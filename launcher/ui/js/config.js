@@ -10,6 +10,6 @@ export const TERNA_PITCH = {
 };
 // Bannières affichées tant que le serveur n'en publie aucune
 export const FALLBACK_NEWS = [
-  { id: "f1", kind: "announcement", title: "Bienvenue chez Dual Pulse", body: "Deux pulsations. Un seul jeu. Retrouvez ici nos logiciels et l'avancée de TERNA.", image: "", link: "" },
+  { id: "f1", kind: "announcement", title: "Bienvenue chez Dual Pulse", body: "Deux pulsations, une seule vision. Retrouvez ici nos logiciels et l'avancée de TERNA.", image: "", link: "" },
   { id: "f2", kind: "event", title: "TERNA arrive", body: TERNA_PITCH.banner + " Inscrivez-vous à la liste de souhaits pour suivre le projet.", image: "", link: "", goto: "games" },
 ];

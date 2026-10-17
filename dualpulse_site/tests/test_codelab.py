@@ -483,6 +483,30 @@ def test_remote_piston():
             pass
 
 
+def test_sandbox_imports_without_resource_module_windows(monkeypatch):
+    """Sous Windows `import resource` échoue : le module doit se charger, et ne JAMAIS proposer de backend local (rien ne confinerait le code)."""
+    import importlib
+    import sys
+    from app.codelab import sandbox as real
+    monkeypatch.setitem(sys.modules, "resource", None)                      # None : « import resource » lève ImportError
+    monkeypatch.setenv("DP_CODELAB_ALLOW_WEAK", "1")
+    monkeypatch.delenv("DP_CODELAB_REMOTE", raising=False)
+    try:
+        sb = importlib.reload(real)
+        assert sb.resource is None
+        monkeypatch.setattr(sb.shutil, "which", lambda _n: None)            # ni bwrap ni unshare
+        b = sb._detect()
+        assert b.name == "none" and not b.usable and not b.local
+        import pytest
+        with pytest.raises(RuntimeError):
+            sb.run(["true"], ".", backend=sb.Backend("rlimit", False))
+        monkeypatch.setenv("DP_CODELAB_REMOTE", "http://piston.example:2000")  # un backend distant reste possible
+        assert sb._detect().name == "remote"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(real)
+
+
 if __name__ == "__main__":
     import traceback
     bad = 0

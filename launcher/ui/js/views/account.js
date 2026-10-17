@@ -41,6 +41,7 @@ export function renderAccount(root, ctx) {
   const role = h("select", { class: "in", id: "inv-role" }, h("option", { value: "friends" }, "Friends"), h("option", { value: "dev" }, "Dev"));
   const days = h("input", { class: "in", id: "inv-days", type: "number", min: "1", max: "90", value: "7" });
   const note = h("input", { class: "in", id: "inv-note", placeholder: "Pour qui ? (facultatif)", maxlength: "80" });
+  const code = h("input", { class: "in", id: "inv-code-in", placeholder: "Code perso (facultatif) : NASKO-VIP", maxlength: "40", autocomplete: "off", spellcheck: "false" });
   const shown = h("div", { id: "inv-shown" });
   const list = h("div", { id: "inv-list" });
   const loadInv = async () => {
@@ -57,12 +58,13 @@ export function renderAccount(root, ctx) {
     } catch (e) { clear(list).append(h("div", { class: "err" }, e.message)); }
   };
   invBox.append(h("div", { class: "form-row" }, h("div", { class: "fld" }, h("label", null, "PROFIL"), role), h("div", { class: "fld", style: { maxWidth: "110px" } }, h("label", null, "JOURS"), days), h("div", { class: "fld", style: { flex: "2" } }, h("label", null, "NOTE"), note),
+    h("div", { class: "fld", style: { flex: "2" } }, h("label", null, "CODE PERSONNALISÉ"), code),
     h("button", { class: "btn pri", type: "button", id: "inv-create", onclick: async () => {
       try {
-        const r = await api.invites.create(role.value, parseInt(days.value, 10) || 7, note.value.trim());
-        clear(shown).append(h("p", { class: "hint", style: { marginTop: "12px" } }, "Code d'invitation (affiché une seule fois — copiez-le maintenant) :"), h("span", { class: "code", id: "inv-code" }, r.code),
+        const r = await api.invites.create(role.value, parseInt(days.value, 10) || 7, note.value.trim(), code.value.trim());
+        clear(shown).append(h("p", { class: "hint", style: { marginTop: "12px" } }, (r.custom ? "Code personnalisé créé (usage unique, insensible à la casse) :" : "Code d'invitation (affiché une seule fois — copiez-le maintenant) :")), h("span", { class: "code", id: "inv-code" }, r.code),
           h("button", { class: "btn sm", type: "button", style: { marginTop: "8px" }, onclick: () => { navigator.clipboard && navigator.clipboard.writeText(r.code).then(() => toast("Code copié.", "ok")); } }, "COPIER"));
-        note.value = ""; loadInv();
+        note.value = ""; code.value = ""; loadInv();
       } catch (e) { toast(e.message, "err"); }
     } }, "GÉNÉRER")), shown, h("div", { style: { marginTop: "14px" } }, list));
   view.append(invBox); loadInv();

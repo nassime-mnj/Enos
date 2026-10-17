@@ -177,6 +177,32 @@ def test_invite_flow_single_use_expiry_revocation_and_no_ceo_invite():
     assert "code_hash" not in c.get(V + "/invites", headers=T).text and inv["code"] not in c.get(V + "/invites", headers=T).text      # le code n'est montré qu'une fois
 
 
+def test_custom_invite_codes():
+    c = fresh()
+    ceo = make_ceo(c)
+    T = H(ceo["access_token"])
+    r = c.post(V + "/invites", json={"role": "friends", "code": "  nasko-vip "}, headers=T)
+    assert r.status_code == 200 and r.json()["code"] == "NASKO-VIP" and r.json()["custom"] is True                  # normalisé en majuscules
+    assert c.post(V + "/invites", json={"role": "friends", "code": "Nasko-VIP"}, headers=T).status_code == 409        # déjà pris (casse ignorée)
+    assert c.post(V + "/auth/register", json={"invite": "nasko-vip", "email": "vip@x.fr", "password": PW}).json()["role"] == "friends"   # saisie insensible à la casse
+    assert c.post(V + "/auth/register", json={"invite": "NASKO-VIP", "email": "vip2@x.fr", "password": PW}).status_code == 400            # usage unique
+    assert c.post(V + "/invites", json={"role": "friends", "code": "nasko-vip"}, headers=T).status_code == 409        # même utilisé, il reste réservé
+    for bad in ("court", "NASKO VIP 123", "-NASKO-VIP", "NASKO-VIP-", "NASKO;VIP1", "é" * 10, "AAAAAAAAAA", "11111111"):
+        assert c.post(V + "/invites", json={"role": "friends", "code": bad}, headers=T).status_code == 400, bad
+    assert c.post(V + "/invites", json={"role": "friends", "code": "A1" * 21}, headers=T).status_code in (400, 422)   # 42 caractères : refusé (422 par le modèle)
+    assert c.post(V + "/invites", json={"role": "dev", "code": "NASKO-VIP"}, headers=T).status_code == 400          # dev : 12 caractères minimum
+    d = c.post(V + "/invites", json={"role": "dev", "code": "NASKO-DEV-2026"}, headers=T)
+    assert d.status_code == 200 and c.post(V + "/auth/register", json={"invite": "nasko-dev-2026", "email": "d@x.fr", "password": PW}).json()["role"] == "dev"
+    assert c.post(V + "/invites", json={"role": "ceo", "code": "NASKO-CEO-2026"}, headers=T).status_code == 400      # jamais de CEO par invitation
+    rnd = c.post(V + "/invites", json={"role": "friends", "code": ""}, headers=T).json()                              # code vide : aléatoire, comme avant
+    assert rnd["code"].startswith("DP-") and rnd["custom"] is False
+    assert c.post(V + "/auth/register", json={"invite": rnd["code"], "email": "r@x.fr", "password": PW}).status_code == 200
+    f, dv = invited(c, ceo, "friends", "ff@x.fr"), invited(c, ceo, "dev", "dd@x.fr")
+    assert c.post(V + "/invites", json={"role": "friends", "code": "ENCORE-UN-CODE"}, headers=H(f["access_token"])).status_code == 403     # seul le CEO crée des codes
+    assert c.post(V + "/invites", json={"role": "friends", "code": "ENCORE-UN-CODE"}, headers=H(dv["access_token"])).status_code == 403
+    assert "NASKO-DEV-2026" not in c.get(V + "/invites", headers=T).text                                              # jamais relu en clair
+
+
 def test_role_hierarchy_enforced_on_every_management_route():
     c = fresh()
     ceo = make_ceo(c)

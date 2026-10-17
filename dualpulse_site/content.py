@@ -6,11 +6,11 @@ Comment ça marche : app/main.py et app/assistant.py font « import content » ;
     STUDIO["contact_email"]   adresse de contact réelle (aujourd'hui un faux contact@dualpulse.example)
     GAME["facts"] « Sortie »  date ou période de sortie
     ROADMAP « Plus tard »     date de sortie
-    TEAM[...]["role"]         intitulés exacts de Nassime et Raf
+    TEAM[...]["role"]         intitulés exacts de Nasko et Hydra (pseudos de développeurs : ne jamais publier de vrais noms)
     (le texte « A_COMPLETER » est remplacé par « À annoncer » à l'affichage ; il n'apparaît jamais tel quel sur le site)
 
 À VÉRIFIER — L'IA ANTAGONISTE E.N.O.S. (information potentiellement sensible)
-    Le site présente publiquement E.N.O.S. comme « l'intelligence qui règne sur les ruines » et adversaire du jeu :
+    Le site évoque publiquement E.N.O.S. comme une présence mystérieuse qui veille sur les ruines, sans aucun détail :
       - dans FEATURES (4e carte « Un adversaire qui apprend »),
       - dans la base de connaissances de l'assistant (entrée « e.n.o.s »).
     Ce sont des textes que j'ai rédigés d'après votre description (« E.N.O.S. est l'IA antagoniste principale du jeu ») ; je ne connais pas
@@ -23,8 +23,8 @@ SHOW_ENOS_LORE = True
 
 STUDIO = {
     "name": "Dual Pulse",
-    "tagline": "Deux pulsations. Un seul jeu.",
-    "pitch": "On est deux, Nassime et Raphaël, et on fait un roguelite platformer en pixel art. Un monde de robots abandonnés, des combats où tout "
+    "tagline": "Deux pulsations, une seule vision.",
+    "pitch": "On est deux, Nasko et Hydra, et on fait un roguelite platformer en pixel art. Un monde de robots abandonnés, des combats où tout "
              "se joue au timing. On prend le temps de bien faire, parce qu'on veut un jeu qu'on aurait envie de rejouer nous-mêmes.",
     "contact_email": "dualpulse.co@gmail.com",
     "year": 2026,
@@ -41,8 +41,8 @@ GAME = {
 FEATURES = [
     ("Un contrôle chirurgical", "Saut variable, double saut, saut mural, roulade invincible, pogo : chaque mouvement a été réglé à la frame près."),
     ("Des salles assemblées", "Des pièces conçues à la main, assemblées à chaque partie : de la variété sans jamais sacrifier le level design."),
-    ("Un monde de métal", "Des ruines automatisées, des machines qui continuent d'obéir à des ordres que plus personne ne donne."),
-    ("Un adversaire qui apprend", "E.N.O.S., l'intelligence qui règne sur ces ruines, n'est pas un boss comme les autres : elle vous observe."),   # A_VERIFIER (lore)
+    ("Un monde de métal", "Des ruines, des machines silencieuses. Quelque chose y veille encore."),
+    ("Quelqu'un vous observe", "E.N.O.S. ne dit pas ce qu'elle veut. Pas encore."),   # lore volontairement léger : à étoffer plus tard
 ]
 
 VALUES = [
@@ -52,8 +52,8 @@ VALUES = [
 ]
 
 TEAM = [
-    {"name": "Nassime", "role": "Co-fondateur · développement & direction"},
-    {"name": "Raphaël Sailly", "role": "Co-fondateur · développement & création"},
+    {"name": "Nasko", "role": "Co-fondateur · développement & direction"},
+    {"name": "Hydra", "role": "Co-fondateur · développement & création"},
 ]
 
 ROADMAP = [
@@ -74,7 +74,7 @@ FAQ = [
 # Ne jamais y mettre d'information interne (outils, accès développeurs, chemins, personnes autres que celles listées plus haut).
 KB = [
     {"id": "studio", "k": ["studio", "dual", "pulse", "qui", "equipe", "fondateur", "vous", "etes", "presentation"],
-     "a": "Dual Pulse est un studio indépendant de deux développeurs, Nassime et Raphaël Sailly. Nous créons un roguelite platformer 2D dans un univers robotique post-apocalyptique."},
+     "a": "Dual Pulse est un studio indépendant de deux développeurs, Nasko et Hydra. Nous créons un roguelite platformer 2D dans un univers robotique post-apocalyptique."},
     {"id": "jeu", "k": ["jeu", "game", "genre", "roguelite", "platformer", "histoire", "univers", "projet", "nom", "titre"],
      "a": "Notre premier jeu est un roguelite platformer 2D d'action, au contrôle précis, dans un monde de robots abandonnés. Il est en développement actif ; son nom n'est pas encore annoncé."},
     {"id": "sortie", "k": ["sortie", "sortira", "date", "quand", "release", "disponible", "lancement", "bientot"],
@@ -92,7 +92,7 @@ KB = [
     {"id": "emploi", "k": ["recrutement", "recrute", "emploi", "travailler", "job", "stage", "candidature", "postuler", "rejoindre", "freelance"],
      "a": "Le studio est petit et ne recrute pas activement, mais les portfolios (pixel art, animation, son, level design) sont les bienvenus à {email}."},
     {"id": "e.n.o.s", "k": ["enos", "e.n.o.s", "ia", "intelligence", "artificielle", "antagoniste", "boss", "adversaire", "robot"],
-     "a": "E.N.O.S. est l'intelligence artificielle antagoniste de notre jeu : elle règne sur les ruines robotiques et observe le joueur. Nous en dévoilerons davantage plus tard."},
+     "a": "E.N.O.S. est une présence qui veille sur les ruines de notre jeu. Nous n'en dirons pas plus pour l'instant."},
     {"id": "donnees", "k": ["donnees", "vie privee", "rgpd", "cookies", "confidentialite", "personnelles", "traceurs", "tracking"],
      "a": "Ce site n'utilise aucun traceur publicitaire. Les messages envoyés à cet assistant servent uniquement à améliorer ses réponses, sans lien avec votre identité."},
     {"id": "salut", "k": ["bonjour", "salut", "hello", "coucou", "bonsoir", "hey", "yo"],

@@ -100,7 +100,7 @@ export const manifest = (product, channel) => call(`/manifest/${product}/${chann
 export const wishlist = (email) => call("/wishlist", { method: "POST", body: { email }, auth: false });
 export const invites = {
   list: () => call("/invites"),
-  create: (role, days, note) => call("/invites", { method: "POST", body: { role, days, note } }),
+  create: (role, days, note, code) => call("/invites", { method: "POST", body: { role, days, note, ...(code ? { code } : {}) } }),
   revoke: (id) => call("/invites/" + id, { method: "DELETE" }),
 };
 export const users = {

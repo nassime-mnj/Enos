@@ -73,7 +73,7 @@ def reset():
 
 
 def seed():
-    """DP_SEED_IPS='1.2.3.4=Nassime,5.6.7.8=Raf' : IP ajoutées au premier démarrage (ensuite, tout se gère dans l'administration)."""
+    """DP_SEED_IPS='1.2.3.4=Nasko,5.6.7.8=Hydra' : IP ajoutées au premier démarrage (ensuite, tout se gère dans l'administration)."""
     for part in os.environ.get("DP_SEED_IPS", "").split(","):
         if "=" in part:
             ip, label = part.split("=", 1)

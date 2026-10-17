@@ -77,6 +77,7 @@ class InviteIn(BaseModel):
     role: str = "friends"
     days: int = 7
     note: str = Field(default="", max_length=80)
+    code: str | None = Field(default=None, max_length=40)     # code choisi par le CEO (ex. NASKO-VIP) ; absent / vide = code aléatoire
 
 
 class UserPatch(BaseModel):
@@ -205,7 +206,7 @@ def build(admin_guard, admin_path):
     # ------------------------------------------------------------ gestion (CEO)
     @r.post(V1 + "/invites")
     def invite_new(b: InviteIn, u=Depends(require("ceo"))):
-        return service.create_invite(u["id"], b.role, b.days, b.note)
+        return service.create_invite(u["id"], b.role, b.days, b.note, b.code)
 
     @r.get(V1 + "/invites")
     def invite_list(u=Depends(require("ceo"))):

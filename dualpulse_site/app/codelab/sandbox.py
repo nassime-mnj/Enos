@@ -2,7 +2,6 @@
 confiné (répertoire de travail 0700 jetable, rlimits, groupe de processus tué au timeout, sortie plafonnée lue en flux)."""
 import contextlib
 import os
-import resource
 import shutil
 import signal
 import stat
@@ -11,6 +10,11 @@ import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
+
+try:
+    import resource
+except ImportError:        # Windows : pas de module « resource » (rlimit, exclusif Unix). Le bac à sable local reste alors indisponible (voir _detect) ; seul un backend distant sert.
+    resource = None
 
 SAFE_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 OUTPUT_BYTES = 64 * 1024
@@ -160,7 +164,7 @@ def _detect():
     remote = os.environ.get("DP_CODELAB_REMOTE", "").strip().rstrip("/")
     if remote:
         return Backend("remote", True, remote=remote)
-    if os.environ.get("DP_CODELAB_ALLOW_WEAK") == "1":
+    if os.environ.get("DP_CODELAB_ALLOW_WEAK") == "1" and resource is not None:     # sans rlimit (Windows), rien ne confine le code : jamais de repli local
         return Backend("rlimit", False)
     return Backend("none", False)
 
@@ -175,7 +179,7 @@ NOBODY = 65534
 
 
 def _drop_root():
-    return os.geteuid() == 0 and os.environ.get("DP_CODELAB_KEEP_ROOT") != "1"
+    return hasattr(os, "geteuid") and os.geteuid() == 0 and os.environ.get("DP_CODELAB_KEEP_ROOT") != "1"
 
 
 def _limits(cpu_s, mem_mb, nproc, drop=False):
@@ -210,6 +214,8 @@ def run(argv, workdir, *, stdin=b"", timeout=None, mem_mb=512, env=None, backend
     b = backend or detect()
     if not b.local:
         raise RuntimeError("backend non local : " + b.name)
+    if resource is None:                      # garde-fou : Windows n'a ni rlimit, ni preexec_fn, ni groupes de processus POSIX
+        raise RuntimeError("bac à sable local indisponible sur ce système (Linux requis)")
     timeout = timeout or timeout_s()
     nproc = nproc or _int_env("DP_CODELAB_NPROC", 512, 16, 100000)
     inside = WORK if b.name == "bwrap" else workdir

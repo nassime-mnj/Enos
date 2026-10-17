@@ -241,17 +241,44 @@ def totp_enable(u, code):
 
 
 # ---------------------------------------------------------------- invitations (la SEULE voie d'inscription)
-def create_invite(created_by, role, days=7, note=""):
+CODE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*[A-Za-z0-9]$")
+CODE_MIN = {"friends": 8, "dev": 12}              # un code choisi se devine plus facilement qu'un code aléatoire : le rôle dev (accès aux builds dev) en exige un plus long
+CODE_MAX = 40
+
+
+def normalize_code(code):
+    """Forme canonique d'un code choisi : sans espaces autour, en MAJUSCULES (la saisie de l'invité n'a ainsi pas à respecter la casse)."""
+    return (code or "").strip().upper()
+
+
+def _check_custom_code(code, role):
+    if not CODE_RE.match(code) or len(code) > CODE_MAX:
+        raise AuthError(400, f"Code invalide : lettres, chiffres, tirets et underscores seulement, {CODE_MAX} caractères au plus, sans commencer ni finir par un tiret.")
+    if len(code) < CODE_MIN[role]:
+        raise AuthError(400, f"Code trop court pour le profil {role} : {CODE_MIN[role]} caractères au moins.")
+    if len(set(code.replace("-", "").replace("_", ""))) < 4:
+        raise AuthError(400, "Code trop simple : varie davantage les caractères.")
+
+
+def create_invite(created_by, role, days=7, note="", code=None):
+    """Crée une invitation à usage unique. `code` vide : code aléatoire (DP-…). Sinon : code choisi par le CEO (ex. NASKO-VIP), stocké en MAJUSCULES."""
     if role not in accounts.INVITABLE:
         raise AuthError(400, "Une invitation ne peut donner que le rôle friends ou dev.")
     if not 1 <= days <= 90:
         raise AuthError(400, "Durée invalide (1 à 90 jours).")
-    code = "DP-" + accounts.new_opaque()[:16]
+    custom = bool((code or "").strip())
+    if custom:
+        code = normalize_code(code)
+        _check_custom_code(code, role)
+    else:
+        code = "DP-" + accounts.new_opaque()[:16]
     with db._lock:
+        if custom and _c().execute("SELECT 1 FROM invites WHERE code_hash=?", (accounts.digest(code),)).fetchone():
+            raise AuthError(409, "Ce code existe déjà (même utilisé, révoqué ou expiré) : choisis-en un autre.")
         cur = _c().execute("INSERT INTO invites(code_hash,role,note,created_by,created_at,expires_at) VALUES(?,?,?,?,?,?)",
                            (accounts.digest(code), role, (note or "")[:80], created_by, now(), now() + days * 86400))
         _c().commit()
-    return {"id": cur.lastrowid, "code": code, "role": role, "expires_at": now() + days * 86400}
+    return {"id": cur.lastrowid, "code": code, "role": role, "expires_at": now() + days * 86400, "custom": custom}
 
 
 def list_invites():
@@ -270,10 +297,12 @@ def revoke_invite(iid):
 
 def register(code, email, password, name=""):
     """Inscription sur invitation : le code est consommé de façon atomique ; le rôle est celui de l'invitation (jamais choisi par l'inscrit)."""
-    h = accounts.digest((code or "").strip())
+    raw = (code or "").strip()
     with db._lock:
         c = _c()
-        inv = c.execute("SELECT * FROM invites WHERE code_hash=?", (h,)).fetchone()
+        inv = c.execute("SELECT * FROM invites WHERE code_hash=?", (accounts.digest(raw),)).fetchone()          # code aléatoire : exact
+        if not inv:                                                                                              # code choisi : stocké en majuscules, saisie insensible à la casse
+            inv = c.execute("SELECT * FROM invites WHERE code_hash=?", (accounts.digest(normalize_code(raw)),)).fetchone()
         if not inv or inv["used_by"] or inv["revoked"] or inv["expires_at"] < now():
             raise AuthError(400, "Invitation invalide ou expirée.")
         try:

@@ -14,6 +14,7 @@ API `/launcher/v1` du site Dual Pulse (`dualpulse_site`). Tests : `py tests/test
 
 ## Rôles (hiérarchie stricte `friends < dev < ceo`)
 - **Aucune inscription libre** : on s'inscrit avec un code d'invitation généré par le CEO (usage unique, 1 à 90 jours, rôle `friends` ou `dev`). Le rôle vient de l'invitation, jamais de l'inscrit.
+- **Codes personnalisés** : `POST /invites` accepte un champ `code` (ex. `NASKO-VIP`) ; vide = code aléatoire `DP-…`. Lettres, chiffres, `-` et `_` ; 8 caractères minimum pour `friends`, **12 pour `dev`** (un code choisi se devine plus facilement) ; 40 au plus ; stocké en MAJUSCULES et saisi sans tenir compte de la casse. Un code déjà créé (même utilisé, révoqué ou expiré) est refusé (409). Toujours à usage unique et avec expiration ; l'inscription reste limitée à 8 essais / 10 min / IP.
 - **Le CEO n'existe que par le jeton d'administration du serveur** (`POST <admin>/api/launcher/ceo`, une seule fois). L'API ne peut ni créer, ni modifier, ni rétrograder un CEO.
 - Le rôle est relu en base à chaque requête : changement de rôle, désactivation, déconnexion globale ou changement de mot de passe prennent effet immédiatement.
 - Mots de passe : scrypt, 10 caractères minimum ; 5 échecs = compte bloqué 15 min ; limitation par IP ; réponses identiques pour compte inconnu / mauvais mot de passe.
