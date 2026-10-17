@@ -19,7 +19,9 @@ import nasko_git
 
 TAG = "[MAJ_GODOT_DISPONIBLE]"
 MAX_AGE = 3 * 86400                       # une alerte plus vieille que 3 jours n'est plus proposée
-_URL_OK = re.compile(r"^(https://[A-Za-z0-9._-]+(:\d+)?/[A-Za-z0-9._~/-]+|git@[A-Za-z0-9._-]+:[A-Za-z0-9._~/-]+|ssh://git@[A-Za-z0-9._-]+(:\d+)?/[A-Za-z0-9._~/-]+)$")
+_USER = r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}"                         # n'importe quel utilisateur (git, prenom.nom…), jamais de « - » initial
+_HOST = r"[A-Za-z0-9][A-Za-z0-9._-]*"
+_URL_OK = re.compile(r"^(https://" + _HOST + r"(:\d+)?/[A-Za-z0-9._~/-]+|" + _USER + "@" + _HOST + r":[A-Za-z0-9._~/-]+|ssh://" + _USER + "@" + _HOST + r"(:\d+)?/[A-Za-z0-9._~/-]+)$")
 _lock = threading.Lock()
 RECV = {"running": False, "ok": None, "message": "", "t": 0.0}
 

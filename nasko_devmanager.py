@@ -31,7 +31,7 @@ NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 DISTRO_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 REPO_RE = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 SCRIPT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.sh$")
-URL_RE = re.compile(r"^(https://[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]+|ssh://[A-Za-z0-9._~:/@%+-]+|git@[A-Za-z0-9.-]+:[A-Za-z0-9._~/%+-]+)$")
+URL_RE = re.compile(r"^(https://[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]+|ssh://[A-Za-z0-9._~:/@%+-]+|[A-Za-z0-9][A-Za-z0-9._-]{0,63}@[A-Za-z0-9][A-Za-z0-9.-]*:[A-Za-z0-9._~/%+-]+)$")
 SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$")
 ANSI_RE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
 OUT_MAX, OUT_KEEP = 2_000_000, 1_500_000
@@ -177,7 +177,7 @@ def normalize_url(text):
         return f"https://github.com/{t}.git"
     if URL_RE.match(t) and not t.startswith("-"):
         return t
-    raise DevError("Adresse invalide : utilisez https://…, git@…, ssh://… ou « proprietaire/depot » (un nom seul ne suffit pas : GitHub a besoin du propriétaire).")
+    raise DevError("Adresse invalide : utilisez https://…, ssh://…, utilisateur@hôte:chemin (ex. prenom.nom@git.forge.epita.fr:projet) ou « proprietaire/depot » (un nom seul ne suffit pas : GitHub a besoin du propriétaire).")
 
 
 # ----------------------------------------------------------------------------- tâches (flux en direct)

@@ -12,6 +12,7 @@ Sécurités : jamais d'invite console (GIT_TERMINAL_PROMPT=0), délais maximum, 
 refus des fichiers > 90 Mo (limite GitHub 100 Mo), identité Git créée automatiquement si absente."""
 import fnmatch
 import os
+import re
 import subprocess
 import threading
 import time
@@ -71,6 +72,10 @@ def info(path):
     return res
 
 
+# https://…, ssh://…, ou SCP « utilisateur@hote:chemin » (n'importe quel utilisateur : git, prenom.nom…) ; ni espace, ni « - » initial
+REMOTE_OK = re.compile(r"^(https://|ssh://|[A-Za-z0-9][A-Za-z0-9._-]{0,63}@[A-Za-z0-9][A-Za-z0-9.-]*:)\S+$")
+
+
 def setup(path, url):
     """Premier branchement (par bouton) : crée le dépôt si besoin, ajoute un .gitignore Godot, relie le dépôt distant."""
     if not available():
@@ -78,8 +83,8 @@ def setup(path, url):
     if not path or not os.path.isdir(path):
         raise RuntimeError("Dossier du projet introuvable.")
     url = (url or "").strip()
-    if url and not (url.startswith(("https://", "git@", "ssh://")) and " " not in url):
-        raise RuntimeError("Adresse du dépôt invalide (ex. https://github.com/vous/projet.git).")
+    if url and not (REMOTE_OK.match(url) and " " not in url):
+        raise RuntimeError("Adresse du dépôt invalide (ex. https://github.com/vous/projet.git ou utilisateur@hote:chemin).")
     root = repo_root(path)
     if not root:
         rc, out = _git(path, "init", "-b", "main")

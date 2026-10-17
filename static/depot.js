@@ -44,7 +44,7 @@
   const repoSel = el("select", { "aria-label": "Dépôt", onchange: () => selectRepo(repoSel.value) });
   const chipBranch = el("span", { class: "dp-chip", text: "—" }), chipAB = el("span", { class: "dp-chip", hidden: true });
   const sendB = btn("ENVOYER", () => sendDlg(), "dp-send"), pushB = btn("PUSH", () => gitSimple("push")), pullB = btn("PULL", () => gitSimple("pull")), commitB = btn("COMMIT", () => commitDlg()), cloneB = btn("GIT CLONE", () => startClone());
-  const cloneUrl = el("input", { type: "text", class: "dp-clone-url", placeholder: "URL ou proprietaire/depot", spellcheck: false, autocomplete: "off", "aria-label": "Adresse du dépôt à cloner", onkeydown: (e) => { if (e.key === "Enter") startClone(); } });
+  const cloneUrl = el("input", { type: "text", class: "dp-clone-url", placeholder: "https://…, utilisateur@hôte:chemin ou proprietaire/depot", spellcheck: false, autocomplete: "off", "aria-label": "Adresse du dépôt à cloner", onkeydown: (e) => { if (e.key === "Enter") startClone(); } });
   const cloneProg = el("div", { class: "dp-cprog", hidden: true, role: "status", "aria-live": "polite" }, el("div", { class: "dp-bar2" }, el("i")), el("small"));
   const gitBtns = [sendB, pushB, pullB, commitB];
   const tabDefs = [["forge", "FORGE"], ["files", "FICHIERS"], ["git", "GIT"], ["subject", "SUJET"], ["train", "ENTRAÎN."], ["shell", "DÉPÔT SHELL"]];

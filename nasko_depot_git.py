@@ -37,8 +37,9 @@ import nasko_wsl
 __all__ = ["GitError", "Runner", "LocalRunner", "WslRunner", "GitRepo", "clone", "clone_argv", "validate_url", "drop_shell",
            "URL_RE", "SHELL_NAME_RE"]
 
-# Même règle que nasko_devmanager.URL_RE (https://, ssh://, git@hote:chemin) ; copiée pour ne pas importer ce module (effets de bord).
-URL_RE = re.compile(r"^(https://[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]+|ssh://[A-Za-z0-9._~:/@%+-]+|git@[A-Za-z0-9.-]+:[A-Za-z0-9._~/%+-]+)$")
+# Même règle que nasko_devmanager.URL_RE (https://, ssh://, utilisateur@hote:chemin : forges d'école, GitHub…) ; copiée pour ne pas importer ce module (effets de bord).
+# tests/test_git_urls.py vérifie que les deux copies restent identiques.
+URL_RE = re.compile(r"^(https://[A-Za-z0-9._~:/?#@!$&'()*+,;=%-]+|ssh://[A-Za-z0-9._~:/@%+-]+|[A-Za-z0-9][A-Za-z0-9._-]{0,63}@[A-Za-z0-9][A-Za-z0-9.-]*:[A-Za-z0-9._~/%+-]+)$")
 NAME_RE = re.compile(r"[A-Za-z0-9._-]{1,100}")
 SHELL_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,80}\.sh")
 WSL_PATH_RE = re.compile(r"[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*")
@@ -548,7 +549,7 @@ def validate_url(url, allow_local=False):
         return u
     if allow_local and (u.startswith("/") or u.startswith("file://")):
         return u
-    raise GitError("Adresse invalide : utilise https://…, ssh://… ou git@hote:chemin (file://, ext:: et chemins locaux sont refusés).")
+    raise GitError("Adresse invalide : utilise https://…, ssh://… ou utilisateur@hote:chemin (file://, ext:: et chemins locaux sont refusés).")
 
 
 def _clone_name(url, name):
