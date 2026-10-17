@@ -25,13 +25,14 @@
     { id: "bleu", name: "BLEU", color: "#2f8cff", h: 212, s: .95 },
   ];
   let _acCache = {};
+  const DEFAULT_THEME = "coreboard";
   const RED_THEMES = ["menace", "coreboard", "rouge"];
   const root = document.documentElement;
   const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const set = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
 
   function apply() {
-    const id = get("enos_persona", "enos") === "eto" ? "eto" : THEMES.some((t) => t.id === get("enos_theme", "")) ? get("enos_theme", "") : "menace";   // ETO : thème blanc imposé, le thème choisi est conservé
+    const id = get("enos_persona", "enos") === "eto" ? "eto" : THEMES.some((t) => t.id === get("enos_theme", "")) ? get("enos_theme", "") : DEFAULT_THEME;   // ETO : thème blanc imposé, le thème choisi est conservé ; rien de mémorisé (nouvelle installation, nouveau profil de fenêtre) : Coreboard
     root.dataset.theme = id;
     let h = get("enos_hue", null), s = get("enos_sat", null);
     const ac = ACCENTS.find((a) => a.id === get("enos_accent", "rouge")) || ACCENTS[0];
@@ -42,7 +43,7 @@
     s === null ? root.style.removeProperty("--sat") : root.style.setProperty("--sat", s);
     _acCache = {};
     const m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.content = id === "eto" ? "#f6f8f7" : id === "menace" ? "#050304" : id === "chill" ? "#1b1635" : id === "entreprise" ? "#0a1020" : id === "pro" ? "#0d1015" : "#000000";
+    if (m) m.content = id === "eto" ? "#f6f8f7" : id === "menace" ? "#050304" : id === "coreboard" ? "#050506" : id === "chill" ? "#1b1635" : id === "entreprise" ? "#0a1020" : id === "pro" ? "#0d1015" : "#000000";
   }
   apply();
 

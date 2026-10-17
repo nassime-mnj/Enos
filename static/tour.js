@@ -31,7 +31,7 @@
     { center: true, title: "C'est parti !", text: () => `Besoin d'aide ? Demande-le simplement à E.N.O.S. dans le chat.${IN_OS() ? " <b>Ctrl + K</b> ouvre tous les modules." : ""}` },
   ];
 
-  let steps = [], i = 0, on = false, root = null, lastTarget = null;
+  let steps = [], i = 0, on = false, root = null, lastTarget = null, settle = 0;
 
   const visible = (el) => !!el && !!(el.offsetWidth || el.offsetHeight) && getComputedStyle(el).visibility !== "hidden";
 
@@ -53,6 +53,7 @@
       else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
     }, true);
     window.addEventListener("resize", () => on && place());
+    document.addEventListener("scroll", () => on && place(), true);          // la grille du lanceur défile : le projecteur suit
   }
 
   // étapes réellement affichables, calculées au lancement : chaque étape choisit sa cible (fenêtre native ou interface classique) et est sautée si elle est absente / masquée
@@ -88,9 +89,21 @@
     if (!s.lx && open) { os.closeLauncher(); await wait(160); }
   }
 
+  // une cible n'est « projetable » que si elle a une taille et touche l'écran : sinon le projecteur (et son voile de 9999 px) partirait dans le vide
+  const usable = (r) => !!r && r.width > 4 && r.height > 4 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
+  let placing = false;
+
   function place() {
+    if (placing) return;
+    placing = true;
+    try { placeNow(); } finally { placing = false; }
+  }
+
+  function placeNow() {
     const s = steps[i], spot = $("tr-spot"), b = $("tr-b");
-    const target = s.center ? null : document.querySelector(s.sel);
+    let target = s.center ? null : document.querySelector(s.sel);
+    if (target && s.lx) { try { target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }); } catch (e) {} }   // tuile du lanceur : la grille défile, les dernières sont sous la ligne de flottaison
+    if (target && !usable(target.getBoundingClientRect())) target = null;          // cible absente, masquée ou hors écran : bulle centrée, jamais de projecteur égaré
     lastTarget = target;
     b.classList.toggle("center", !target);
     if (!target) {
@@ -123,6 +136,8 @@
     $("tr-next").textContent = i === steps.length - 1 ? "TERMINER" : i === 0 ? "COMMENCER" : "SUIVANT";
     place();
     requestAnimationFrame(place);
+    clearTimeout(settle);                                          // le lanceur s'ouvre et ses tuiles apparaissent en cascade (animations) : on recale le projecteur une fois la mise en page stabilisée
+    settle = setTimeout(() => { if (on && steps[i] === s) { place(); settle = setTimeout(() => on && steps[i] === s && place(), 600); } }, 450);
     $("tr-next").focus({ preventScroll: true });
   }
 
