@@ -247,8 +247,13 @@ def launcher_env():
     env = dict(os.environ)
     env["CARGO_TARGET_DIR"] = str(LAUNCHER_TARGET)
     remaps = [(str(Path.home()), "~"), (str(LAUNCHER), "launcher"), (str(ROOT), "enos")]
-    flags = " ".join(f"--remap-path-prefix={a}={b}" for a, b in remaps if a)
-    env["RUSTFLAGS"] = (env.get("RUSTFLAGS", "") + " " + flags).strip()
+    flags = [f"--remap-path-prefix={a}={b}" for a, b in remaps if a]
+    # CARGO_ENCODED_RUSTFLAGS (séparateur \x1f) : RUSTFLAGS se découpe sur les espaces, or le dossier du projet en contient (« Logiciel ENOS »)
+    base = env.pop("CARGO_ENCODED_RUSTFLAGS", "")
+    if not base and env.get("RUSTFLAGS"):
+        base = "\x1f".join(env["RUSTFLAGS"].split())
+    env.pop("RUSTFLAGS", None)
+    env["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join(([base] if base else []) + flags)
     return env
 
 
