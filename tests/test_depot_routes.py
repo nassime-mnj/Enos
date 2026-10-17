@@ -44,9 +44,12 @@ class Routes(unittest.TestCase):
         nasko_core.config_path, nasko_core.data_dir = cls._cp, cls._dd
 
     def test_paths_are_role_gated(self):
-        for p in ("/api/depot/git/send", "/api/depot/shell-drop", "/ws/depot-term"):
-            self.assertFalse(nasko_roles.allowed("friends", p)[0], p)
-            self.assertTrue(nasko_roles.allowed("dev", p)[0], p)
+        # capacité « depot » : donnée à Friends (étudiants), à Dev et au CEO ; le reste de « devtools » reste refusé à Friends (voir test_roles.py)
+        for p in ("/api/depot/git/send", "/api/depot/shell-drop", "/ws/depot-term", "/api/depot/workspace", "/api/depot/terminal/reset"):
+            self.assertEqual(nasko_roles.capability_for(p), "depot", p)
+            for role in ("friends", "dev", "ceo"):
+                self.assertTrue(nasko_roles.allowed(role, p)[0], (role, p))
+        self.assertFalse(nasko_roles.allowed("friends", "/api/dev/uninstall-launcher")[0])
 
     def test_state_and_status(self):
         st = self.c.get("/api/depot/state").json()

@@ -31,15 +31,15 @@ log = logging.getLogger("nasko.roles")
 ROLES = ("ceo", "dev", "friends")
 LABELS = {"ceo": "CEO", "dev": "Dev", "friends": "Friends"}
 DESCRIPTIONS = {"ceo": "Accès total", "dev": "Tout sauf API Control Panel et Notes de frais",
-                "friends": "Agenda, Éditeur PDF, Studio média, Outils rapides, assistant IA"}
+                "friends": "Agenda, Éditeur PDF, Studio média, Outils rapides, assistant IA, Dépôt Intranet"}
 PIN_MIN = 4
 PIN_ITER = 200_000
 MAX_FAILS, LOCK_S = 5, 60
 
 # ------------------------------------------------------------------ capacités
 ALL_CAPS = ("core", "ai", "agenda", "syllabus", "pdf", "studio", "quick", "settings_basic", "update",
-            "receipts", "apimon", "google", "system", "devtools", "leisure", "creator", "cloud", "mirror", "gaming")
-FRIENDS_CAPS = frozenset({"core", "ai", "agenda", "syllabus", "pdf", "studio", "quick", "settings_basic", "update", "cloud"})
+            "receipts", "apimon", "google", "system", "devtools", "depot", "leisure", "creator", "cloud", "mirror", "gaming")
+FRIENDS_CAPS = frozenset({"core", "ai", "agenda", "syllabus", "pdf", "studio", "quick", "settings_basic", "update", "cloud", "depot"})
 DEV_CAPS = frozenset(ALL_CAPS) - {"receipts", "apimon"}
 CEO_CAPS = frozenset(ALL_CAPS)
 ROLE_CAPS = {"ceo": CEO_CAPS, "dev": DEV_CAPS, "friends": FRIENDS_CAPS}
@@ -73,9 +73,12 @@ PREFIX_CAPS = (
     # --- développement et projet de jeu (Terna)
     ("/api/projects", "devtools"), ("/api/files", "devtools"), ("/api/file", "devtools"), ("/api/godot", "devtools"), ("/api/f6", "devtools"),
     ("/api/env", "devtools"), ("/api/tasks", "devtools"), ("/api/git", "devtools"), ("/api/godotsync", "devtools"), ("/api/pack", "devtools"),
-    ("/api/colis", "devtools"), ("/api/warehouse", "devtools"), ("/api/devchat", "devtools"), ("/api/channel", "devtools"), ("/api/dev", "devtools"), ("/api/depot", "devtools"), ("/ws/depot-term", "devtools"),
+    ("/api/colis", "devtools"), ("/api/warehouse", "devtools"), ("/api/devchat", "devtools"), ("/api/channel", "devtools"),
     ("/api/site", "devtools"), ("/api/assistant", "devtools"), ("/api/imgproc", "devtools"), ("/api/anim", "devtools"), ("/api/audio", "devtools"),
     ("/api/screen", "devtools"), ("/api/narration", "devtools"), ("/ws/chat", "devtools"),
+    # --- Dépôt Intranet / Dev Manager (dépôts Git, éditeur, terminal WSL, clang-format) : capacité PROPRE, donnée aussi à Friends (étudiants). Le reste de « devtools » ne l'est pas.
+    ("/api/depot", "depot"), ("/api/dev", "depot"), ("/ws/depot-term", "depot"),
+    ("/api/dev/uninstall-launcher", "devtools"),               # nettoyage des builds de test du Launcher : outil du développeur, pas des étudiants
     # --- création avancée, jeux et loisirs
     ("/api/cloud", "cloud"), ("/api/mirror", "mirror"), ("/api/clipper", "gaming"), ("/api/afk", "gaming"), ("/api/babel", "gaming"), ("/api/tilt", "gaming"), ("/api/brb", "gaming"), ("/api/compress", "creator"), ("/api/youtube", "creator"),
     ("/api/chess", "leisure"), ("/api/study", "leisure"), ("/api/pet", "leisure"), ("/api/chill", "leisure"), ("/ws/chess", "leisure"), ("/ws/pet", "leisure"),

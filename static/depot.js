@@ -117,6 +117,11 @@
     await refresh(true);
     clearInterval(S.clock); S.clock = setInterval(tick, 1000);
     startPoll();
+    // Premier lancement chez quelqu'un d'autre : son dossier WSL n'est pas celui par défaut -> on ouvre directement le réglage (une seule fois par session)
+    if (!S.wsAsked) {
+      S.wsAsked = true;
+      try { const st = await api("/api/depot/workspace"); if (st.wsl && !st.exists) workspaceDlg(); } catch (e) { /* le réglage reste accessible par le bouton */ }
+    }
   }
   function close() { root.hidden = true; clearInterval(S.clock); clearInterval(S.poll); }
   open.onclick = show;

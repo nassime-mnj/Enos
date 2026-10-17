@@ -44,8 +44,9 @@ class Matrix(Base):
     ALLOWED_FRIENDS = ["/api/agenda/tasks", "/api/agenda/overview", "/api/agent/status", "/api/epita/config", "/api/background/settings", "/api/syllabus/analyze", "/api/pdf/state",
                        "/api/pdf/job/ocr", "/api/studio/upload", "/api/chat", "/api/history", "/api/stt/start", "/api/voice/x", "/api/tts/abc", "/api/settings/language", "/api/settings/persona",
                        "/api/settings/welcome/preview", "/api/status", "/api/edition", "/api/role", "/api/role/select", "/api/security/ticket", "/api/update", "/api/ota/check", "/api/shutdown",
-                       "/", "/static/pdfed.js", "/dl/abc/file.pdf", "/login", "/api/onboarding/agenda", "/api/notify/poll"]
-    DENIED_FRIENDS = ["/api/sys/history", "/api/cleaner/scan", "/api/org/list", "/api/power/request", "/api/tabs", "/ext/poll", "/api/git/sync", "/api/dev/repos", "/api/godot/run", "/api/godotsync/accept",
+                       "/", "/static/pdfed.js", "/dl/abc/file.pdf", "/login", "/api/onboarding/agenda", "/api/notify/poll",
+                       "/api/depot/state", "/api/depot/git/status", "/api/depot/workspace", "/api/depot/inject_clang_format", "/api/depot/format_c", "/api/depot/terminal/reset", "/ws/depot-term", "/api/dev/repos", "/api/dev/status"]
+    DENIED_FRIENDS = ["/api/sys/history", "/api/cleaner/scan", "/api/org/list", "/api/power/request", "/api/tabs", "/ext/poll", "/api/git/sync", "/api/dev/uninstall-launcher", "/api/godot/run", "/api/godotsync/accept",
                       "/api/projects", "/api/files", "/api/env/launch", "/api/tasks/env", "/api/warehouse/list", "/api/team/devices", "/api/devchat/send", "/api/channel/open", "/api/apimon/state",
                       "/api/receipts/analyze", "/api/mobile/pc", "/api/mobile/chess/play", "/api/security/status", "/api/security/config", "/api/network", "/api/devices", "/api/pair/start",
                       "/api/sync/upload", "/api/compress/state", "/api/youtube/upload", "/api/chess/state", "/api/study/x", "/api/pet/start", "/api/chill/tracks", "/api/discord/start",
@@ -75,6 +76,19 @@ class Matrix(Base):
         # le module Terna et les outils « machine » doivent être fluides pour Dev
         for p in ("/api/git/sync", "/api/godotsync/push", "/api/dev/repos", "/api/warehouse/list", "/api/devchat/send", "/ws/chat", "/api/godot/run", "/api/cleaner/scan", "/api/tabs", "/ext/poll"):
             self.assertTrue(R.allowed("dev", p)[0], p)
+
+    def test_depot_capability_is_separate_from_devtools(self):
+        """Friends reçoit le Dépôt Intranet / Dev Manager (capacité « depot ») mais RIEN d'autre de « devtools » : ni Godot, ni projets, ni outil de nettoyage des builds de test."""
+        self.assertIn("depot", R.FRIENDS_CAPS)
+        self.assertNotIn("devtools", R.FRIENDS_CAPS)
+        for p in ("/api/depot/state", "/api/depot/git/push", "/api/dev/run", "/api/dev/script", "/ws/depot-term"):
+            self.assertEqual(R.capability_for(p), "depot", p)
+            self.assertTrue(R.allowed("friends", p)[0], p)
+        for p in ("/api/dev/uninstall-launcher", "/api/devchat/send", "/api/devices", "/api/git/sync", "/api/godot/run", "/api/projects", "/api/imgproc/state"):
+            self.assertFalse(R.allowed("friends", p)[0], p)
+            self.assertTrue(R.allowed("dev", p)[0], p)
+        self.assertEqual(R.capability_for("/api/dev/uninstall-launcher"), "devtools")
+        self.assertEqual(R.capability_for("/api/devchat/send"), "devtools")                 # /api/dev ne « déborde » pas sur /api/devchat
 
     def test_ceo_has_everything(self):
         for p in self.ALLOWED_FRIENDS + self.DENIED_FRIENDS + ["/api/receipts/job", "/api/apimon/state"]:

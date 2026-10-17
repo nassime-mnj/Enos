@@ -125,14 +125,14 @@ def list_repos(cfg=None, full=False):
     if not full:
         rc, out = _wsl(d, LIST_LIGHT, timeout=40)
         if rc:
-            raise DevError(f"Lecture de {W.WORKSPACE_UNC} impossible : {out[-200:] or 'distribution « ' + d + ' » inaccessible'}")
+            raise DevError(f"Lecture de {W.WORKSPACE_UNC} impossible : {out[-200:] or 'distribution « ' + d + ' » inaccessible'} — règle ton dossier dans Dépôt Intranet › ESPACE WSL.")
         return {"distro": d, "base": _base(out), "repos": [{"name": n} for n in out.splitlines() if REPO_RE.match(n)]}
     t, v = _cache["repos"]
     if v and v["distro"] == d and time.time() - t < 8:
         return v
     rc, out = _wsl(d, LIST_FULL, timeout=90)
     if rc:
-        raise DevError(f"Lecture de {W.WORKSPACE_UNC} impossible : {out[-200:]}")
+        raise DevError(f"Lecture de {W.WORKSPACE_UNC} impossible : {out[-200:]} — règle ton dossier dans Dépôt Intranet › ESPACE WSL.")
     repos = []
     for line in out.splitlines():
         p = line.split("\t")

@@ -167,9 +167,12 @@ class Workspace(unittest.TestCase):
             D.import_script("../etc", "x.sh", "echo\n")
 
     # ------------------------------------------------------------------ édition Friends
-    def test_workspace_module_is_withheld_from_friends(self):
-        self.assertIn("nasko_wsl", release_editions.PY_MODULES["devtools"])
-        self.assertIn("devtools", release_editions.EXCLUDED_CAPS["friends"])
+    def test_workspace_module_ships_with_the_depot_capability_and_hides_the_owner_home(self):
+        # nasko_wsl fait partie de la capacité « depot » (livrée aussi à Friends) ; le dossier personnel du CEO y est neutralisé hors édition CEO (release_editions.OWNER_HOME)
+        self.assertIn("nasko_wsl", release_editions.PY_MODULES["depot"])
+        self.assertNotIn("nasko_wsl", release_editions.PY_MODULES["devtools"])
+        self.assertNotIn("depot", release_editions.EXCLUDED_CAPS["friends"])
+        self.assertTrue(release_editions.OWNER_HOME.search(UNC.replace("\\\\", "\\")))
 
 
 if __name__ == "__main__":

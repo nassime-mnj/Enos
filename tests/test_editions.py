@@ -60,6 +60,37 @@ class Isolation(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(s, kept)), kept)
         self.assertNotIn(E.MARK, open(os.path.join(s, "nasko_apimon.py"), encoding="utf-8").read())
 
+    def test_friends_gets_the_depot_but_not_the_rest_of_devtools(self):
+        s = stage_for("friends")
+        self.assertEqual(E.verify(s, "friends"), [])
+        for kept in ("nasko_depot.py", "nasko_depot_git.py", "nasko_depot_term.py", "nasko_devmanager.py", "nasko_wsl.py", "static/depot.js", "static/devmanager.js",
+                     "static/vendor/monaco", "static/vendor/xterm", "static/assets/epita.clang-format"):
+            self.assertTrue(os.path.exists(os.path.join(s, kept)), kept)
+        for mod in E.PY_MODULES["depot"]:
+            self.assertNotIn(E.MARK, open(os.path.join(s, mod + ".py"), encoding="utf-8").read(), mod)       # vrai code, pas une coquille
+        for mod in E.PY_MODULES["devtools"]:                                                             # le reste de devtools reste exclu
+            self.assertIn(E.MARK, open(os.path.join(s, mod + ".py"), encoding="utf-8").read(), mod)
+        self.assertNotIn("depot", E.EXCLUDED_CAPS["friends"])
+        self.assertIn("devtools", E.EXCLUDED_CAPS["friends"])
+
+    def test_owner_home_is_neutralised_outside_the_ceo_edition(self):
+        for ed in ("friends", "dev"):
+            s = stage_for(ed)
+            self.assertEqual(E.verify(s, ed), [])
+            for mod in E.PY_MODULES["depot"]:
+                src = open(os.path.join(s, mod + ".py"), encoding="utf-8").read()
+                self.assertIsNone(E.OWNER_HOME.search(src), f"{ed}/{mod}")
+            wsl = open(os.path.join(s, "nasko_wsl.py"), encoding="utf-8").read()
+            self.assertIn("home\\\\utilisateur", wsl)
+        ceo = open(os.path.join(stage_for("ceo"), "nasko_wsl.py"), encoding="utf-8").read()
+        self.assertIn("home\\\\nasko", ceo)                                                              # le CEO garde son dossier par défaut
+
+    def test_verify_detects_owner_home_leak(self):
+        s = stage_for("friends")
+        p = os.path.join(s, "nasko_wsl.py")
+        open(p, "a", encoding="utf-8").write('\nX = "/home/nasko/ex00"\n')
+        self.assertTrue(any("home/nasko" in b for b in E.verify(s, "friends")))
+
     def test_unknown_edition_is_refused(self):
         with self.assertRaises(ValueError):
             E.excluded_caps("admin")

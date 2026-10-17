@@ -25,7 +25,8 @@ EXCLUDED_CAPS = {
 PY_MODULES = {                                    # modules Python propres à une capacité (remplacés par une coquille dans les éditions qui l'excluent)
     "receipts": ["nasko_receipts"],
     "apimon": ["nasko_apimon"],
-    "devtools": ["nasko_env", "nasko_git", "nasko_godotsync", "nasko_godotdiag", "nasko_wsl", "nasko_devmanager", "nasko_anim", "nasko_audio", "nasko_depot", "nasko_depot_git", "nasko_depot_study", "nasko_depot_forge", "nasko_depot_term"],
+    "devtools": ["nasko_env", "nasko_git", "nasko_godotsync", "nasko_godotdiag", "nasko_anim", "nasko_audio"],
+    "depot": ["nasko_wsl", "nasko_devmanager", "nasko_depot", "nasko_depot_git", "nasko_depot_study", "nasko_depot_forge", "nasko_depot_term"],   # Dépôt Intranet + Dev Manager : donnés aussi à Friends
     "leisure": ["nasko_chess", "nasko_chessbridge", "nasko_mobchess", "nasko_pet", "opening_manager"],
     "creator": ["nasko_compress", "nasko_youtube"],
     "system": ["nasko_cleaner", "nasko_sysctl", "nasko_sysmon", "nasko_diag", "nasko_power"],
@@ -33,7 +34,10 @@ PY_MODULES = {                                    # modules Python propres à un
     "mirror": ["nasko_mirror"],
     "gaming": ["nasko_clipper", "nasko_capture", "nasko_babel", "nasko_tilt", "nasko_brb", "nasko_afk"],
 }
-DIRS = {"leisure": ["godot_chess", "openings"], "devtools": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
+DIRS = {"leisure": ["godot_chess", "openings"], "depot": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
+# Le dossier de travail WSL par défaut nomme l'utilisateur Linux du CEO : hors édition CEO il est remplacé par un nom neutre (chaque utilisateur règle le sien dans « ESPACE WSL »).
+OWNER_HOME = re.compile(r"(home(?:\\+|/))nasko\b")
+OWNER_REPLACEMENT = r"\1utilisateur"
 KEEP_STATIC = {"quick.js", "updatebar.js", "roles.js", "app.js", "sec.js", "team.js", "onboarding.js", "home.js", "defi.js"}   # partagés : jamais supprimés (quick.js appelle /api/receipts mais sert aussi Friends)
 MARK = "# ENOS-EDITION-STUB"
 
@@ -131,6 +135,16 @@ def apply(stage, edition):
             p = os.path.join(stage, d)
             if os.path.isdir(p):
                 shutil.rmtree(p); rep["removed_dirs"].append(d)
+    if edition != "ceo":
+        for mod in PY_MODULES.get("depot", []):
+            p = os.path.join(stage, mod + ".py")
+            if os.path.isfile(p):
+                src = _read(p)
+                new = OWNER_HOME.sub(OWNER_REPLACEMENT, src)
+                if new != src:
+                    with open(p, "w", encoding="utf-8", newline="") as f:
+                        f.write(new)
+                    rep.setdefault("neutralized", []).append(mod)
     with open(os.path.join(stage, "enos_edition.json"), "w", encoding="utf-8") as f:
         json.dump({"edition": edition}, f)
     return rep
@@ -147,6 +161,11 @@ def verify(stage, edition):
         for d in DIRS.get(cap, []):
             if os.path.isdir(os.path.join(stage, d)):
                 bad.append(f"{d}/ : dossier présent")
+    if edition != "ceo":
+        for mod in PY_MODULES.get("depot", []):
+            p = os.path.join(stage, mod + ".py")
+            if os.path.isfile(p) and OWNER_HOME.search(_read(p)):
+                bad.append(f"{mod}.py : dossier personnel du CEO (home/nasko) présent")
     static = os.path.join(stage, "static")
     if os.path.isdir(static):
         left = [n for n in prunable_static(static, edition)]
