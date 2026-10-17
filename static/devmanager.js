@@ -191,7 +191,46 @@
   $("dv-filter").oninput = renderRepos;
   $("dv-select").onchange = (e) => select(e.target.value);
   $("dv-list").onclick = (e) => { const b = e.target.closest(".dv-repo"); if (b) select(b.dataset.n); };
-  $("dv-clone").onclick = () => launch(post("/api/dev/clone", { url: $("dv-url").value }));
+  // git clone : aucun dialogue, aucun choix de dossier (le backend clone dans l'espace de travail WSL). Le clic envoie l'adresse sur-le-champ ; la barre suit la progression de git.
+  const cloneStep = (line, prev) => {
+    const m = /(Receiving objects|Resolving deltas|Updating files|Checking out files):\s+(\d{1,3})%/.exec(line || "");
+    if (!m) return prev;
+    const p = Math.min(100, +m[2]), v = m[1] === "Receiving objects" ? p * 0.8 : m[1] === "Resolving deltas" ? 80 + p * 0.15 : 95 + p * 0.05;
+    return Math.max(prev || 0, Math.min(99, Math.round(v)));
+  };
+  const paintClone = (pct, text, kind) => {
+    const box = $("dv-cprog"), bar = box.querySelector(".dv-cbar");
+    box.hidden = false; box.className = "dv-cprog" + (kind ? " " + kind : "");
+    bar.classList.toggle("ind", pct == null && !kind); bar.firstChild.style.width = pct == null ? "" : pct + "%";
+    box.querySelector("small").textContent = text;
+  };
+  let cloning = false;
+  $("dv-clone").onclick = async () => {
+    const url = $("dv-url").value.trim();
+    if (cloning) return;
+    if (!url) return $("dv-url").focus();
+    cloning = true; $("dv-clone").disabled = true;
+    paintClone(null, "Clonage de " + url + " …");
+    try {
+      const pr = post("/api/dev/clone", { url });
+      launch(pr);                                                         // la sortie de git s'affiche aussi dans le terminal
+      const { id } = await pr;
+      let pct = null;
+      for (let i = 0; i < 1800; i++) {
+        await new Promise((z) => setTimeout(z, 500));
+        const j = await api("/api/dev/job?id=" + encodeURIComponent(id) + "&since=0");
+        const lines = (j.text || "").trim().split("\n"), last = lines[lines.length - 1] || "";
+        pct = cloneStep(last, pct); paintClone(pct, last || "Connexion au dépôt…");
+        if (!j.running) {
+          if (j.rc !== 0) throw new Error("git clone a échoué : " + (lines.slice(-2).join(" ").trim() || "code " + j.rc));
+          break;
+        }
+      }
+      paintClone(100, "Cloné.", "ok"); $("dv-url").value = "";
+      setTimeout(() => { if (!cloning) $("dv-cprog").hidden = true; }, 2500);
+    } catch (e) { paintClone(100, e.message, "bad"); }
+    finally { cloning = false; $("dv-clone").disabled = false; }
+  };
   $("dv-url").onkeydown = (e) => { if (e.key === "Enter") $("dv-clone").click(); };
   $("dv-open").onclick = async () => {
     if (!S.cur) return; const b = $("dv-open"); b.disabled = true; msg("run", "Ouverture de VS Code…");

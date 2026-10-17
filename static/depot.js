@@ -43,7 +43,9 @@
   const root = el("section", { id: "dp", role: "dialog", "aria-label": "Dépôt Intranet", hidden: true });
   const repoSel = el("select", { "aria-label": "Dépôt", onchange: () => selectRepo(repoSel.value) });
   const chipBranch = el("span", { class: "dp-chip", text: "—" }), chipAB = el("span", { class: "dp-chip", hidden: true });
-  const sendB = btn("ENVOYER", () => sendDlg(), "dp-send"), pushB = btn("PUSH", () => gitSimple("push")), pullB = btn("PULL", () => gitSimple("pull")), commitB = btn("COMMIT", () => commitDlg()), cloneB = btn("CLONER", () => cloneDlg());
+  const sendB = btn("ENVOYER", () => sendDlg(), "dp-send"), pushB = btn("PUSH", () => gitSimple("push")), pullB = btn("PULL", () => gitSimple("pull")), commitB = btn("COMMIT", () => commitDlg()), cloneB = btn("GIT CLONE", () => startClone());
+  const cloneUrl = el("input", { type: "text", class: "dp-clone-url", placeholder: "URL ou proprietaire/depot", spellcheck: false, autocomplete: "off", "aria-label": "Adresse du dépôt à cloner", onkeydown: (e) => { if (e.key === "Enter") startClone(); } });
+  const cloneProg = el("div", { class: "dp-cprog", hidden: true, role: "status", "aria-live": "polite" }, el("div", { class: "dp-bar2" }, el("i")), el("small"));
   const gitBtns = [sendB, pushB, pullB, commitB];
   const tabDefs = [["forge", "FORGE"], ["files", "FICHIERS"], ["git", "GIT"], ["subject", "SUJET"], ["train", "ENTRAÎN."], ["shell", "DÉPÔT SHELL"]];
   const tabBar = el("div", { class: "dp-tabs", role: "tablist" }, tabDefs.map(([id, l]) => el("button", { "data-t": id, role: "tab", text: l, onclick: () => tab(id) })));
@@ -52,7 +54,8 @@
   const termBox = el("div", { id: "dp-term" }, el("div", { class: "dp-ph" }, btn("OUVRIR LE TERMINAL LINUX", () => openTerm())));
   const split = el("div", { class: "dp-split", title: "Redimensionner le terminal" });
   root.append(
-    el("div", { class: "dp-bar" }, el("h2", { text: "DÉPÔT INTRANET" }), repoSel, chipBranch, chipAB, cloneB, el("span", { class: "dp-sp" }), ...gitBtns, btn("⟳", () => refresh(true)), btn("✕ FERMER", () => close())),
+    el("div", { class: "dp-bar" }, el("h2", { text: "DÉPÔT INTRANET" }), repoSel, chipBranch, chipAB, cloneUrl, cloneB, el("span", { class: "dp-sp" }), ...gitBtns, btn("⟳", () => refresh(true)), btn("✕ FERMER", () => close())),
+    cloneProg,
     el("div", { class: "dp-main" }, el("aside", { class: "dp-side" }, tabBar, Object.values(panes)), el("div", { class: "dp-work" }, ftabs, editorBox, split, termBox)));
   document.body.appendChild(root);
 
@@ -282,17 +285,54 @@
         catch (e) { out.replaceChildren(...[note(e.message, "bad"), e.data && e.data.steps ? stepsView(e.data.steps) : null].filter(Boolean)); }
       } }, { label: "FERMER", fn: (d) => d.remove(), cls: "ghost" }]);
   }
-  function cloneDlg() {
-    const url = el("input", { type: "text", placeholder: "git@host:org/depot.git  ou  https://…", spellcheck: false }), name = el("input", { type: "text", placeholder: "nom du dossier (facultatif)", spellcheck: false }), out = el("div");
-    modal("CLONER (git clone)", el("div", {}, el("label", { text: "Adresse du dépôt" }), url, el("label", { text: "Dossier de destination" }), name, out), [
-      { label: "CLONER", fn: async (d) => {
-        out.replaceChildren(note("Clonage en cours…"));
-        try {
-          const r = await post("/api/depot/clone", { url: url.value.trim(), name: name.value.trim() });
-          if (r.job) { for (let i = 0; i < 900; i++) { await new Promise((z) => setTimeout(z, 1000)); const j = await api("/api/dev/job?" + q({ id: r.job, since: 0 })); out.replaceChildren(note((j.text || "").trim().split("\n").slice(-3).join("\n") || "…")); if (!j.running) { if (j.code) throw new Error("git clone a échoué (code " + j.code + ")."); break; } } }
-          d.remove(); S.repo = r.name || ""; await refresh(true);
-        } catch (e) { out.replaceChildren(note(e.message, "bad")); }
-      } }, { label: "ANNULER", fn: (d) => d.remove(), cls: "ghost" }]);
+  // ------------------------------------------------------------------ git clone : AUCUNE fenêtre, AUCUN choix de dossier
+  // Le dossier de destination n'est plus une question : le backend clone toujours dans l'espace de travail (\\wsl.localhost\Ubuntu\home\nasko en WSL ; dépôt local ailleurs).
+  // Un clic sur GIT CLONE envoie l'adresse au backend sur-le-champ et affiche la barre de progression sous la barre d'outils.
+  let cloning = false;
+  const cloneBar = () => cloneProg.querySelector(".dp-bar2");
+  // progression git (« Receiving objects: 45% », « Resolving deltas: 80% »…) ramenée à une échelle unique 0-100 ; null = pas encore de pourcentage
+  function cloneProgress(line, prev) {
+    const m = /(Receiving objects|Resolving deltas|Updating files|Checking out files):\s+(\d{1,3})%/.exec(line || "");
+    if (!m) return prev;
+    const p = Math.min(100, +m[2]);
+    const v = m[1] === "Receiving objects" ? p * 0.8 : m[1] === "Resolving deltas" ? 80 + p * 0.15 : 95 + p * 0.05;
+    return Math.max(prev || 0, Math.min(99, Math.round(v)));
+  }
+  function paintClone(pct, text, kind) {
+    cloneProg.hidden = false; cloneProg.className = "dp-cprog" + (kind ? " " + kind : "");
+    const bar = cloneBar(); bar.classList.toggle("ind", pct == null && !kind);
+    bar.firstChild.style.width = pct == null ? "" : pct + "%";
+    cloneProg.querySelector("small").textContent = text;
+  }
+  async function startClone() {
+    if (cloning) return;
+    const url = cloneUrl.value.trim();
+    if (!url) { cloneUrl.focus(); return; }                                  // rien à cloner : le curseur est placé dans le champ, sans dialogue
+    cloning = true; cloneB.disabled = true; cloneUrl.disabled = true;
+    const dest = (S.st && S.st.base) || "";
+    let pct = null;
+    paintClone(null, "Clonage de " + url + (dest ? " → " + dest : "") + " …");
+    try {
+      const r = await post("/api/depot/clone", { url });                      // pas de nom de dossier : il est déduit de l'adresse côté backend
+      if (r.job) {
+        for (let i = 0; i < 1800; i++) {                                      // 15 min maximum
+          await new Promise((z) => setTimeout(z, 500));
+          const j = await api("/api/dev/job?" + q({ id: r.job, since: 0 }));
+          const lines = (j.text || "").trim().split("\n"), last = lines[lines.length - 1] || "";
+          pct = cloneProgress(last, pct);
+          paintClone(pct, last || "Connexion au dépôt…");
+          if (!j.running) {
+            if (j.rc !== 0) throw new Error("git clone a échoué : " + (lines.slice(-2).join(" ").trim() || "code " + j.rc));
+            break;
+          }
+        }
+      }
+      paintClone(100, "Cloné : " + (r.name || url), "ok");
+      cloneUrl.value = "";
+      S.repo = r.name || ""; await refresh(true);
+      setTimeout(() => { if (!cloning) cloneProg.hidden = true; }, 2500);
+    } catch (e) { paintClone(100, e.message, "bad"); }
+    finally { cloning = false; cloneB.disabled = false; cloneUrl.disabled = false; }
   }
   async function paintGit() {
     const p = panes.git; if (!S.repo) { p.replaceChildren(note("Choisis ou clone un dépôt.")); return; }
