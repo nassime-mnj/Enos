@@ -202,7 +202,7 @@ def dev_download(request: Request):
     if not rate_ok("dl", ip, 10, per=600):
         raise HTTPException(429, "Too many downloads, please try again in a few minutes.")
     db.log_download(entry, ip, True)
-    return FileResponse(f, media_type="application/octet-stream", filename="ENOS.exe", headers={"X-Robots-Tag": "noindex"})
+    return FileResponse(f, media_type="application/octet-stream", filename=f.name, headers={"X-Robots-Tag": "noindex"})    # le vrai nom (ex. ENOS-Setup-1.0.1-dev.exe), plus un « ENOS.exe » codé en dur
 
 
 # ----------------------------------------------------------------------------- administration de la liste blanche

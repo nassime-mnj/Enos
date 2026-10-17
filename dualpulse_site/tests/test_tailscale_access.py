@@ -36,6 +36,17 @@ def test_authorised_tailnet_user_gets_the_dev_zone_and_the_download():
     assert last["entry"] == "tailscale:ami@example.org" and last["ip"] == "100.101.102.103" and last["ok"] == 1     # le journal garde QUI et d'où
 
 
+def test_download_keeps_the_real_file_name(monkeypatch):
+    """DP_DOWNLOAD_FILE peut pointer vers l'installeur : le fichier téléchargé porte SON nom, pas un « ENOS.exe » codé en dur."""
+    setup = Path(TMP) / "ENOS-Setup-1.0.1-dev.exe"
+    setup.write_bytes(b"MZ" + b"\1" * 4096)
+    monkeypatch.setenv("DP_DOWNLOAD_FILE", str(setup))
+    r = served().get("/dev/telecharger")
+    assert r.status_code == 200 and r.content == setup.read_bytes()
+    assert "ENOS-Setup-1.0.1-dev.exe" in r.headers["content-disposition"]
+    assert "filename=\"ENOS.exe\"" not in r.headers["content-disposition"]
+
+
 def test_other_tailnet_user_is_refused():
     c = served(**{"Tailscale-User-Login": "intrus@example.org"})
     assert "devzone" not in c.get("/").text
