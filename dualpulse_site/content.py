@@ -5,15 +5,16 @@ Comment ça marche : app/main.py et app/assistant.py font « import content » ;
 MÉDIAS DU JEU (galerie de la page /studio) : voir MEDIA plus bas. Déposez les fichiers dans static/media/ puis renseignez leur « src » ;
     tant qu'un « src » est vide, un emplacement réservé (placeholder) s'affiche à sa place.
 
-ANONYMAT : le site ne cite que les pseudos « Nasko » et « Hydra ». Aucun vrai nom, visage, ville ou détail personnel dans ce fichier, ni dans les médias
-    (vérifier aussi les métadonnées EXIF / noms de fichiers des images avant dépôt).
+ANONYMAT ABSOLU : le site public n'affiche AUCUN nom ni pseudo (ni vrais noms, ni « Nasko » / « Hydra »). Parler de « we », « the team » ou « an independent studio ».
+    Idem pour les médias (visages, noms de dossiers, métadonnées EXIF) : à vérifier avant tout dépôt dans static/media/.
+
+LANGUE : tout le texte public est en anglais (marché international). Ce fichier en est la seule source, avec les gabarits templates/*.html (libellés d'interface).
 
 À COMPLÉTER  — chaque emplacement est marqué A_COMPLETER :
     STUDIO["contact_email"]   adresse de contact réelle (aujourd'hui un faux contact@dualpulse.example)
     GAME["facts"] « Sortie »  date ou période de sortie
     ROADMAP « Plus tard »     date de sortie
-    TEAM[...]["role"]         intitulés exacts de Nasko et Hydra (pseudos de développeurs : ne jamais publier de vrais noms)
-    (le texte « A_COMPLETER » est remplacé par « À annoncer » à l'affichage ; il n'apparaît jamais tel quel sur le site)
+    (le texte « A_COMPLETER » est remplacé par « to be announced » à l'affichage ; il n'apparaît jamais tel quel sur le site)
 
 À VÉRIFIER — L'IA ANTAGONISTE E.N.O.S. (information potentiellement sensible)
     Le site évoque publiquement E.N.O.S. comme une présence mystérieuse qui veille sur les ruines, sans aucun détail :
@@ -29,108 +30,110 @@ SHOW_ENOS_LORE = True
 
 STUDIO = {
     "name": "Dual Pulse",
-    "tagline": "Deux pulsations, une seule vision.",
-    "pitch": "Nasko et Hydra. Deux développeurs, aucune façade. Nous forgeons un roguelite platformer en pixel art dans un monde de robots abandonnés. "
-             "Les combats se gagnent au timing. Les erreurs se paient.",
-    "manifesto": "On prend le temps de forger le jeu qu'on veut poncer nous-mêmes.",
+    "tagline": "Two pulses, one vision.",
+    "eyebrow": "Independent game studio",
+    "pitch": "An independent studio building a pixel art roguelite platformer set in a desolate world of abandoned machines. "
+             "We focus on tight controls, punishing but fair combat, and deep replayability.",
+    "manifesto": "We are simply taking the time to build the game we want to play.",
+    "about": [
+        "Dual Pulse is a small independent studio. Our first project is a pixel art roguelite platformer, and we are building it slowly and carefully, "
+        "because the details are what make a game like this feel good to play.",
+        "Most of our time goes into the parts players feel more than they notice: tuning jump arcs and hit windows, redrawing sprites until they read clearly, "
+        "and playtesting rooms until the difficulty feels fair. We have no release date, and we would rather keep it that way until the game is ready.",
+    ],
     "contact_email": "dualpulse.co@gmail.com",
     "year": 2026,
 }
 
 GAME = {
-    "title": "Premier projet. Titre classifié.",
-    "subtitle": "Roguelite platformer · pixel art · monde de robots abandonnés",
-    "status": "En forge",
-    "text": "Un platformer d'action 2D où tout se joue au timing : esquiver, parer, riposter. Les salles sont assemblées à partir de pièces dessinées à la main. "
-            "Chaque partie est différente. Aucune n'est indulgente.",
+    "title": "Our first game",
+    "subtitle": "Pixel art roguelite platformer",
+    "status": "In development",
+    "text": "Set in a desolate world of abandoned machines, the game is built around fast, precise movement and combat that rewards timing. "
+            "Rooms are assembled from hand-drawn pieces, so every run plays differently while the level design stays readable.",
 }
 
 FEATURES = [
-    ("Le timing, sans filet", "Des fenêtres de réaction à la frame près. Un geste raté se paie. Un geste juste se mérite."),
-    ("Des salles forgées à la main", "Dessinées une à une, réassemblées à chaque partie. Jamais deux fois la même lecture."),
-    ("Un monde de métal", "Des ruines, des machines silencieuses. Quelque chose y veille encore."),
-    ("Quelqu'un vous observe", "E.N.O.S. ne dit pas ce qu'elle veut. Pas encore."),   # lore volontairement léger : à étoffer plus tard
+    ("Tight controls", "Variable-height jumps, double jump, wall jump, an invincible roll and pogo attacks, all tuned frame by frame so the character does what you meant."),
+    ("Punishing but fair combat", "Enemies telegraph their attacks and timing windows stay consistent, so getting better comes from learning the fight, not from luck."),
+    ("Deep replayability", "Hand-built room pieces are reassembled on every run, which keeps each attempt different without giving up careful level design."),
+    ("A world left running", "Ruined facilities and machines still following orders nobody gives anymore. An artificial intelligence called E.N.O.S. rules over them. More on that later."),   # lore volontairement léger
 ]
 
 VALUES = [
-    ("Précision", "Un mouvement exact vaut mieux que dix approximatifs. Le reste est du bruit."),
-    ("Justesse", "La difficulté est une promesse. Chaque défaite doit avoir une cause lisible."),
-    ("Discrétion", "Le travail parle. Nous, peu."),
-]
-
-TEAM = [
-    {"name": "Nasko", "role": "Développement · Direction"},
-    {"name": "Hydra", "role": "Développement · Création"},
+    ("Precise controls", "Movement is the foundation of a platformer. We tune acceleration, jump height and input timing until it feels right under the fingers."),
+    ("Fair difficulty", "The game is demanding, but a defeat should always be readable: you should know what went wrong and what to try next run."),
+    ("Hand-drawn pixel art", "Sprites, tiles and rooms are drawn by hand and kept consistent in style, so the world reads clearly at a glance."),
 ]
 
 ROADMAP = [
-    ("Fait", "Prototype jouable : contrôle, combat, interface."),
-    ("En cours", "Salles, ennemis, boss. Le monde prend forme."),
-    ("Ensuite", "Contenu, équilibrage, première version de test."),
-    ("Plus tard", "Sortie. Date A_COMPLETER."),
+    ("Done", "Playable prototype: movement, combat and HUD."),
+    ("In progress", "Room generation, enemies, bosses, and a library of effects and sounds."),
+    ("Next", "More content, balancing, and a public playtest."),
+    ("Later", "Release. Date A_COMPLETER."),
 ]
 
 FAQ = [
-    ("Quand le jeu sort-il ?", "Aucune date annoncée. Il sortira quand il sera prêt, pas avant."),
-    ("Sur quelles plateformes ?", "PC en premier. Le reste suivra, ou non."),
-    ("Peut-on le tester ?", "Une version de test viendra. Écrivez-nous pour être prévenu."),
-    ("Qui êtes-vous ?", "Nasko et Hydra. Le reste n'a pas d'importance."),
-    ("Comment vous joindre ?", "Par e-mail (section Contact) ou via l'Assistant Support."),
+    ("When will the game be released?", "We haven't announced a release date yet. We'll post news on this site as soon as we have something concrete to share."),
+    ("Which platforms will it be on?", "PC first. We may look at other platforms later, depending on how the project goes."),
+    ("Can I playtest it?", "A public playtest is planned. Send us an email and we'll let you know when it opens."),
+    ("Who is making it?", "A small independent team. We'd rather let the game speak for itself."),
+    ("How can I contact the studio?", "By email (see the Contact section) or through the Support Assistant."),
 ]
 
 # ------------------------------------------------------------------ GALERIE (page /studio) — emplacements pour les images / GIF / vidéos du JEU (jamais l'interface E.N.O.S.)
 # Un emplacement = un dict. Pour y mettre un média : déposer le fichier dans static/media/ et renseigner "src" (ex. "/static/media/boss-01.webp").
 #   kind   : "image" (png / webp / jpg / gif animé) ou "video" (mp4 / webm : lue en boucle, muette, sans commande)
 #   slot   : place dans la grille asymétrique (desktop) — hero (grand, 7x3) · a (5x2) · b (3x2) · c (haut, 2x3) · d (4x2) · e (3x2) · f (3x1). Sur mobile : carrousel à glisser.
-#   alt    : description du média pour les lecteurs d'écran (obligatoire dès qu'il y a un « src »)
-#   caption: légende courte affichée au survol (facultatif)
+#   alt    : description du média (en anglais) pour les lecteurs d'écran (obligatoire dès qu'il y a un « src »)
+#   caption: légende courte (en anglais) affichée au survol (facultatif)
 #   pixel  : True = agrandissement « pixel net » (recommandé pour le pixel art) ; False = lissé
 #   label  : texte du placeholder tant que « src » est vide
 MEDIA = [
-    {"slot": "hero", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Signal en attente"},
-    {"slot": "a", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Archive 02"},
-    {"slot": "b", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Archive 03"},
-    {"slot": "c", "kind": "video", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Séquence 04"},
-    {"slot": "d", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Archive 05"},
-    {"slot": "e", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Archive 06"},
-    {"slot": "f", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Archive 07"},
+    {"slot": "hero", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Gameplay capture"},
+    {"slot": "a", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Screenshot"},
+    {"slot": "b", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Screenshot"},
+    {"slot": "c", "kind": "video", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Gameplay clip"},
+    {"slot": "d", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Screenshot"},
+    {"slot": "e", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Screenshot"},
+    {"slot": "f", "kind": "image", "src": "", "alt": "", "caption": "", "pixel": True, "label": "Screenshot"},
 ]
 MEDIA_EXT = {".png", ".webp", ".jpg", ".jpeg", ".gif", ".avif", ".mp4", ".webm"}
 
-# ------------------------------------------------------------------ Assistant Support : base de connaissances PUBLIQUE
-# Ne jamais y mettre d'information interne (outils, accès développeurs, chemins, personnes autres que celles listées plus haut).
+# ------------------------------------------------------------------ Assistant Support : base de connaissances PUBLIQUE (mots-clés en anglais, sans accents)
+# Ne jamais y mettre d'information interne (outils, accès développeurs, chemins, noms de personnes).
 KB = [
-    {"id": "studio", "k": ["studio", "dual", "pulse", "qui", "equipe", "fondateur", "vous", "etes", "presentation"],
-     "a": "Dual Pulse : Nasko et Hydra. Deux développeurs, un studio sans visage. Nous forgeons un roguelite platformer en pixel art dans un monde de robots abandonnés."},
-    {"id": "jeu", "k": ["jeu", "game", "genre", "roguelite", "platformer", "histoire", "univers", "projet", "nom", "titre"],
-     "a": "Un roguelite platformer 2D en pixel art. Des combats punitifs, tout se joue au timing. Le titre est classifié pour l'instant."},
-    {"id": "sortie", "k": ["sortie", "sortira", "date", "quand", "release", "disponible", "lancement", "bientot"],
-     "a": "Aucune date de sortie n'est annoncée. Le jeu sortira quand il sera prêt. Écrivez-nous pour être prévenu."},
-    {"id": "plateforme", "k": ["plateforme", "pc", "windows", "mac", "linux", "console", "switch", "playstation", "xbox", "mobile", "android", "ios", "steam"],
-     "a": "PC en premier. Le reste n'est pas confirmé."},
-    {"id": "beta", "k": ["beta", "test", "tester", "playtest", "demo", "essayer", "jouer", "acces", "anticipe"],
-     "a": "Une version de test viendra, pas encore ouverte. Écrivez-nous via la section Contact pour être prévenu."},
-    {"id": "prix", "k": ["prix", "gratuit", "payant", "cout", "combien", "euro", "tarif", "acheter", "free"],
-     "a": "Le prix n'est pas fixé. Il sera annoncé avant la sortie."},
-    {"id": "contact", "k": ["contact", "contacter", "mail", "email", "ecrire", "joindre", "message", "adresse", "parler", "presse", "partenariat"],
-     "a": "Un seul canal : {email}. Presse et partenariats compris."},
-    {"id": "bug", "k": ["bug", "probleme", "erreur", "plante", "crash", "marche", "fonctionne", "souci", "panne", "signaler"],
-     "a": "Décrivez le problème (ce que vous faisiez, votre appareil) à {email}. Nous le traitons."},
-    {"id": "emploi", "k": ["recrutement", "recrute", "emploi", "travailler", "job", "stage", "candidature", "postuler", "rejoindre", "freelance"],
-     "a": "Nous ne recrutons pas activement. Un portfolio (pixel art, animation, son, level design) peut être envoyé à {email}."},
-    {"id": "e.n.o.s", "k": ["enos", "e.n.o.s", "ia", "intelligence", "artificielle", "antagoniste", "boss", "adversaire", "robot"],
-     "a": "E.N.O.S. est une présence qui veille sur les ruines de notre jeu. Nous n'en dirons pas plus pour l'instant."},
-    {"id": "donnees", "k": ["donnees", "vie privee", "rgpd", "cookies", "confidentialite", "personnelles", "traceurs", "tracking"],
-     "a": "Aucun traceur publicitaire sur ce site. Les messages envoyés à cet assistant servent uniquement à améliorer ses réponses, sans lien avec votre identité."},
-    {"id": "salut", "k": ["bonjour", "salut", "hello", "coucou", "bonsoir", "hey", "yo"],
-     "a": "Assistant Support de Dual Pulse. Studio, jeu, sortie, tests : posez votre question."},
-    {"id": "merci", "k": ["merci", "thanks", "super", "parfait", "genial", "top"],
-     "a": "Avec plaisir."},
+    {"id": "studio", "k": ["studio", "team", "who", "company", "developer", "developers", "dual", "pulse", "behind", "making", "made"],
+     "a": "Dual Pulse is a small independent studio. We're building a pixel art roguelite platformer and taking our time to get the details right."},
+    {"id": "game", "k": ["game", "genre", "roguelite", "roguelike", "platformer", "pixel", "story", "world", "setting", "project", "title", "gameplay", "combat", "controls"],
+     "a": "It's a pixel art roguelite platformer set in a desolate world of abandoned machines. We're focusing on tight controls, punishing but fair combat and deep replayability."},
+    {"id": "release", "k": ["release", "released", "launch", "date", "when", "available", "soon", "coming"],
+     "a": "We haven't announced a release date yet. If you'd like to hear about it first, send us an email and we'll keep you posted."},
+    {"id": "platforms", "k": ["platform", "platforms", "pc", "windows", "mac", "linux", "console", "switch", "playstation", "xbox", "mobile", "android", "ios", "steam"],
+     "a": "PC first. We may look at other platforms later, but nothing is confirmed yet."},
+    {"id": "playtest", "k": ["beta", "test", "testing", "playtest", "playtests", "demo", "try", "early", "access"],
+     "a": "A public playtest is planned but isn't open yet. Email us at {email} and we'll let you know when it starts."},
+    {"id": "price", "k": ["price", "pricing", "free", "paid", "cost", "how much", "euro", "dollar", "buy", "purchase"],
+     "a": "The price hasn't been decided yet. We'll share it ahead of release."},
+    {"id": "contact", "k": ["contact", "email", "mail", "write", "reach", "press", "partnership", "partnerships", "business", "inquiry", "message", "address"],
+     "a": "You can reach us at {email} for press, partnerships and general questions."},
+    {"id": "bug", "k": ["bug", "bugs", "issue", "problem", "error", "crash", "crashes", "broken", "report", "fix"],
+     "a": "Sorry about that. Please email {email} with what you were doing and what device you're on, and we'll take a look."},
+    {"id": "jobs", "k": ["job", "jobs", "hiring", "hire", "career", "careers", "work", "join", "apply", "application", "freelance", "artist", "portfolio", "internship"],
+     "a": "We're a small team and not hiring right now, but we're always happy to see portfolios (pixel art, animation, sound, level design) at {email}."},
+    {"id": "e.n.o.s", "k": ["enos", "e.n.o.s", "ai", "intelligence", "artificial", "antagonist", "boss", "enemy", "machine", "machines", "robot", "robots"],
+     "a": "E.N.O.S. is an artificial intelligence that watches over the ruined world of our game. We'll share more about it later."},
+    {"id": "privacy", "k": ["privacy", "data", "gdpr", "cookies", "tracking", "tracker", "trackers", "personal", "analytics"],
+     "a": "This site has no advertising trackers. Messages sent to this assistant are only used to improve its answers and are not linked to your identity."},
+    {"id": "hello", "k": ["hello", "hi", "hey", "greetings", "morning", "evening"],
+     "a": "Hello! I'm the Dual Pulse support assistant. Ask me about the studio, the game, the release or playtests."},
+    {"id": "thanks", "k": ["thanks", "thank", "great", "awesome", "perfect", "cool"],
+     "a": "You're welcome!"},
 ]
 
-SUGGESTIONS = ["Quand sort le jeu ?", "C'est quoi votre jeu ?", "Puis-je tester ?", "Comment vous contacter ?"]
-FALLBACK = ("Je n'ai pas cette réponse. Sujets disponibles : {topics}. "
-            "Pour le reste : {email}.")
+SUGGESTIONS = ["When is the release?", "What is the game about?", "Can I playtest it?", "How can I contact you?"]
+FALLBACK = ("I don't have an answer for that. I can help with: {topics}. "
+            "For anything else, email us at {email}.")
 
 
 # ------------------------------------------------------------------ application de SHOW_ENOS_LORE (ne rien modifier ci-dessous)

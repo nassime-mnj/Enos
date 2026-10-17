@@ -136,6 +136,7 @@ p{margin:0 0 1em}
    ============================================================================ */
 .manifesto{margin:0 0 46px;padding:4px 0 4px clamp(18px,3vw,34px);border-left:3px solid var(--pa);max-width:900px}
 .manifesto p{margin:0 0 12px;font:750 clamp(1.5rem,3.6vw,2.7rem)/1.14 var(--font);letter-spacing:-.018em;color:var(--text)}
+.about{max-width:760px;margin:0 0 44px}.about p{margin:0 0 1em;color:#c3ccda;font-size:1.08rem}
 .manifesto cite{font:600 .78rem var(--mono);letter-spacing:.24em;text-transform:uppercase;font-style:normal;color:var(--muted)}
 
 /* ---- galerie : grille asymétrique 12 x 5 (ordinateur), carrousel à glisser (mobile) */
@@ -179,3 +180,7 @@ p{margin:0 0 1em}
   .gal-hint{display:block}
 }
 @media (prefers-reduced-motion:reduce){.shot.empty::after{display:none}}
+
+/* ---- section jeu : 4 cartes en 2 x 2, titre aéré */
+.grid2.feat{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.two h2{margin-bottom:14px}

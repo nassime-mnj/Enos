@@ -24,7 +24,7 @@
   const add = (cls, text) => { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; };
   function openChat() {
     chat.hidden = false; fab.hidden = true; fab.setAttribute("aria-expanded", "true");
-    if (!greeted) { greeted = true; add("bot", "Assistant Support de Dual Pulse. Studio, jeu, sortie, tests : posez votre question."); }
+    if (!greeted) { greeted = true; add("bot", "Hi, I'm the Dual Pulse support assistant. Ask me about the studio, the game, the release or playtests."); }
     setTimeout(() => input.focus(), 50);
   }
   function closeChat() { chat.hidden = true; fab.hidden = false; fab.setAttribute("aria-expanded", "false"); fab.focus(); }
@@ -39,9 +39,9 @@
     try {
       const r = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
       const j = await r.json();
-      t.className = "msg bot"; t.textContent = j.reply || "Désolé, une erreur est survenue.";
+      t.className = "msg bot"; t.textContent = j.reply || "Sorry, something went wrong.";
       (j.suggestions || []).forEach((s) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = s; sug.appendChild(b); });
-    } catch (e) { t.className = "msg bot"; t.textContent = "Connexion impossible pour le moment. Écrivez-nous par e-mail (section Contact)."; }
+    } catch (e) { t.className = "msg bot"; t.textContent = "Can't connect right now. Please email us instead (see the Contact section)."; }
     busy = false; log.scrollTop = log.scrollHeight;
   }
   $("chat-form").addEventListener("submit", (e) => { e.preventDefault(); ask(input.value); });

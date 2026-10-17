@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>{{ studio.name }} — Télécharger le Launcher pour Windows</title>
-<meta name="description" content="Téléchargez le Launcher {{ studio.name }} pour Windows. Accès sur invitation (Dev ou Friends).">
+<title>{{ studio.name }} — Download the Launcher for Windows</title>
+<meta name="description" content="Download the {{ studio.name }} Launcher for Windows. Access is by invitation only (Dev or Friends).">
 <meta name="theme-color" content="#050507">
-<meta property="og:title" content="{{ studio.name }} — Launcher pour Windows">
+<meta property="og:title" content="{{ studio.name }} — Launcher for Windows">
 <meta property="og:description" content="{{ studio.tagline }}">
 <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/css/index.css">
 {% if dev %}<link rel="stylesheet" href="/dev/style.css">{% endif %}
 </head>
 <body class="home">
-<a class="skip" href="#contenu">Aller au contenu</a>
+<a class="skip" href="#content">Skip to content</a>
 
 <canvas id="fx" aria-hidden="true"></canvas>
 <div class="stage" aria-hidden="true">
@@ -22,59 +22,59 @@
 </div>
 
 <header class="bar">
-  <a class="brand" href="/" aria-label="{{ studio.name }} — accueil"><img src="/static/img/logo.svg" alt="" width="30" height="30"><span>DUAL<b>PULSE</b></span></a>
-  <nav aria-label="Navigation principale"><a href="#acces">Accès</a><a href="/studio">Le studio</a></nav>
+  <a class="brand" href="/" aria-label="{{ studio.name }} — home"><img src="/static/img/logo.svg" alt="" width="30" height="30"><span>DUAL<b>PULSE</b></span></a>
+  <nav aria-label="Main navigation"><a href="#access">Access</a><a href="/studio">The studio</a></nav>
 </header>
 
 {% if dev %}
-<section class="devzone" id="acces-dev" aria-label="Accès développeur">
+<section class="devzone" id="acces-dev" aria-label="Developer access">
   <div class="wrap devrow">
     <div class="deveye" aria-hidden="true"></div>
     <div class="devtext">
-      <b>ACCÈS DÉVELOPPEUR</b>
-      <span>Connexion reconnue. Cette zone n'est visible que depuis une adresse autorisée.</span>
-      {% if dev.version %}<small>Version {{ dev.version }}{% if dev.available %} · {{ (dev.size / 1048576) | round(1) }} Mo{% endif %}</small>{% endif %}
+      <b>DEVELOPER ACCESS</b>
+      <span>Connection recognised. This area is only visible from an authorised address.</span>
+      {% if dev.version %}<small>Version {{ dev.version }}{% if dev.available %} · {{ (dev.size / 1048576) | round(1) }} MB{% endif %}</small>{% endif %}
       {% if dev.sha256 %}<small class="hash">SHA-256 {{ dev.sha256 }}</small>{% endif %}
     </div>
-    {% if dev.available %}<a class="btn-enos" href="/dev/telecharger" download>Télécharger E.N.O.S.</a>{% else %}<span class="btn-enos off">Fichier non déposé sur le serveur</span>{% endif %}
+    {% if dev.available %}<a class="btn-enos" href="/dev/telecharger" download>Download E.N.O.S.</a>{% else %}<span class="btn-enos off">File not uploaded to the server</span>{% endif %}
   </div>
 </section>
 {% endif %}
 
-<main id="contenu">
+<main id="content">
   <section class="hero" aria-labelledby="titre">
     <div class="hero-in">
       <img class="mark" src="/static/img/logo.svg" alt="" width="132" height="132">
-      <p class="kicker">Launcher officiel</p>
+      <p class="kicker">Official Launcher</p>
       <h1 id="titre" class="word"><span class="w1">DUAL</span><span class="w2">PULSE</span></h1>
       <p class="tag">{{ studio.tagline }}</p>
 
       {% if dl.available %}
       <a class="dl" href="/get/windows" rel="nofollow">
         <svg class="win" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7H3zM11.6 4.25 21 3v8.4h-9.4zM3 12.5h7.5v7L3 18.5zM11.6 12.5H21V21l-9.4-1.3z"/></svg>
-        <span class="dl-t"><b>Télécharger pour Windows</b><small>Windows 10 / 11 · 64 bits{% if dl.version %} · v{{ dl.version }}{% endif %}{% if dl.size_mb %} · {{ dl.size_mb }} Mo{% endif %}</small></span>
+        <span class="dl-t"><b>Download for Windows</b><small>Windows 10 / 11 · 64-bit{% if dl.version %} · v{{ dl.version }}{% endif %}{% if dl.size_mb %} · {{ dl.size_mb }} MB{% endif %}</small></span>
       </a>
       {% else %}
       <span class="dl off" role="link" aria-disabled="true">
         <svg class="win" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7H3zM11.6 4.25 21 3v8.4h-9.4zM3 12.5h7.5v7L3 18.5zM11.6 12.5H21V21l-9.4-1.3z"/></svg>
-        <span class="dl-t"><b>Télécharger pour Windows</b><small>Bientôt disponible</small></span>
+        <span class="dl-t"><b>Download for Windows</b><small>Coming soon</small></span>
       </span>
       {% endif %}
       {% if dl.sha256 %}<p class="hash">SHA-256 {{ dl.sha256 }}</p>{% endif %}
     </div>
-    <a class="cue" href="#acces" aria-label="Aller à la section Accès"><i></i></a>
+    <a class="cue" href="#access" aria-label="Go to the Access section"><i></i></a>
   </section>
 
-  <section id="acces" class="access" aria-labelledby="acces-t">
+  <section id="access" class="access" aria-labelledby="access-t">
     <div class="access-in">
-      <h2 id="acces-t">Accès sur invitation</h2>
-      <p>L'accès nécessite un <b>code d'invitation</b> (<span class="tagpill">Dev</span> ou <span class="tagpill">Friends</span>), demandé lors de la première ouverture du Launcher. Ton rôle dépend du code que tu reçois.</p>
-      <p class="small">Pas de code ? Demande-le à l'équipe : <a href="mailto:{{ studio.contact_email }}">{{ studio.contact_email }}</a></p>
+      <h2 id="access-t">Invitation only</h2>
+      <p>Access requires an <b>invitation code</b> (<span class="tagpill">Dev</span> or <span class="tagpill">Friends</span>), which the Launcher asks for the first time you open it. Your access level depends on the code you receive.</p>
+      <p class="small">No code? Ask the team: <a href="mailto:{{ studio.contact_email }}">{{ studio.contact_email }}</a></p>
     </div>
   </section>
 </main>
 
-<footer class="foot"><span>© {{ studio.year }} {{ studio.name }}</span><a href="/studio">Le studio</a></footer>
+<footer class="foot"><span>© {{ studio.year }} {{ studio.name }}</span><a href="/studio">The studio</a></footer>
 <script src="/static/js/index.js" defer></script>
 </body>
 </html>

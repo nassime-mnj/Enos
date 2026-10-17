@@ -108,7 +108,7 @@ def _media():
 
 @app.get("/studio", response_class=HTMLResponse)
 def studio(request: Request):
-    ctx = {"request": request, "studio": content.STUDIO, "game": content.GAME, "features": content.FEATURES, "values": content.VALUES, "team": content.TEAM,
+    ctx = {"request": request, "studio": content.STUDIO, "game": content.GAME, "features": content.FEATURES, "values": content.VALUES,
            "roadmap": content.ROADMAP, "faq": content.FAQ, "suggestions": content.SUGGESTIONS, "media": _media(), "dev": _dev_ctx(request)}
     return templates.TemplateResponse(request, "studio.html", ctx)
 
@@ -118,10 +118,10 @@ def get_windows(request: Request):
     """Téléchargement public du Launcher : redirection vers le lien R2 configuré. Rien n'est servi par ce serveur."""
     ip = whitelist.client_ip(request)
     if not rate_ok("launcher-dl", ip, 30, per=600):
-        raise HTTPException(429, "Trop de téléchargements, réessayez dans quelques minutes.")
+        raise HTTPException(429, "Too many downloads, please try again in a few minutes.")
     d = distribution.launcher()
     if not d["available"]:
-        return PlainTextResponse("Le téléchargement n'est pas encore disponible. Revenez très bientôt.", status_code=503, headers={"Retry-After": "3600"})
+        return PlainTextResponse("The download isn't available yet. Please check back soon.", status_code=503, headers={"Retry-After": "3600"})
     return RedirectResponse(d["url"], status_code=302, headers={"X-Robots-Tag": "noindex"})
 
 
@@ -160,9 +160,9 @@ class Ask(BaseModel):
 def support(b: Ask, request: Request):
     ip = whitelist.client_ip(request)
     if not rate_ok("support", ip, 20):
-        return JSONResponse({"reply": "Vous écrivez très vite : laissez-moi quelques secondes avant la prochaine question.", "suggestions": []}, status_code=429)
+        return JSONResponse({"reply": "You're typing fast. Give me a few seconds before the next question.", "suggestions": []}, status_code=429)
     if not b.message.strip():
-        return {"reply": "Posez-moi votre question, je vous écoute.", "suggestions": content.SUGGESTIONS}
+        return {"reply": "Go ahead and ask your question.", "suggestions": content.SUGGESTIONS}
     r = assistant.answer(b.message)
     try:
         db.log_question(b.message, r["matched"])
@@ -189,9 +189,9 @@ def dev_download(request: Request):
     f = download_file()
     if not f.is_file():
         db.log_download(entry, ip, False)
-        raise HTTPException(503, "Le fichier n'est pas encore déposé sur le serveur.")
+        raise HTTPException(503, "The file has not been uploaded to the server yet.")
     if not rate_ok("dl", ip, 10, per=600):
-        raise HTTPException(429, "Trop de téléchargements, réessayez dans quelques minutes.")
+        raise HTTPException(429, "Too many downloads, please try again in a few minutes.")
     db.log_download(entry, ip, True)
     return FileResponse(f, media_type="application/octet-stream", filename="ENOS.exe", headers={"X-Robots-Tag": "noindex"})
 

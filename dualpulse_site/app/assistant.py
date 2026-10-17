@@ -5,8 +5,8 @@ import unicodedata
 
 import content
 
-_STOP = set("le la les un une des de du d l et ou en au aux a est sont ce cet cette ces je tu il elle on nous vous ils elles que qui quoi quel quelle "
-            "pour par sur dans avec sans mon ma mes ton ta tes son sa ses y ne pas plus ca c s qu j m t n se me te moi est-ce".split())
+_STOP = set("the a an is are was were be to of in on for and or it its this that i you we do does can will my your our what which with at by from as there any have has am so if "
+            "please just".split())
 
 
 def _norm(s):
@@ -28,7 +28,7 @@ def _score(entry, toks, text):
         elif kn in toks:
             score += 1.5
         elif any(len(t) >= 4 and len(kn) >= 4 and (kn.startswith(t) or t.startswith(kn)) for t in toks):
-            score += 1.0                                        # pluriels / conjugaisons proches (sort ~ sortie, sortira)
+            score += 1.0                                        # pluriels / conjugaisons proches (release ~ released)
     return score
 
 
@@ -45,5 +45,5 @@ def answer(message):
             best, best_s = e, s
     if best and best_s >= 1.4:
         return {"reply": best["a"].format(email=email), "matched": best["id"], "suggestions": []}
-    topics = "le studio, le jeu, la date de sortie, les tests, les plateformes, le contact"
+    topics = "the studio, the game, the release date, playtests, platforms, contact"
     return {"reply": content.FALLBACK.format(topics=topics, email=email), "matched": None, "suggestions": content.SUGGESTIONS}
