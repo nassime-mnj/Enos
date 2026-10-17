@@ -4708,6 +4708,24 @@ def depot_format_c(b: DepotClang):
     return _depot(nasko_depot_git.format_c, _drepo(b.repo), b.folder)
 
 
+class DepotTermReset(BaseModel):
+    repo: str = ""
+
+
+@app.post("/api/depot/terminal/reset", dependencies=_LOCAL)
+def depot_terminal_reset(b: DepotTermReset):
+    """PURGER TERMINAL : ferme de force les shells pty ouverts (arbre de processus entier, WSL compris). Le terminal neuf naît à la reconnexion du WebSocket /ws/depot-term.
+    Vérifie d'abord qu'un nouveau terminal pourra démarrer, pour ne pas laisser l'utilisateur sans shell."""
+    if b.repo:
+        _depot(nasko_depot_term._check_repo, b.repo)
+    info = nasko_depot_term.backends(load_config())
+    if not (info.get("wsl") or info.get("local")):
+        raise HTTPException(400, "Aucun terminal disponible sur cette machine : le shell actuel est conservé.")
+    n = sum(1 for s in nasko_depot_term.list_sessions())
+    nasko_depot_term.close_all()
+    return {"ok": True, "closed": n}
+
+
 @app.websocket("/ws/depot-term")
 async def ws_depot_term(ws: WebSocket, repo: str = "", cols: int = 100, rows: int = 30):
     """Terminal Linux interactif (WSL / shell local) : octets bruts = frappes et sortie, JSON {"t":"resize"} / {"t":"exit"}. Authentification et profil : middlewares."""

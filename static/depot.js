@@ -29,6 +29,12 @@
   const note = (t, kind) => el("div", { class: "dp-msg " + (kind || ""), text: t });
   const fmtT = (s) => { if (s == null) return "—"; s = Math.max(0, Math.floor(s)); const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; const p = (n) => String(n).padStart(2, "0"); return (d ? d + " j " : "") + p(h) + ":" + p(m) + ":" + p(x); };
   const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("chargement impossible : " + src)); document.head.appendChild(s); });
+  // xterm.js et son addon sont des bundles UMD : si un chargeur AMD est présent (celui de Monaco, déjà chargé quand on ouvre un fichier), ils s'y enregistrent comme modules
+  // anonymes au lieu de créer window.Terminal / window.FitAddon -> « window.Terminal is not a constructor ». On masque donc `define` le temps du chargement.
+  const loadUmd = async (src) => {
+    const saved = window.define;
+    try { window.define = undefined; await loadScript(src); } finally { if (saved !== undefined) window.define = saved; else delete window.define; }
+  };
   const loadCss = (href) => { if (!document.querySelector(`link[href="${href}"]`)) document.head.appendChild(el("link", { rel: "stylesheet", href })); };
 
   function modal(title, body, actions) {
@@ -70,11 +76,14 @@
   const ftabs = el("div", { class: "dp-ftabs" }), editorBox = el("div", { id: "dp-editor" }, el("div", { class: "dp-ph", text: "Ouvre un fichier depuis l'onglet FICHIERS." }));
   const termBox = el("div", { id: "dp-term" }, el("div", { class: "dp-ph" }, btn("OUVRIR LE TERMINAL LINUX", () => openTerm())));
   const split = el("div", { class: "dp-split", title: "Redimensionner le terminal" });
+  const purgeB = btn("🗑 PURGER TERMINAL", () => purgeTerm(), "ghost");
+  purgeB.title = "Ferme le shell Linux actuel (tous ses processus) et en démarre un neuf et propre";
+  const termBar = el("div", { class: "dp-termbar" }, el("small", { text: "TERMINAL" }), el("span", { class: "dp-sp" }), purgeB);
   root.append(
     el("div", { class: "dp-bar" }, el("h2", { text: "DÉPÔT INTRANET" }), repoSel, chipBranch, chipAB, cloneUrl, cloneB, el("span", { class: "dp-sp" }), ...gitBtns, btn("⟳", () => refresh(true)), btn("✕ FERMER", () => close())),
     el("div", { class: "dp-bar dp-fmtbar", role: "group", "aria-label": "Formatage C (norme EPITA)" }, el("small", { class: "dp-fmtlab", text: "FORMAT C" }), injectB, fmtDir, fmtGo, fmtMsg),
     cloneProg,
-    el("div", { class: "dp-main" }, el("aside", { class: "dp-side" }, tabBar, Object.values(panes)), el("div", { class: "dp-work" }, ftabs, editorBox, split, termBox)));
+    el("div", { class: "dp-main" }, el("aside", { class: "dp-side" }, tabBar, Object.values(panes)), el("div", { class: "dp-work" }, ftabs, editorBox, split, termBar, termBox)));
   document.body.appendChild(root);
 
   function tab(id) {
@@ -259,7 +268,8 @@
     termBox.replaceChildren(el("div", { class: "dp-ph", text: "Connexion au terminal…" }));
     try {
       loadCss(EXT + "xterm/xterm.css");
-      if (!window.Terminal) { await loadScript(EXT + "xterm/xterm.js"); await loadScript(EXT + "xterm/addon-fit.js"); }
+      if (typeof window.Terminal !== "function" || !(window.FitAddon && window.FitAddon.FitAddon)) { await loadUmd(EXT + "xterm/xterm.js"); await loadUmd(EXT + "xterm/addon-fit.js"); }
+      if (typeof window.Terminal !== "function") throw new Error("xterm.js chargé mais « Terminal » reste indéfini (conflit avec un chargeur de modules).");
       // Police strictement monospace, sans espacement ni ligature : xterm mesure UNE cellule puis aligne toute la grille dessus (le moindre écart = caractères qui se chevauchent)
       const term = new window.Terminal({ cursorBlink: true, fontFamily: "Consolas, 'Courier New', monospace", fontSize: 13, fontWeight: "normal", fontWeightBold: "bold", letterSpacing: 0, lineHeight: 1, theme: { background: "#0b0d10" }, scrollback: 5000, convertEol: false, rightClickSelectsWord: false });
       const fit = new window.FitAddon.FitAddon(); term.loadAddon(fit);
@@ -290,6 +300,20 @@
       new ResizeObserver(() => { try { fit.fit(); } catch (x) { /* masqué */ } }).observe(termBox);
       S.term = term; S.ws = ws; S.fit = fit; term.focus();
     } catch (e) { termBox.replaceChildren(el("div", { class: "dp-ph" }, note("Terminal indisponible : " + e.message, "bad"))); }
+  }
+  // PURGER : dispose l'instance xterm, vide le conteneur, demande au serveur de tuer le shell (et ses enfants), puis rouvre un terminal tout neuf
+  let purging = false;
+  async function purgeTerm() {
+    if (purging) return;
+    purging = true; purgeB.disabled = true; purgeB.textContent = "…";
+    try {
+      closeTerm();
+      termBox.replaceChildren(el("div", { class: "dp-ph", text: "Purge du terminal…" }));
+      await post("/api/depot/terminal/reset", { repo: S.repo || "" });
+      if (S.repo) await openTerm();
+      else termBox.replaceChildren(el("div", { class: "dp-ph" }, btn("OUVRIR LE TERMINAL LINUX", () => openTerm())));
+    } catch (e) { termBox.replaceChildren(el("div", { class: "dp-ph" }, note("Purge impossible : " + e.message, "bad"))); }
+    finally { purging = false; purgeB.disabled = false; purgeB.textContent = "🗑 PURGER TERMINAL"; }
   }
   function closeTerm() { try { if (S.ws) S.ws.close(); } catch (e) { /* déjà fermé */ } try { if (S.term) S.term.dispose(); } catch (e) { /* déjà détruit */ } S.ws = S.term = S.fit = null; termBox.replaceChildren(el("div", { class: "dp-ph" }, btn("OUVRIR LE TERMINAL LINUX", () => openTerm()))); }
   (() => { let y = 0, h = 0, on = false; split.onpointerdown = (e) => { on = true; y = e.clientY; h = termBox.offsetHeight; split.setPointerCapture(e.pointerId); }; split.onpointermove = (e) => { if (on) termBox.style.height = Math.max(80, Math.min(window.innerHeight - 220, h + y - e.clientY)) + "px"; }; split.onpointerup = () => { on = false; if (S.fit) try { S.fit.fit(); } catch (x) { /* ignoré */ } }; })();

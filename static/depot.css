@@ -27,6 +27,7 @@
 #dp-editor .dp-ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--mid);font-size:13px;text-align:center;padding:20px}
 .dp-split{height:7px;background:var(--dim);cursor:row-resize;flex:none}
 .dp-split:hover{background:var(--neon)}
+.dp-termbar{display:flex;align-items:center;gap:8px;padding:2px 8px;background:var(--panel);border-top:1px solid var(--dim);flex:none}.dp-termbar small{color:var(--mid);font:700 10px var(--font-ui,Consolas,monospace);letter-spacing:2px}
 #dp-term{height:var(--dp-th,260px);min-height:80px;background:#0b0d10;padding:4px 6px;flex:none;position:relative}
 /* xterm doit mesurer une cellule monospace pure : on coupe tout héritage du thème (espacement, ligatures, ombres, majuscules) */
 #dp-term .xterm,#dp-term .xterm *{font-family:Consolas,'Courier New',monospace!important;letter-spacing:0!important;word-spacing:0!important;text-transform:none!important;text-shadow:none!important;font-variant-ligatures:none!important;font-feature-settings:"liga" 0,"calt" 0!important;font-kerning:none!important}
