@@ -1,0 +1,30 @@
+# Image recommandée pour la production d'Enos CodeLab (serveur dualpulse_site + bac à sable bubblewrap).
+#   docker build -f Dockerfile.codelab -t dualpulse-codelab .
+#   docker run --rm -p 8000:8000 \
+#       --security-opt seccomp=unconfined --security-opt apparmor=unconfined \   # bwrap a besoin de unshare()/mount() pour créer ses espaces de noms
+#       --pids-limit 1024 --memory 2g --cpus 2 \                                   # PAS de cgroups dans bwrap : on les pose ici, au niveau du conteneur
+#       dualpulse-codelab
+# Alternative plus fine à seccomp=unconfined : un profil seccomp Docker par défaut + --cap-add SYS_ADMIN (moins recommandé), ou un profil
+# personnalisé n'autorisant que unshare/clone(CLONE_NEW*)/mount/pivot_root/setns. Sur un hôte avec user namespaces non privilégiés
+# (kernel.unprivileged_userns_clone=1), bwrap fonctionne sans SYS_ADMIN une fois seccomp assoupli.
+# Le conteneur reste « non-root » : le serveur tourne sous l'utilisateur 'dp' ; bwrap crée un espace de noms utilisateur par exécution.
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc g++ libc6-dev default-jdk-headless bubblewrap sqlite3 bash \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 dp
+
+WORKDIR /srv/dualpulse_site
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+ENV DP_CODELAB_TMPDIR=/tmp \
+    DP_CODELAB_TIMEOUT=10 \
+    DP_CODELAB_CONCURRENCY=3 \
+    PYTHONUNBUFFERED=1
+USER dp
+EXPOSE 8000
+# Vérifier au démarrage : GET /launcher/v1/codelab/languages doit afficher sandbox.mode = "bwrap" et strong = true.
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

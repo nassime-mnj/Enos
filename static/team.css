@@ -1,0 +1,96 @@
+/* ÉQUIPE : RÉGLAGES (#rg) + HUB ÉQUIPE (#hb). Uniquement des variables de thème : s'adapte aux 10 thèmes. */
+#rg[hidden],#hb[hidden],#sw[hidden],#pk[hidden],#dv[hidden],#rg [hidden],#hb [hidden],#sw [hidden],#pk [hidden],#dv [hidden]{display:none!important}
+#rg,#hb,#sw,#pk,#dv{position:fixed;inset:0;z-index:284;display:flex;flex-direction:column;background:color-mix(in srgb,var(--bg) 94%,var(--panel));color:var(--neon);animation:tmIn .25s ease-out}
+@keyframes tmIn{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+.tm-top{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--dim);background:var(--panel);flex-wrap:wrap}
+.tm-top h2{margin:0;margin-right:auto;font:800 18px var(--font-ui,Consolas,monospace);letter-spacing:5px;color:var(--neon)}
+.tm-top h2 small{display:block;font:400 11px var(--font-ui,Consolas,monospace);letter-spacing:1px;color:var(--mid)}
+.tm-top .btn{width:auto;margin:0;padding:6px 12px;font-size:13px}
+.tm-tabs{display:flex;gap:6px;padding:10px 18px 0;border-bottom:1px solid var(--dim);flex-wrap:wrap}
+.tm-tabs button{background:none;border:1px solid var(--dim);border-bottom:none;color:var(--mid);font:700 12px var(--font-ui,Consolas,monospace);letter-spacing:2px;padding:8px 16px;cursor:pointer;position:relative}
+.tm-tabs button.on{color:var(--bg);background:var(--neon);border-color:var(--neon)}
+.tm-tabs button .dot{display:inline-block;min-width:16px;padding:0 5px;margin-left:8px;border-radius:9px;background:var(--mg);color:#fff;font-size:10px;line-height:16px;text-align:center}
+.tm-body{flex:1;min-height:0;overflow-y:auto;padding:16px 18px;max-width:1080px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.tm-card{padding:14px;border:1px solid var(--dim);background:var(--panel)}
+.tm-card h3{margin:0 0 10px;font:800 13px var(--font-ui,Consolas,monospace);letter-spacing:3px;color:var(--neon)}
+.tm-card h3 small{font:400 11px var(--font-ui,Consolas,monospace);letter-spacing:0;color:var(--mid);margin-left:8px}
+.tm-card p,.tm-note{margin:0 0 10px;font-size:12px;line-height:1.6;color:var(--mid)}
+.tm-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tm-row .btn{width:auto;margin:0;padding:7px 14px;font-size:12px}
+.tm-card input[type=text],.tm-card select,.tm-chatf input{flex:1;min-width:140px;padding:8px 10px;background:var(--bg);border:1px solid var(--dim);color:var(--u);font:13px var(--font-ui,Consolas,monospace)}
+.tm-card input:focus,.tm-card select:focus,.tm-chatf input:focus{outline:none;border-color:var(--neon)}
+.tm-err{color:var(--mg);font-size:12px;min-height:16px}
+.tm-ok{color:var(--neon);font-size:12px}
+/* thèmes */
+#rg-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.rg-sl{display:grid;grid-template-columns:110px 1fr 50px;gap:10px;align-items:center;font-size:12px;color:var(--mid)}
+.rg-sl input[type=range]{width:100%;accent-color:var(--neon)}
+#rg-hue{background:linear-gradient(90deg,hsl(0 100% 50%),hsl(60 100% 50%),hsl(120 100% 50%),hsl(180 100% 50%),hsl(240 100% 50%),hsl(300 100% 50%),hsl(360 100% 50%));height:8px;appearance:none;border-radius:4px}
+/* listes */
+.tm-list{display:flex;flex-direction:column;gap:6px}
+.tm-item{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--dim);background:var(--bg);flex-wrap:wrap}
+.tm-item b{color:var(--u);font-weight:600}.tm-item small{color:var(--mid);font-size:11px}
+.tm-item .grow{flex:1;min-width:150px;word-break:break-all}
+.tm-item .btn{width:auto;margin:0;padding:5px 10px;font-size:11px}
+.tm-item.new{border-color:var(--neon);box-shadow:0 0 10px color-mix(in srgb,var(--neon) 30%,transparent)}
+.tm-tag{font-size:10px;letter-spacing:1px;padding:2px 7px;border:1px solid var(--mid);color:var(--mid)}
+.tm-tag.new{background:var(--neon);color:var(--bg);border-color:var(--neon)}
+.tm-tag.me{border-color:var(--cy);color:var(--cy)}
+.tm-empty{padding:18px;text-align:center;color:var(--mid);font-size:12px}
+.tm-uuid{font:12px Consolas,monospace;word-break:break-all;color:var(--u)}
+/* chat */
+#hb-log{flex:1;min-height:220px;max-height:55vh;overflow-y:auto;padding:12px;border:1px solid var(--dim);background:var(--bg);display:flex;flex-direction:column;gap:8px}
+.cm{max-width:82%;padding:7px 11px;border:1px solid var(--dim);background:var(--panel);font-size:13px;line-height:1.45;word-break:break-word;white-space:pre-wrap}
+.cm small{display:block;font-size:10px;color:var(--mid);letter-spacing:1px;margin-bottom:2px}
+.cm.me{align-self:flex-end;border-color:var(--neon)}
+.tm-chatf{display:flex;gap:8px}.tm-chatf .btn{width:auto;margin:0}
+#hb-peer-st{font-size:11px}#hb-peer-st.on{color:var(--neon)}#hb-peer-st.error{color:var(--mg)}
+/* git */
+.gt-steps{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.gt-step{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--dim);background:var(--bg)}
+.gt-step i{flex:none;width:14px;height:14px;margin-top:3px;border-radius:50%;border:2px solid var(--dim)}
+.gt-step.run i{border-color:var(--cy);animation:gtPulse 1s infinite}.gt-step.ok i{background:var(--neon);border-color:var(--neon)}.gt-step.skip i{background:var(--mid);border-color:var(--mid)}.gt-step.err i{background:var(--mg);border-color:var(--mg)}
+.gt-step code{color:var(--u);font-size:12px}.gt-step small{display:block;color:var(--mid);font-size:11px;white-space:pre-wrap;word-break:break-all}
+@keyframes gtPulse{50%{opacity:.35}}
+#gt-go{width:100%;padding:14px;font-size:15px;letter-spacing:3px}
+.gt-msg{padding:10px;border:1px solid var(--dim);font-size:13px}.gt-msg.ok{border-color:var(--neon);color:var(--neon)}.gt-msg.bad{border-color:var(--mg);color:var(--mg)}
+/* Eto vs E.N.O.S. */
+body.remote:not(.ed-dev) .dev-only,body.remote:not(.ed-dev) .prem{display:none!important}
+.eto-note{display:none}body.remote:not(.ed-dev) .eto-note{display:block}
+.btn .bdg{display:inline-block;margin-left:8px;min-width:18px;padding:0 6px;border-radius:9px;background:var(--mg);color:#fff;font:700 11px/18px Consolas,monospace;text-align:center;vertical-align:middle}
+.btn .bdg:empty{display:none}
+@media (max-width:640px){.rg-sl{grid-template-columns:80px 1fr 40px}.cm{max-width:94%}.tm-body{padding:12px}}
+
+.chan-st{margin-top:10px;padding:10px;border:1px solid var(--dim);font-size:13px;color:var(--mid)}
+.chan-st.good{border-color:var(--neon);color:var(--neon);box-shadow:0 0 12px color-mix(in srgb,var(--neon) 30%,transparent)}.chan-st.ok{border-color:var(--cy);color:var(--cy)}.chan-st.wait{border-color:var(--mid)}
+.chan-st:empty{display:none}
+#hb-chan{padding:12px 26px;font-size:14px;letter-spacing:3px}
+.gt-files{margin:8px 0;padding:8px 10px;border:1px solid var(--mg);font:12px Consolas,monospace;color:var(--u);word-break:break-all}
+#gt-choice .btn{flex:1;min-width:200px}
+
+/* SITE WEB : voyant d'état (variables de thème : en ligne = néon du thème, hors ligne = magenta/rouge du thème) */
+.sw-state{display:flex;align-items:center;gap:12px;margin-bottom:10px;font:800 16px var(--font-ui,Consolas,monospace);letter-spacing:3px}
+.sw-led{width:14px;height:14px;border-radius:50%;background:var(--mid);box-shadow:0 0 0 2px var(--dim)}
+.sw-state[data-s="on"]{color:var(--neon)}.sw-state[data-s="on"] .sw-led{background:var(--neon);box-shadow:0 0 10px var(--neon)}
+.sw-state[data-s="off"]{color:var(--mg)}.sw-state[data-s="off"] .sw-led{background:var(--mg);box-shadow:0 0 10px var(--mg)}
+.sw-state[data-s="wait"] .sw-led{animation:swPulse 1s ease-in-out infinite}
+@keyframes swPulse{50%{opacity:.25}}
+#sw-start[disabled],#sw-open[disabled]{opacity:.4;cursor:not-allowed}
+
+/* CONSTRUIRE UN COLIS (variables de thème : s'adapte à Menace Rouge comme aux autres thèmes) */
+.pk-item{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--dim);background:var(--bg);margin-top:8px}
+.pk-item .grow{flex:1;min-width:200px;word-break:break-all}.pk-item small{display:block;color:var(--mid);font-size:11px}
+.pk-item .btn{width:auto;margin:0;padding:6px 12px;font-size:13px}
+.pk-busy{animation:swPulse 1s ease-in-out infinite}
+
+/* SYNC GODOT : alerte rougeoyante (variables de thème : rouge Menace Rouge via --mg) */
+#gs[hidden],#gs [hidden]{display:none!important}
+#gs{position:fixed;inset:0;z-index:284;display:flex;flex-direction:column;background:color-mix(in srgb,var(--bg) 94%,var(--panel));color:var(--neon);animation:tmIn .25s ease-out}
+#gs-alert{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:400;width:min(560px,calc(100vw - 32px));padding:16px 18px;border:1px solid var(--mg);background:color-mix(in srgb,var(--bg) 92%,var(--mg));color:var(--u,#fff);box-shadow:0 0 18px var(--mg),0 0 46px color-mix(in srgb,var(--mg) 60%,transparent),inset 0 0 22px color-mix(in srgb,var(--mg) 25%,transparent);animation:gsGlow 1.8s ease-in-out infinite}
+#gs-alert[hidden]{display:none!important}
+#gs-alert.bad{border-style:dashed}
+.gs-a-t{font:700 15px/1.5 var(--font-ui,Consolas,monospace);letter-spacing:1px;margin-bottom:12px}
+.gs-a-b{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.gs-a-b[hidden]{display:none!important}
+.gs-a-b .btn{width:auto;margin:0}
+@keyframes gsGlow{50%{box-shadow:0 0 30px var(--mg),0 0 80px color-mix(in srgb,var(--mg) 75%,transparent),inset 0 0 30px color-mix(in srgb,var(--mg) 40%,transparent)}}

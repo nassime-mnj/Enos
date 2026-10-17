@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+jinja2
+httpx
+cryptography
+psycopg[binary]>=3.1

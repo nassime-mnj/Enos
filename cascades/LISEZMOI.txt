@@ -1,0 +1,2 @@
+Détecteurs Haar de la bibliothèque OpenCV (licences Intel / BSD, voir l'en-tête de chaque fichier XML).
+Utilisés par le Studio média (floutage de confidentialité : visages, plaques). Détection approximative : toujours vérifier le résultat.

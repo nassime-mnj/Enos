@@ -1,0 +1,11 @@
+.adm-in{padding-block:50px}.adm-t{font-size:2rem;margin-bottom:24px}
+.adm-card{padding:24px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);margin-bottom:20px}
+.adm-card h2{font-size:1.2rem;margin-bottom:12px}
+.adm input{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--text);font:inherit;min-width:0;flex:1}
+.adm input:focus{outline:0;border-color:var(--pa)}
+.adm-row,#login-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.adm-list{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.adm-list li{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);flex-wrap:wrap}
+.adm-list code{font:.9rem var(--mono);color:var(--pa)}.adm-list small{color:var(--muted)}
+.adm-list button{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;padding:6px 12px;cursor:pointer}.adm-list button.armed{background:#b3202f;border-color:#b3202f}
+.adm-err{color:#ff6b6b;min-height:1.2em;margin:8px 0 0}

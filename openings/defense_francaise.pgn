@@ -1,0 +1,44 @@
+[Event "Défense Française"]
+[Repertoire "black"]
+[Level "1200-1300"]
+[Theory "de la Française"]
+[ECO "C00"]
+[Description "Le contre-pied solide des Noirs : e6 puis d5, une chaîne de pions fermée et du contre-jeu en c5."]
+
+1. e4 { [%cal Ge2e4] [%csl Ge4,Gd4] Les Blancs prennent le centre. } 1... e6 { [%name Défense Française] [%cal Ge6d5,Gd7d5] [%csl Gd5] L'idée : on prépare d5 pour attaquer tout de suite le pion e4 blanc. Position solide, mais un peu fermée. }
+2. d4 { [%cal Gd2d4] Les Blancs construisent un grand centre e4 et d4. } 2... d5 { [%cal Gd5e4] [%csl Gd5,Re4] Voilà le coup clé : on attaque le centre blanc. Les trois principes : contrôler le centre, développer les pièces, mettre le roi en sécurité. }
+3. e5 { [%name Variante d'Avance] [%cal Ge5e6,Rc7c5] [%csl Re5,Gd4] Les Blancs poussent le pion et gagnent de l'espace, mais ce pion e5 est une cible. Le plan des Noirs : attaquer la base de la chaîne, le pion d4. }
+( 3. exd5 { [%name Variante d'Échange] [%cal Ge4d5,Re6d5] Les Blancs prennent tout de suite : la structure devient symétrique. }
+  3... exd5 { [%csl Gd5,Gd4] On reprend du pion : position simple et égale, aucun danger particulier. }
+  4. Nf3 Nf6 5. Bd3 Bd6 { [%cal Gf8d6] On développe les pièces vers le centre. }
+  6. O-O O-O { [%csl Gg1,Gg8] Les deux rois sont à l'abri : partie égale, à nous de jouer mieux que lui. }
+  7. Bg5 Bg4 8. Nbd2 Nbd7 { Position symétrique et solide. }
+)
+( 3. Nc3 { [%name Variante Classique et Winawer] [%cal Gb1c3] Les Blancs défendent e4 en développant un cavalier. Deux réponses sérieuses pour les Noirs. }
+  3... Nf6 { [%name Variante Classique] [%cal Gf6e4] [%csl Re4] On attaque e4 en développant une pièce. }
+  ( 3... Bb4 { [%name Variante Winawer] [%cal Gb4c3] [%csl Rc3] Le fou cloue le cavalier : on veut doubler les pions blancs en c3. C'est la variante la plus tranchante. }
+    4. e5 { [%cal Ge5e6] } 4... c5 { [%cal Gc5d4] On attaque le centre blanc par le côté. }
+    5. a3 Bxc3+ { [%csl Rc3] On donne le fou pour casser la structure de pions des Blancs. }
+    6. bxc3 Ne7 { [%cal Ge7f5,Gc5d4] On développe sans perdre de temps. Les pions blancs c3 et c2 sont faibles.}
+    7. Qg4 { [%cal Gg4g7] La dame attaque le pion g7 : le coup le plus piquant. } 7... Qc7 { [%csl Gg7,Gc7] La dame défend g7 et attaque e5 et c3 en même temps. } )
+  4. Bg5 Be7 { [%cal Gg5f6] [%csl Rf6] Le fou blanc cloue notre cavalier. On met le fou en e7 pour casser la menace. }
+  5. e5 Nfd7 { [%cal Ge7g5] Le cavalier recule : on veut échanger le fou blanc. }
+  6. Bxe7 Qxe7 { [%csl Ge7] }
+  7. f4 O-O 8. Nf3 c5 { [%cal Gc5d4] On attaque la base d4 : c'est toujours le même plan dans la Française. }
+)
+( 3. Nd2 { [%name Variante Tarrasch] [%cal Gb1d2] Les Blancs gardent la tension et veulent reprendre d5 avec un cavalier. }
+  3... Nf6 4. e5 Nfd7 { [%cal Gd7c5] }
+  5. Bd3 c5 { [%cal Gc5d4] }
+  6. c3 Nc6 7. Ne2 cxd4 8. cxd4 f6 { [%cal Gf6e5] [%csl Re5] On attaque la pointe e5 de la chaîne : le plan classique contre l'Avance et le Tarrasch. }
+)
+3... c5 { [%cal Gc5d4] [%csl Gd4] Le coup le plus important de la Française : on attaque d4 pour casser la chaîne de pions blancs. }
+4. c3 { [%cal Gc2c3] [%csl Gd4] Les Blancs défendent d4 avec un pion. }
+( 4. dxc5 { [%cal Gd4c5] Les Blancs prennent le pion mais lâchent le centre. }
+  4... Nc6 { [%cal Gc6e5] [%csl Re5] On vise le pion e5 : il n'est plus protégé par d4. }
+  5. Nf3 Bxc5 { [%cal Gc5f2] On reprend le pion avec un développement actif. }
+  6. Bd3 f6 { [%cal Gf6e5] On casse le pion e5 : les Noirs sont très bien. }
+)
+4... Nc6 { [%cal Gc6d4] [%csl Gd4] On met une deuxième pièce sur d4 : un pion défendu une seule fois, ça tient mal. }
+5. Nf3 Qb6 { [%cal Gb6d4,Gb6b2] [%csl Gd4,Rb2] La dame attaque d4 et b2 : triple pression sur la base de la chaîne. }
+6. a3 c4 { [%cal Gc4c3] [%csl Gc4,Gb4] Les Noirs bloquent le côté dame et empêchent b3 : on gagne de l'espace et le plan est clair, f6 plus tard pour attaquer e5. }
+*

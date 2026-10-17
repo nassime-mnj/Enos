@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#050506">
+<!-- Aucune requête réseau depuis les pages : tout passe par le pont natif (clés jamais lues par le JavaScript). -->
+<meta http-equiv="Content-Security-Policy" content="connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>E.N.O.S.</title>
+<link rel="stylesheet" href="css/mobile.css">
+<link rel="stylesheet" href="css/codelab.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="top">
+    <div class="brand">E.N.O.S<small id="brand-sub">AUTONOME</small></div>
+    <button id="link-chip" class="chip off" aria-label="État du PC"><i></i><span>PC hors ligne</span></button>
+    <button id="btn-settings" class="icon-btn" aria-label="Réglages"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M4.2 19.8L7 17M17 7l2.8-2.8"/></svg></button>
+  </header>
+
+  <!-- Pager : 4 vues côte à côte, glissées au doigt -->
+  <main id="pager">
+    <div id="track">
+
+      <!-- ===== ACCUEIL ===== -->
+      <section class="view" data-v="home" aria-label="Accueil"><div class="scroll">
+        <div class="hero card">
+          <div class="hero-date" id="h-date"></div>
+          <h1 id="h-hello">Salut</h1>
+          <div class="hero-clock" id="h-clock">--:--</div>
+        </div>
+        <div class="card next" id="h-next" hidden>
+          <div class="cd" id="h-next-cd">--</div>
+          <div class="t"><b id="h-next-t"></b><small id="h-next-s"></small></div>
+        </div>
+        <div class="card">
+          <h3>Aujourd'hui<button class="mini" id="h-ag-open">+ TÂCHE</button></h3>
+          <div id="h-day" class="list"></div>
+        </div>
+        <div class="card">
+          <h3>À rendre</h3>
+          <div id="h-due" class="list"></div>
+        </div>
+        <div class="grid2">
+          <button class="tile" data-go="chat" data-persona="enos"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg><b>ENOS</b><small>Cerveau froid</small></button>
+          <button class="tile" data-go="chat" data-persona="eto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg><b>ETO</b><small>Zen &amp; vif</small></button>
+        </div>
+        <div class="foot-pad"></div>
+      </div></section>
+
+      <!-- ===== CHAT ===== -->
+      <section class="view" data-v="chat" aria-label="Chat IA">
+        <div class="chat">
+          <div class="seg" id="persona-seg" role="tablist"><button data-p="enos" class="on">E.N.O.S.</button><button data-p="eto">ETO</button><i class="seg-ind"></i></div>
+          <div id="msgs" class="msgs" aria-live="polite"></div>
+          <div class="composer">
+            <button class="icon-btn" id="btn-voice" aria-label="Voix" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
+            <textarea id="inp" rows="1" placeholder="Parle à E.N.O.S.…" enterkeyhint="send"></textarea>
+            <button class="send" id="btn-send" aria-label="Envoyer"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== OUTILS ===== -->
+      <section class="view" data-v="tools" aria-label="Modules"><div class="scroll">
+        <div id="tools-home">
+          <div class="tools-grid">
+            <button class="tool" data-tool="img"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><b>Compresser<br>des photos</b><small>Sur le téléphone</small></button>
+            <button class="tool" data-tool="files"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><b>Gérer<br>les dossiers</b><small>Téléchargements, documents</small></button>
+          </div>
+          <p class="hint">Appui long sur un élément pour ses options.</p>
+        </div>
+        <div id="tool-img" class="subview" hidden>
+          <button class="back" data-back>◂ OUTILS</button>
+          <div class="card">
+            <h3>Compression de photos</h3>
+            <label class="fld">Qualité <b id="q-val">80%</b><input type="range" id="q-range" min="40" max="95" value="80"></label>
+            <label class="fld">Taille max.
+              <select id="q-side"><option value="1280">1280 px</option><option value="1920" selected>1920 px</option><option value="2560">2560 px</option><option value="0">Originale</option></select></label>
+            <label class="fld">Format <select id="q-fmt"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP (plus léger)</option></select></label>
+            <input type="file" id="img-input" accept="image/*" multiple hidden>
+            <button class="btn pri wide" id="img-pick">CHOISIR DES PHOTOS</button>
+          </div>
+          <div id="img-list" class="list"></div>
+          <button class="btn pri wide" id="img-save" hidden>ENREGISTRER DANS LA GALERIE</button>
+        </div>
+        <div id="tool-files" class="subview" hidden>
+          <button class="back" data-back>◂ OUTILS</button>
+          <div class="card">
+            <h3>Dossiers<button class="mini" id="f-pick">CHOISIR</button></h3>
+            <div class="crumbs" id="f-crumbs"><span class="muted">Aucun dossier choisi</span></div>
+            <div id="f-list" class="list"></div>
+            <div class="row"><button class="btn" id="f-mkdir" hidden>＋ DOSSIER</button><button class="btn" id="f-sort" hidden>RANGER PAR TYPE</button></div>
+          </div>
+        </div>
+        <div class="foot-pad"></div>
+      </div></section>
+
+      <!-- ===== PC ===== -->
+      <section class="view" data-v="pc" aria-label="PC"><div class="scroll">
+        <div id="pc-locked" class="locked card">
+          <div class="radar"><i></i><i></i><i></i></div>
+          <h2>PC hors ligne</h2>
+          <p id="pc-locked-msg">Recherche de ton PC sur le Wi-Fi et via Tailscale…</p>
+          <div class="row"><button class="btn" id="pc-retry">RECONNECTER</button><button class="btn" id="pc-wake">ALLUMER LE PC</button></div>
+          <button class="mini" id="pc-setup">Configurer l'appairage</button>
+        </div>
+        <div id="pc-live" hidden>
+          <div class="card pc-head"><div><b id="pc-host">PC</b><small id="pc-sub"></small></div><span class="chip on"><i></i><span id="pc-via">LAN</span></span></div>
+          <div class="card"><h3>Système<span class="sp" id="pc-profile"></span></h3>
+            <div class="gauges">
+              <div class="g" id="g-cpu"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50" pathLength="100"/><circle class="fg" cx="60" cy="60" r="50" pathLength="100"/></svg><div class="v">--</div><div class="l">CPU</div><div class="s"></div></div>
+              <div class="g" id="g-gpu"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50" pathLength="100"/><circle class="fg" cx="60" cy="60" r="50" pathLength="100"/></svg><div class="v">--</div><div class="l">GPU</div><div class="s"></div></div>
+              <div class="g" id="g-ram"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50" pathLength="100"/><circle class="fg" cx="60" cy="60" r="50" pathLength="100"/></svg><div class="v">--</div><div class="l">RAM</div><div class="s"></div></div>
+            </div>
+            <div id="pc-bars"></div>
+          </div>
+          <div class="card" id="pc-fans-card"><h3>Ventilateurs<span class="sp">lecture seule</span></h3><div id="pc-fans" class="list"></div></div>
+          <div class="card"><h3>Projet Godot<button class="mini" id="pc-stop" hidden>■ STOP</button></h3><div id="pc-running" class="muted"></div><div id="pc-scenes" class="list"></div></div>
+          <div class="card"><h3>Alimentation</h3><div class="row"><button class="btn" data-power="sleep">⏾ VEILLE</button><button class="btn warn" data-power="shutdown">⏻ ÉTEINDRE</button></div></div>
+          <button class="btn wide" id="pc-fullui">OUVRIR L'INTERFACE COMPLÈTE DU PC</button>
+        </div>
+        <div class="foot-pad"></div>
+      </div></section>
+
+    </div>
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav id="tabbar" aria-label="Navigation">
+    <button data-tab="home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Accueil</span></button>
+    <button data-tab="chat"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg><span>Chat</span></button>
+    <button data-tab="tools"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg><span>Modules</span></button>
+    <button data-tab="pc" id="tab-pc" class="pc-off"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>PC</span></button>
+    <i id="tab-ind"></i>
+  </nav>
+
+  <div id="toasts" aria-live="polite"></div>
+  <div id="scrim" hidden></div>
+  <div id="sheet" class="sheet" hidden role="dialog"></div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/native.js"></script>
+<script src="js/link.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/agenda.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/views.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/suite.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/quicklib.js"></script>
+<script src="js/m_text.js"></script>
+<script src="js/m_expenses.js"></script>
+<script src="js/m_pdf.js"></script>
+<script src="js/m_syllabus.js"></script>
+<script src="js/m_scan.js"></script>
+<script src="js/m_cloud.js"></script>
+<script src="js/m_clip.js"></script>
+<script src="js/m_vault.js"></script>
+<script src="js/m_cleaner.js"></script>
+<script src="js/codelab_quest.js"></script>
+<script src="js/codelab.js"></script>
+<script src="js/eye_data.js"></script>
+<script src="js/eye_eto.js"></script>
+<script src="js/board.js"></script>
+<script src="js/play.js"></script>
+<script src="js/apps.js"></script>
+<script src="js/modules.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/importer.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+/* MODE DISCUSSION : avatar pixel art interactif */
+#dm[hidden]{display:none}
+#dm{--c:hsl(var(--h) calc(100% * var(--sat)) 50%);--c2:hsl(var(--h) calc(100% * var(--sat)) 35.5%);position:fixed;inset:0;z-index:250;display:flex;flex-direction:column;overflow:hidden;background:#000;animation:dmIn .45s ease-out}
+@keyframes dmIn{from{opacity:0;filter:brightness(3) blur(4px)}to{opacity:1;filter:none}}
+#dm:has(#dm-stage[data-state=listening]){--c:hsl(calc(var(--h) + 38) calc(100% * var(--sat)) 50%);--c2:hsl(calc(var(--h) + 39) calc(100% * var(--sat)) 32.9%)}
+#dm:has(#dm-stage[data-state=thinking]){--c:hsl(calc(var(--h) - 94) calc(100% * var(--sat)) 50%);--c2:hsl(calc(var(--h) - 94) calc(100% * var(--sat)) 35.1%)}
+#dm:has(#dm-stage[data-state=speaking]){--c:hsl(var(--h) calc(100% * var(--sat)) 68.2%);--c2:hsl(var(--h) calc(100% * var(--sat)) 50%)}
+.dm-bg{position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--c) 18%,transparent),transparent 62%),
+  linear-gradient(hsl(var(--h) calc(100% * var(--sat)) 50% / 0.05) 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,hsl(var(--h) calc(100% * var(--sat)) 50% / 0.05) 1px,transparent 1px) 0 0/40px 40px;transition:background .6s}
+.dm-bg::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#00000030 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+.dm-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,#000000d0 100%)}
+.dm-top{position:relative;z-index:3;display:flex;align-items:center;gap:14px;padding:12px 18px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.dm-top h2{margin:0;margin-right:auto;font:800 17px Consolas,monospace;letter-spacing:5px;color:var(--c);text-shadow:0 0 14px var(--c);transition:color .5s}
+.dm-top h2 small{display:block;font:400 10px Consolas,monospace;letter-spacing:2px;color:var(--c2);text-shadow:none}
+#dm-chip{padding:5px 14px;border:1px solid var(--c);color:var(--c);font:700 12px Consolas,monospace;letter-spacing:3px;background:#00000099;
+ clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:color .4s,border-color .4s}
+#dm-chip::before{content:"●";margin-right:8px;animation:dmBlink 1s steps(2) infinite}
+@keyframes dmBlink{50%{opacity:.2}}
+.dm-top .btn{width:auto;margin:0;padding:6px 12px;font-size:13px}
+.dm-main{position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 18px}
+
+/* ---- scene de l'avatar */
+#dm-stage{position:relative;width:min(46vh,78vw,420px);aspect-ratio:1;display:grid;place-items:center}
+.dm-ring{position:absolute;inset:-14%;border-radius:50%;border:2px solid transparent;pointer-events:none}
+.dm-ring.r1{border-top-color:var(--c);border-bottom-color:var(--c);animation:dmSpin 9s linear infinite;opacity:.55;transition:border-color .5s}
+.dm-ring.r2{inset:-24%;border:1px dashed color-mix(in srgb,var(--c) 55%,transparent);animation:dmSpin 24s linear infinite reverse;transition:border-color .5s}
+.dm-ring.r3{inset:-5%;border:2px solid color-mix(in srgb,var(--c) 30%,transparent);box-shadow:0 0 40px color-mix(in srgb,var(--c) 35%,transparent),inset 0 0 40px color-mix(in srgb,var(--c) 18%,transparent);
+ animation:dmPulse 3.2s ease-in-out infinite;transition:box-shadow .5s,border-color .5s}
+@keyframes dmSpin{to{transform:rotate(360deg)}}
+@keyframes dmPulse{50%{transform:scale(1.035);opacity:.75}}
+#dm-stage[data-state=listening] .dm-ring.r3{animation:dmListen 1.3s ease-out infinite}
+@keyframes dmListen{0%{transform:scale(.97);opacity:1}100%{transform:scale(1.22);opacity:0}}
+#dm-stage[data-state=thinking] .dm-ring.r1{animation-duration:1.6s;opacity:.9}
+#dm-stage[data-state=thinking] .dm-ring.r2{animation-duration:6s}
+#dm-stage[data-state=speaking] .dm-ring.r3{animation:dmSpeak .45s ease-in-out infinite alternate}
+@keyframes dmSpeak{from{transform:scale(1)}to{transform:scale(calc(1.02 + var(--lvl,0)*.08))}}
+
+#dm-face{position:relative;width:78%;aspect-ratio:1;cursor:pointer;animation:dmFloat 4.5s ease-in-out infinite;transition:filter .4s;
+ filter:drop-shadow(0 0 22px color-mix(in srgb,var(--c) 55%,transparent))}
+@keyframes dmFloat{50%{transform:translateY(-8px)}}
+#dm-stage[data-state=speaking] #dm-face{animation:dmBounce .22s steps(2) infinite;transform-origin:50% 100%}
+@keyframes dmBounce{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-10px) scale(calc(1 + var(--lvl,0)*.05))}}
+#dm-stage[data-state=thinking] #dm-face{animation:dmThink 1.8s ease-in-out infinite}
+@keyframes dmThink{0%,100%{transform:rotate(-2.5deg) translateY(0)}50%{transform:rotate(2.5deg) translateY(-6px)}}
+#dm-stage[data-state=listening] #dm-face{animation:dmLean 2.2s ease-in-out infinite}
+@keyframes dmLean{50%{transform:scale(1.04) translateY(-4px)}}
+.dm-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated;
+ opacity:0;transition:opacity .28s ease;pointer-events:none;user-select:none}
+.dm-img.on{opacity:1}
+#dm-face::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;
+ background:repeating-linear-gradient(0deg,#00000066 0 2px,transparent 2px 5px)}
+#dm-face::before{content:"";position:absolute;left:0;right:0;height:14%;top:-14%;pointer-events:none;z-index:2;
+ background:linear-gradient(transparent,color-mix(in srgb,var(--c) 28%,transparent),transparent);animation:dmScan 3.6s linear infinite}
+@keyframes dmScan{to{top:100%}}
+/* glitch : decalage RVB + tranches horizontales, ~400 ms a chaque changement d'expression */
+#dm-face.glitch{animation:dmGlitch .42s steps(2) 1}
+#dm-face.glitch .dm-img.on{animation:dmSlice .42s steps(1) 1;filter:drop-shadow(-5px 0 #ff2a6d) drop-shadow(5px 0 hsl(calc(var(--h) + 38) calc(100% * var(--sat)) 50%))}
+@keyframes dmGlitch{0%{transform:translate(0)}20%{transform:translate(-8px,2px) skewX(6deg)}40%{transform:translate(7px,-3px) skewX(-5deg)}60%{transform:translate(-4px,1px)}80%{transform:translate(5px,0) skewX(3deg)}100%{transform:translate(0)}}
+@keyframes dmSlice{0%{clip-path:inset(12% 0 70% 0)}18%{clip-path:inset(55% 0 20% 0)}36%{clip-path:inset(0 0 85% 0)}54%{clip-path:inset(70% 0 8% 0)}72%{clip-path:inset(30% 0 40% 0)}100%{clip-path:inset(0)}}
+
+#dm-eq{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:56px;margin-top:-6px}
+#dm-eq i{width:6px;height:3px;background:var(--c);box-shadow:0 0 8px var(--c);transition:background .4s,box-shadow .4s}
+
+/* ---- sous-titres */
+.dm-sub{width:min(820px,100%);text-align:center;display:flex;flex-direction:column;gap:8px;min-height:0}
+#dm-you-wrap{color:var(--c2);font-size:13px;letter-spacing:1px;transition:color .4s}#dm-you-wrap[hidden]{display:none}
+#dm-you-wrap b{color:hsl(var(--h) calc(100% * var(--sat)) 77.6%);margin-right:8px}
+#dm-you{color:hsl(var(--h) calc(100% * var(--sat)) 77.6%);opacity:.8}
+#dm-bot{min-height:3.2em;max-height:24vh;overflow-y:auto;font-size:clamp(15px,2.2vw,21px);line-height:1.5;color:var(--c);text-shadow:0 0 12px color-mix(in srgb,var(--c) 40%,transparent);white-space:pre-wrap;transition:color .4s}
+#dm-bot.err{color:var(--mg)}
+#dm-bot.typing::after{content:"█";margin-left:2px;animation:dmBlink .8s steps(2) infinite}
+#dm-stage[data-state=thinking]~.dm-sub #dm-bot::before{content:"Analyse en cours";animation:dmDots 1.2s steps(4) infinite}
+@keyframes dmDots{0%{content:"Analyse en cours"}25%{content:"Analyse en cours."}50%{content:"Analyse en cours.."}75%{content:"Analyse en cours..."}}
+
+/* ---- saisie */
+.dm-form{position:relative;z-index:3;display:flex;gap:10px;align-items:center;width:min(820px,100%);margin:0 auto;padding:14px 18px calc(18px + env(safe-area-inset-bottom,0px))}
+.dm-form input{flex:1;min-width:0;padding:13px 16px;background:hsl(calc(var(--h) - 2) calc(82% * var(--sat)) 2.2% / 0.85);color:var(--c);border:2px solid var(--c2);font:16px Consolas,monospace;outline:0;caret-color:var(--c);transition:border-color .3s,box-shadow .3s}
+.dm-form input:focus{border-color:var(--c);box-shadow:0 0 20px color-mix(in srgb,var(--c) 40%,transparent)}
+.dm-form .btn{width:auto;margin:0;min-height:48px;padding:0 16px}
+.dm-form .btn.ico{width:50px;padding:0}
+.dm-form .btn.on{background:var(--c);color:#000;border-color:var(--c);box-shadow:0 0 18px var(--c)}
+@media (max-width:768px){.dm-top h2{font-size:13px;letter-spacing:3px}#dm-chip{font-size:10px;letter-spacing:2px;padding:4px 10px}}
+@media (prefers-reduced-motion:reduce){#dm-face,.dm-ring{animation:none!important}}
+
+/* ---- L'ŒIL D'E.N.O.S. (réf. HAL 9000) : un seul œil rouge, jamais d'avatar souriant. Rouge fixe, quel que soit le thème. */
+#dm.eye:has(#dm-stage){--c:hsl(356 100% 50%);--c2:hsl(356 85% 32%)}
+#dm.eye:has(#dm-stage[data-state=thinking]){--c:hsl(8 100% 56%);--c2:hsl(356 90% 38%)}
+#dm.eye:has(#dm-stage[data-state=speaking]){--c:hsl(356 100% 62%);--c2:hsl(356 100% 46%)}
+#dm.eye .dm-bg{background:radial-gradient(ellipse at 50% 42%,hsl(356 100% 30% / .30),transparent 60%),repeating-linear-gradient(90deg,#ffffff05 0 1px,transparent 1px 3px),#070607}
+#dm.eye .dm-ring.r1,#dm.eye .dm-ring.r2{display:none}
+#dm.eye .dm-ring.r3{inset:-3%;border-color:hsl(356 60% 22%);box-shadow:0 0 60px hsl(356 100% 40% / .35),inset 0 0 60px hsl(356 100% 30% / .25);animation:eyeHalo 4s ease-in-out infinite}
+#dm.eye #dm-face{animation:eyeIdle 4s ease-in-out infinite;transform-origin:50% 50%;filter:drop-shadow(0 0 26px hsl(356 100% 45% / .6)) brightness(.9);transition:filter .5s}
+#dm.eye #dm-face::before{display:none}                       /* pas de balayage de scanline sur l'œil */
+#dm.eye .dm-img{image-rendering:pixelated}
+/* repos : battement lent, comme un voyant de veille */
+@keyframes eyeIdle{0%,100%{transform:scale(1);filter:drop-shadow(0 0 22px hsl(356 100% 40% / .5)) brightness(.82)}50%{transform:scale(1.035);filter:drop-shadow(0 0 40px hsl(356 100% 48% / .8)) brightness(1.05)}}
+@keyframes eyeHalo{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}}
+/* écoute : l'œil se dilate, fixe */
+#dm.eye #dm-stage[data-state=listening] #dm-face{animation:eyeListen 1.8s ease-in-out infinite}
+@keyframes eyeListen{0%,100%{transform:scale(1.07);filter:drop-shadow(0 0 36px hsl(356 100% 50% / .75)) brightness(1.05)}50%{transform:scale(1.1);filter:drop-shadow(0 0 48px hsl(356 100% 55% / .9)) brightness(1.15)}}
+/* réflexion : il se contracte, brille, vibre (saccades de calcul) */
+#dm.eye #dm-stage[data-state=thinking] #dm-face{animation:eyeThink .9s steps(2,end) infinite}
+@keyframes eyeThink{0%{transform:scale(.88) translateX(0);filter:drop-shadow(0 0 54px hsl(10 100% 55% / .95)) brightness(1.5)}50%{transform:scale(.86) translateX(-2px);filter:drop-shadow(0 0 70px hsl(10 100% 60%)) brightness(1.75)}100%{transform:scale(.88) translateX(2px);filter:drop-shadow(0 0 54px hsl(10 100% 55% / .95)) brightness(1.5)}}
+#dm.eye #dm-stage[data-state=thinking] .dm-ring.r3{animation:eyeHalo .9s ease-in-out infinite;border-color:hsl(10 100% 45%)}
+/* parole : taille et éclat suivent le volume réel de la voix (--lvl, 0..1, mis à jour toutes les 100 ms) */
+#dm.eye #dm-stage[data-state=speaking] #dm-face{animation:none;transform:scale(calc(1.02 + var(--lvl,0)*.2));
+ filter:drop-shadow(0 0 calc(34px + var(--lvl,0)*60px) hsl(356 100% 52% / .9)) brightness(calc(1.1 + var(--lvl,0)*.9));transition:transform .09s linear,filter .09s linear}
+#dm.eye #dm-stage[data-state=speaking] .dm-ring.r3{animation:none;transform:scale(calc(1 + var(--lvl,0)*.08));box-shadow:0 0 calc(50px + var(--lvl,0)*80px) hsl(356 100% 45% / .55),inset 0 0 50px hsl(356 100% 35% / .35)}
+@media (prefers-reduced-motion:reduce){#dm.eye #dm-face,#dm.eye .dm-ring.r3{animation:none!important}}
+#dm.eye #dm-face::after{display:none}   /* pas de trame de lignes : elle dessinait un rectangle autour de l'œil */

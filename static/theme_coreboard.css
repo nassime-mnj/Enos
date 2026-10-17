@@ -1,0 +1,120 @@
+/* ============================================================================
+   THÈME « COREBOARD » — noir profond / gris foncé / accents rouge vif, grille rouge sombre, angles légèrement arrondis.
+   À charger APRÈS themes.css. Activé par <html data-theme="coreboard"> (voir theme.js).
+   Polices : titres pixel-art = "Press Start 2P" (fichier static/pixel.woff2, optionnel : repli sur Consolas gras),
+             texte = Rajdhani/Segoe UI (lisible, technique).
+   Les couleurs passent par --h/--sat comme les autres thèmes : le curseur de teinte de RÉGLAGES continue de fonctionner.
+   ============================================================================ */
+@font-face{font-family:"CB Pixel";src:local("Press Start 2P"),local("PressStart2P-Regular"),local("Silkscreen"),url("/static/pixel.woff2") format("woff2");font-display:swap}
+
+[data-theme="coreboard"]{
+  --h:352;--sat:1;--radius:6px;
+  --cb-bg:#050506;--cb-bg2:#0a0a0c;--cb-surf:#101012;--cb-surf2:#17171a;--cb-line:#26262b;--cb-text:#e9e9ec;--cb-muted:#8b8b94;
+  --cb-red:hsl(var(--h) calc(88% * var(--sat)) 52%);--cb-red-dim:hsl(var(--h) calc(70% * var(--sat)) 22%);--cb-red-glow:hsl(var(--h) calc(90% * var(--sat)) 50% / .35);
+  --cb-grid:hsl(var(--h) calc(80% * var(--sat)) 32% / .24);
+  --font-pixel:"CB Pixel","Press Start 2P","Silkscreen",Consolas,monospace;
+  --font-ui:"Rajdhani","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  /* on réaffecte les variables de base pour que TOUTES les vues existantes se recolorent sans retouche */
+  --bg:var(--cb-bg);--panel:var(--cb-surf);--neon:var(--cb-red);--mid:var(--cb-muted);--dim:var(--cb-line);--u:var(--cb-text);--bgx:var(--cb-bg);--surf:var(--cb-surf);--surf2:var(--cb-surf2);--line:var(--cb-line)}
+
+/* ---- fond : noir + fine grille rouge sombre + halo rouge en haut à droite */
+html[data-theme="coreboard"],html[data-theme="coreboard"] body{background:var(--cb-bg);color:var(--cb-text);font-family:var(--font-ui);font-size:15px}
+html[data-theme="coreboard"] body::before{background:
+  radial-gradient(ellipse 70% 45% at 85% 0%,hsl(var(--h) 90% 25% / .45),transparent 70%),
+  linear-gradient(var(--cb-grid) 1px,transparent 1px) 0 0/32px 32px,
+  linear-gradient(90deg,var(--cb-grid) 1px,transparent 1px) 0 0/32px 32px,
+  linear-gradient(180deg,#0a0a0c,#050506)!important;
+  filter:none;animation:none;opacity:1}
+html[data-theme="coreboard"] body::after{background:radial-gradient(ellipse at center,transparent 40%,#000000b0 100%)}
+
+/* ---- on neutralise les effets CRT des autres thèmes */
+html[data-theme="coreboard"] *:not(pre):not(#ascii):not(code){font-family:var(--font-ui)!important}
+html[data-theme="coreboard"] *{clip-path:none!important;text-shadow:none!important}
+html[data-theme="coreboard"] .box{animation:none}
+html[data-theme="coreboard"] .btn::before{display:none}
+
+/* ---- en-tête : barre de marque en police pixel */
+html[data-theme="coreboard"] header{display:flex;align-items:center;gap:16px;text-align:left;padding:12px 22px;overflow:visible;background:linear-gradient(180deg,#0e0e10,#08080a);border-bottom:1px solid var(--cb-line)}
+html[data-theme="coreboard"] header::after,html[data-theme="coreboard"] #avatar{display:none}
+html[data-theme="coreboard"] header::before{content:var(--brand,"E.N.O.S");font:400 18px var(--font-pixel)!important;letter-spacing:3px;color:var(--cb-red);white-space:nowrap}
+html[data-theme="coreboard"] #tag{order:2;margin-left:auto;font-size:12px;letter-spacing:2px;color:var(--cb-muted)}
+html[data-theme="coreboard"] #greet{order:1;margin:0;min-height:0;font-size:14px;color:var(--cb-muted);flex:1}
+
+/* ---- cartes : fond gris très foncé, filet fin, angles 6px, titre précédé du motif « /// » rouge de Coreboard */
+html[data-theme="coreboard"] .box{background:var(--cb-surf);border:1px solid var(--cb-line);border-radius:var(--radius);box-shadow:0 10px 30px #0008;overflow:hidden}
+html[data-theme="coreboard"] .box h3{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;background:transparent;border-bottom:1px solid var(--cb-line);
+  color:var(--cb-text);font:700 13px var(--font-ui);letter-spacing:1.5px;text-transform:uppercase;border-radius:var(--radius) var(--radius) 0 0}
+html[data-theme="coreboard"] .box h3::before{content:"";width:18px;height:12px;flex:none;
+  background:repeating-linear-gradient(115deg,var(--cb-red) 0 3px,transparent 3px 7px)}
+html[data-theme="coreboard"] .box:hover{border-color:hsl(var(--h) 60% 28%)}
+
+/* ---- gros titres en pixel-art (classe à poser sur les titres de vues, ou balises h1/h2) */
+html[data-theme="coreboard"] h1,html[data-theme="coreboard"] h2,html[data-theme="coreboard"] .cb-title{font:400 clamp(14px,2vw,22px)/1.4 var(--font-pixel)!important;letter-spacing:2px;color:var(--cb-text);text-transform:uppercase}
+html[data-theme="coreboard"] h1::first-letter,html[data-theme="coreboard"] .cb-title::first-letter{color:var(--cb-red)}
+
+/* ---- boutons : contour fin, rouge au survol, plein rouge à l'appui ; état actif = filet rouge dessous (onglets/modes) */
+html[data-theme="coreboard"] .btn,html[data-theme="coreboard"] button:not(.th-card){font-family:var(--font-ui)!important;font-weight:600;letter-spacing:.5px}
+html[data-theme="coreboard"] .btn{background:var(--cb-surf2);color:var(--cb-text);border:1px solid var(--cb-line);border-radius:var(--radius);transition:border-color .15s,background .15s,box-shadow .15s}
+html[data-theme="coreboard"] .btn small{color:var(--cb-muted)}
+html[data-theme="coreboard"] .btn:hover{background:#1d1d21;border-color:var(--cb-red);color:#fff;box-shadow:0 0 0 3px var(--cb-red-glow)}
+html[data-theme="coreboard"] .btn:active{background:var(--cb-red);color:#fff;border-color:var(--cb-red)}
+html[data-theme="coreboard"] .btn.on,html[data-theme="coreboard"] .btn.active,html[data-theme="coreboard"] .btn[aria-pressed="true"]{border-color:var(--cb-red);background:hsl(var(--h) 70% 10%);box-shadow:inset 0 -2px 0 var(--cb-red)}
+
+/* ---- champs */
+html[data-theme="coreboard"] input[type=text],html[data-theme="coreboard"] input[type=search],html[data-theme="coreboard"] input[type=number],html[data-theme="coreboard"] select,html[data-theme="coreboard"] textarea{
+  background:var(--cb-bg2);border:1px solid var(--cb-line);border-radius:var(--radius);color:var(--cb-text);padding:7px 10px;outline:none}
+html[data-theme="coreboard"] input:focus,html[data-theme="coreboard"] select:focus,html[data-theme="coreboard"] textarea:focus{border-color:var(--cb-red);box-shadow:0 0 0 3px var(--cb-red-glow)}
+html[data-theme="coreboard"] #log{background:var(--cb-bg2)}
+html[data-theme="coreboard"] footer{color:var(--cb-muted)}
+html[data-theme="coreboard"] ::selection{background:var(--cb-red);color:#fff}
+html[data-theme="coreboard"] ::-webkit-scrollbar{width:10px;height:10px}
+html[data-theme="coreboard"] ::-webkit-scrollbar-thumb{background:#2a2a30;border-radius:6px}
+html[data-theme="coreboard"] ::-webkit-scrollbar-thumb:hover{background:var(--cb-red)}
+html[data-theme="coreboard"] ::-webkit-scrollbar-track{background:transparent}
+
+/* =========================================================================================================
+   COMPOSANTS DU TABLEAU DE BORD SYSTÈME (vue « Performances » / « Accueil »). Utilisables avec n'importe quel thème,
+   mais conçus pour Coreboard : à poser dans le HTML de la nouvelle vue.
+   ========================================================================================================= */
+.cb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.cb-card{background:var(--cb-surf,#101012);border:1px solid var(--cb-line,#26262b);border-radius:6px;padding:14px 16px}
+.cb-card>h4{margin:0 0 12px;display:flex;align-items:center;gap:10px;font:700 14px var(--font-ui,sans-serif);letter-spacing:1px;color:#fff}
+.cb-card>h4::before{content:"";width:18px;height:12px;background:repeating-linear-gradient(115deg,var(--cb-red,#e0243c) 0 3px,transparent 3px 7px)}
+
+/* ligne « libellé ........ valeur » + barre de progression dégradé violet → rouge */
+.cb-row{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;padding:3px 0;color:var(--cb-text,#e9e9ec)}
+.cb-row span:first-child{color:var(--cb-muted,#8b8b94)}
+.cb-bar{height:2px;background:#2a2a30;margin:1px 0 6px;position:relative}
+.cb-bar>i{position:absolute;left:0;top:0;bottom:0;width:var(--v,0%);background:linear-gradient(90deg,#5b3ee0,var(--cb-red,#e0243c));transition:width .4s}
+
+/* sélecteur de mode (Silencieux / Équilibré / Turbo) : icône + libellé, filet rouge sous l'actif */
+.cb-modes{display:flex;border-bottom:1px solid var(--cb-line,#26262b)}
+.cb-modes button{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:transparent;border:0;color:var(--cb-muted,#8b8b94);cursor:pointer;font-weight:600;border-radius:6px 6px 0 0}
+.cb-modes button:hover{color:#fff;background:#ffffff08}
+.cb-modes button.on{color:#fff;background:linear-gradient(180deg,transparent,hsl(var(--h,352) 80% 25% / .35));box-shadow:inset 0 -2px 0 var(--cb-red,#e0243c)}
+
+/* interrupteur (Turbo Boost…) */
+.cb-switch{position:relative;width:46px;height:24px;border-radius:3px;background:#2a2a30;border:1px solid var(--cb-line,#26262b);cursor:pointer;transition:.15s}
+.cb-switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:2px;transition:.15s}
+.cb-switch.on{background:var(--cb-red,#e0243c);border-color:var(--cb-red,#e0243c)}.cb-switch.on::after{left:24px}
+
+/* groupe de pastilles (Préférence énergie : Défaut / Perf. / Équ.+ / Éco / Min) */
+.cb-seg{display:flex;gap:6px;flex-wrap:wrap}
+.cb-seg button{padding:5px 12px;background:var(--cb-bg2,#0a0a0c);border:1px solid var(--cb-line,#26262b);border-radius:4px;color:var(--cb-text,#e9e9ec);cursor:pointer;font-size:13px}
+.cb-seg button:hover{border-color:var(--cb-red,#e0243c)}
+.cb-seg button.on{border-color:var(--cb-red,#e0243c);background:hsl(var(--h,352) 70% 12%);color:#fff;font-weight:700}
+
+/* jauge ventilateur : arc SVG (stroke-dasharray) — <svg class="cb-gauge"><circle class="bg"/><circle class="fg" style="--p:.62"/></svg> */
+.cb-gauge{width:170px;height:170px;transform:rotate(135deg)}
+.cb-gauge circle{fill:none;stroke-width:9;stroke-linecap:round;cx:85px;cy:85px;r:70px}
+.cb-gauge .bg{stroke:#26262b;stroke-dasharray:330 440}
+.cb-gauge .fg{stroke:#6a4cf0;stroke-dasharray:calc(330px * var(--p,0)) 440;transition:stroke-dasharray .5s}
+
+/* gros titre de section type « GPU / CPU » en pixel */
+.cb-hero{font:400 20px var(--font-pixel,monospace)!important;letter-spacing:2px;color:#fff}
+
+/* ---- carte d'aperçu dans RÉGLAGES > thèmes */
+.th-card[data-theme="coreboard"] .mock{background:linear-gradient(var(--cb-grid,#7a141f22) 1px,transparent 1px) 0 0/10px 10px,#08080a;border-color:#26262b;border-radius:6px}
+.th-card[data-theme="coreboard"] .mock b{background:var(--cb-red,#e0243c);border-radius:2px}
+.th-card[data-theme="coreboard"] .mock i{border-color:var(--cb-red,#e0243c);border-radius:4px}
+.th-card[data-theme="coreboard"] .mock em{border-color:#26262b;border-radius:4px;background:#101012}

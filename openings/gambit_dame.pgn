@@ -1,0 +1,26 @@
+[Event "Gambit Dame"]
+[Repertoire "white"]
+[Level "1200-1300"]
+[Theory "du Gambit Dame"]
+[ECO "D06"]
+[Description "On offre un pion pour dominer le centre : c4 attaque d5, les Blancs gagnent de l'espace et de l'initiative."]
+
+1. d4 { [%cal Gd2d4] [%csl Gd4,Ge5] On prend le centre avec le pion dame. Il est protégé par la dame, c'est plus solide que e4. } 1... d5 { [%csl Gd5] Les Noirs répondent symétriquement. }
+2. c4 { [%name Gambit Dame] [%cal Gc2c4,Gc4d5] [%csl Rd5] On attaque le pion d5 avec le pion c : si les Noirs prennent, on récupère facilement le pion et on reste dominant. Ce n'est pas un vrai gambit, c'est un pion offert temporairement. }
+2... e6 { [%name Gambit Dame Refusé] [%cal Ge6d5] [%csl Gd5] Les Noirs défendent d5 : le choix le plus solide. }
+( 2... dxc4 { [%name Gambit Dame Accepté] [%cal Gd5c4] [%csl Rc4] Les Noirs prennent le pion. On va le reprendre, mais pas à n'importe quel prix. }
+  3. Nf3 { [%cal Gg1f3,Ge2e3] On développe et on prépare e3 puis Fxc4. } 3... Nf6
+  4. e3 { [%cal Ge2e3,Gf1c4] [%csl Rc4] On ouvre la diagonale du fou pour reprendre le pion. } 4... e6
+  5. Bxc4 { [%cal Gf1c4] [%csl Gc4] Le pion est récupéré : on a un centre et une belle structure. } 5... c5 { [%cal Gc5d4] [%csl Gd4] Les Noirs attaquent notre centre par le côté : c'est le plan classique.}
+  6. O-O a6 { [%cal Ga6b5] [%csl Gb5] }
+)
+3. Nc3 { [%cal Gb1c3] [%csl Gd5] On met la pression sur d5 avec un deuxième attaquant. } 3... Nf6 { [%cal Gf6d5] [%csl Gd5] Les Noirs développent et protègent d5 une deuxième fois. }
+4. Bg5 { [%cal Gc1g5,Gg5f6] [%csl Rf6] Le fou cloue le cavalier f6 : celui-ci défend d5, donc la pression sur d5 augmente. } 4... Be7 { [%cal Gf8e7] On brise le clouage en préparant le roque. }
+5. e3 { [%cal Ge2e3] [%csl Gd3,Gf1] Un pion solide, il ouvre aussi la diagonale du fou f1. } 5... O-O { [%csl Gg8] Les Noirs mettent leur roi en sécurité. }
+6. Nf3 { [%cal Gg1f3] [%csl Gf3] Développement du deuxième cavalier : toutes les petites pièces sont en jeu. } 6... Nbd7 { [%cal Gb8d7] Les Noirs développent aussi, en défendant e5 et f6. }
+7. Rc1 { [%cal Ga1c1,Gc1c4] [%csl Gc1] La tour prend la colonne c : on va jouer sur le côté dame. } 7... c6 { [%cal Gc6d5] [%csl Gd5] Les Noirs consolident d5 avec un pion. }
+8. Bd3 { [%cal Gf1d3,Gd3c4] [%csl Gd3] Le fou se place en d3, il vise h7 et prépare cxd5. } 8... dxc4 { [%cal Gd5c4] [%csl Rc4] Les Noirs prennent : le pion c4 est gagné pour l'instant. }
+9. Bxc4 { [%cal Gd3c4] [%csl Gc4] On reprend avec le fou : voilà la structure classique, avec le fou actif sur c4. } 9... Nd5 { [%cal Gf6d5] [%csl Rg5] Les Noirs échangent des pièces pour dégager leur position. }
+10. Bxe7 { [%cal Gg5e7] [%csl Re7] On échange les fous : on garde l'avantage d'espace et le roi noir perd un défenseur. } 10... Qxe7 { [%csl Ge7] }
+11. O-O { [%cal Ge1g1] [%csl Gg1] On roque : le roi est protégé, toutes les pièces développées. } 11... Nxc3 { [%cal Gd5c3] [%csl Rc3] Les Noirs échangent encore un cavalier pour avoir de l'air. } 12. Rxc3 { [%cal Gc1c3] La tour reprend, la colonne c est à nous. } 12... e5 { [%cal Ge6e5] [%csl Ge5] Les Noirs lancent le coup libérateur de la défense orthodoxe. Position équilibrée, riche et jouable. }
+*

@@ -1,0 +1,45 @@
+/* COULEURS D'ACCENT (déclinaisons de Coreboard) + effet « shiny ».
+   <html data-accent="rouge|violet|or|vert|bleu" data-shiny="1"> posés par theme.js. Les modules (Agenda, Accueil, Profils, Syllabus…) lisent --ac / --ac2 / --acd / --ac3 / --ac-lt
+   au lieu d'un rouge codé en dur : changer d'accent recolore tout, sans redémarrage. */
+:root{--ah:352;--as:77%;--al:52%}
+html[data-accent="violet"]{--ah:268;--as:72%;--al:62%}
+html[data-accent="or"]{--ah:42;--as:92%;--al:50%}
+html[data-accent="vert"]{--ah:145;--as:66%;--al:44%}
+html[data-accent="bleu"]{--ah:212;--as:88%;--al:56%}
+:root{
+  --ac:hsl(var(--ah) var(--as) var(--al));
+  --ac2:hsl(var(--ah) var(--as) calc(var(--al) + 13%));
+  --ac3:hsl(var(--ah) var(--as) calc(var(--al) - 3%));
+  --acd:hsl(var(--ah) calc(var(--as) - 8%) calc(var(--al) - 25%));
+  --ac-lt:hsl(var(--ah) 100% 86%);
+  --ac-glow:hsl(var(--ah) var(--as) var(--al) / .35);
+}
+
+/* ---- pastilles du sélecteur (Réglages) */
+.ac-row{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.ac-sw{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:30px;border:1.5px solid #333;background:#0b0b0d;color:#ddd;cursor:pointer;font:700 12px Rajdhani,Consolas,sans-serif;letter-spacing:1.2px;transition:.18s}
+.ac-sw i{width:20px;height:20px;border-radius:50%;background:var(--sw);box-shadow:0 0 0 2px #0008 inset,0 0 10px color-mix(in srgb,var(--sw) 60%,transparent)}
+.ac-sw:hover{border-color:var(--sw)}.ac-sw.on{border-color:var(--sw);background:color-mix(in srgb,var(--sw) 14%,#0b0b0d);color:#fff}
+.ac-toggle{display:flex;align-items:center;gap:10px;margin:4px 0;cursor:pointer;font-size:14px}
+.ac-toggle input{accent-color:var(--ac)}
+
+/* ---- SHINY : balayage lumineux très discret sur les bordures (cartes, boutons principaux) et sur la marque.
+   Technique : un liseré de 1 px peint par un dégradé animé, découpé en cadre par un masque ; aucun reflow, pointer-events none. */
+@keyframes shinySweep{from{background-position:210% 0}to{background-position:-110% 0}}
+@keyframes shinyText{from{background-position:200% 0}to{background-position:-100% 0}}
+html[data-shiny="1"] :is(.box,.ag-card,.cb-card,.tm-card,.rl-card,.hm-card,.sy-card,.ob-card,.ag-b.pri,.rl-b:not(.ghost),.ob-b:not(.ghost),.tr-bubble){position:relative}
+html[data-shiny="1"] :is(.box,.ag-card,.cb-card,.tm-card,.rl-card,.hm-card,.sy-card,.ob-card,.ag-b.pri,.rl-b:not(.ghost),.ob-b:not(.ghost),.tr-bubble)::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:1;opacity:.9;
+  background:linear-gradient(110deg,transparent 40%,var(--ac2) 50%,transparent 60%) 210% 0/260% 100%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  animation:shinySweep 7s linear infinite}
+/* décalage de phase : les cartes ne brillent pas toutes en même temps */
+html[data-shiny="1"] :is(.box,.ag-card,.cb-card,.tm-card,.hm-card):nth-child(2n)::after{animation-delay:-2.3s}
+html[data-shiny="1"] :is(.box,.ag-card,.cb-card,.tm-card,.hm-card):nth-child(3n)::after{animation-delay:-4.6s}
+html[data-shiny="1"] .ag-now{background:linear-gradient(90deg,var(--ac),var(--ac2),var(--ac));background-size:200% 100%;animation:shinyText 5s linear infinite}
+html[data-shiny="1"][data-theme="coreboard"] header::before,html[data-shiny="1"] #ag .ag-top h2{
+  background:linear-gradient(110deg,var(--ac) 35%,#fff 50%,var(--ac) 65%) 200% 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:shinyText 8s linear infinite}
+@media (prefers-reduced-motion:reduce){
+  html[data-shiny="1"] :is(.box,.ag-card,.cb-card,.tm-card,.rl-card,.hm-card,.sy-card,.ob-card,.ag-b.pri,.rl-b,.ob-b,.tr-bubble)::after{animation:none;background-position:50% 0;opacity:.45}
+  html[data-shiny="1"] .ag-now,html[data-shiny="1"][data-theme="coreboard"] header::before,html[data-shiny="1"] #ag .ag-top h2{animation:none}
+}

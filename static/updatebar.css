@@ -1,0 +1,9 @@
+/* Bannière de mise à jour (Launcher) : discrète, en bas à droite, jamais bloquante. */
+.upd-bar{position:fixed;right:16px;bottom:16px;z-index:400;display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:min(520px,calc(100vw - 32px));padding:10px 14px;background:var(--panel,#11151a);color:var(--u,#dfe);border:1px solid var(--neon,#0f9);box-shadow:0 6px 28px #000a,0 0 18px color-mix(in srgb,var(--neon,#0f9) 25%,transparent);font:13px var(--font-ui,Consolas,monospace);animation:updIn .35s ease-out}
+.upd-bar b{color:var(--neon,#0f9)}
+.upd-bar button{font:700 12px var(--font-ui,Consolas,monospace);letter-spacing:1px;cursor:pointer;padding:5px 10px;border:1px solid var(--neon,#0f9);background:transparent;color:var(--neon,#0f9)}
+.upd-bar .upd-go{background:var(--neon,#0f9);color:var(--bg,#000)}
+.upd-bar button:disabled{opacity:.5;cursor:wait}
+.upd-done{border-color:var(--cy,#5df)}
+@keyframes updIn{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){.upd-bar{animation:none}}

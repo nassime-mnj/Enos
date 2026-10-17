@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="nasko-token" content="__TOKEN__">
+<!--NASKO-KEY-->
+<script>try{if(/[?&]desktop=1/.test(location.search)||sessionStorage.getItem("enos_os")==="1"){document.documentElement.classList.add("os");sessionStorage.setItem("enos_os","1")}}catch(e){}</script>
+<script src="/static/theme.js?v=20261005d"></script>
+<script src="/static/motion.js"></script>
+<script src="/static/sec.js"></script>
+<script src="/static/roles.js"></script>
+<title>E.N.O.S.</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#050304">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{--h:356;--sat:1;--bg:#000;--panel:hsl(calc(var(--h) - 2) calc(82% * var(--sat)) 2.2%);--neon:hsl(var(--h) calc(100% * var(--sat)) 50%);--mid:hsl(var(--h) calc(100% * var(--sat)) 35.5%);--dim:hsl(calc(var(--h) + 2) calc(78% * var(--sat)) 19.8%);--cy:hsl(calc(var(--h) + 38) calc(100% * var(--sat)) 50%);--mg:#ff2a6d;--u:hsl(var(--h) calc(100% * var(--sat)) 77.6%)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}   /* sans cela, .btn{display:block} annule l'attribut hidden (boutons fantômes) */
+html,body{margin:0;height:100%;background:var(--bg);position:relative;color:var(--neon);font:14px/1.5 Consolas,"Courier New",monospace}
+body{display:flex;flex-direction:column;overflow:hidden;animation:boot .8s ease-out;max-width:100vw;overflow-x:hidden;box-sizing:border-box}
+main,header,footer,form,.box{box-sizing:border-box;max-width:100vw}
+@keyframes boot{from{opacity:0;filter:brightness(3)}to{opacity:1;filter:none}}
+::selection{background:var(--neon);color:#000}
+body{background:transparent}   /* le noir est porté par <html> : sinon il masque l'image de fond (z-index négatif) */
+/* ---- fond d'écran : image + overlay d'assombrissement + respiration lente */
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+ background:#000 url("/static/img/nasko_background.jpg") center / cover no-repeat;
+ transform-origin:center;will-change:transform,opacity;animation:pulse-bg 9s ease-in-out infinite}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+ background:radial-gradient(ellipse at center,#00000040 0%,#0000009e 80%)}
+@keyframes pulse-bg{0%,100%{transform:scale(1);opacity:.78}50%{transform:scale(1.02);opacity:1}}
+body.speaking::before{animation-duration:2.6s}   /* le fond « respire » plus vite quand E.N.O.S. parle */
+@media (prefers-reduced-motion:reduce){body::before{animation:none}}
+header{position:relative;text-align:center;padding:10px 10px 6px;border-bottom:1px solid var(--dim);
+ background:repeating-linear-gradient(0deg,hsl(var(--h) calc(86% * var(--sat)) 2.7% / 0.77) 0 2px,#000000a8 2px 4px);overflow:hidden}
+header::after{content:"";position:absolute;left:0;right:0;height:18px;background:linear-gradient(#0000,hsl(calc(var(--h) - 1) calc(81% * var(--sat)) 8.2%),#0000);animation:scan 4s linear infinite;pointer-events:none}
+@keyframes scan{from{top:-20px}to{top:100%}}
+pre#ascii{margin:0;display:inline-block;font:700 clamp(8px,1.55vw,17px)/1.05 Consolas,monospace;color:var(--mid);
+ text-shadow:0 0 6px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.53),0 0 18px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.27);animation:pulse 2.4s ease-in-out infinite;position:relative}
+@keyframes pulse{50%{color:hsl(var(--h) calc(100% * var(--sat)) 68.2%);text-shadow:0 0 10px hsl(var(--h) calc(100% * var(--sat)) 50%),0 0 28px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.53)}}
+pre#ascii.glitch{text-shadow:-4px 0 var(--cy),4px 0 var(--mg);transform:translateX(var(--gx,0))}
+#tag{color:var(--dim);font-size:11px;letter-spacing:2px}
+#greet{min-height:24px;font-size:15px;margin-top:4px}
+#greet::after,.cur::after{content:"█";animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+main{flex:1;display:grid;grid-template-columns:320px minmax(0,1fr);gap:12px;padding:12px;min-height:0;min-width:0;overflow-x:hidden}
+/* ---- sections reservees au PC / a l'appareil distant */
+body.remote .local-only{display:none!important}
+body:not(.remote) .remote-only{display:none!important}
+.menu-btn,.drawer-head,#scrim{display:none}
+.ch-short{display:none}
+.dev{padding:6px 0;border-bottom:1px solid hsl(calc(var(--h) + 2) calc(73% * var(--sat)) 8.6%)}.dev .dn{color:var(--neon)}.dev .di{font-size:11px}.dev .da{margin-top:4px}
+#files{max-height:200px;overflow-y:auto}
+h3.clickable{cursor:pointer;display:flex;gap:8px;align-items:center;user-select:none}
+h3.clickable:hover{color:var(--neon)}
+h3.clickable .chev{margin-left:auto;transition:transform .15s}h3.clickable.closed .chev{transform:rotate(-90deg)}
+#scenelist{max-height:300px;overflow-y:auto;overscroll-behavior:contain}
+.sg{margin-bottom:4px}
+.sg .sgh{cursor:pointer;color:var(--mid);font-size:12px;padding:3px 2px;display:flex;gap:6px;user-select:none}
+.sg .sgh:hover{color:var(--neon)}.sg .sgh .n{margin-left:auto;color:var(--dim)}
+.btn.scene{padding:4px 8px;font-size:12px;font-weight:400;margin:0 0 3px 10px;width:calc(100% - 10px);min-height:0;
+ clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn.scene .ext,.btn.scene .dd{color:var(--dim);font-size:10px;margin-left:4px}
+.btn.scene.busy{opacity:.55;pointer-events:none}
+#netinfo{font-size:12px;color:var(--mid);word-break:break-all}#netinfo b{color:var(--neon);letter-spacing:2px}
+#netinfo img.qr{display:block;width:170px;height:170px;margin:6px 0;border:6px solid #fff;background:#fff}
+.box{border:2px solid var(--dim);background:#00000066;animation:border 3.2s ease-in-out infinite;display:flex;flex-direction:column;min-height:0;min-width:0}
+@keyframes border{50%{border-color:var(--mid);box-shadow:0 0 14px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.13)}}
+.box h3{margin:0;padding:8px 12px;font-size:13px;letter-spacing:1px;border-bottom:1px solid var(--dim);color:var(--mid)}
+#side{overflow-y:auto}
+.sec{padding:10px 12px;border-bottom:1px solid hsl(calc(var(--h) + 2) calc(73% * var(--sat)) 8.6%)}
+.btn{display:block;width:100%;text-align:left;margin:0 0 8px;padding:10px 14px;background:var(--bg);color:var(--neon);
+ border:2px solid var(--dim);font:700 14px Consolas,monospace;cursor:pointer;position:relative;overflow:hidden;
+ clip-path:polygon(0 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%);transition:background .15s,border-color .15s,color .15s}
+.btn small{display:block;font-weight:400;font-size:10px;color:var(--dim);transition:color .15s}
+.btn:hover{background:hsl(calc(var(--h) - 2) calc(80% * var(--sat)) 10%);border-color:var(--neon);color:hsl(var(--h) calc(100% * var(--sat)) 89.2%)}.btn:hover small{color:var(--mid)}
+.btn::before{content:"";position:absolute;top:0;bottom:0;width:16px;left:-30px;background:hsl(calc(var(--h) + 3) calc(78% * var(--sat)) 26.9% / 0.4)}
+.btn:hover::before{animation:sweep .6s ease-out}
+@keyframes sweep{to{left:110%}}
+.btn:active{background:var(--neon);color:#000}.btn:active small{color:#000}
+.btn.sm{padding:5px 10px;font-size:12px;display:inline-block;width:auto;margin:0 6px 0 0}
+input[type=text]{width:100%;background:hsl(calc(var(--h) - 2) calc(82% * var(--sat)) 2.2% / 0.85);color:var(--neon);border:2px solid var(--dim);padding:6px 8px;font:13px Consolas,monospace;outline:0;caret-color:var(--neon)}
+input[type=text]:focus{border-color:var(--neon)}
+ul{list-style:none;margin:0;padding:0}
+li.row{display:flex;gap:6px;align-items:center;padding:3px 4px;cursor:pointer;border-left:2px solid transparent;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+li.row:hover{background:hsl(calc(var(--h) - 2) calc(80% * var(--sat)) 10%);border-left-color:var(--neon)}
+li.row .x{margin-left:auto;color:var(--dim)}li.row .x:hover{color:var(--mg)}
+li.row.cur2{border-left-color:var(--neon);background:hsl(calc(var(--h) - 2) calc(79% * var(--sat)) 5.7%)}
+.dim{color:var(--dim)}
+#bars{display:flex;align-items:flex-end;gap:2px;height:48px}
+#bars i{flex:1;background:var(--dim);height:4px;transition:height .08s}
+#chatbox{min-height:0}
+#log{flex:1;overflow-y:auto;padding:10px 14px;background:hsl(calc(var(--h) - 2) calc(82% * var(--sat)) 2.2% / 0.55);scroll-behavior:smooth}
+.m{margin:0 0 14px;white-space:pre-wrap;word-wrap:break-word;animation:fade .35s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.m b{font-weight:700}.u b,.u span{color:var(--u)}.sys{color:var(--dim)}
+.err{color:var(--mg)}.err b{color:var(--mg)}
+#preview{display:none;max-height:34%;overflow:auto;margin:0;padding:8px 14px;border-top:1px solid var(--dim);background:#000000d9;color:var(--mid);font-size:12px;white-space:pre-wrap}
+form{display:flex;gap:8px;padding:8px;border-top:1px solid var(--dim)}
+form label{align-self:center;color:var(--mid);font-weight:700}
+form input{flex:1;min-width:0;font-size:15px;border:2px solid var(--dim)}
+form .btn{width:auto;margin:0}
+footer{display:flex;justify-content:space-between;padding:4px 14px 8px;color:var(--dim);font-size:11px}
+#led{color:var(--neon);animation:blink 2s steps(2) infinite}
+
+#avatar{position:relative;display:inline-block;transition:transform .08s linear;transform:scale(calc(1 + var(--lvl,0)*.035))}
+#avatar::before,#avatar::after{content:"";position:absolute;inset:-4px -16px;border:2px solid var(--neon);border-radius:50%/45%;opacity:0;pointer-events:none}
+#avatar.is-speaking::before{animation:wave 1.6s ease-out infinite}
+#avatar.is-speaking::after{animation:wave 1.6s ease-out .8s infinite}
+@keyframes wave{from{transform:scale(.92);opacity:.75}to{transform:scale(1.14);opacity:0}}
+pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
+@keyframes speak-glow{from{color:hsl(var(--h) calc(100% * var(--sat)) 68.2%);text-shadow:0 0 8px hsl(var(--h) calc(100% * var(--sat)) 50%),0 0 24px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.53)}
+ to{color:hsl(calc(var(--h) - 1) calc(100% * var(--sat)) 91.6%);text-shadow:0 0 16px hsl(var(--h) calc(100% * var(--sat)) 50%),0 0 46px hsl(var(--h) calc(100% * var(--sat)) 50%),0 0 84px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.4)}}
+.chat-head{display:flex;align-items:center;gap:12px;padding:6px 12px!important}
+#logo{height:46px;width:46px;flex:none;border-radius:10px;background:#000000b0;border:1px solid var(--dim);padding:2px;
+ box-shadow:0 0 8px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.2);transition:box-shadow .3s,border-color .3s}
+#logo.is-speaking{border-color:var(--neon);animation:pulse-glow .7s ease-in-out infinite alternate}
+@keyframes pulse-glow{from{box-shadow:0 0 8px 1px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.4);transform:scale(1);filter:brightness(1)}
+ to{box-shadow:0 0 22px 6px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.8),0 0 54px 14px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.4);transform:scale(1.12);filter:brightness(1.5) saturate(1.3)}}
+#avatar.is-listening pre#ascii{text-shadow:0 0 10px var(--cy),0 0 28px hsl(calc(var(--h) + 38) calc(100% * var(--sat)) 50% / 0.33)}
+.think{color:var(--mid)}
+.think i{font-style:normal;display:inline-block;animation:dots 1.2s steps(4) infinite;overflow:hidden;vertical-align:bottom;width:0}
+@keyframes dots{to{width:2.4em}}
+#avatar.is-thinking pre#ascii{animation:think 1.4s ease-in-out infinite}
+@keyframes think{0%,100%{color:var(--mid);text-shadow:0 0 6px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.53)}50%{color:hsl(calc(var(--h) - 90) calc(100% * var(--sat)) 64.5%);text-shadow:0 0 14px hsl(calc(var(--h) - 94) calc(100% * var(--sat)) 50% / 0.67),0 0 36px hsl(calc(var(--h) - 94) calc(100% * var(--sat)) 50% / 0.33)}}
+#vstate{margin-left:auto;font-weight:400;color:var(--dim)}
+.btn.ico{width:48px;padding:0;display:grid;place-items:center;flex:none}
+.btn.ico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn.ico.listening{border-color:var(--mg);color:var(--mg);animation:rec 1s ease-in-out infinite}
+@keyframes rec{50%{box-shadow:0 0 0 4px #ff2a6d44,0 0 16px #ff2a6d88;background:#1a0008}}
+.btn.ico.on{background:var(--neon);color:#000;border-color:var(--neon);box-shadow:0 0 16px hsl(var(--h) calc(100% * var(--sat)) 50% / 0.53)}
+#modal{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center}
+/* ======== MOBILE (telephone) : le chat occupe 100 % de l'ecran ; le panneau lateral devient un tiroir ☰ ======== */
+@media (max-width: 768px) {
+  html,body{height:100vh;height:100dvh;overscroll-behavior-y:none}
+  body{width:100%}
+  body>header,body>footer{display:none}                         /* bandeau ASCII et barre d'etat : inutiles sur telephone */
+  main{display:block;padding:0;gap:0;overflow:hidden;min-height:0}
+  #chatbox{height:100%;border:0;border-radius:0;animation:none;background:transparent;box-shadow:none}
+  .chat-head{padding:calc(env(safe-area-inset-top,0px) + 6px) 10px 6px 6px!important;gap:10px;background:#000000b3;border-bottom:1px solid var(--dim)}
+  .ch-long{display:none}.ch-short{display:inline;font-size:15px;letter-spacing:2px;color:var(--neon)}
+  #logo{height:42px;width:42px}
+  #vstate{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #log{font-size:16px;line-height:1.45;padding:10px 12px;background:hsl(calc(var(--h) - 2) calc(82% * var(--sat)) 2.2% / 0.55);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  #preview{display:none!important}
+  form{gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));background:#000000bf}
+  form label{display:none}
+  form input{font-size:16px;min-height:48px;padding:0 10px}   /* 16 px : evite le zoom automatique du navigateur */
+  .btn.ico{width:48px;height:48px}
+  form .btn[type=submit]{height:48px;padding:0 12px;font-size:13px}
+  .menu-btn{display:grid;place-items:center;flex:none;width:44px;height:44px;margin:0;padding:0;font-size:24px;line-height:1;
+   background:transparent;color:var(--neon);border:1px solid var(--dim);border-radius:10px;cursor:pointer}
+  .menu-btn:active{background:var(--neon);color:#000}
+  /* tiroir (off-canvas) : le panneau lateral, en surimpression, uniquement quand on l'ouvre */
+  #side{display:flex;position:fixed;z-index:60;top:0;bottom:0;left:0;width:min(88vw,360px);max-width:none;border-width:0 2px 0 0;border-radius:0;
+   background:hsl(calc(var(--h) - 2) calc(82% * var(--sat)) 2.2% / 0.96);animation:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+   transform:translateX(-104%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s}
+  body.menu-open #side{transform:none;visibility:visible;transition:transform .25s ease,visibility 0s}
+  #scrim{display:block;position:fixed;inset:0;z-index:55;background:#000000cc;opacity:0;pointer-events:none;transition:opacity .2s}
+  body.menu-open #scrim{opacity:1;pointer-events:auto}
+  .drawer-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--dim);color:var(--mid);font-weight:700;letter-spacing:1px}
+  .drawer-head button{width:44px;height:44px;margin:0;font-size:20px;background:transparent;color:var(--neon);border:1px solid var(--dim);border-radius:10px}
+  #side .btn{min-height:48px}
+  #side .btn.sm{min-height:44px;margin-bottom:6px}
+}
+</style>
+<link rel="stylesheet" href="/static/f6.css">
+<link rel="stylesheet" href="/static/imgproc.css">
+<link rel="stylesheet" href="/static/anim.css">
+<link rel="stylesheet" href="/static/talk.css">
+<link rel="stylesheet" href="/static/colis.css">
+<link rel="stylesheet" href="/static/compress.css">
+<link rel="stylesheet" href="/static/pdfed.css">
+<link rel="stylesheet" href="/static/studio.css">
+<link rel="stylesheet" href="/static/syllabus.css">
+<link rel="stylesheet" href="/static/quick.css">
+<link rel="stylesheet" href="/static/background.css">
+<link rel="stylesheet" href="/static/roles.css">
+<link rel="stylesheet" href="/static/search.css">
+<link rel="stylesheet" href="/static/youtube.css">
+<link rel="stylesheet" href="/static/cleaner.css">
+<link rel="stylesheet" href="/static/organizer.css">
+<link rel="stylesheet" href="/static/apimon.css">
+<link rel="stylesheet" href="/static/audio.css">
+<link rel="stylesheet" href="/static/env.css">
+<link rel="stylesheet" href="/static/sync.css">
+<link rel="stylesheet" href="/static/chill.css">
+<link rel="stylesheet" href="/static/tabs.css">
+<link rel="stylesheet" href="/static/security.css">
+<link rel="stylesheet" href="/static/themes.css">
+<link rel="stylesheet" href="/static/team.css">
+<link rel="stylesheet" href="/static/devmanager.css">
+<link rel="stylesheet" href="/static/depot.css">
+<link rel="stylesheet" href="/static/updatebar.css">
+<link rel="stylesheet" href="/static/study.css">
+<link rel="stylesheet" href="/static/mobile.css">
+<link rel="stylesheet" href="/static/defi.css">
+<link rel="stylesheet" href="/static/persona.css?v=20261005d">
+<link rel="stylesheet" href="/static/sysdash.css">
+<link rel="stylesheet" href="/static/theme_coreboard.css">
+<link rel="stylesheet" href="/static/accent.css?v=1">
+<link rel="stylesheet" href="/static/tour.css?v=1">
+<link rel="stylesheet" href="/static/home.css?v=1">
+<link rel="stylesheet" href="/static/agenda.css?v=2">
+<link rel="stylesheet" href="/static/onboarding.css?v=1">
+<link rel="stylesheet" href="/static/pair.css?v=1">
+<link rel="stylesheet" href="/static/motion.css">
+</head>
+<body>
+<header>
+  <div id="avatar"><pre id="ascii"></pre></div>
+  <div id="eto-avatar" class="eto-only" aria-hidden="true"></div>
+  <div id="tag">[ AI CORE // ONLINE ]</div>
+  <div class="persona-slot" data-persona-slot></div>
+  <div id="greet"></div>
+</header>
+<main>
+  <aside id="side" class="box">
+    <div class="drawer-head"><span>[ MENU ]</span><button id="b-menu-close" aria-label="Fermer le menu">✕</button></div>
+    <label class="side-search" for="side-q"><span aria-hidden="true">⌕</span><input id="side-q" type="search" placeholder="Rechercher un outil…" autocomplete="off" spellcheck="false" aria-label="Rechercher un outil"><button type="button" id="side-q-x" aria-label="Effacer la recherche" hidden>✕</button></label>
+    <h3>[ MODULES ]</h3>
+    <div id="side-none" class="dim" hidden>Aucun outil ne correspond.</div>
+    <div class="sec">
+      <button class="btn dev-ok" id="b-env">1. ENVIRONNEMENT<small>PowerShell · Claude · Godot · Aseprite</small></button>
+      <button class="btn dev-ok" id="b-px">2. PIXELLAB<small>Chrome privé : temp-mail + inscription</small></button>
+      <button class="btn local-only dev-ok" id="b-el">ELEVENLABS · SESSION PRIVÉE<small>Navigation privée : inscription ElevenLabs + e-mail temporaire</small></button>
+      <button class="btn dev-ok" id="b-f6-mod">3. TESTS F6<small>Panel plein écran · visu en direct des scènes</small></button>
+      <button class="btn prem dev-ok" id="b-ip">4. TRAITEMENT D'IMAGE<small>PhotoRoom · Sprite Slicer · colis &amp; livraison</small></button>
+      <button class="btn prem dev-ok" id="b-av">5. VISUALISEUR D'ANIMATION<small>Explorateur de dossiers · lecture des frames en pixel art</small></button>
+      <button class="btn friends-ok" id="b-dm">6. MODE DISCUSSION<small>L'Œil d'E.N.O.S. · plein écran · réagit en direct</small></button>
+      <button class="btn dev-ok" id="b-sy">10. SYNC<small>PC ⇄ mobile · QR code · envoi de fichiers</small></button>
+      <button class="btn dev-ok" id="b-ch">11. MODE CHILL<small>Lecteur ambiant · Stockage/Ambiance_Audio</small></button>
+      <button class="btn local-only dev-ok" id="b-tb">12. GESTION GOOGLE<small>Onglets Chrome · miniatures · fermeture</small></button>
+      <button class="btn dev-only dev-ok" id="b-hb">14. HUB ÉQUIPE<small>Entrepôt de colis · chat développeurs<span class="bdg" id="hb-badge"></span></small></button>
+      <button class="btn local-only dev-ok" id="b-gitsync">SYNCHRONISER LE PROJET<small>git add · commit · pull · push (dossier Godot)</small></button>
+      <button class="btn local-only dev-ok" id="b-assist">APPELER L'ASSISTANT<small>Nouvelle fenêtre PowerShell · Claude dans le dossier E.N.O.S.</small></button>
+      <button class="btn local-only dev-ok" id="b-site">SITE WEB<small>Serveur Dual Pulse · état · démarrage · accès</small></button>
+      <button class="btn local-only dev-ok" id="b-pk">CONSTRUIRE UN COLIS<small>Dossier d'export → .zip · envoi vers le projet</small></button>
+      <button class="btn friends-ok" id="b-preview" hidden>VOIR COMME LE GRAND PUBLIC<small>Aperçu de l'interface utilisateur · retour : 5 appuis sur le logo</small></button>
+      <button class="btn local-only dev-ok" id="b-mob">CONTRÔLE MOBILE<small>ADB · miroir scrcpy · strictement local, un seul téléphone</small></button>
+      <button class="btn local-only dev-ok" id="b-pet">ŒIL DE BUREAU<small id="pet-sub">Widget flottant · clic = micro + vision de l'écran</small></button>
+      <button class="btn local-only dev-ok" id="b-vac">ASPIRATEUR<small id="vac-sub">L'Œil est aspiré vers l'autre écran · refaire = retour dans l'autre sens</small></button>
+      <button class="btn local-only dev-ok" id="b-dep">DÉPÔT INTRANET<small>Forge · éditeur Monaco · terminal Linux · Git « Envoyer » · sujets PDF · Dépôt Shell</small></button>
+      <button class="btn local-only dev-ok" id="b-dev">DEV MANAGER<small>WSL Ubuntu · dépôts WSL · git clone · VS Code · scripts .sh de chaque dépôt</small></button>
+      <button class="btn local-only dev-ok" id="b-st">APPRENTISSAGE ÉCHECS<small>ETO enseigne les ouvertures · flèches · retour en arrière · pratique</small></button>
+      <button class="btn local-only dev-ok" id="b-df">DÉFI<small>Jeux contre E.N.O.S. · Échecs (Stockfish)</small></button>
+      <button class="btn local-only dev-ok" id="b-gs">SYNC GODOT<small>Diffuser ma mise à jour · alerte automatique à l'associé</small></button>
+      <button class="btn friends-ok" id="b-rg">15. RÉGLAGES<small>Thèmes · profil · appareils de confiance<span class="bdg" id="rg-badge"></span></small></button>
+      <button class="btn local-only dev-ok" id="b-se">13. SÉCURITÉ<small>Clé d'appairage · chemins autorisés · alertes</small></button>
+      <button class="btn prem dev-ok" id="b-au">9. LABORATOIRE AUDIO<small>Vidéo → WAV · découpage intelligent des SFX · éditeur d'onde</small></button>
+      <button class="btn local-only dev-ok" id="b-yt">16. YOUTUBE UPLOADER<small>Titre · visibilité · envoi direct sur votre chaîne (API v3)</small></button>
+      <button class="btn local-only ceo-only" id="b-api">18. API CONTROL PANEL<small>Quotas · consommation · dates de reset (ElevenLabs, Groq…)</small></button>
+      <button class="btn local-only dev-ok" id="b-sys">20. SYSTÈME<small>Profils de performance · Turbo Boost · capteurs CPU / GPU / RAM</small></button>
+      <button class="btn local-only dev-ok" id="b-dc">17. DEEP SYSTEM CLEANER<small>Scan du disque · gros fichiers · niveau de risque · suppression</small></button>
+      <button class="btn local-only dev-ok" id="b-og">19. ORGANISATEUR<small>Dossiers &amp; fichiers · glisser-déposer · renommer · ranger · annuler</small></button>
+      <button class="btn local-only friends-ok" id="b-qt">24. OUTILS RAPIDES<small>JSON / XML · dépenses partagées · notes de frais (tickets → Excel)</small></button>
+      <button class="btn local-only friends-ok" id="b-syl">23. SYLLABUS SCANNER<small>Plan de cours (PDF) → examens, rendus et cours dans l'agenda</small></button>
+      <button class="btn local-only friends-ok" id="b-sm">22. STUDIO MÉDIA<small>HEIC/WEBP · MP3/GIF · netteté · débruitage · flou · EXIF · transcription · sous-titres</small></button>
+      <button class="btn local-only friends-ok" id="b-pdf">21. ÉDITEUR PDF<small>Fusion · pages · annotation · caviardage · signature · OCR · IA</small></button>
+      <button class="btn dev-ok" id="b-cp">8. COMPRESSION MÉDIA<small>Image &amp; vidéo · qualité maximale · cible en Mo</small></button>
+      <button class="btn prem dev-ok" data-open-colis>7. GÉRER LES COLIS<small>Colis en attente · poids · contenu · renommer</small></button>
+    </div>
+    <h3 class="local-only dev-ok">[ PROJETS ]</h3>
+    <div class="sec local-only dev-ok">
+      <ul id="projects"></ul>
+      <div style="display:flex;gap:6px;margin-top:6px"><input type="text" id="newproj" placeholder="C:\chemin\du\projet"><button class="btn sm" id="addproj" title="Ajouter ce chemin" style="margin:0">+</button><button class="btn sm" id="browseproj" title="Parcourir… (sélecteur de dossier)" style="margin:0">…</button></div>
+    </div>
+    <h3 class="local-only dev-ok clickable" id="scenesh" title="Afficher / masquer la liste des scènes"><span>[ SCÈNES GODOT ]</span><span id="scenecount" class="dim"></span><span class="chev">▾</span></h3>
+    <div class="sec local-only dev-ok" id="scenessec">
+      <div style="display:flex;gap:6px;margin-bottom:6px"><input type="text" id="scenefilter" placeholder="Filtrer (ex. test, diag)"><button class="btn sm" id="scenerefresh" title="Rescanner le projet" style="margin:0">⟳</button></div>
+      <div id="scenenote" class="dim" style="font-size:11px"></div>
+      <div id="scenelist"></div>
+    </div>
+    <h3 class="local-only dev-ok">[ FICHIERS ]</h3>
+    <div class="sec local-only dev-ok"><div class="dim" id="crumb">— aucun projet sélectionné —</div><ul id="files"></ul></div>
+    <h3 id="neth" class="local-only dev-ok" style="display:none">[ ACCÈS TÉLÉPHONE ]</h3>
+    <div class="sec local-only dev-ok" id="netsec" style="display:none"><button class="btn sm dev-ok" id="b-net" style="margin-bottom:8px">…</button> <button class="btn sm dev-ok" id="b-awake" style="margin-bottom:8px" title="Empêche la mise en veille automatique pour rester joignable à distance">…</button><div id="netinfo"></div></div>
+    <h3 id="devh" class="local-only dev-ok" style="display:none">[ APPAREILS DE CONFIANCE ]</h3>
+    <div class="sec local-only dev-ok" id="devsec" style="display:none">
+      <ul id="devices"></ul><div class="dim" id="devnote" style="font-size:11px;margin:6px 0"></div>
+      <button class="btn sm dev-ok" id="b-revoke-all">TOUT RÉVOQUER</button>
+    </div>
+    <h3>[ SIGNAL VOCAL ]</h3>
+    <div class="sec">
+      <div id="bars"></div><br>
+      <button class="btn sm friends-ok" id="b-audio">AUDIO : ON</button><button class="btn sm friends-ok" id="b-clear">EFFACER</button><button class="btn sm local-only friends-ok" id="b-update" title="Ferme E.N.O.S., reconstruit ENOS.exe avec les dernières modifications puis le relance">MISE À JOUR</button><button class="btn sm local-only friends-ok" id="b-quit">QUITTER</button>
+    </div>
+    <h3 class="dev-ok">[ ALIMENTATION ]</h3>
+    <div class="sec dev-ok"><button class="btn sm dev-ok" id="b-sleep" title="Met le PC en veille (rallumable à distance)">⏾ VEILLE</button><button class="btn sm warn dev-ok" id="b-off" title="Éteint le PC (confirmation + compte à rebours annulable)">⏻ ÉTEINDRE</button></div>
+    <h3 class="remote-only">[ CET APPAREIL ]</h3>
+    <div class="sec remote-only"><div id="devname" class="dim" style="margin-bottom:8px"></div>
+      <button class="btn sm friends-ok" id="b-forget" title="Révoque ce téléphone : le code sera redemandé">OUBLIER CET APPAREIL</button>
+      <button class="btn sm friends-ok" id="b-appset" hidden style="margin-top:8px">RÉGLAGES DE L'APPLICATION</button></div>
+  </aside>
+  <section id="chatbox" class="box">
+    <h3 class="chat-head"><button id="b-menu" class="menu-btn" aria-label="Ouvrir le menu">☰</button><span id="eto-logo" class="eto-only" aria-hidden="true"></span><img id="logo" src="/logo.png" alt="Avatar E.N.O.S." onerror="this.remove()"><span class="ch-title"><span class="ch-long">[ TERMINAL DE DIALOGUE ]</span><span class="ch-short">E.N.O.S.</span></span><span id="vstate"></span><button id="b-f6" class="f6-launch dev-ok" aria-label="Ouvrir le panel de tests F6" title="Tests F6 (touche F6)">F6<span class="k">TESTS</span></button></h3>
+    <section id="f6-zone" class="f6-zone dev-ok" aria-label="Zone tests F6">
+      <button type="button" id="f6-zone-main" class="fz-main"><span class="fz-badge">F6</span><span class="fz-txt"><b>ZONE TESTS F6</b><small id="fz-sub">Analyse du projet…</small></span><span class="fz-go">OUVRIR<i>▶</i></span></button>
+      <div class="fz-cats" id="fz-cats"></div>
+    </section>
+    <div id="log"></div>
+    <pre id="preview"></pre>
+    <form id="form" autocomplete="off"><label id="u-label">NASSIME ▸</label><input type="text" id="inp" autofocus><button class="btn ico" type="button" id="b-mic" title="Micro : dicter un message"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg></button>
+    <button class="btn" type="button" id="b-interrupt" title="Couper la voix d'E.N.O.S. et lui parler tout de suite">⏹ INTERROMPRE</button><button class="btn ico" type="button" id="b-live" title="Mode Live : conversation vocale continue"><svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></svg></button>
+    <button class="btn" type="submit">ENVOYER</button></form>
+  </section>
+  <section id="f6view" aria-label="Tests F6" hidden>
+    <div class="f6-bg" aria-hidden="true"><div class="f6-grid3d"></div><div class="f6-vignette"></div></div>
+    <header class="f6-top">
+      <button id="f6-back" class="f6-btn"><span class="ar">◂</span> CHAT IA</button>
+      <div class="f6-title"><h2 data-text="TESTS F6">TESTS F6</h2><span id="f6-project"></span></div>
+      <button id="f6-power" class="f6-btn pw-ico" title="Éteindre le PC" aria-label="Éteindre le PC">⏻</button>
+      <div class="f6-chips"><span id="chip-pc" class="chip"></span><span id="chip-godot" class="chip"></span><span id="chip-view" class="chip"></span></div>
+    </header>
+    <div class="f6-body">
+      <section class="f6-stage idle" id="f6-stage">
+        <div class="stage-frame">
+          <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+          <img id="f6-live" alt="Visu en direct de la scène" draggable="false">
+          <div class="stage-hud"><span class="live">● LIVE</span><span id="f6-fps"></span><span id="f6-res"></span></div>
+          <div class="stage-nosig"><div class="ring"></div><b id="f6-nosig-title">AUCUN SIGNAL</b><small id="f6-nosig-msg">Lancez une scène pour la voir ici</small></div>
+          <div class="stage-scan"></div>
+        </div>
+        <div class="stage-bar">
+          <div class="run" id="f6-running"><span class="dot"></span><span id="f6-run-name">Aucune scène en cours</span><small id="f6-run-time"></small></div>
+          <div class="seg" id="f6-q" role="group" aria-label="Qualité de la visu"><button data-q="eco">ÉCO</button><button data-q="normal" class="on">NORMAL</button><button data-q="hd">HD</button></div>
+          <button class="f6-btn danger" id="f6-stop" disabled>■ STOP</button>
+          <button class="f6-btn icon" id="f6-full" title="Plein écran" aria-label="Plein écran">⛶</button>
+        </div>
+        <div class="telemetry" id="f6-tele">
+          <div><small>PROJET</small><b id="t-proj">—</b></div><div><small>SCÈNES</small><b id="t-scenes">—</b></div><div><small>EN COURS</small><b id="t-run">—</b></div>
+          <div><small>TEMPS</small><b id="t-time">—</b></div><div><small>SPECTATEURS</small><b id="t-view">0</b></div><div><small>VISU</small><b id="t-mode">—</b></div>
+        </div>
+        <div class="stage-share local-only" id="f6-share">PARTAGE D'ÉCRAN
+          <div class="seg"><button data-m="off">OFF</button><button data-m="window">FENÊTRE DU JEU</button><button data-m="full">ÉCRAN COMPLET</button></div></div>
+      </section>
+      <section class="f6-list">
+        <div class="f6-tools">
+          <label class="f6-search"><span>⌕</span><input id="f6-filter" type="text" placeholder="Rechercher une scène…  ( / )" autocomplete="off" spellcheck="false"><button type="button" id="f6-clear" class="f6-x" aria-label="Effacer la recherche" hidden>✕</button></label>
+          <button class="f6-btn icon" id="f6-fold" title="Replier / déplier les catégories" aria-label="Replier tout">⇕</button>
+          <button class="f6-btn icon" id="f6-refresh" title="Rescanner le projet" aria-label="Rescanner">⟳</button>
+        </div>
+        <div class="f6-chips2" id="f6-chips"></div>
+        <div class="f6-count" id="f6-count"></div>
+        <div id="f6-grid"></div>
+      </section>
+    </div>
+    <div class="f6-toast" id="f6-toast" role="status"></div>
+  </section>
+</main>
+<div id="scrim"></div>
+<footer><span id="led">● SYSTEM ONLINE</span><span>E.N.O.S. AI // v3.0 hybride — <span id="clock"></span></span></footer>
+<script src="/static/eto_face.js?v=20261006e8bit"></script>
+<script src="/static/persona.js?v=20261005d"></script>
+<script src="/static/app.js?v=20261005d"></script>
+<div id="pw" class="pw" role="dialog" aria-modal="true" aria-labelledby="pw-title" hidden>
+  <div class="pw-box">
+    <div id="pw-confirm">
+      <h2 id="pw-title">ÉTEINDRE LE PC ?</h2><p id="pw-msg"></p>
+      <input id="pw-pin" type="password" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="CODE D'ACCÈS" hidden>
+      <div class="pw-err" id="pw-err"></div>
+      <button class="btn" id="pw-go">CONFIRMER</button><button class="btn" id="pw-no">ANNULER</button>
+    </div>
+    <div id="pw-count" class="pw-count" hidden>
+      <small id="pw-count-title">ARRÊT DANS</small><b id="pw-sec">20</b><small>SECONDES</small><div class="pw-bar"><i id="pw-fill"></i></div><small id="pw-by"></small>
+      <button class="btn" id="pw-cancel">ANNULER L'ARRÊT</button>
+    </div>
+    <div id="pw-done" class="pw-done" hidden><span id="pw-done-msg"></span></div>
+  </div>
+</div>
+<section id="ip" class="prem" role="dialog" aria-label="Traitement d'image" hidden>
+  <div class="ip-top">
+    <h2>TRAITEMENT D'IMAGE<small>PhotoRoom · Sprite Slicer · Colis &amp; livraison</small></h2>
+    <div id="ip-tabs"><button data-c="simple" class="on">IMAGE SIMPLE</button><button data-c="multiple">IMAGE MULTIPLE</button></div>
+    <button class="btn sm ip-x" id="ip-close">✕ FERMER</button>
+  </div>
+  <div class="ip-sub"><button class="btn sm" id="ip-back" hidden>◂ TÂCHES</button><span id="ip-crumb"></span><span id="ip-todo"></span><button class="btn sm" id="ip-open">OUVRIR « A FAIRE »</button><button class="btn sm local-only" id="ip-fbtn" title="Choisir un dossier entier (sous-dossiers compris) : toutes ses images sont envoyées au traitement">📁 IMPORTER UN DOSSIER</button><button class="btn sm" id="ip-qbtn" hidden title="Rouvrir l'écran de progression">📊 SUIVI DU TRAITEMENT</button><button class="btn sm" id="ip-folders" title="Dossiers Principaux : trier les images en sous-dossiers et exporter en .zip">🗂 MES DOSSIERS</button><button class="btn sm local-only" id="ip-dlbtn" title="Choisir des images récentes du dossier Téléchargements et les envoyer au traitement">⇩ TÉLÉCHARGEMENTS</button><button class="btn sm" id="ip-refresh">⟳ ACTUALISER</button>
+    <span class="sp dim">Déposez vos images dans « A faire » : le traitement démarre tout seul.</span></div>
+  <div id="ip-err" hidden><span id="ip-err-msg"></span><button class="btn sm" id="ip-retry">RELANCER</button></div>
+  <pre id="ip-log"></pre>
+  <div id="ip-wrap"><div id="ip-empty" class="dim" hidden></div><div id="ip-tasks"></div><div id="ip-grid" hidden></div></div>
+  <div class="ip-bar">
+    <span class="cnt" id="ip-count"></span>
+    <button class="btn sm" id="ip-all" hidden>TOUT SÉLECTIONNER</button>
+    <button class="btn red" id="ip-clean">Nettoyer le dossier Livraison</button>
+    <button class="btn amber" id="ip-conv" hidden title="Image Simple déposée par erreur : découpe le PNG détouré avec Sprite Slicer et le range dans Image Multiple">Découper en tuiles (Erreur de dossier)</button>
+    <button class="btn green" id="ip-zip" disabled>Créer un colis (.zip)</button>
+    <button class="btn sm dev-ok" data-open-colis title="Voir, renommer et inspecter les colis en attente">GÉRER LES COLIS</button>
+    <button class="btn big" id="ip-ship">LIVRER LE COLIS</button>
+  </div>
+  <div class="ip-toast" id="ip-toast" role="status"></div>
+</section>
+<div id="ip-hud" hidden aria-live="polite"></div>
+<div id="ip-dl" hidden role="dialog" aria-label="Images du dossier Téléchargements">
+  <div class="tm-top"><h2>TÉLÉCHARGEMENTS<small id="ip-dl-sub">Images récentes · cochez-en plusieurs : elles sont traitées une par une</small></h2>
+    <button class="btn" id="ip-dl-go" disabled>ENVOYER AU TRAITEMENT</button><button class="btn" id="ip-dl-folder">OUVRIR LE DOSSIER</button><button class="btn" id="ip-dl-x">✕ FERMER</button></div>
+  <div id="ip-dl-grid"></div>
+</div>
+<div id="ip-dlg" hidden><div class="dlg-box"><h2 id="ip-dlg-title"></h2><div id="ip-dlg-note"></div><div id="ip-dlg-list"></div><button class="btn" id="ip-dlg-cancel">ANNULER</button></div></div>
+<section id="ip-fo" hidden role="dialog" aria-label="Organisation des Dossiers Principaux">
+  <div class="fo-top"><h2 id="fo-title">MES DOSSIERS<small id="fo-sub"></small></h2>
+    <button class="btn sm amber" id="fo-repair" disabled title="Reprend uniquement les images restées dans « A faire » et les ajoute à ce dossier, sans rien écraser">🔧 RÉPARER</button><button class="btn sm" id="fo-export" disabled title="Exporter le Dossier Principal en .zip vers BIN A JEU">⇪ EXPORTER EN .ZIP</button><button class="btn sm" id="fo-x">✕ FERMER</button></div>
+  <div class="fo-body">
+    <aside class="fo-side"><div id="fo-pick"></div><div id="fo-list"></div><button class="btn sm" id="fo-add" disabled>＋ AJOUTER UN DOSSIER</button></aside>
+    <div class="fo-main"><div class="fo-bar"><span id="fo-where"></span><span id="fo-count"></span><button class="btn sm" id="fo-all">TOUT SÉLECTIONNER</button><button class="btn sm" id="fo-move" disabled>DÉPLACER VERS…</button><button class="btn sm red" id="fo-delsub" hidden>SUPPRIMER CE DOSSIER</button></div>
+      <div id="fo-grid"></div></div>
+  </div>
+</section>
+<section id="ip-q" hidden role="dialog" aria-label="Progression du traitement">
+  <div class="q-box">
+    <h1 id="q-title"></h1>
+    <div id="q-now"></div><div id="q-stage"></div>
+    <div class="q-track"><div id="q-fill"></div></div>
+    <div class="q-pct"><b id="q-pct">0 %</b><span id="q-count"></span></div>
+    <div class="q-stats"><div><b id="q-ok">0</b><small>validées</small></div><div><b id="q-bad">0</b><small>en échec</small></div><div><b id="q-left">0</b><small>restantes</small></div><div><b id="q-eta">—</b><small>temps restant estimé</small></div><div><b id="q-el">0 s</b><small>écoulé</small></div></div>
+    <ul id="q-log"></ul>
+    <div class="q-btns"><button class="btn" id="q-hide">MASQUER (continue en arrière-plan)</button><button class="btn green" id="q-close" hidden>FERMER</button></div>
+  </div>
+</section>
+<div id="ip-ask" hidden><div class="dlg-box"><h2 id="ip-ask-title"></h2><div id="ip-ask-note"></div><input id="ip-ask-in" type="text" maxlength="100" autocomplete="off" spellcheck="false"><div id="ip-ask-err"></div><div class="ask-btns"><button class="btn" id="ip-ask-ok">VALIDER</button><button class="btn" id="ip-ask-cancel">ANNULER</button></div></div></div>
+<div id="ip-ov" hidden data-kind="work"><div class="ov-box"><div class="ov-ring"></div><h1 id="ip-ov-title"></h1><div id="ip-ov-sub"></div>
+  <div class="ov-track"><div id="ip-ov-fill"></div></div><div id="ip-ov-pct">0 %</div><button class="btn" id="ip-ov-cancel" hidden>■ ANNULER</button></div></div>
+<script src="/static/f6.js"></script>
+<script src="/static/imgproc.js"></script>
+<section id="av" class="prem" role="dialog" aria-label="Visualiseur d'animation" hidden>
+  <div class="av-top"><h2>VISUALISEUR D'ANIMATION<small>Explorateur · tri numérique des frames · rendu pixel art</small></h2><button class="btn sm" id="av-close">✕ FERMER</button></div>
+  <div class="av-view" id="av-explore">
+    <div id="av-roots"></div>
+    <div id="av-crumb"></div>
+    <div id="av-note" hidden></div>
+    <div id="av-dirs"></div>
+    <div id="av-here" class="dim"></div>
+    <button id="av-validate" disabled><span id="av-validate-main">VALIDER CE DOSSIER</span><small id="av-validate-sub"></small></button>
+  </div>
+  <div class="av-view" id="av-player" hidden>
+    <div id="av-loading" hidden><div id="av-load-txt"></div><div class="av-track"><div id="av-load-fill"></div></div></div>
+    <div id="av-stage-wrap" hidden>
+      <div class="av-meta"><span id="av-folder"></span><span id="av-info"></span></div>
+      <div id="av-stage" data-bg="checker"><canvas id="av-cv" width="1" height="1"></canvas></div>
+      <div class="av-ctl">
+        <button class="btn" id="av-prev" title="Image précédente (←)">◂</button>
+        <button class="btn on" id="av-play"></button>
+        <button class="btn" id="av-next" title="Image suivante (→)">▸</button>
+        <button class="btn on" id="av-loop"></button>
+        <label>VITESSE <input type="range" id="av-fps" min="1" max="60" value="12"><span id="av-fps-v"></span></label>
+        <input type="range" id="av-scrub" min="0" max="0" value="0">
+        <span id="av-fname"></span>
+      </div>
+      <div class="av-ctl">
+        <button class="btn" id="av-zout">−</button><span id="av-zoom"></span><button class="btn" id="av-zin">+</button><button class="btn" id="av-zauto">AUTO</button>
+        <button class="btn" id="av-bg">FOND : CHECKER</button>
+        <button class="btn" id="av-change" style="margin-left:auto">◂ CHANGER DE DOSSIER</button>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="/static/anim.js"></script>
+<section id="dm" role="dialog" aria-label="Mode discussion" hidden>
+  <div class="dm-bg"></div><div class="dm-vig"></div>
+  <div class="dm-top"><h2>MODE DISCUSSION<small>E.N.O.S. // INTERFACE VISUELLE</small></h2><span id="dm-chip" data-state="idle">EN VEILLE</span><button class="btn sm" id="dm-close">✕ QUITTER</button></div>
+  <div class="dm-main">
+    <div id="dm-stage" data-state="idle">
+      <div class="dm-ring r2"></div><div class="dm-ring r1"></div><div class="dm-ring r3"></div>
+      <div id="dm-face" title="Cliquez : petit glitch"><div id="dm-eto" class="eto-only" aria-hidden="true"></div><img class="dm-img on" id="dm-img-a" src="/static/img/enos_eye_idle.png" alt="L'Œil d'E.N.O.S." draggable="false"><img class="dm-img" id="dm-img-b" alt="" draggable="false"></div>
+    </div>
+    <div id="dm-eq" aria-hidden="true"></div>
+    <div class="dm-sub"><div id="dm-you-wrap" hidden><b class="u-label">NASSIME ▸</b><span id="dm-you"></span></div><div id="dm-bot"></div></div>
+  </div>
+  <form class="dm-form" id="dm-form" autocomplete="off">
+    <input type="text" id="dm-inp" placeholder="Parlez à E.N.O.S.…" aria-label="Message">
+    <button class="btn ico" type="button" id="dm-mic" title="Micro : dicter un message"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg></button>
+    <button class="btn ico" type="button" id="dm-live" title="Mode Live : conversation vocale continue"><svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></svg></button>
+    <button class="btn" type="submit">ENVOYER</button>
+  </form>
+</section>
+<section id="cm" class="prem" role="dialog" aria-label="Gérer les colis" hidden>
+  <div class="cm-top"><h2>GÉRER LES COLIS<small>Colis en attente de livraison</small></h2><span id="cm-sum"></span><button class="btn sm" id="cm-refresh">⟳ ACTUALISER</button><button class="btn sm" id="cm-close">✕ FERMER</button></div>
+  <div id="cm-wrap"><div id="cm-empty" hidden>— Aucun colis en attente : créez-en un depuis une tâche —</div><div id="cm-list"></div></div>
+  <div class="cm-toast" id="cm-toast" role="status"></div>
+</section>
+<section id="yt" class="local-only" role="dialog" aria-label="YouTube Uploader" hidden>
+  <div class="yt-top"><h2>YOUTUBE UPLOADER<small>API YouTube Data v3 · OAuth2 · envoi par morceaux reprenable</small></h2><button class="btn sm yt-conn" id="yt-conn">CONNECTER À YOUTUBE</button><span id="yt-acct" class="yt-chip"></span><button class="btn sm" id="yt-disc" hidden>DÉCONNECTER</button><button class="btn sm" id="yt-close">✕ FERMER</button></div>
+  <div id="yt-wrap">
+    <div id="yt-setup" class="yt-warn" hidden>
+      <b>Première connexion : E.N.O.S. s'occupe de tout</b>
+      <p>Cliquez sur <b>CONNECTER À YOUTUBE</b>. E.N.O.S. ouvre les pages Google Cloud, détecte tout seul le fichier d'identifiant dès que vous le téléchargez, le configure, puis vous demande
+      uniquement de <b>vous connecter à Google</b> et d'<b>autoriser</b>. Google impose de créer cet identifiant dans VOTRE compte (une seule fois) : les étapes s'affichent dans le journal ci-dessous.</p>
+      <details class="yt-adv"><summary>Options manuelles</summary><button class="btn sm" id="yt-import">IMPORTER client_secret.json…</button> <button class="btn sm" id="yt-opencfg">OUVRIR LE DOSSIER DE CONFIGURATION</button></details> <button class="btn sm" id="yt-recheck">J'AI TERMINÉ · VÉRIFIER</button>
+    </div>
+    <div id="yt-connect" class="yt-warn" hidden>Aucune chaîne connectée. <button class="btn sm" id="yt-auth">CONNECTER MA CHAÎNE</button></div>
+    <form id="yt-form" autocomplete="off" novalidate>
+      <div class="yt-field"><label>VIDÉO</label>
+        <div class="yt-pickrow"><button type="button" class="btn" id="yt-pick">CHOISIR UNE VIDÉO<small>S'ouvre dans ~\Videos</small></button>
+        <div class="yt-file" id="yt-file"><b>Aucune vidéo sélectionnée</b><small></small></div></div></div>
+      <div class="yt-field"><label for="yt-title">TITRE <em id="yt-count">0 / 100</em></label>
+        <input type="text" id="yt-title" maxlength="100" placeholder="Titre de la vidéo" spellcheck="true"><div class="yt-err" id="yt-title-e" hidden></div></div>
+      <div class="yt-field"><label for="yt-vis">VISIBILITÉ</label>
+        <select id="yt-vis"><option value="public">Public</option><option value="unlisted">Non répertoriée</option><option value="private" selected>Privée</option></select></div>
+      <div class="yt-kids">Audience : « non conçue pour les enfants » — réglage appliqué automatiquement.</div>
+      <div class="yt-err" id="yt-form-e" hidden></div>
+      <button type="submit" class="btn big" id="yt-go">ENVOYER SUR YOUTUBE</button>
+      <button type="button" class="btn warn" id="yt-stop" hidden>■ ANNULER L'ENVOI</button>
+    </form>
+    <div id="yt-prog" hidden><div class="yt-bar"><i id="yt-bar-i"></i></div><div class="yt-pct"><b id="yt-pct">0 %</b><span id="yt-msg"></span></div></div>
+    <div id="yt-done" class="yt-done" hidden><b>✔ VIDÉO ENVOYÉE</b><a id="yt-link" href="#" target="_blank" rel="noopener"></a><div id="yt-note"></div></div>
+    <pre id="yt-log" aria-live="polite"></pre>
+  </div>
+</section>
+<section id="sd" class="local-only" role="dialog" aria-label="Tableau de bord système" hidden>
+  <div class="sd-top"><h2>SYSTÈME</h2><span id="sd-upd"></span><button class="btn" id="sd-close">✕ FERMER</button></div>
+  <div class="sd-body"><div id="sd-msg" hidden></div><div id="sd-main"><div class="sd-empty">Lecture des capteurs…</div></div></div>
+</section>
+<section id="ap" class="local-only" role="dialog" aria-label="API Control Panel" hidden>
+  <div class="ap-top"><h2>API CONTROL PANEL<small>Consommation de vos clés API · dates de reset · état des services</small></h2><span id="ap-upd"></span><button class="btn" id="ap-refresh">⟳ ACTUALISER</button><button class="btn" id="ap-close">✕ FERMER</button></div>
+  <div class="ap-body"><div id="ap-cards"><div class="ap-empty">Chargement des quotas…</div></div><div class="ap-foot">Vos clés ne quittent jamais ce PC et ne sont jamais affichées. Estimations locales : plafonds réglables dans nasko_config.json (groq_daily_token_limit, openai_monthly_token_limit…).</div></div>
+</section>
+<section id="dc" class="local-only" role="dialog" aria-label="Deep System Cleaner" hidden>
+  <div class="dc-top"><h2>DEEP SYSTEM CLEANER<small>Analyse du disque · gros fichiers · niveaux de risque · suppression guidée</small></h2><button class="btn sm" id="dc-close">✕ FERMER</button></div>
+  <div class="dc-body">
+    <div class="dc-ctl">
+      <div class="dc-disk" id="dc-disk"><div class="dc-dbar"><i id="dc-dbar-i"></i></div><span id="dc-dtxt">—</span></div>
+      <div class="dc-scan">
+        <label class="dc-opt">Seuil <select id="dc-min"><option value="20">20 Mo</option><option value="50">50 Mo</option><option value="100" selected>100 Mo</option><option value="250">250 Mo</option><option value="500">500 Mo</option><option value="1024">1 Go</option></select></label>
+        <label class="dc-opt">Portée <select id="dc-scope"><option value="system">Disque système</option><option value="all">Tous les disques fixes</option></select></label>
+        <button class="btn" id="dc-go">LANCER LE SCAN PROFOND</button><button class="btn warn" id="dc-stop" hidden>■ ARRÊTER</button>
+      </div>
+    </div>
+    <div id="dc-prog" hidden><div class="dc-pbar"><i></i></div><small id="dc-ptxt"></small></div>
+    <div class="dc-filters" id="dc-filters" hidden>
+      <div class="dc-chips" id="dc-cats"></div>
+      <div class="dc-chips" id="dc-risks"></div>
+      <input type="search" id="dc-q" placeholder="Filtrer par nom ou chemin…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="dc-legend" id="dc-legend" hidden><span>🟢 Ultra safe — suppression recommandée</span><span>🟠 Moins safe — avertissement avant suppression</span><span>🔴 À risque — suppression bloquée</span></div>
+    <div class="dc-tablewrap" id="dc-tablewrap" hidden>
+      <table id="dc-table"><thead><tr><th><input type="checkbox" id="dc-all" aria-label="Tout sélectionner"></th><th>RISQUE</th><th>TYPE</th><th class="r">TAILLE</th><th>FICHIER</th><th></th></tr></thead><tbody id="dc-rows"></tbody></table>
+    </div>
+    <div id="dc-empty" class="dc-empty" hidden></div>
+  </div>
+  <div class="dc-bar" id="dc-actbar" hidden><span id="dc-sel">0 sélectionné</span><label class="dc-opt"><input type="checkbox" id="dc-perm"> Supprimer définitivement (sans Corbeille)</label><button class="btn danger" id="dc-del" disabled>SUPPRIMER LA SÉLECTION</button></div>
+  <div class="dc-modal" id="dc-modal" hidden><div class="dc-card" role="alertdialog" aria-labelledby="dc-mt"><h3 id="dc-mt"></h3><div id="dc-mb"></div><div class="dc-macts"><button class="btn" id="dc-mcancel">ANNULER</button><button class="btn danger" id="dc-mok">CONFIRMER</button></div></div></div>
+  <div class="dc-toast" id="dc-toast" role="status"></div>
+</section>
+<section id="og" class="local-only" role="dialog" aria-label="Organisateur de dossiers et de fichiers" hidden>
+  <div class="og-top"><h2>ORGANISATEUR<small>Dossiers &amp; fichiers · glisser-déposer · raccourcis clavier · tout est annulable</small></h2><button class="btn sm" id="og-close">✕ FERMER</button></div>
+  <div id="og-home" class="og-home"></div>
+  <div id="og-work" class="og-work" hidden>
+    <div class="og-bar">
+      <button class="og-ib" id="og-back" title="Précédent (Alt+←)">◂</button><button class="og-ib" id="og-fwd" title="Suivant (Alt+→)">▸</button><button class="og-ib" id="og-up" title="Dossier parent (Retour arrière)">▴</button>
+      <div class="og-crumbs" id="og-crumbs"></div>
+      <input type="search" id="og-q" placeholder="Filtrer…  ( / )" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="og-tools">
+      <button class="og-t" id="og-mkdir" title="Nouveau dossier (Ctrl+N)"><b>＋</b> Dossier</button>
+      <button class="og-t" id="og-mkfile" title="Nouveau fichier vide (Ctrl+Maj+N)"><b>＋</b> Fichier</button>
+      <button class="og-t" id="og-import" title="Copier des fichiers ou un dossier ici"><b>⤓</b> Importer</button>
+      <i class="og-sep"></i>
+      <button class="og-t" id="og-group" title="Regrouper la sélection dans un nouveau dossier (Ctrl+G)"><b>▣</b> Regrouper</button>
+      <button class="og-t" id="og-extract" title="Extraire la sélection vers le dossier parent (Ctrl+↑)"><b>⇱</b> Extraire</button>
+      <button class="og-t" id="og-rename" title="Renommer (F2)"><b>✎</b> Renommer</button>
+      <button class="og-t" id="og-bulk" title="Renommer plusieurs éléments selon un modèle (numéros, dates, rechercher / remplacer…)"><b>⌸</b> Par modèle</button>
+      <button class="og-t danger" id="og-del" title="Supprimer → Corbeille (Suppr)"><b>✕</b> Supprimer</button>
+      <i class="og-sep"></i>
+      <button class="og-t" id="og-auto" title="Ranger les fichiers de ce dossier par type"><b>✦</b> Ranger par type</button>
+      <button class="og-t" id="og-undo" title="Annuler (Ctrl+Z)"><b>↶</b> Annuler</button>
+      <span class="og-grow"></span>
+      <select id="og-sort" title="Tri"><option value="name">Nom</option><option value="mtime">Date</option><option value="size">Taille</option><option value="ext">Type</option></select>
+      <button class="og-ib" id="og-order" title="Sens du tri">↑</button>
+      <button class="og-ib" id="og-hid" title="Afficher les éléments cachés">◌</button>
+      <input type="range" id="og-zoom" min="80" max="260" step="10" title="Taille des miniatures">
+      <button class="og-ib" id="og-view" title="Liste / Icônes">▦</button>
+    </div>
+    <div class="og-main">
+      <aside class="og-side"><h4>RACCOURCIS</h4><div id="og-roots"></div><h4>ARBORESCENCE</h4><div id="og-tree"></div></aside>
+      <div class="og-files" id="og-files" tabindex="0"></div>
+    </div>
+    <div class="og-status"><span id="og-count"></span><span id="og-selinfo"></span><span class="og-hint">F2 renommer · Suppr corbeille · Ctrl+C/X/V · Ctrl+G regrouper · Ctrl+↑ extraire · Ctrl+Z annuler · tracer un cadre = sélectionner plusieurs, glisser la sélection = déplacer, Ctrl+glisser = copier</span></div>
+  </div>
+  <div class="og-menu" id="og-menu" hidden></div>
+  <div class="og-modal" id="og-modal" hidden><div class="og-card" role="alertdialog" aria-labelledby="og-mt"><h3 id="og-mt"></h3><div id="og-mb"></div><input type="text" id="og-mi" hidden autocomplete="off" spellcheck="false"><div class="og-macts"><button class="btn" id="og-mcancel">ANNULER</button><button class="btn" id="og-mok">OK</button></div></div></div>
+  <div class="og-toast" id="og-toast" role="status"></div>
+</section>
+<section id="cp" role="dialog" aria-label="Compression média" hidden>
+  <div class="cp-top"><h2>COMPRESSION MÉDIA<small>Images (Pillow) · Vidéos (FFmpeg x264) · 100 % local</small></h2><button class="btn sm" id="cp-close">✕ FERMER</button></div>
+  <div id="cp-wrap">
+    <!-- étape 1 : choix du type -->
+    <div id="cp-s1">
+      <div class="cp-big">
+        <button class="cp-card img" id="cp-img"><span class="ico"><i></i><i></i><i></i></span><b>COMPRESSER UNE IMAGE</b><small>PNG · JPG · WEBP · BMP · TIFF</small></button>
+        <button class="cp-card vid" id="cp-vid"><span class="ico"><i></i></span><b>COMPRESSER UNE VIDÉO</b><small>MP4 · MOV · MKV · AVI · WEBM… → MP4 (x264)</small></button>
+      </div>
+      <div id="cp-nofx" class="cp-warn" hidden>FFmpeg introuvable : la compression vidéo est indisponible.</div>
+    </div>
+    <!-- étape 2 : fichier + réglages -->
+    <div id="cp-s2" hidden>
+      <div class="cp-file"><span class="kind" id="cp-kind"></span><div class="fi"><b id="cp-fname"></b><small id="cp-finfo"></small></div><button class="btn sm" id="cp-back">◂ CHANGER</button></div>
+      <div id="cp-pick">
+        <div class="cp-pickrow local-only"><button class="btn" id="cp-browse"><span id="cp-browse-l">OUVRIR MES VIDÉOS</span><small id="cp-browse-s">Le sélecteur s'ouvre directement dans ~\Videos</small></button><button class="btn alt" id="cp-other">Chercher un autre fichier…</button></div>
+        <label class="btn remote-only" id="cp-gallery" for="cp-gal">CHOISIR DANS LA GALERIE<small>Le fichier est envoyé au PC, compressé, puis renvoyé sur ce téléphone</small><input type="file" id="cp-gal" hidden></label>
+        <form id="cp-pathform" class="local-only" autocomplete="off"><input type="text" id="cp-path" placeholder="… ou collez le chemin complet du fichier" spellcheck="false"><button class="btn sm" type="submit">OK</button></form>
+        <div id="cp-todo" class="local-only"></div><div id="cp-perr" class="cp-warn" hidden></div>
+      </div>
+      <div id="cp-set" hidden>
+        <div class="cp-modes" role="tablist"><button class="on" data-m="percent">MODE POURCENTAGE</button><button data-m="target">MODE CIBLE (MO)</button></div>
+        <div class="cp-pane" id="cp-pane-percent">
+          <div class="cp-pct"><b id="cp-pct-v">80</b><span>%</span></div>
+          <input type="range" id="cp-pct" min="1" max="100" value="80">
+          <div class="cp-scale"><span>1 % · très léger</span><span>100 % · qualité quasi intacte</span></div>
+          <div class="cp-map" id="cp-map"></div>
+        </div>
+        <div class="cp-pane" id="cp-pane-target" hidden>
+          <label for="cp-tgt">Poids maximum souhaité</label>
+          <div class="cp-tgt"><input type="text" id="cp-tgt" inputmode="decimal" value="8" autocomplete="off"><span>Mo</span></div>
+          <div class="cp-chips"><button data-v="8">8 Mo · Discord</button><button data-v="10">10</button><button data-v="25">25</button><button data-v="50">50</button></div>
+          <div class="cp-map" id="cp-tmap"></div>
+        </div>
+        <button class="btn big" id="cp-go">LANCER LA COMPRESSION</button>
+      </div>
+    </div>
+    <!-- étape 3 : résultat -->
+    <div id="cp-s3" hidden></div>
+  </div>
+</section>
+<section id="qt" class="local-only" role="dialog" aria-label="Outils rapides" hidden>
+  <div class="qt-top"><h2>OUTILS RAPIDES<small>Formateur JSON / XML · dépenses partagées · notes de frais</small></h2><button class="btn sm" id="qt-close">✕ FERMER</button></div>
+  <nav class="qt-tabs" id="qt-tabs"><button data-t="json" class="on">JSON / XML</button><button data-t="exp">DÉPENSES PARTAGÉES</button><button data-t="rc" class="ceo-only">NOTES DE FRAIS</button></nav>
+  <div class="qt-main" id="qt-main"></div><div class="qt-toast" id="qt-toast" role="status"></div><input type="file" id="qt-file" hidden>
+</section>
+<section id="sm" class="local-only" role="dialog" aria-label="Studio média" hidden>
+  <div class="sm-top"><h2>STUDIO MÉDIA<small>Images · vidéo · audio · vie privée · texte — traitement local</small></h2><button class="btn sm" id="sm-folder" title="Ouvrir le dossier des résultats">DOSSIER RÉSULTATS</button><button class="btn sm" id="sm-close">✕ FERMER</button></div>
+  <div class="sm-body"><nav class="sm-nav" id="sm-nav"></nav><main class="sm-main" id="sm-main"></main></div>
+  <div class="sm-job" id="sm-job" hidden><div class="sm-jc"><div class="sm-spin"></div><b id="sm-jt"></b><small id="sm-js"></small><div class="sm-bar"><i id="sm-jb"></i></div><button class="btn sm" id="sm-jx">ANNULER</button></div></div>
+  <div class="sm-toast" id="sm-toast" role="status"></div>
+  <input type="file" id="sm-file" multiple hidden>
+</section>
+<section id="pe" class="local-only" role="dialog" aria-label="Éditeur PDF" hidden>
+  <div class="pe-top">
+    <h2>ÉDITEUR PDF<small id="pe-sub">Pages · annotation · caviardage · signature · OCR · IA — 100 % local</small></h2>
+    <button class="btn sm" id="pe-add" title="Ajouter ou fusionner des PDF, images ou documents Office">+ AJOUTER / FUSIONNER</button>
+    <button class="btn sm" id="pe-undo" title="Revenir à la version précédente (Ctrl+Z)">↶ ANNULER</button>
+    <button class="btn sm" id="pe-save" title="Enregistrer une copie du document dans Livraison">⬇ ENREGISTRER</button>
+    <button class="btn sm" id="pe-new" title="Fermer ce document et en commencer un autre">NOUVEAU</button>
+    <button class="btn sm" id="pe-close">✕ FERMER</button>
+  </div>
+  <div id="pe-empty" class="pe-empty">
+    <div class="pe-dz" id="pe-dz">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></svg>
+      <b>DÉPOSEZ VOS FICHIERS ICI</b>
+      <p>PDF, images (JPG, PNG…) ou documents Word / Excel / PowerPoint — plusieurs à la fois : ils sont fusionnés dans l'ordre.</p>
+      <button class="btn" id="pe-pick">CHOISIR DES FICHIERS</button>
+      <small>Rien ne quitte ce PC, sauf le texte envoyé au LLM si vous utilisez l'onglet IA.</small>
+    </div>
+  </div>
+  <div id="pe-body" class="pe-body" hidden>
+    <nav class="pe-tabs" id="pe-tabs" role="tablist">
+      <button data-t="pages" class="on">PAGES</button><button data-t="annot">ANNOTER</button><button data-t="edit">ÉDITER · CAVIARDER</button><button data-t="sign">SIGNER</button>
+      <button data-t="tools">OUTILS</button><button data-t="secu">SÉCURITÉ</button><button data-t="ai">IA</button>
+    </nav>
+    <div class="pe-main">
+      <div class="pe-center">
+        <div id="pe-v-pages" class="pe-grid" tabindex="0"></div>
+        <div id="pe-v-page" class="pe-viewer" hidden>
+          <div class="pe-vbar">
+            <button class="btn sm" id="pe-prev">◂</button><span class="pe-pn"><input type="text" id="pe-pnum" inputmode="numeric" autocomplete="off"> / <b id="pe-ptot"></b></span><button class="btn sm" id="pe-next">▸</button>
+            <label class="pe-zoom">ZOOM <input type="range" id="pe-zoom" min="50" max="220" step="5" value="100"></label>
+            <span id="pe-vinfo" class="pe-hint"></span>
+          </div>
+          <div class="pe-stage" id="pe-stage"><div class="pe-pg" id="pe-pg"><img id="pe-img" alt="" draggable="false"><div class="pe-ov" id="pe-ov"><svg id="pe-svg" class="pe-svg"></svg></div></div></div>
+        </div>
+        <div id="pe-v-doc" class="pe-doc" hidden></div>
+      </div>
+      <aside class="pe-panel" id="pe-panel"></aside>
+    </div>
+    <div class="pe-status"><span id="pe-st1"></span><span id="pe-st2"></span></div>
+  </div>
+  <div class="pe-job" id="pe-job" hidden><div class="pe-jc"><div class="pe-spin"></div><b id="pe-jt"></b><small id="pe-js"></small><div class="pe-bar"><i id="pe-jb"></i></div><button class="btn sm" id="pe-jx">ANNULER</button></div></div>
+  <div class="pe-modal" id="pe-modal" hidden><div class="pe-mc" role="alertdialog" aria-labelledby="pe-mt"><h3 id="pe-mt"></h3><div id="pe-mb"></div><div class="pe-macts" id="pe-ma"></div></div></div>
+  <div class="pe-toast" id="pe-toast" role="status"></div>
+  <input type="file" id="pe-file" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.gif,.docx,.doc,.odt,.rtf,.txt,.xlsx,.xls,.ods,.pptx,.ppt,.odp,.html,.htm">
+</section>
+<section id="au" class="local-only" role="dialog" aria-label="Laboratoire audio" hidden>
+  <div class="au-top"><h2>LABORATOIRE AUDIO<small>FFmpeg · pydub · wavesurfer.js — création de SFX pour Godot</small></h2><span id="au-file"></span><button class="btn sm" id="au-change">◂ AUTRE FICHIER</button><button class="btn sm" id="au-close">✕ FERMER</button></div>
+  <div class="au-body">
+    <div class="au-main">
+      <div id="au-scroll">
+        <div id="au-start" class="au-card">
+          <h3>IMPORTER UNE PISTE</h3><p>Vidéo (.mkv, .mp4…) ou audio brut : la piste est extraite en <b>WAV 16 bits sans perte</b>, puis les silences sont analysés pour repérer chaque effet sonore.</p>
+          <button class="btn" id="au-browse">CHOISIR UN FICHIER<small>.mkv · .mp4 · .mov · .wav · .mp3 · .flac · .ogg · .m4a …</small></button>
+          <form id="au-pathform" autocomplete="off"><input type="text" id="au-path" placeholder="… ou collez le chemin complet du fichier" spellcheck="false"><button class="btn sm" type="submit">OK</button></form>
+          <div id="au-todo"></div><div id="au-nofx" class="au-warn" hidden>FFmpeg introuvable : l'extraction est indisponible.</div><div id="au-perr" class="au-warn" hidden></div>
+        </div>
+        <div id="au-edit" hidden>
+          <div class="au-bar">
+            <button class="btn" id="au-stop" title="Retour au début">■</button><button class="btn" id="au-play" title="Lecture / pause (Espace)">▶</button>
+            <span id="au-time">0:00.000 / 0:00.000</span>
+            <label class="au-zoom">ZOOM <input type="range" id="au-zoom" min="0" max="800" step="5" value="0"></label>
+          </div>
+          <div id="au-wave-wrap"><div id="au-wave"></div>
+            <div class="au-hint"><b>Glisser</b> sur l'onde = nouvelle zone · <b>double-clic</b> = zone rapide · <b>bords</b> = ajuster · <b>▶ / ✕</b> sur chaque zone · <b>Suppr</b> = effacer la zone active</div></div>
+          <div class="au-tune">
+            <label>SENSIBILITÉ (seuil sous la moyenne) <span id="au-p-off-v"></span><input type="range" id="au-p-off" min="3" max="50" step="1" value="16"></label>
+            <label>SILENCE MINI ENTRE 2 SFX <span id="au-p-sil-v"></span><input type="range" id="au-p-sil" min="20" max="2000" step="10" value="200"></label>
+            <label>MARGE AUTOUR DU SFX <span id="au-p-keep-v"></span><input type="range" id="au-p-keep" min="0" max="300" step="5" value="40"></label>
+            <label>DURÉE MINI D'UN SFX <span id="au-p-min-v"></span><input type="range" id="au-p-min" min="5" max="1000" step="5" value="40"></label>
+            <div class="row"><button class="btn" id="au-re">⟳ RE-ANALYSER</button><button class="btn" id="au-add">+ AJOUTER UNE ZONE AU CURSEUR</button><button class="btn" id="au-clear">TOUT EFFACER</button><span id="au-thr"></span></div>
+          </div>
+          <div class="au-head"><h4>ZONES DE COUPE</h4><span id="au-count"></span></div>
+          <div id="au-empty" hidden>Aucune zone : glissez sur l'onde ou relancez l'analyse avec une sensibilité plus forte.</div>
+          <div id="au-list"></div>
+        </div>
+      </div>
+      <div class="au-foot" id="au-export-wrap">
+        <div class="au-fmt" id="au-fmt-bar">
+          <div class="seg" id="au-fmt" role="radiogroup" aria-label="Format d'export"><button type="button" data-f="mp3" class="on" role="radio" aria-checked="true">MP3</button><button type="button" data-f="wav" role="radio" aria-checked="false">WAV</button></div>
+          <label class="kb" id="au-kb-wrap">QUALITÉ <select id="au-kb"><option value="128">128 kb/s</option><option value="192" selected>192 kb/s</option><option value="256">256 kb/s</option><option value="320">320 kb/s</option></select></label>
+          <button type="button" class="btn sm" id="au-full" title="Convertir toute la piste en un seul fichier MP3, sans découpe">♫ TOUT EN UN SEUL MP3</button>
+        </div>
+        <button id="au-export" hidden disabled><span>DÉCOUPER ET EXPORTER LES SFX</span><small id="au-export-n">aucune zone</small></button></div>
+      <div class="au-toast" id="au-toast" role="status"></div>
+    </div>
+    <aside class="au-side">
+      <h3>PLAYLIST<span id="au-pl-n"></span></h3>
+      <div id="au-pl-tabs"><button data-t="work" class="on">TRAVAIL</button><button data-t="out">LIVRAISON</button></div>
+      <div id="au-pl"></div>
+      <div class="foot"><button class="btn sm" id="au-pl-refresh">⟳ ACTUALISER</button><button class="btn sm" id="au-pl-open">OUVRIR LE DOSSIER</button></div>
+    </aside>
+  </div>
+  <div id="au-done" hidden></div>
+</section>
+<script src="/static/vendor/wavesurfer.min.js"></script>
+<script src="/static/vendor/wavesurfer.regions.min.js"></script>
+<script src="/static/audio.js"></script>
+<section id="ev" class="local-only" role="dialog" aria-label="Session de travail" hidden>
+  <div class="ev-box">
+    <div class="ev-head"><h2>ENVIRONNEMENT<span id="ev-proj"></span><small>SESSION DE TRAVAIL · RIEN N'EST LANCÉ SANS VOTRE ACCORD</small></h2><button class="ev-x" id="ev-x" aria-label="Fermer">✕</button></div>
+    <div id="ev-load">ANALYSE DE LA SESSION…</div>
+    <div id="ev-pick" hidden>
+      <div class="ev-lbl">OUTILS À OUVRIR</div>
+      <div id="ev-tools"></div>
+      <div id="ev-screens" hidden><div class="ev-lbl">CHOISIR L'ÉCRAN DE DESTINATION <b id="ev-screen-v"></b></div><div id="ev-map"></div></div>
+      <div class="ev-acts"><button id="ev-go"><span>LANCER LA SÉLECTION</span><small id="ev-go-n"></small></button><button id="ev-all">TOUT OUVRIR</button></div>
+      <div id="ev-note"></div>
+    </div>
+    <div id="ev-run" hidden>
+      <div class="ev-lbl"><span id="ev-run-t">SESSION EN COURS</span></div>
+      <div style="font-size:11px;color:var(--mid);margin:-4px 0 10px" id="ev-run-s"></div>
+      <div class="ev-track"><div id="ev-bar"></div></div>
+      <div id="ev-items"></div>
+      <div class="ev-fin" id="ev-fin" hidden></div>
+      <button class="btn" id="ev-close2" hidden>FERMER</button>
+    </div>
+  </div>
+</section>
+<section id="sy" role="dialog" aria-label="Synchronisation PC et mobile" hidden>
+  <div class="sy-top"><h2>SYNC<small>PC ⇄ MOBILE · fichiers sans câble ni cloud</small></h2><button class="btn sm" id="sy-close">✕ FERMER</button></div>
+  <div id="sy-wrap">
+    <div class="sy-cards">
+      <button class="sy-card on" data-t="mobile" type="button"><span class="ar">⇢</span><span><b>ENVOYER VERS MOBILE</b><small>Le PC prépare un fichier : le téléphone le télécharge (QR code ou lien).</small></span></button>
+      <button class="sy-card" data-t="pc" type="button"><span class="ar">⇠</span><span><b>ENVOYER VERS PC</b><small id="sy-pc-hint">Photos, vidéos, fichiers du téléphone vers Stockage/Réception_Mobile.</small></span></button>
+    </div>
+    <div id="sy-mobile">
+      <div id="sy-local"><div class="sy-pick">
+        <button class="btn" id="sy-browse">CHOISIR UN FICHIER SUR LE PC…</button>
+        <form id="sy-pathform" autocomplete="off"><input type="text" id="sy-path" placeholder="… ou collez le chemin complet du fichier" spellcheck="false"><button class="btn sm" type="submit">PARTAGER</button></form>
+      </div><div class="sy-warn" id="sy-nonet" hidden>L'accès téléphone est désactivé : les liens ne seront pas joignables. Activez-le dans [ ACCÈS TÉLÉPHONE ] (menu).</div></div>
+      <div id="sy-remote-dl"><div class="sy-head">FICHIERS PRÊTS SUR LE PC</div></div>
+      <div id="sy-tickets"></div><div id="sy-empty" hidden></div>
+    </div>
+    <div id="sy-pc" hidden>
+      <label id="sy-drop" for="sy-file"><span class="ic">⇪</span><b>CHOISIR DES FICHIERS</b><small>ou glissez-les ici · plusieurs à la fois · photos, vidéos, documents…</small></label>
+      <input type="file" id="sy-file" multiple>
+      <div id="sy-up"></div>
+      <div class="sy-head">REÇUS SUR LE PC <span id="sy-rec-n"></span><button class="btn local-only" id="sy-open">OUVRIR LE DOSSIER</button></div>
+      <div id="sy-rec"></div><div id="sy-max"></div>
+    </div>
+  </div>
+  <div class="sy-toast" id="sy-toast" role="status"></div>
+</section>
+<audio id="ch-audio" preload="metadata"></audio>
+<section id="ch" role="dialog" aria-label="Mode chill" hidden>
+  <div class="ch-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="ch-in">
+    <div class="ch-bar"><h2>Chill</h2><button class="ch-pill" id="ch-hide" title="Masquer l'interface : la musique continue">Réduire ▾</button></div>
+    <div class="ch-card">
+      <div class="ch-orb" aria-hidden="true"></div>
+      <h3 id="ch-title">Choisissez une piste</h3><p id="ch-sub">Ambiance</p>
+      <div class="ch-seek"><span id="ch-cur">0:00</span><input class="ch-range" id="ch-seek" type="range" min="0" max="1000" value="0" aria-label="Position de lecture"><span id="ch-dur">0:00</span></div>
+      <div class="ch-ctl"><button class="sk" id="ch-prev" aria-label="Piste précédente">⏮</button><button class="pp" id="ch-play" aria-label="Lecture">▶</button><button class="sk" id="ch-next" aria-label="Piste suivante">⏭</button></div>
+      <div class="ch-vol"><span>🔈</span><input class="ch-range" id="ch-vol" type="range" min="0" max="100" value="70" aria-label="Volume"><span>🔊</span></div>
+    </div>
+    <div class="ch-list">
+      <div class="ch-lh">Pistes<span id="ch-count"></span><button id="ch-refresh">⟳</button><button id="ch-folder" class="local-only">Dossier</button></div>
+      <div id="ch-empty" hidden>Aucune musique trouvée.<br>Déposez vos fichiers audio dans<br><b>Stockage / Ambiance_Audio</b></div>
+      <div id="ch-list"></div>
+    </div>
+  </div>
+</section>
+<div id="ch-mini" hidden><button id="mini-prev" aria-label="Précédente">⏮</button><button id="mini-play" aria-label="Lecture">▶</button><button id="mini-next" aria-label="Suivante">⏭</button><span id="mini-title"></span><button id="mini-open" aria-label="Agrandir">⤢</button><button id="mini-stop" aria-label="Arrêter">✕</button><i id="mini-bar"></i></div>
+<section id="tb" class="local-only" role="dialog" aria-label="Gestion Google" hidden>
+  <div class="tb-top"><h2>GESTION GOOGLE<small>Onglets du Chrome connecté (CDP)</small></h2><span id="tb-count"></span>
+    <label class="tb-q"><span>⌕</span><input type="text" id="tb-q" placeholder="Filtrer par titre ou adresse…" autocomplete="off" spellcheck="false"></label>
+    <button class="btn sm" id="tb-refresh" title="Recalculer les miniatures">⟳ ACTUALISER</button><button class="btn sm" id="tb-close">✕ FERMER</button></div>
+  <div id="tb-grid"></div><div id="tb-none" hidden>Aucun onglet ne correspond au filtre.</div>
+  <div id="tb-err" hidden><h3 id="tb-err-t"></h3><p id="tb-err-m"></p><button class="btn" id="tb-ext">INSTALLER L'EXTENSION CHROME (RECOMMANDÉ · VOS VRAIS ONGLETS)</button><button class="btn" id="tb-launch">OUVRIR LE CHROME E.N.O.S.</button>
+    <div id="tb-hint">Depuis Chrome 136, le port de débogage est ignoré sur votre profil habituel. Pour piloter vos propres onglets, lancez Chrome avec :<br><code>chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\ChromeNASKO"</code><br>(un dossier de profil dédié ; vous pouvez y copier votre profil existant).</div></div>
+  <div class="tb-toast" id="tb-toast" role="status"></div>
+</section>
+<script src="/static/talk.js"></script>
+<script src="/static/colis.js"></script>
+<script src="/static/sync.js"></script>
+<script src="/static/chill.js"></script>
+<section id="se" class="local-only" role="dialog" aria-label="Sécurité" hidden>
+  <div class="se-top"><h2>SÉCURITÉ<small>Zero-trust · aucune saisie de mot de passe au quotidien</small></h2><span id="se-state"></span><button class="btn sm" id="se-close">✕ FERMER</button></div>
+  <div id="se-wrap">
+    <div class="se-grid">
+      <div class="se-card" id="se-pair">
+        <h3>CLÉ D'APPAIRAGE <small id="se-fp"></small></h3>
+        <p>À coller <b>une seule fois</b> dans l'application Android : RÉGLAGES → « CLÉ DE SÉCURITÉ ». Le PC, lui, la reçoit automatiquement.</p>
+        <div class="se-tok" id="se-tok">NK1.••••••••••••••••••••••••••••••••</div>
+        <div class="se-acts"><button class="btn sm" id="se-show">AFFICHER</button><button class="btn sm" id="se-copy">COPIER</button><button class="btn sm" id="se-qrb">QR CODE</button></div>
+        <img id="se-qr" alt="QR du jeton d'appairage" hidden>
+        <div class="se-note" id="se-created"></div>
+        <button class="btn red" id="se-rot">RÉGÉNÉRER LA CLÉ</button>
+        <div class="se-note">Régénérer invalide immédiatement tous les appareils appairés (l'APK devra recoller le nouveau jeton).</div>
+      </div>
+      <div class="se-card">
+        <h3>PROTECTIONS ACTIVES</h3>
+        <ul class="se-list" id="se-prot"></ul>
+        <label class="se-sw"><input type="checkbox" id="se-enc"><i></i><span>Chiffrement AES-256-GCM <b>obligatoire</b> pour les appareils distants<small>L'APK appairée chiffre déjà tout ; les navigateurs de téléphone sans jeton seraient refusés.</small></span></label>
+        <label class="se-sw"><input type="checkbox" id="se-inj"><i></i><span>Fournir la clé aux <b>navigateurs de confiance</b> (téléphone sans APK)<small>Décoché : seule l'APK appairée à la main peut parler à l'API.</small></span></label>
+      </div>
+    </div>
+    <div class="se-cnt" id="se-cnt"></div>
+    <div class="se-card"><h3>JOURNAL DE SÉCURITÉ <small>dernières tentatives bloquées</small></h3><div id="se-ev"></div></div>
+    <div class="se-card"><h3>DOSSIERS AUTORISÉS <small>tout chemin hors de cette liste est refusé</small></h3><ul class="se-roots" id="se-roots"></ul></div>
+  </div>
+</section>
+<script src="/static/tabs.js?v=20261005d"></script>
+<script src="/static/security.js"></script>
+<script src="/static/env.js"></script>
+<script src="/static/compress.js"></script>
+<script src="/static/pdfed.js"></script>
+<script src="/static/studio.js"></script>
+<script src="/static/syllabus.js"></script>
+<script src="/static/quicklib.js"></script>
+<script src="/static/quick.js"></script>
+<script src="/static/background.js"></script>
+<script src="/static/youtube.js"></script>
+<script src="/static/cleaner.js"></script>
+<script src="/static/organizer.js"></script>
+<script src="/static/apimon.js"></script>
+<script src="/static/sysdash.js"></script>
+<script src="/static/sysdiag.js"></script>
+<script src="/static/search.js"></script>
+<section id="rg" role="dialog" aria-label="Réglages" hidden>
+  <div class="tm-top"><h2>RÉGLAGES<small id="rg-sub">Thèmes · profil · appareils de confiance</small></h2><button class="btn sm" id="rg-close">✕ FERMER</button></div>
+  <nav class="tm-tabs" id="rg-tabs"><button data-t="th" class="on">THÈMES</button><button data-t="pf" class="local-only dev-ok">PROFIL</button><button data-t="dv" class="local-only dev-ok">APPAREILS<span class="dot" id="rg-pend" hidden></span></button><button data-t="ed">CET APPAREIL</button></nav>
+  <div class="tm-body">
+    <div data-p="th">
+      <div class="tm-card local-only"><h3>LANGUE DE L'ASSISTANT <small>texte, voix, phrases réflexes et micro</small></h3>
+        <div class="tm-row"><select id="rg-lang"><option value="fr">Français</option><option value="en">English</option></select></div>
+        <div class="tm-note" id="rg-lang-note"></div></div>
+      <div class="tm-card local-only"><h3>PHRASE D'ACCUEIL <small>jouée une fois au lancement, quand E.N.O.S. est prêt</small></h3>
+        <div class="tm-row"><select id="rg-welcome"><option value="fr">Français — « Bon retour parmi nous, capitaine… »</option><option value="en">English — « Welcome Captain… »</option><option value="off">Désactivée</option></select><button class="btn sm" id="rg-welcome-test">▶ ÉCOUTER</button></div>
+        <div class="tm-note" id="rg-welcome-note"></div></div>
+      <div class="tm-card"><h3>COULEUR D'ACCENT <small>décline le thème rouge · mémorisée sur cet appareil</small></h3><div class="ac-row" id="rg-accent"></div>
+        <label class="ac-toggle"><input type="checkbox" id="rg-shiny"> <span><b>Effet brillant (shiny)</b> · léger balayage lumineux sur les bordures et les boutons principaux</span></label></div>
+      <div class="tm-card"><h3>THÈME <small>l'apparence est mémorisée sur cet appareil</small></h3><div id="rg-themes"></div></div>
+      <div class="tm-card"><h3>ANIMATIONS <small>transitions entre les fenêtres · mémorisé sur cet appareil</small></h3>
+        <div class="tm-row" id="rg-motion"><button class="btn sm" data-motion="full" type="button">COMPLÈTES</button><button class="btn sm" data-motion="reduced" type="button">RÉDUITES</button><button class="btn sm" data-motion="off" type="button">AUCUNE</button><button class="btn sm" id="rg-motion-demo" type="button">▶ APERÇU</button></div>
+        <div class="tm-note" id="rg-motion-note"></div></div>
+      <div class="tm-card"><h3>COULEUR PRINCIPALE <small>réglage fin par-dessus le thème</small></h3>
+        <div class="rg-sl"><span>TEINTE</span><input type="range" id="rg-hue" min="0" max="360" step="1" aria-label="Teinte"><b id="rg-hue-v"></b></div>
+        <div class="rg-sl" style="margin-top:12px"><span>INTENSITÉ</span><input type="range" id="rg-sat" min="0" max="120" step="1" aria-label="Intensité"><b id="rg-sat-v"></b></div>
+        <div class="tm-row" style="margin-top:12px"><button class="btn sm" id="rg-reset">RÉINITIALISER LA COULEUR</button></div></div>
+    </div>
+    <div data-p="pf" hidden>
+      <div class="tm-card"><h3>PROFIL <small>chaque personne a ses propres chemins</small></h3>
+        <p>Les chemins ci-dessous sont enregistrés dans <b>enos_profiles.json</b> sous le profil choisi : Nassime et Raf peuvent partager ce fichier sans écraser les chemins de l'autre.</p>
+        <div class="tm-row"><select id="rg-prof" aria-label="Profil actif"></select><input type="text" id="rg-label" maxlength="30" placeholder="Nom affiché" aria-label="Nom affiché"><button class="btn sm" id="rg-label-save">ENREGISTRER LE NOM</button></div>
+        <div class="tm-note" id="rg-pfinfo"></div></div>
+      <div class="tm-card"><h3>CHEMINS <small>outils et dossiers de ce PC</small></h3><div class="tm-list" id="rg-paths"></div><div class="tm-err" id="rg-perr"></div></div>
+      <div class="tm-card local-only"><h3>TÉLÉPHONE (ADB) <small>profil actif uniquement</small></h3>
+        <p>ID de l'appareil Android que ce profil peut piloter. Toutes les commandes partent en <b>adb -s &lt;ID&gt;</b> : sans ID, rien n'est envoyé. L'ID est enregistré dans le profil actif : Nassime ne peut piloter que son téléphone, Raf que le sien. Rien ne transite par l'entrepôt.</p>
+        <div class="tm-row"><input type="text" id="rg-adb" maxlength="64" placeholder="ID ADB (ex. R58M12ABCDE ou 192.168.1.20:5555)" spellcheck="false" autocomplete="off"><button class="btn sm" id="rg-adb-save">ENREGISTRER</button><button class="btn sm" id="rg-adb-detect">DÉTECTER</button></div>
+        <div class="tm-list" id="rg-adb-list" style="margin-top:8px"></div><div class="tm-err" id="rg-adb-err"></div></div>
+    </div>
+    <div data-p="dv" hidden>
+      <div class="tm-card"><h3>APPAREILS DE CONFIANCE <small>Eto → Eto Dev</small></h3>
+        <p>Un téléphone dont l'UUID figure ici passe de <b>Eto</b> (gratuit, limité) à <b>Eto Dev</b> : outils premium, chat, entrepôt et colis. Un téléphone qui se connecte apparaît d'abord « en attente » : approuvez-le seulement si vous le reconnaissez.</p>
+        <h3 style="margin-top:14px">CONNECTÉS À CE PC <small>téléphones entrés avec le code d'accès</small></h3><div class="tm-list" id="rg-conn"></div>
+        <h3 style="margin-top:14px">EN ATTENTE</h3><div class="tm-list" id="rg-pending"></div>
+        <h3 style="margin-top:14px">APPROUVÉS</h3><div class="tm-list" id="rg-devs"></div>
+        <h3 style="margin-top:14px">AJOUTER PAR UUID</h3>
+        <div class="tm-row"><input type="text" id="rg-d-uuid" placeholder="UUID du téléphone" spellcheck="false"><input type="text" id="rg-d-name" placeholder="Nom (ex. Pixel de Raf)" maxlength="40"><button class="btn sm" id="rg-d-add">APPROUVER</button></div>
+        <div class="tm-err" id="rg-derr"></div></div>
+    </div>
+    <div data-p="ed" hidden>
+      <div class="tm-card"><h3>CET APPAREIL</h3><div class="tm-item"><div class="grow"><b id="rg-brand"></b><br><small id="rg-edtxt"></small></div></div>
+        <h3 style="margin-top:14px">IDENTIFIANT (UUID)</h3><div class="tm-uuid" id="rg-myuuid"></div>
+        <div class="tm-note eto-note" style="margin-top:10px">Pour débloquer Eto Dev, envoyez cet identifiant à l'administrateur d'E.N.O.S. : il l'approuvera dans RÉGLAGES → APPAREILS sur le PC.</div></div>
+    </div>
+  </div>
+</section>
+<section id="hb" class="dev-only" role="dialog" aria-label="Hub équipe" hidden>
+  <div class="tm-top"><h2>HUB ÉQUIPE<small id="hb-sub">Entrepôt partagé · chat · synchronisation du projet</small></h2><button class="btn sm" id="hb-close">✕ FERMER</button></div>
+  <nav class="tm-tabs" id="hb-tabs"><button data-t="wh" class="on">ENTREPÔT<span class="dot" id="hb-wh-n" hidden></span></button><button data-t="ch">CHAT<span class="dot" id="hb-ch-n" hidden></span></button><button data-t="gt" class="local-only">PROJET (GIT)</button></nav>
+  <div class="tm-body">
+    <div data-p="wh">
+      <div class="tm-card"><h3>ENVOYER À L'ENTREPÔT <small id="hb-wh-root"></small></h3>
+        <div class="tm-row"><select id="hb-wh-colis" aria-label="Colis à envoyer"></select><button class="btn sm" id="hb-wh-send">ENVOYER LE COLIS</button><button class="btn sm" id="hb-wh-refresh">⟳ ACTUALISER</button></div>
+        <div class="tm-row local-only" style="margin-top:8px"><input type="text" id="hb-wh-path" placeholder="Fichier à envoyer (chemin complet)" spellcheck="false"><button class="btn sm" id="hb-wh-pick">PARCOURIR…</button><button class="btn sm" id="hb-wh-sendf">ENVOYER LE FICHIER</button></div>
+        <div class="tm-err" id="hb-wh-err"></div></div>
+      <div class="tm-card"><h3>CONTENU DE L'ENTREPÔT <small id="hb-wh-peers"></small></h3>
+        <div class="tm-row" style="margin-bottom:10px"><span class="tm-note" style="margin:0">Livrer dans :</span><select id="hb-wh-dest" aria-label="Destination de livraison"></select></div>
+        <div class="tm-list" id="hb-wh-list"></div></div>
+    </div>
+    <div data-p="ch" hidden>
+      <div class="tm-card"><h3>CHAT DÉVELOPPEURS <small id="hb-ch-st"></small></h3>
+        <div id="hb-log" aria-live="polite"></div>
+        <form class="tm-chatf" id="hb-ch-form" autocomplete="off" style="margin-top:10px"><input type="text" id="hb-ch-inp" maxlength="4000" placeholder="Écrire un message…" aria-label="Message"><button class="btn sm" type="submit">ENVOYER</button></form></div>
+      <div class="tm-card local-only"><h3>CANAL AVEC L'ASSOCIÉ <small>aucun réglage, aucune commande</small></h3>
+        <div class="tm-row"><button class="btn" id="hb-chan">OUVRIR LE CANAL</button><button class="btn sm" id="hb-chan-off" hidden>FERMER LE CANAL</button></div>
+        <div class="chan-st" id="hb-chan-st"></div><div class="tm-note" id="hb-chan-note"></div><div class="tm-err" id="hb-chan-err"></div></div>
+    </div>
+    <div data-p="gt" hidden>
+      <div class="tm-card"><h3>SYNCHRONISER LE PROJET <small id="gt-info"></small></h3>
+        <p>Enchaîne <b>git add .</b> → <b>git commit -m "Auto-sync via E.N.O.S."</b> → <b>git pull</b> → <b>git push</b> sur le dossier du projet Godot. En cas de conflit, la fusion est annulée proprement et les fichiers concernés sont listés.</p>
+        <button class="btn" id="gt-go">SYNCHRONISER LE PROJET</button>
+        <div class="gt-steps" id="gt-steps"></div><div id="gt-msg"></div>
+        <div id="gt-choice" hidden><div class="gt-files" id="gt-files"></div>
+          <div class="tm-row"><button class="btn" id="gt-ours">GARDER MES VERSIONS</button><button class="btn" id="gt-theirs">PRENDRE CELLES DE L'AUTRE</button></div>
+          <div class="tm-note">Une branche de sauvegarde est créée avant : rien ne peut être perdu. Vous pourrez toujours la retrouver.</div></div>
+        <div id="gt-setup" hidden><h3 style="margin-top:14px">CONNECTER LE DÉPÔT</h3>
+          <div class="tm-row"><input type="text" id="gt-url" placeholder="Adresse GitHub du projet (https://github.com/…/….git)" spellcheck="false"><button class="btn sm" id="gt-setup-go">CONNECTER</button></div></div></div>
+    </div>
+  </div>
+</section>
+<section id="dv" class="local-only" role="dialog" aria-label="Dev Manager" hidden>
+  <div class="tm-top"><h2>DEV MANAGER<small id="dv-sub">WSL · ~/Nasko</small></h2><span id="dv-busy" class="dv-chip" hidden></span><button class="btn sm" id="dv-close">✕ FERMER</button></div>
+  <div class="dv-wrap">
+    <aside class="dv-side">
+      <div class="tm-card"><h3>CLONER <small>dans le dossier des dépôts</small></h3>
+        <div class="tm-row"><input type="text" id="dv-url" placeholder="URL ou proprietaire/depot" spellcheck="false" autocomplete="off" aria-label="Adresse du dépôt"><button class="btn sm" id="dv-clone">GIT CLONE</button></div></div>
+      <div class="tm-card dv-repos"><h3>DÉPÔTS <small id="dv-count"></small><button class="btn sm" id="dv-refresh" title="Actualiser">⟳</button></h3>
+        <select id="dv-select" aria-label="Mes dépôts"><option value="">— Mes dépôts —</option></select>
+        <input type="text" id="dv-filter" placeholder="Filtrer…" spellcheck="false" autocomplete="off" aria-label="Filtrer les dépôts">
+        <div id="dv-list" role="listbox" aria-label="Dépôts"></div></div>
+    </aside>
+    <section class="dv-main">
+      <div class="tm-card dv-head" id="dv-head">
+        <div class="dv-empty" id="dv-empty">← Choisissez un dépôt dans « Mes dépôts » ou clonez-en un.</div>
+        <div id="dv-info" hidden>
+          <div class="dv-title"><b id="dv-name"></b><span class="dv-chip" id="dv-branch"></span><span class="dv-chip" id="dv-dirty"></span><span class="dv-chip" id="dv-ab"></span></div>
+          <div class="dv-path" id="dv-path"></div>
+          <div class="tm-row dv-actions">
+            <button class="btn" id="dv-open">⌥ OUVRIR DANS VS CODE</button>
+            <button class="btn dv-primary" id="dv-edit" title="Explorateur + éditeur avec coloration syntaxique, sauvegarde dans WSL">🗂 EXPLORATEUR / ÉDITEUR</button>
+            <button class="btn" id="dv-explorer" title="Ouvrir le dossier dans l'Explorateur Windows">📁 WINDOWS</button>
+            <button class="btn" data-q="git status -sb">STATUS</button>
+            <button class="btn" data-q="git pull --ff-only">PULL</button>
+            <button class="btn" data-q="git log --oneline --decorate -15">LOG</button>
+            <button class="btn" data-q="git diff --stat">DIFF</button>
+          </div>
+        </div>
+      </div>
+      <div class="tm-card dv-ide" id="dv-ide" hidden>
+        <h3>ÉDITEUR <small id="ide-title"></small><span class="dv-spacer"></span><button class="btn sm" id="ide-save" disabled title="Ctrl+S">💾 SAUVEGARDER</button><button class="btn sm" id="ide-full" title="Plein écran">⛶</button><button class="btn sm" id="ide-close" title="Fermer l'éditeur">✕</button></h3>
+        <div class="ide-grid">
+          <div class="ide-side">
+            <div class="ide-tools"><button class="btn sm" id="ide-nf" title="Nouveau fichier">＋ FICHIER</button><button class="btn sm" id="ide-nd" title="Nouveau dossier">＋ DOSSIER</button><button class="btn sm" id="ide-del" title="Supprimer la sélection">🗑</button><button class="btn sm" id="ide-rf" title="Actualiser">⟳</button></div>
+            <div id="ide-tree" role="tree" aria-label="Arborescence du dépôt"></div>
+          </div>
+          <div class="ide-ed">
+            <div id="ide-tabs" role="tablist"></div>
+            <div id="ide-host"><div id="ide-empty">Cliquez sur un fichier de l'arborescence pour l'ouvrir.<br>Clic droit : nouveau fichier / dossier, supprimer.</div></div>
+            <div class="ide-status" id="ide-status"></div>
+          </div>
+        </div>
+        <form id="ide-bar" hidden></form>
+        <div id="ide-msg"></div>
+      </div>
+      <div class="tm-card dv-scripts" id="dv-scripts" hidden>
+        <h3>SCRIPTS .SH <small>racine du dépôt · glissez-déposez vos .sh ici</small><button class="btn sm" id="dv-import">⬆ IMPORTER UN .SH</button></h3>
+        <input type="file" id="dv-file" accept=".sh,text/x-shellscript" multiple hidden>
+        <div id="dv-sh" class="dv-sh"></div>
+        <div id="dv-import-msg"></div>
+      </div>
+      <div class="tm-card dv-term" id="dv-term" hidden>
+        <h3>TERMINAL LINUX <small id="dv-cwd"></small><span class="dv-spacer"></span><button class="btn sm" id="dv-copy">COPIER</button><button class="btn sm" id="dv-clear">VIDER</button></h3>
+        <div class="dv-jobs" id="dv-jobs" role="tablist" aria-label="Tâches"></div>
+        <pre id="dv-out" class="dv-out" aria-live="polite" tabindex="0"></pre>
+        <div class="dv-chips" id="dv-chips"></div>
+        <form class="dv-cmd" id="dv-form" autocomplete="off">
+          <span class="dv-prompt" id="dv-prompt">$</span>
+          <input type="text" id="dv-cmd" placeholder="Commande Shell à exécuter : ./script.sh, make, git pull…  (↑ ↓ historique)" spellcheck="false" autocomplete="off" aria-label="Commande Shell à exécuter">
+          <button class="btn" type="submit" id="dv-run">EXÉCUTER LA COMMANDE</button>
+          <button class="btn dv-stop" type="button" id="dv-stop" hidden>■ ARRÊTER</button>
+          <button class="btn sm" type="button" id="dv-fav" title="Enregistrer cette commande en favori">★</button>
+        </form>
+      </div>
+      <div id="dv-msg"></div>
+    </section>
+  </div>
+</section>
+<section id="st" class="local-only" role="dialog" aria-label="Mode apprentissage" hidden>
+  <div class="tm-top"><h2>APPRENTISSAGE<small>ETO · OUVERTURES D'ÉCHECS · DÉMONSTRATION ANIMÉE</small></h2><button class="btn sm" id="st-close">✕ FERMER</button></div>
+  <div class="st-wrap">
+    <aside class="st-side" aria-label="Ouvertures">
+      <h3>RÉPERTOIRE BLANC</h3><div class="st-list" id="st-list-w"></div>
+      <h3>RÉPERTOIRE NOIR</h3><div class="st-list" id="st-list-b"></div>
+      <div class="st-dirs" id="st-dirs"></div>
+    </aside>
+    <section class="st-main">
+      <div class="st-boardwrap"><div id="st-embed" hidden aria-hidden="true"></div><div id="st-board" aria-label="Plateau d'étude"></div><svg id="st-arrows" viewBox="0 0 8 8" preserveAspectRatio="none" aria-hidden="true"></svg></div>
+    </section>
+    <aside class="st-coach" aria-label="Coach ETO">
+      <div class="st-card"><span class="st-pill" id="st-pill">EN ATTENTE</span>
+        <div class="st-title" id="st-title" style="margin-top:8px">CHOISIS UNE OUVERTURE</div><div class="st-var" id="st-var"></div><div class="st-line" id="st-line"></div></div>
+      <div class="st-ctl">
+        <button class="btn go" id="st-pause" disabled>▶ LECTURE</button><button class="btn" id="st-back" disabled title="Rewind : le plateau recule d'un coup">◀ RETOUR</button><button class="btn" id="st-fwd" disabled>SUIVANT ▶</button>
+        <button class="btn" id="st-explain" disabled title="ETO explique la position actuelle">EXPLIQUE-MOI</button><button class="btn" id="st-restart" disabled>↻ DEPUIS LE DÉBUT</button><button class="btn" id="st-practice" disabled title="Passer à la pratique : ETO rend la main">✋ JE PRATIQUE</button>
+      </div>
+      <h3 id="st-varsh" hidden>VARIANTES À CE COUP</h3><div class="st-vars" id="st-vars"></div>
+      <div class="st-hint" id="st-hint" style="font-size:12px;color:var(--cy,var(--neon))"></div>
+      <div class="st-say" id="st-say" aria-live="polite"></div>
+      <div class="st-opt"><label><input type="checkbox" id="st-voice" checked> VOIX</label>
+        <label>Commentaire <select id="st-detail"><option value="key">essentiel</option><option value="full">détaillé</option></select></label>
+        <label>Rythme <select id="st-pace"><option value="fast">rapide</option><option value="normal" selected>normal</option><option value="slow">lent</option></select></label></div>
+      <small class="st-dirs" id="st-opts-n"></small>
+      <div id="st-msg" aria-live="polite"></div>
+      <h3>JOURNAL D'ETO</h3><div class="st-log" id="st-log"></div>
+    </aside>
+  </div>
+</section>
+<section id="sw" role="dialog" aria-label="Gestion du site web" hidden>
+  <div class="tm-top"><h2>SITE WEB<small>DUAL PULSE · SERVEUR LOCAL 127.0.0.1:8000</small></h2><button class="btn sm" id="sw-close">✕ FERMER</button></div>
+  <div class="tm-body">
+    <div class="tm-card"><h3>ÉTAT DU SERVEUR</h3>
+      <div class="sw-state" id="sw-state" data-s="check"><span class="sw-led"></span><b id="sw-label">Vérification…</b></div>
+      <p id="sw-text"></p>
+      <div class="tm-row"><button class="btn" id="sw-start">DÉMARRER LE SERVEUR</button><button class="btn" id="sw-open" disabled>ACCÉDER AU SITE WEB</button></div>
+      <div id="sw-msg"></div></div>
+    <div class="tm-card"><h3>LIEN PUBLIC <small>à partager sur Discord</small></h3>
+      <p>Crée un lien internet temporaire (tunnel localhost.run, sans inscription) vers le site. Le lien change à chaque génération et cesse de fonctionner quand vous l'arrêtez ou fermez E.N.O.S. Les visiteurs voient uniquement la page publique, jamais la zone développeur.</p>
+      <div class="tm-row"><button class="btn" id="sw-tun" disabled>GÉNÉRER UN LIEN PUBLIC</button><button class="btn sm" id="sw-tun-off" hidden>ARRÊTER LE LIEN</button></div>
+      <div class="tm-row" id="sw-link" hidden><input type="text" id="sw-url" readonly spellcheck="false"><button class="btn sm" id="sw-copy">COPIER</button></div>
+      <div id="sw-tmsg"></div></div>
+  </div>
+</section>
+<section id="pk" role="dialog" aria-label="Construire un colis" hidden>
+  <div class="tm-top"><h2>CONSTRUIRE UN COLIS<small>DOSSIER → ARCHIVE .ZIP · LA SOURCE RESTE INTACTE</small></h2><button class="btn sm" id="pk-close">✕ FERMER</button></div>
+  <div class="tm-body">
+    <div class="tm-card"><h3>1 · DOSSIER À EMPAQUETER</h3>
+      <p>Choisissez le dossier (ex. un export Godot contenant les exécutables). Il est seulement lu : rien n'y est modifié, déplacé ni supprimé.</p>
+      <div class="tm-row"><input type="text" id="pk-src" placeholder="Chemin du dossier — ex. D:\Godot\BinaJeux" spellcheck="false"><button class="btn sm" id="pk-pick">PARCOURIR…</button></div>
+      <div class="tm-row"><button class="btn" id="pk-go">VALIDER ET COMPRESSER</button></div>
+      <div id="pk-msg"></div></div>
+    <div class="tm-card"><h3>2 · COLIS CONSTRUITS <small id="pk-folder"></small></h3>
+      <div class="tm-row"><label class="tm-note" for="pk-dest" style="margin:0">Destination :</label><select id="pk-dest"></select></div>
+      <div id="pk-list"></div></div>
+  </div>
+</section>
+<section id="gs" role="dialog" aria-label="Synchronisation Godot" hidden>
+  <div class="tm-top"><h2>SYNC GODOT<small>GIT EN ARRIÈRE-PLAN · ALERTE AUTOMATIQUE À L'ASSOCIÉ</small></h2><button class="btn sm" id="gs-close">✕ FERMER</button></div>
+  <div class="tm-body">
+    <div class="tm-card"><h3>DOSSIER DU PROJET GODOT <small>profil actif</small></h3>
+      <div class="tm-row"><input type="text" id="gs-dir" placeholder="Dossier du projet Godot (dépôt Git)" spellcheck="false"><button class="btn sm" id="gs-pick">PARCOURIR…</button><button class="btn sm" id="gs-save">ENREGISTRER</button></div>
+      <div class="tm-note" id="gs-state"></div></div>
+    <div class="tm-card"><h3>DIFFUSER MA MISE À JOUR</h3>
+      <p>Enchaîne en silence <b>git add .</b> → <b>commit</b> → <b>pull</b> → <b>push</b>, puis prévient votre associé dans le chat partagé : son E.N.O.S. affichera une alerte avec un bouton ACCEPTER. Ne copiez jamais le projet Godot par OneDrive : Git est le seul canal.</p>
+      <div class="tm-row"><button class="btn" id="gs-go">DIFFUSER MA MISE À JOUR GODOT</button></div>
+      <div class="gt-steps" id="gs-steps"></div><div id="gs-msg"></div>
+      <div id="gs-choice" hidden><div class="tm-row"><button class="btn" id="gs-ours">GARDER MES VERSIONS</button><button class="btn" id="gs-theirs">PRENDRE CELLES DE L'AUTRE</button></div>
+        <div class="tm-note">Une branche de sauvegarde est créée avant : rien ne peut être perdu.</div></div></div>
+    <div class="tm-card"><h3>RECEVOIR LA DERNIÈRE MISE À JOUR</h3>
+      <p>Normalement automatique (l'alerte rouge apparaît seule). Ce bouton sert de secours : <b>git pull</b> sécurisé (jamais d'écrasement), ou <b>git clone</b> si le dossier est vide.</p>
+      <div class="tm-row"><button class="btn" id="gs-pull">RÉCUPÉRER LA MISE À JOUR</button></div><div class="tm-note" id="gs-recv"></div></div>
+  </div>
+</section>
+<div id="gs-alert" role="alertdialog" aria-live="assertive" hidden>
+  <div class="gs-a-t" id="gs-alert-t"></div>
+  <div class="gs-a-b" id="gs-alert-b"><button class="btn" id="gs-ok">ACCEPTER</button><button class="btn sm" id="gs-later">PLUS TARD</button><button class="btn sm" id="gs-ignore">IGNORER</button></div>
+</div>
+<section id="mob" class="local-only" role="dialog" aria-label="Contrôle mobile" hidden>
+  <div class="tm-top"><h2>CONTRÔLE MOBILE<small>ADB LOCAL · UN SEUL TÉLÉPHONE · AUCUN TRANSIT PAR L'ENTREPÔT</small></h2><button class="btn sm" id="mob-close">✕ FERMER</button></div>
+  <div class="tm-body">
+    <div class="tm-card"><h3>ÉTAT</h3>
+      <div class="sw-state" id="mob-state" data-s="check"><span class="sw-led"></span><b id="mob-label">Vérification…</b></div>
+      <p id="mob-text"></p><div class="tm-row"><button class="btn sm" id="mob-install" hidden>TÉLÉCHARGER ADB</button><button class="btn sm" id="mob-refresh">ACTUALISER</button></div><div id="mob-msg"></div></div>
+    <div class="tm-card"><h3>COMMANDES DE TEST</h3>
+      <div class="mob-grid">
+        <button class="btn" data-mob="screen">ÉCRAN ON / OFF<small>adb shell input keyevent 26</small></button>
+        <button class="btn" data-mob="youtube">OUVRIR YOUTUBE<small>adb shell monkey -p com.google.android.youtube …</small></button>
+        <button class="btn" data-mob="swipe">BALAYAGE VERS LE HAUT<small>adb shell input swipe 500 1500 500 500 · déverrouiller</small></button>
+        <button class="btn" id="mob-mirror">AFFICHER L'ÉCRAN<small>scrcpy · téléchargé automatiquement s'il manque</small></button>
+      </div><div id="mob-amsg"></div></div>
+  </div>
+</section>
+<section id="df" class="local-only" role="dialog" aria-label="Défi" hidden>
+  <div class="tm-top"><h2>DÉFI<small>AFFRONTEZ E.N.O.S.</small></h2><button class="btn sm" id="df-close">✕ FERMER</button></div>
+  <div class="tm-body"><div class="tm-card"><h3>JEUX DISPONIBLES</h3>
+    <div class="mob-grid"><button class="btn" id="df-chess">CHESS<small>Échecs · Stockfish · jugement de chaque coup</small></button><button class="btn" id="df-cond">MISE EN CONDITION<small>Plateau libre · posez vos pièces · interrogez ETO · réveillez E.N.O.S. ou ETO</small></button></div></div></div>
+</section>
+<section id="cd" class="local-only" role="dialog" aria-label="Mise en condition" hidden>
+  <div class="tm-top"><h2>MISE EN CONDITION<small id="cd-sub">PLATEAU LIBRE · E.N.O.S. ET ETO SONT EN SOMMEIL</small></h2><button class="btn sm" id="cd-close">✕ FERMER</button></div>
+  <div class="cd-wrap">
+    <div class="cd-left">
+      <div id="cd-board" aria-label="Plateau de mise en condition"></div>
+      <div id="cd-pal" class="cd-pal" aria-label="Pièces à poser"></div>
+      <div class="cd-row">
+        <button class="btn sm" id="cd-start">POSITION DE DÉPART</button><button class="btn sm" id="cd-clear">VIDER</button><button class="btn sm" id="cd-flip">⇅ RETOURNER</button>
+        <label class="cd-opt">Trait <select id="cd-turn" class="cs-sel"><option value="w">aux Blancs</option><option value="b">aux Noirs</option></select></label>
+      </div>
+      <div class="cd-row cd-castle" title="Un roque n'est possible que si le roi et la tour sont à leur place">
+        <span>Roques :</span><label><input type="checkbox" data-c="K"> O-O blanc</label><label><input type="checkbox" data-c="Q"> O-O-O blanc</label><label><input type="checkbox" data-c="k"> O-O noir</label><label><input type="checkbox" data-c="q"> O-O-O noir</label>
+      </div>
+      <div class="cd-row"><input id="cd-moves" class="cd-in" placeholder="Jouer des coups depuis cette position : 1.e4 e6 2.d4 d5" aria-label="Coups à jouer" maxlength="600"><button class="btn sm" id="cd-play">JOUER</button></div>
+      <div id="cd-msg" class="cd-msg" aria-live="polite"></div>
+    </div>
+    <div class="cd-right">
+      <div class="cd-sleep"><div class="cd-card" id="cd-enos"><b>E.N.O.S.</b><i>💤 en sommeil</i></div><div class="cd-card" id="cd-eto"><b>ETO</b><i>💤 en sommeil</i></div></div>
+      <div class="tm-card cd-call"><h3>RÉVEILLER UN ADVERSAIRE</h3>
+        <div class="cd-row"><label class="cd-opt">Il joue les <select id="cd-ai" class="cs-sel"><option value="b">Noirs (je joue les Blancs)</option><option value="w">Blancs (je joue les Noirs)</option></select></label></div>
+        <label class="cs-power" for="cd-pow"><span id="cd-powtxt"></span><input type="range" id="cd-pow" min="1" max="100" step="1" value="100" aria-label="Puissance de l'adversaire"></label>
+        <div class="cd-row"><button class="btn" id="cd-call-enos">APPELER E.N.O.S.</button><button class="btn" id="cd-call-eto">APPELER ETO</button></div>
+        <small class="cd-hint">La partie démarre depuis cette position (non archivée dans l'historique). S'il a le trait, il joue en premier.</small>
+      </div>
+      <div class="tm-card cd-ask"><h3>QUESTION À ETO</h3>
+        <textarea id="cd-q" class="cd-in" rows="3" maxlength="500" placeholder="Ex. : Dans cette position de la Défense française, si mon adversaire joue ça, que dois-je faire ?" aria-label="Question pour ETO"></textarea>
+        <div class="cd-row"><button class="btn" id="cd-ask">DEMANDER À ETO</button><label class="cd-opt"><input type="checkbox" id="cd-voice" checked> VOIX</label><label class="cd-opt">Je joue <select id="cd-side" class="cs-sel"><option value="w">les Blancs</option><option value="b">les Noirs</option></select></label></div>
+        <div id="cd-log" class="cd-log" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="cs" class="local-only" role="dialog" aria-label="Échecs" hidden>
+  <div class="tm-top"><h2>CHESS<small>VOUS CONTRE E.N.O.S. · STOCKFISH</small></h2>
+    <label class="cs-power" for="cs-pow"><span id="cs-powtxt">Puissance : 100 % (Équivalent : 3200 Elo)</span><input type="range" id="cs-pow" min="1" max="100" step="1" value="100" aria-label="Puissance d'E.N.O.S."></label>
+    <select id="cs-opp" class="cs-sel" title="Adversaire du duel" aria-label="Adversaire du duel"><option value="enos">ADVERSAIRE · E.N.O.S.</option><option value="eto">ADVERSAIRE · ETO</option><option value="eto_brillant">ADVERSAIRE · ETO BRILLANT (3200)</option></select>
+    <select id="cs-mode" class="cs-sel" title="Mode de jeu : défi contre E.N.O.S., ou cours avec ETO qui commente votre partie contre un bot virtuel" aria-label="Mode de jeu"><option value="enos">DÉFI · E.N.O.S.</option><option value="coach">COURS · MOI VS BOT + COACH ETO</option><option value="speedrun">SPEEDRUN · ETO VS BOT</option><option value="titans">⚔ CHOC DES TITANS · E.N.O.S. VS ETO</option><option value="boss">👑 BOSS FINAL · STOCKFISH</option></select><select id="cs-boss" class="cs-sel" hidden title="Qui affronte le boss Stockfish ?" aria-label="Challenger du boss"><option value="eto">ETO VS STOCKFISH</option><option value="enos">E.N.O.S. VS STOCKFISH</option><option value="duo">E.N.O.S. + ETO VS STOCKFISH</option></select><select id="cs-elo" class="cs-sel" hidden title="Niveau du bot virtuel (ETO le simule à partir de ses 3200 Elo)" aria-label="Elo du bot"><option value="400">Bot 400 Elo</option><option value="600" selected>Bot 600 Elo</option><option value="800">Bot 800 Elo</option><option value="1000">Bot 1000 Elo</option><option value="1200">Bot 1200 Elo</option><option value="1500">Bot 1500 Elo</option><option value="1800">Bot 1800 Elo</option><option value="2200">Bot 2200 Elo</option><option value="2600">Bot 2600 Elo</option><option value="3200">⭐ ETO Brillant · 3200 Elo (sacrifices !!)</option></select><button class="btn sm" id="cs-sr-pause" hidden title="Mettre la partie en pause">⏸ PAUSE</button><button class="btn sm titans" id="cs-titans" title="Match spectateur : E.N.O.S. contre ETO, 3200 Elo chacun, ils se répondent en direct">⚔ ORGANISER UN 1v1 E.N.O.S. VS ETO</button><button class="btn sm" id="cs-w">NOUVELLE PARTIE · BLANCS</button><button class="btn sm" id="cs-b">NOIRS</button><button class="btn sm" id="cs-hbtn">HISTORIQUE</button><select id="cs-theme" class="cs-sel" title="Thème des pièces (plateau Godot)" aria-label="Thème des pièces"></select><select id="cs-board" class="cs-sel" title="Plateau : couleurs des cases (26 plateaux)" aria-label="Plateau"></select><select id="cs-vtheme" class="cs-sel" title="Style visuel du plateau (matériaux, néon, yeux des cavaliers)" aria-label="Style visuel du plateau"></select><span class="persona-slot" data-persona-slot></span><button class="btn sm" id="cs-mic" title="Parler à E.N.O.S. pendant la partie (trash talk)">🎤 TRASH TALK</button><button class="btn sm" id="cs-discord" title="Écoute Discord : E.N.O.S. / ETO entendent la voix de votre ami en appel (audio de sortie du PC) et lui répondent à voix haute">🎧 ÉCOUTE DISCORD : OFF</button><label class="dim" id="cs-discord-mixl" style="font-size:11px;white-space:nowrap" title="Fusionner aussi votre micro avec l'audio du bureau"><input type="checkbox" id="cs-discord-mic"> + mon micro</label><span id="cs-discord-lv" class="dim" style="font-size:11px" hidden></span><button class="btn sm" id="cs-stop" title="Couper la voix d'E.N.O.S. et lui répondre tout de suite">⏹ INTERROMPRE</button><button class="btn sm" id="cs-revbtn" title="Bilan de la partie : précision, niveau estimé, coups par catégorie">BILAN</button><button class="btn sm warn" id="cs-resign" title="Abandonner la partie en cours">ABANDONNER</button><button class="btn sm" id="cs-cond" hidden title="Revenir à la position posée pour la rejouer autrement">↩ MISE EN CONDITION</button><button class="btn sm" id="cs-close">✕ FERMER</button></div>
+  <div class="cs-wrap">
+    <div class="cs-left"><div id="cs-board" aria-label="Plateau d'échecs"></div><div id="cs-embed" hidden aria-hidden="true"></div><div id="cs-promo" hidden></div><div id="cs-status"></div></div>
+    <div class="cs-right">
+      <div id="cs-eye" aria-label="Emplacement de l'œil 3D d'E.N.O.S." title="Emplacement réservé : l'œil 3D animé d'E.N.O.S."></div>
+      <div id="cs-coach" class="cs-coach" hidden>
+        <div class="cc-head"><div id="cs-coach-face" class="cc-face" aria-hidden="true"></div><div class="cc-t"><b id="cc-title">COACH ETO</b><small id="cc-sub">commente la partie en direct</small></div>
+          <label class="cc-opt" title="ETO parle à voix haute"><input type="checkbox" id="cc-voice" checked> VOIX</label><label class="cc-opt" title="Seulement si ElevenLabs n'a plus de crédits : parler quand même avec la voix du navigateur (décoché par défaut)"><input type="checkbox" id="cc-bvoice"> VOIX SECOURS</label><label class="cc-opt" id="cc-onwrap" title="Laisser ETO commenter ce duel"><input type="checkbox" id="cc-on" checked> COACH</label></div>
+        <div id="cs-coach-log" class="cc-log" aria-live="polite"></div>
+      </div>
+      <div id="cs-dec" class="cs-dec" hidden><b>GAFFE CATASTROPHIQUE</b><div id="cs-dec-t"></div>
+        <button class="btn" id="cs-dec-go">CONTINUER AVEC CETTE ERREUR</button><button class="btn" id="cs-dec-undo">ANNULER LE COUP (TAKEBACK)</button></div>
+      <div id="cs-judge" class="cs-judge"></div>
+      <div class="cs-evalw"><div class="cs-evalb"><i id="cs-evalf"></i></div><b id="cs-evalv">0.0</b></div>
+      <div id="cs-moves"></div>
+    </div>
+  </div>
+  <div id="cs-rev" hidden role="dialog" aria-label="Bilan de la partie">
+    <div class="tm-top"><h2>BILAN DE LA PARTIE<small id="cs-rsub"></small></h2><button class="btn sm" id="cs-rclose">✕ FERMER</button></div>
+    <div class="cs-rwrap" id="cs-rbody"></div>
+  </div>
+  <div id="cs-hist" hidden role="dialog" aria-label="Historique des parties">
+    <div class="tm-top"><h2>HISTORIQUE<small id="cs-hcount">10 DERNIÈRES PARTIES</small></h2><button class="btn sm" id="cs-hclose">✕ RETOUR</button></div>
+    <div class="cs-hwrap">
+      <div class="cs-hlist" id="cs-hlist"></div>
+      <div class="cs-hview" id="cs-hview" hidden>
+        <div id="cs-hboard"></div>
+        <div class="tm-row" style="justify-content:center;margin:8px 0"><button class="btn sm" id="cs-hfirst">⏮</button><button class="btn sm" id="cs-hprev">◀</button><span id="cs-hply" style="min-width:90px;text-align:center"></span><button class="btn sm" id="cs-hnext">▶</button><button class="btn sm" id="cs-hlast">⏭</button></div>
+        <div class="tm-row" style="justify-content:center"><button class="btn sm" id="cs-hcopy">COPIER LE PGN</button></div>
+        <div id="cs-hmoves"></div>
+        <div id="cs-hrev" class="rv"></div>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="/static/team.js"></script>
+<script src="/static/power.js"></script>
+<script src="/static/mobile.js"></script>
+<script src="/static/defi.js?v=20261005d"></script>
+<script src="/static/notify.js?v=2"></script>
+<script src="/static/agenda.js?v=2"></script>
+<script src="/static/home.js?v=1"></script>
+<script src="/static/onboarding.js?v=1"></script>
+<script src="/static/tour.js?v=1"></script>
+<script src="/static/cloud.js?v=1"></script>
+<script src="/static/gaming.js?v=1"></script>
+<script src="/static/pair.js?v=1"></script>
+<script src="/static/deeplink.js"></script>
+<script src="/static/pet.js"></script>
+<script src="/static/devmanager.js"></script>
+<script src="/static/depot.js"></script>
+<script src="/static/updatebar.js"></script>
+<script src="/static/study.js"></script>
+</body>
+</html>

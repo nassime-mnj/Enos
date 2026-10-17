@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Eto</title>
+<style>
+:root{--neon:#00ff41;--mid:#00b82e;--dim:#0a4d1c;--amber:#ffb000;--red:#ff3b3b}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#000;color:var(--neon);font-family:Consolas,"Courier New",monospace}
+body{display:flex;justify-content:center;padding:28px 18px 40px;background:radial-gradient(ellipse at 50% 0,#052e12 0,#000 62%)}
+body::before{content:"";position:fixed;inset:0;background:repeating-linear-gradient(0deg,#0000 0 2px,#00ff4108 2px 3px);pointer-events:none}
+main{width:100%;max-width:460px;position:relative}
+.logo{text-align:center;font-weight:900;font-size:34px;letter-spacing:10px;text-shadow:0 0 18px var(--neon);margin:10px 0 4px}
+.sub{text-align:center;color:var(--mid);font-size:11px;letter-spacing:4px;margin-bottom:26px}
+section{border:1px solid #00ff4199;background:#021a08d9;padding:20px 18px;box-shadow:0 0 30px #00ff4122,inset 0 0 30px #00ff410d;position:relative}
+section::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--neon);box-shadow:0 0 14px var(--neon)}
+h2{margin:0 0 6px;font-size:16px;letter-spacing:3px}
+p{color:var(--mid);font-size:13px;line-height:1.5;margin:6px 0 14px}
+label{display:block;font-size:11px;letter-spacing:2px;color:var(--mid);margin:14px 0 6px}
+input{width:100%;background:#000;color:var(--neon);border:1px solid var(--dim);padding:13px 12px;font:16px Consolas,monospace;outline:none}
+input:focus{border-color:var(--neon);box-shadow:0 0 14px #00ff4144}
+button{display:block;width:100%;margin-top:14px;min-height:50px;background:#000;color:var(--neon);border:1px solid var(--neon);font:800 14px Consolas,monospace;letter-spacing:3px;cursor:pointer}
+button.main{background:var(--neon);color:#000;box-shadow:0 0 18px #00ff4166}
+button.amber{border-color:var(--amber);color:var(--amber)}button.ghost{border-color:var(--dim);color:var(--mid)}
+button:active{filter:brightness(1.4)}
+.err{color:var(--red);font-size:13px;min-height:18px;margin-top:10px}
+.fp{font-size:12px;word-break:break-all;line-height:1.7;padding:12px;border:1px dashed var(--mid);background:#000;color:#d8ffe2;letter-spacing:1px}
+.warn{border-color:var(--red)}.warn h2{color:var(--red)}.warn::after{background:var(--red);box-shadow:0 0 14px var(--red)}
+.dots::after{content:"";animation:d 1.4s steps(4) infinite}@keyframes d{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.radar{width:74px;height:74px;margin:6px auto 14px;border:2px solid var(--dim);border-radius:50%;position:relative;overflow:hidden}
+.radar::before{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,#00ff4100 0 70%,#00ff4188);animation:r 1.6s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+[hidden]{display:none!important}
+</style></head>
+<body><main>
+<div class="logo">Eto</div><div class="sub">APPLICATION ANDROID</div>
+
+<section id="setup" hidden>
+  <h2>[ CONNEXION AU PC ]</h2>
+  <p>Entrez l'adresse de votre PC (affichée dans le panneau « ACCÈS TÉLÉPHONE » de E.N.O.S.). Un VPN comme Tailscale permet d'y accéder hors de chez vous.</p>
+  <label for="srv">ADRESSE DU PC</label>
+  <input id="srv" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="192.168.1.28   ou   https://100.64.0.5:8443">
+  <label for="rly">RELAIS DE RÉVEIL (OPTIONNEL)</label>
+  <input id="rly" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="192.168.1.50:8088">
+  <label for="key">CLÉ DE SÉCURITÉ (À COLLER UNE SEULE FOIS)</label>
+  <input id="key" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="NK1.…  (panneau SÉCURITÉ de E.N.O.S. sur le PC)">
+  <div class="fp" id="kfp" hidden style="margin-top:8px"></div>
+  <div class="err" id="serr"></div>
+  <button class="main" id="bsave">ENREGISTRER ET SE CONNECTER</button>
+  <button class="ghost" id="bupd">VÉRIFIER LES MISES À JOUR</button>
+  <div class="sub" id="ver" style="margin:16px 0 0"></div>
+  <button class="ghost" id="bback" hidden>ANNULER</button>
+</section>
+
+<section id="offline" hidden>
+  <div class="radar"></div>
+  <h2 style="text-align:center">PC INJOIGNABLE</h2>
+  <p style="text-align:center">Il est peut-être éteint, en veille ou hors réseau. Reconnexion automatique<span class="dots"></span></p>
+  <div class="fp" id="osrv" style="text-align:center;letter-spacing:2px"></div>
+  <button class="amber" id="bwake" hidden>⏻  ALLUMER LE PC</button>
+  <button class="main" id="bretry">RÉESSAYER MAINTENANT</button>
+  <button class="ghost" id="bset">RÉGLAGES</button>
+</section>
+
+<section id="trust" hidden>
+  <h2 id="thead">[ NOUVEAU CERTIFICAT ]</h2>
+  <p id="tmsg">Première connexion à ce PC. Comparez cette empreinte avec celle affichée dans le panneau « ACCÈS TÉLÉPHONE » de E.N.O.S. sur le PC avant de continuer.</p>
+  <div class="fp" id="fp"></div>
+  <button class="main" id="btrust">C'EST LA BONNE : FAIRE CONFIANCE</button>
+  <button class="ghost" id="bno">ANNULER</button>
+</section>
+</main>
+<script>
+(function(){
+  var A = window.NaskoApp, $ = function(i){return document.getElementById(i);}, I = {};
+  try { I = JSON.parse(A.info()); } catch (e) {}
+  function show(){
+    var m = (location.hash || "").slice(1) || (I.server ? "offline" : "setup");
+    ["setup","offline","trust"].forEach(function(k){ $(k).hidden = k !== m; });
+    try { I = JSON.parse(A.info()); } catch (e) {}
+    if (m === "setup") {
+      $("srv").value = I.server || ""; $("rly").value = I.relay || ""; $("bback").hidden = !I.server; $("serr").textContent = "";
+      $("key").value = ""; $("kfp").hidden = !I.hasKey;
+      $("key").placeholder = I.hasKey ? "(clé enregistrée : laissez vide pour la conserver)" : "NK1.…  (panneau SÉCURITÉ de E.N.O.S. sur le PC)";
+      $("kfp").textContent = I.hasKey ? "CLÉ ENREGISTRÉE · EMPREINTE " + I.keyFp + " — comparez-la avec celle du panneau SÉCURITÉ du PC." : "";
+    }
+    if (m === "offline") { $("osrv").textContent = (I.server || "").replace(/^https?:\/\//, "").replace(/\/$/, ""); $("bwake").hidden = !I.relay; }
+    if (m === "trust") {
+      $("fp").textContent = I.fp || "(empreinte illisible)";
+      var ch = !!I.changed; $("trust").className = ch ? "warn" : "";
+      $("thead").textContent = ch ? "[ ⚠ CERTIFICAT MODIFIÉ ]" : "[ NOUVEAU CERTIFICAT ]";
+      $("tmsg").textContent = ch ? "Le certificat de ce PC a changé (nouvelle adresse IP, régénération) — ou quelqu'un se fait passer pour lui. Vérifiez l'empreinte sur le PC avant d'accepter."
+        : "Première connexion à ce PC. Comparez cette empreinte avec celle affichée dans le panneau « ACCÈS TÉLÉPHONE » de E.N.O.S. sur le PC avant de continuer.";
+    }
+  }
+  window.addEventListener("hashchange", show); show();
+  $("bsave").onclick = function(){
+    var k = $("key").value.trim();
+    if (k) { var e = A.saveKey(k); if (e) { $("serr").textContent = e; return; } }      // clé collée une seule fois : mémorisée par l'application
+    var r = A.save($("srv").value, $("rly").value); if (r) $("serr").textContent = r;
+  };
+  $("bupd").onclick = function(){ A.checkUpdate(); };
+  $("ver").textContent = I.version ? "VERSION " + I.version : "";
+  $("bback").onclick = function(){ A.retry(); };
+  $("bretry").onclick = function(){ A.retry(); };
+  $("bwake").onclick = function(){ A.wake(); };
+  $("bset").onclick = function(){ location.hash = "setup"; };
+  $("btrust").onclick = function(){ A.trust(); };
+  $("bno").onclick = function(){ location.hash = "setup"; };
+})();
+</script></body></html>

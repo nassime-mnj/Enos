@@ -1,0 +1,30 @@
+/* PROFILS D'UTILISATION : CEO · Dev · Friends.
+   Classes : friends-ok (visible par tous), dev-ok (CEO + Dev), ceo-only (CEO seul). Le profil est posé sur <body class="role-…"> par le serveur.
+   Sans profil choisi (« role-pending ») la page se comporte comme Friends. Ce masquage est un confort : la garde réelle est côté serveur (RoleGate). */
+body.role-friends .dev-ok,body.role-friends .ceo-only,
+body.role-pending .dev-ok,body.role-pending .ceo-only,
+body.role-dev .ceo-only{display:none!important}
+
+/* sélecteur de profil */
+#rl[hidden]{display:none}
+#rl{position:fixed;inset:0;z-index:900;display:grid;place-items:center;padding:18px;background:radial-gradient(900px 500px at 50% -10%,color-mix(in srgb,var(--ac) 13%,transparent),transparent 60%),#050506f5;backdrop-filter:blur(6px);font-family:Consolas,"Courier New",monospace;color:#e9e9ec;animation:rlIn .25s ease-out}
+@keyframes rlIn{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+#rl .rl-box{width:min(880px,100%);max-height:92vh;overflow:auto}
+#rl h2{margin:0 0 6px;font-size:22px;letter-spacing:5px;color:var(--ac2);text-align:center}
+#rl .rl-sub{margin:0 0 22px;text-align:center;color:#8b8b94;line-height:1.5}
+#rl .rl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+#rl .rl-card{display:flex;flex-direction:column;gap:8px;padding:22px 18px;border:1px solid #26262b;background:linear-gradient(160deg,#141417,#0a0a0c);color:inherit;cursor:pointer;text-align:left;font:inherit;transition:.15s;border-radius:4px}
+#rl .rl-card:hover,#rl .rl-card:focus-visible{border-color:var(--ac2);box-shadow:0 0 30px color-mix(in srgb,var(--ac) 27%,transparent);transform:translateY(-3px);outline:0}
+#rl .rl-card.cur{border-color:#3ddc84}
+#rl .rl-card b{font-size:20px;letter-spacing:3px;color:#fff}#rl .rl-card small{color:#8b8b94;line-height:1.5}#rl .rl-card em{font-style:normal;font-size:11px;letter-spacing:2px;color:var(--ac2)}
+#rl .rl-pin{max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+#rl .rl-pin p{margin:0;color:#c9c9d0;line-height:1.5}
+#rl input{background:#000;color:#fff;border:1px solid #3a3a42;padding:11px 12px;font:16px Consolas,monospace;letter-spacing:4px;text-align:center}
+#rl input:focus{outline:0;border-color:var(--ac2)}
+#rl .rl-err{min-height:18px;color:#ff8a98;font-size:13px;text-align:center}
+#rl .rl-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#rl .rl-b{padding:10px 18px;border:1px solid var(--ac2);background:#000;color:var(--ac2);font:700 13px Consolas,monospace;letter-spacing:2px;cursor:pointer}
+#rl .rl-b:hover:not(:disabled){background:var(--ac2);color:#000}#rl .rl-b:disabled{opacity:.4}#rl .rl-b.ghost{border-color:#3a3a42;color:#8b8b94}
+@media (max-width:760px){#rl .rl-cards{grid-template-columns:1fr}}
+/* carte des réglages */
+#rl-card .rl-cur{font-size:15px;margin-bottom:8px}#rl-card .rl-cur b{color:#3ddc84;letter-spacing:2px}

@@ -1,0 +1,15 @@
+/* Zone développeur — thème E.N.O.S. (rouge sang sur acier). Servi uniquement aux IP autorisées. */
+.devzone{position:relative;background:linear-gradient(180deg,#140507,#0a0405);border-bottom:1px solid #4a0d16;box-shadow:0 0 40px #ff1a2e22 inset;overflow:hidden}
+.devzone::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#ffffff05 0 1px,transparent 1px 3px);pointer-events:none}
+.devrow{position:relative;display:flex;align-items:center;gap:20px;padding-block:16px;flex-wrap:wrap}
+.deveye{flex:none;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#ffb3a8 0 6%,transparent 7%),radial-gradient(circle,#050102 0 16%,#ff1a2e 17% 58%,#5a0710 60% 76%,#2a2a2e 78% 100%);animation:deyePulse 3.6s ease-in-out infinite;box-shadow:0 0 22px #ff1a2e99}
+@keyframes deyePulse{50%{transform:scale(1.07);box-shadow:0 0 34px #ff1a2ecc}}
+.devtext{flex:1;min-width:220px;display:flex;flex-direction:column;gap:2px}
+.devtext b{font:800 .85rem ui-monospace,Consolas,monospace;letter-spacing:.28em;color:#ff3b4d}
+.devtext span{color:#d9b9bd;font-size:.95rem}
+.devtext small{color:#9c7479;font:.78rem ui-monospace,Consolas,monospace}.devtext small.hash{word-break:break-all}
+.btn-enos{display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border-radius:6px;background:#ff1a2e;color:#fff;font:800 .95rem ui-monospace,Consolas,monospace;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;
+  border:1px solid #ff5a68;box-shadow:0 0 24px #ff1a2e66;transition:transform .2s,box-shadow .2s}
+.btn-enos:hover{transform:translateY(-2px);box-shadow:0 0 36px #ff1a2eaa}
+.btn-enos.off{background:#2a1417;border-color:#4a0d16;color:#9c7479;box-shadow:none;letter-spacing:.06em;text-transform:none;font-weight:600}
+@media (prefers-reduced-motion:reduce){.deveye{animation:none}}

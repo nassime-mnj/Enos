@@ -1,0 +1,10 @@
+/* BARRE DE RECHERCHE DES OUTILS (haut du menu, au-dessus de la liste) */
+.side-search{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:0 10px;border:2px solid #2a2a38;background:#000;transition:border-color .2s,box-shadow .2s}
+.side-search:focus-within{border-color:var(--neon);box-shadow:0 0 14px color-mix(in srgb,var(--neon) 35%,transparent)}
+.side-search>span{color:var(--mid,#8a8aa8);font-size:15px}
+.side-search input{flex:1;min-width:0;border:0!important;background:transparent!important;outline:0;padding:9px 0!important;margin:0!important;font:13px Consolas,monospace;color:#fff}
+.side-search input::placeholder{color:#6c6c88}
+.side-search button{width:auto;margin:0;padding:2px 6px;border:0;background:none;color:var(--mid,#8a8aa8);cursor:pointer;font-size:13px}
+.side-search button:hover{color:#fff}
+#side-none{margin:0 0 10px;font-size:12px;color:var(--mid,#8a8aa8)}
+#side .srch-off{display:none!important}

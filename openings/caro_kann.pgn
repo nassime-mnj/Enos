@@ -1,0 +1,30 @@
+[Event "Défense Caro-Kann"]
+[Repertoire "black"]
+[Level "1200-1300"]
+[Theory "de la Caro-Kann"]
+[ECO "B10"]
+[Description "Très solide : c6 puis d5, le fou de cases blanches sort avant que la chaîne de pions ne se ferme."]
+
+1. e4 { [%cal Ge2e4] Les Blancs prennent le centre. } 1... c6 { [%cal Gc6d5,Gd7d5] [%csl Gd5] On prépare d5 avec un pion, sans bloquer le fou de cases blanches. Principe : une structure solide, sans point faible. }
+2. d4 { [%cal Gd2d4] Les Blancs construisent leur grand centre. } 2... d5 { [%cal Gd5e4] [%csl Gd5,Re4] On attaque e4 : voilà le plan de la Caro-Kann. }
+3. Nc3 { [%name Variante Classique] [%cal Gb1c3] [%csl Ge4] Les Blancs défendent e4 avec un cavalier. }
+( 3. e5 { [%name Variante d'Avance] [%cal Ge4e5] [%csl Re5] Les Blancs avancent le pion : on gagne de l'espace côté roi, mais c'est la cible. Notre fou sort avant de fermer la porte !}
+  3... Bf5 { [%cal Gc8f5] [%csl Gf5] Le fou sort AVANT la chaîne de pions : c'est l'avantage de la Caro-Kann sur la Française. }
+  4. Nf3 e6 { [%cal Ge6d5] On referme la structure, le fou est à l'extérieur, position très saine. }
+  5. Be2 c5 { [%cal Gc5d4] [%csl Gd4] On attaque la base de la chaîne : le plan classique. }
+  6. Be3 cxd4 7. Nxd4 Ne7 { [%cal Ge7c6,Ge7g6] [%csl Rd4] }
+)
+( 3. exd5 { [%name Variante d'Échange] [%cal Ge4d5] Les Blancs échangent tout de suite. }
+  3... cxd5 { [%csl Gd5] On reprend avec le pion c : structure symétrique. }
+  4. c4 { [%name Attaque Panov] [%cal Gc2c4,Gc4d5] [%csl Rd5] Attaque sur d5 avec le pion c. } 4... Nf6 { [%cal Gf6d5] }
+  5. Nc3 e6 6. Nf3 Be7 7. cxd5 Nxd5 { [%cal Gf6d5] [%csl Gd5] On reprend avec le cavalier : bon développement. } 8. Bd3 Nc6 { [%cal Gc6d4] [%csl Rd4] On met la pression sur d4. }
+)
+3... dxe4 { [%cal Gd5e4] [%csl Re4] On prend le pion e4. }
+4. Nxe4 { [%cal Gc3e4] [%csl Ge4] Les Blancs reprennent avec le cavalier. } 4... Bf5 { [%cal Gc8f5,Gf5e4] [%csl Re4] Le fou sort et attaque le cavalier e4 : on développe en gagnant un temps. }
+5. Ng3 { [%cal Ge4g3] Le cavalier recule en attaquant le fou. } 5... Bg6 { [%cal Gf5g6] [%csl Gg6] Le fou s'échappe : il garde sa diagonale vers b1. }
+6. h4 { [%cal Gh2h4,Gh4h5] [%csl Rg6] Les Blancs lancent l'attaque : ils veulent h5 pour piéger le fou. } 6... h6 { [%cal Gh7h6] [%csl Gg6] On répond précisément : le fou gagne la case h7 et h5 ne fait plus rien. }
+7. Nf3 { [%cal Gg1f3] Les Blancs développent leur cavalier. } 7... Nd7 { [%cal Gb8d7] Les Noirs développent le cavalier vers un bon poste. }
+8. h5 { [%cal Gh4h5,Rh5g6] [%csl Rg6] Les Blancs attaquent le fou. } 8... Bh7 { [%cal Gg6h7] [%csl Gh7] Le fou recule en h7 : toujours actif. }
+9. Bd3 { [%cal Gf1d3,Gd3h7] [%csl Rh7] Le fou blanc offre l'échange : c'est la clé de la variante. } 9... Bxd3 { [%cal Gh7d3] [%csl Rd3] Les Noirs échangent le fou actif. }
+10. Qxd3 { [%cal Gd1d3] } 10... e6 { [%cal Ge6d5] [%csl Gd5] On referme le centre avec un pion et on prépare Cf6 et Fe7. Position solide, à nous de jouer bien. }
+*

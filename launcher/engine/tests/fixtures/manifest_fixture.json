@@ -1,0 +1,25 @@
+{
+ "manifest": {
+  "product": "enos",
+  "channel": "dev",
+  "version": "3.2.0",
+  "released": "2026-10-20",
+  "notes": "Nouveautés : é à ü — \"citations\" \\ et retour\nligne ✓ 日本",
+  "min_launcher": "1.0.0",
+  "launch": "ENOS-Setup-3.2.0-dev.exe",
+  "silent_args": "/SILENT",
+  "app_id": "{6F1E2B7A-4C3D-4E8B-9A57-E905A1C0D3B2}",
+  "run": "ENOS.exe",
+  "files": [
+   {
+    "path": "ENOS-Setup-3.2.0-dev.exe",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size": 12345,
+    "key": "enos/dev/3.2.0/ENOS-Setup-3.2.0-dev.exe"
+   }
+  ]
+ },
+ "signature": "jsWFeFLYsj6vJJjFFadFLbWMIWyDWiu7vIG89eE+oXiiKM6JCZPLRAnwX3eUDIEYxi+Ew4HAWAOoHahCzVoNDA==",
+ "pubkey": "DB1Qt1jwgW7T1qTjakeZB5FKHUg0DobO8EkJrurRoAU=",
+ "canonical": "{\"app_id\":\"{6F1E2B7A-4C3D-4E8B-9A57-E905A1C0D3B2}\",\"channel\":\"dev\",\"files\":[{\"key\":\"enos/dev/3.2.0/ENOS-Setup-3.2.0-dev.exe\",\"path\":\"ENOS-Setup-3.2.0-dev.exe\",\"sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"size\":12345}],\"launch\":\"ENOS-Setup-3.2.0-dev.exe\",\"min_launcher\":\"1.0.0\",\"notes\":\"Nouveautés : é à ü — \\\"citations\\\" \\\\ et retour\\nligne ✓ 日本\",\"product\":\"enos\",\"released\":\"2026-10-20\",\"run\":\"ENOS.exe\",\"silent_args\":\"/SILENT\",\"version\":\"3.2.0\"}"
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Administration</title>
+<link rel="stylesheet" href="/static/css/site.css"><link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body class="adm" data-base="{{ base }}">
+<main class="wrap narrow adm-in">
+  <h1 class="adm-t">Administration</h1>
+  <section class="adm-card" id="login">
+    <h2>Connexion</h2>
+    <form id="login-form"><input type="password" id="tok" placeholder="Jeton d'administration" autocomplete="current-password" required><button class="btn primary" type="submit">Entrer</button></form>
+    <p class="adm-err" id="login-err"></p>
+  </section>
+  <div id="panel" hidden>
+    <section class="adm-card">
+      <h2>Accès autorisés</h2>
+      <p class="muted">Seules ces adresses voient la zone développeur du site. Une adresse (1.2.3.4) ou un réseau (203.0.113.0/28, au plus large /16).</p>
+      <ul class="adm-list" id="list"></ul>
+      <form id="add-form" class="adm-row"><input id="ip" placeholder="Adresse IP ou réseau CIDR" required><input id="label" placeholder="Nom (ex. Raf)" maxlength="60"><input id="days" type="number" min="1" max="3650" placeholder="Jours (vide = illimité)"><button class="btn primary" type="submit">Ajouter</button></form>
+      <div class="adm-row"><button class="btn ghost" id="add-me" type="button">Ajouter mon IP actuelle</button><span class="muted" id="me"></span></div>
+      <p class="adm-err" id="err"></p>
+    </section>
+    <section class="adm-card"><h2>Derniers téléchargements</h2><ul class="adm-list" id="dl"></ul></section>
+  </div>
+</main>
+<script src="/static/js/admin.js" defer></script>
+</body>
+</html>

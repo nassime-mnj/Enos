@@ -1,0 +1,158 @@
+[
+ {
+  "id": "vecteezy_vert",
+  "label": "Vecteezy · Vert (original)",
+  "light": "#efeed2",
+  "dark": "#779555"
+ },
+ {
+  "id": "gris_noir",
+  "label": "Gris & Noir",
+  "light": "#c4c6c9",
+  "dark": "#34373c"
+ },
+ {
+  "id": "noir_blanc",
+  "label": "Noir & Blanc",
+  "light": "#ececec",
+  "dark": "#1e1e1e"
+ },
+ {
+  "id": "ardoise",
+  "label": "Ardoise",
+  "light": "#e1e5e8",
+  "dark": "#62707e"
+ },
+ {
+  "id": "acier",
+  "label": "Bleu acier",
+  "light": "#d5e1e8",
+  "dark": "#7898b0"
+ },
+ {
+  "id": "glace",
+  "label": "Glace",
+  "light": "#f6fafd",
+  "dark": "#a0c4e2"
+ },
+ {
+  "id": "ocean",
+  "label": "Océan",
+  "light": "#e2eef5",
+  "dark": "#3c76a8"
+ },
+ {
+  "id": "bleu_nuit",
+  "label": "Bleu nuit",
+  "light": "#b0bcd6",
+  "dark": "#22305c"
+ },
+ {
+  "id": "neon_cyan",
+  "label": "Néon cyan (sombre)",
+  "light": "#2e4254",
+  "dark": "#0e1822"
+ },
+ {
+  "id": "neon_violet",
+  "label": "Néon violet (sombre)",
+  "light": "#54367c",
+  "dark": "#1a102c"
+ },
+ {
+  "id": "violet",
+  "label": "Violet",
+  "light": "#eee8f6",
+  "dark": "#8673aa"
+ },
+ {
+  "id": "rose",
+  "label": "Rose",
+  "light": "#fcecf0",
+  "dark": "#d6809e"
+ },
+ {
+  "id": "rouge_sang",
+  "label": "Rouge sang",
+  "light": "#f0dcd7",
+  "dark": "#a0282d"
+ },
+ {
+  "id": "noir_rouge",
+  "label": "Noir & Rouge (E.N.O.S.)",
+  "light": "#601e24",
+  "dark": "#18080a"
+ },
+ {
+  "id": "orange",
+  "label": "Orange",
+  "light": "#ffeccd",
+  "dark": "#e28c3c"
+ },
+ {
+  "id": "sable",
+  "label": "Sable",
+  "light": "#f7f0cd",
+  "dark": "#d6b446"
+ },
+ {
+  "id": "noir_or",
+  "label": "Noir & Or",
+  "light": "#dec88c",
+  "dark": "#1c1c1c"
+ },
+ {
+  "id": "bois_clair",
+  "label": "Bois classique",
+  "light": "#f0d9b5",
+  "dark": "#b58863"
+ },
+ {
+  "id": "noyer",
+  "label": "Noyer",
+  "light": "#eed5b0",
+  "dark": "#8c5c3c"
+ },
+ {
+  "id": "chocolat",
+  "label": "Crème & Chocolat",
+  "light": "#f5e6cd",
+  "dark": "#5e3c28"
+ },
+ {
+  "id": "turquoise",
+  "label": "Turquoise",
+  "light": "#e1f5f0",
+  "dark": "#3ca096"
+ },
+ {
+  "id": "menthe",
+  "label": "Menthe",
+  "light": "#e8f7ec",
+  "dark": "#6ebe8c"
+ },
+ {
+  "id": "lime",
+  "label": "Lime (ETO)",
+  "light": "#f6fce6",
+  "dark": "#78be1e"
+ },
+ {
+  "id": "foret",
+  "label": "Beige & Forêt",
+  "light": "#e8e1c8",
+  "dark": "#2e5c3e"
+ },
+ {
+  "id": "corail",
+  "label": "Corail & Marine",
+  "light": "#fce8de",
+  "dark": "#204064"
+ },
+ {
+  "id": "papier",
+  "label": "Papier",
+  "light": "#f5f5f5",
+  "dark": "#bebebe"
+ }
+]

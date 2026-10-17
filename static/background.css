@@ -1,0 +1,4 @@
+#bg-card .bg-grid{display:flex;flex-direction:column;gap:9px}
+#bg-card .bg-chk{display:flex;align-items:center;gap:9px;cursor:pointer;line-height:1.4}
+#bg-card .bg-chk input[type=checkbox]{width:18px;height:18px;accent-color:var(--neon,var(--ac));flex:none}
+#bg-card input[type=time]{margin-left:6px;background:#000;color:inherit;border:1px solid var(--dim,#444);padding:3px 6px;color-scheme:dark;font:inherit}

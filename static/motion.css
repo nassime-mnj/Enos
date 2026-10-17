@@ -1,0 +1,90 @@
+/* ============================================================================
+   MOUVEMENT E.N.O.S. — chargé EN DERNIER (après les thèmes). Piloté par motion.js (classes mo-*).
+   Niveaux : html[data-motion="full"] = transitions complètes · "reduced" = fondus seulement · "off" = rien.
+   Principe de performance : uniquement transform / opacity (composités par le GPU), pas de filter ni de clip-path
+   (les thèmes PRO / ENTREPRISE / CHILL / LUXE / COREBOARD forcent clip-path:none).
+   ============================================================================ */
+:root{--mo-ease:cubic-bezier(.2,.8,.2,1);--mo-spring:cubic-bezier(.2,1.25,.35,1);--mo-in:cubic-bezier(.5,0,.8,.4);--mo-c:var(--neon,var(--ac))}
+
+@keyframes moSceneIn{from{opacity:0;transform:translate3d(0,28px,0) scale(.982)}55%{opacity:1}to{opacity:1;transform:none}}
+@keyframes moSceneOut{from{opacity:1;transform:none}to{opacity:0;transform:translate3d(0,-16px,0) scale(1.014)}}
+@keyframes moFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes moFadeOut{from{opacity:1}to{opacity:0}}
+@keyframes moPopIn{from{opacity:0;transform:translate3d(0,14px,0) scale(.92)}to{opacity:1;transform:none}}
+@keyframes moPopOut{from{opacity:1;transform:none}to{opacity:0;transform:translate3d(0,8px,0) scale(.965)}}
+@keyframes moPane{from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:none}}
+@keyframes moItem{from{opacity:0;transform:translate3d(0,18px,0) scale(.985)}to{opacity:1;transform:none}}
+@keyframes moDown{from{opacity:0;transform:translate3d(0,-26px,0)}to{opacity:1;transform:none}}
+@keyframes moUp{from{opacity:0;transform:translate3d(0,30px,0)}to{opacity:1;transform:none}}
+@keyframes moLeft{from{opacity:0;transform:translate3d(-34px,0,0)}to{opacity:1;transform:none}}
+@keyframes moRight{from{opacity:0;transform:translate3d(34px,0,0)}to{opacity:1;transform:none}}
+@keyframes moMsg{from{opacity:0;transform:translate3d(0,12px,0) scale(.985)}to{opacity:1;transform:none}}
+@keyframes moPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--mo-c) 55%,transparent)}100%{box-shadow:0 0 0 16px transparent}}
+@keyframes moDraw{to{stroke-dashoffset:0}}
+@keyframes moGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes moBreath{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes moSweepDown{0%{transform:translate3d(0,-140px,0);opacity:0}12%{opacity:1}85%{opacity:1}100%{transform:translate3d(0,100vh,0);opacity:0}}
+@keyframes moSweepUp{0%{transform:translate3d(0,100vh,0);opacity:0}12%{opacity:1}85%{opacity:1}100%{transform:translate3d(0,-140px,0);opacity:0}}
+
+/* ---- FENÊTRES PLEIN ÉCRAN : glissement + fondu, sortie plus rapide que l'entrée */
+html[data-motion="full"] .mo-scene.mo-in{animation:moSceneIn .52s var(--mo-ease) both!important}
+html[data-motion="full"] .mo-scene.mo-out{animation:moSceneOut .26s var(--mo-in) both!important;pointer-events:none!important}
+/* ---- MODALES (fond sombre + boîte) : le fond fond, la boîte rebondit */
+html[data-motion="full"] .mo-backdrop.mo-in{animation:moFadeIn .22s ease-out both!important}
+html[data-motion="full"] .mo-backdrop.mo-in>:first-child{animation:moPopIn .4s var(--mo-spring) both!important}
+html[data-motion="full"] .mo-backdrop.mo-out{animation:moFadeOut .2s ease-in both!important;pointer-events:none!important}
+html[data-motion="full"] .mo-backdrop.mo-out>:first-child{animation:moPopOut .2s ease-in both!important}
+/* ---- PETITES FENÊTRES SANS FOND */
+html[data-motion="full"] .mo-pop.mo-in{animation:moPopIn .38s var(--mo-spring) both!important}
+html[data-motion="full"] .mo-pop.mo-out{animation:moPopOut .18s ease-in both!important;pointer-events:none!important}
+/* ---- ONGLETS INTERNES */
+html[data-motion="full"] .mo-pane.mo-in{animation:moPane .32s var(--mo-ease) both!important}
+/* ---- NIVEAU RÉDUIT : fondus seulement, aucun déplacement */
+html[data-motion="reduced"] .mo-in{animation:moFadeIn .2s ease-out both!important}
+html[data-motion="reduced"] .mo-out{animation:moFadeOut .14s ease-in both!important;pointer-events:none!important}
+html[data-motion="reduced"] .mo-in>:first-child,html[data-motion="reduced"] .mo-out>:first-child{animation:none!important}
+
+/* ---- APPARITION EN CASCADE du contenu d'une fenêtre (cartes, boutons, titres, tableaux…) */
+html[data-motion="full"] .mo-item{animation:moItem .55s var(--mo-ease) both!important;animation-delay:calc(var(--mo-i,0) * 36ms + 120ms)!important}
+
+/* ---- BALAYAGE LUMINEUX : trait fin + traînée qui descend (ouverture) ou remonte (fermeture) */
+#mo-sweep{position:fixed;inset:0;z-index:2147483000;pointer-events:none;overflow:hidden;visibility:hidden}
+#mo-sweep.go{visibility:visible}
+#mo-sweep i{position:absolute;left:0;right:0;top:0;height:140px;will-change:transform,opacity;opacity:0;
+ background:linear-gradient(to bottom,transparent 0%,color-mix(in srgb,var(--mo-c) 10%,transparent) 55%,color-mix(in srgb,var(--mo-c) 38%,transparent) 96%,var(--mo-c) 100%);
+ box-shadow:0 1px 14px color-mix(in srgb,var(--mo-c) 70%,transparent)}
+#mo-sweep.go i{animation:moSweepDown .62s cubic-bezier(.45,.05,.25,1) both}
+#mo-sweep.go.up i{animation:moSweepUp .46s cubic-bezier(.45,.05,.25,1) both;background:linear-gradient(to top,transparent 0%,color-mix(in srgb,var(--mo-c) 8%,transparent) 55%,color-mix(in srgb,var(--mo-c) 30%,transparent) 96%,var(--mo-c) 100%)}
+html:not([data-motion="full"]) #mo-sweep{display:none}
+
+/* ---- INTRO AU DÉMARRAGE */
+html[data-motion="full"].mo-boot header{animation:moDown .75s var(--mo-ease) both!important}
+html[data-motion="full"].mo-boot #side{animation:moLeft .8s var(--mo-ease) .15s both!important}
+html[data-motion="full"].mo-boot main>*:not(#side){animation:moRight .85s var(--mo-ease) .22s both!important}
+html[data-motion="full"].mo-boot #side .btn{animation:moItem .55s var(--mo-ease) both!important;animation-delay:calc(var(--mo-i,0) * 30ms + 320ms)!important}
+html[data-motion="full"].mo-boot footer{animation:moFadeIn 1s .7s both!important}
+
+/* ---- MESSAGES DU CHAT */
+html[data-motion="full"] .mo-msg{animation:moMsg .45s var(--mo-ease) both!important}
+html[data-motion="reduced"] .mo-msg{animation:moFadeIn .2s both!important}
+
+/* ---- MICRO-INTERACTIONS : boutons (léger soulèvement, enfoncement, onde au clic) */
+html[data-motion="full"] .btn{transition:transform .18s var(--mo-ease),box-shadow .22s,border-color .2s,background-color .2s,color .2s}
+html[data-motion="full"] .btn:not(:disabled):hover{transform:translate3d(0,-1px,0)}
+html[data-motion="full"] .btn:not(:disabled):active{transform:scale(.985);transition-duration:.06s}
+html[data-motion="full"] .btn.mo-click{animation:moPulse .52s ease-out!important}
+
+/* ---- FONDU DES COULEURS quand on change de thème (classe posée ~0,7 s par motion.js) */
+html.mo-theme,html.mo-theme *,html.mo-theme *::before,html.mo-theme *::after{transition:background-color .55s ease,color .55s ease,border-color .55s ease,box-shadow .55s ease,fill .55s ease,stroke .55s ease,filter .55s ease,opacity .55s ease!important}
+
+/* ---- GRAPHIQUES ET JAUGES : tracé progressif quand une fenêtre vient de s'ouvrir (classe mo-draw posée par motion.js) */
+html[data-motion="full"] .mo-draw .sd-chart path[fill="none"]{stroke-dasharray:1;stroke-dashoffset:1;animation:moDraw 1s var(--mo-ease) .2s forwards}
+html[data-motion="full"] .mo-draw .sd-chart path[fill^="url"]{animation:moFadeIn 1s ease .4s both}
+html[data-motion="full"] .mo-draw .cb-bar>i,html[data-motion="full"] .mo-draw .sd-mini>i{transform-origin:left center;animation:moGrow .9s var(--mo-ease) .2s both}
+html[data-motion="full"] .sd-empty{animation:moBreath 1.8s ease-in-out infinite}
+
+/* ---- Réglages › Animations */
+#rg-motion{display:flex;gap:8px;flex-wrap:wrap}
+#rg-motion .btn.on{border-color:var(--neon);box-shadow:inset 0 -2px 0 var(--neon)}
+
+@media (prefers-reduced-motion:reduce){html:not([data-motion="full"]) .btn{transition:none}}

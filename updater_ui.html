@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>E.N.O.S. — Mise à jour</title>
+<style>
+:root{--h:__HUE__;--neon:hsl(var(--h) 100% 52%);--mid:hsl(var(--h) 100% 38%);--dim:hsl(calc(var(--h) + 2) 78% 20%);--deep:hsl(var(--h) 80% 6%);--cy:hsl(calc(var(--h) + 38) 100% 55%);--ok:#2dffa0;--bad:#ff2a6d}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--neon);font:14px/1.5 Consolas,"Courier New",monospace;overflow:hidden;user-select:none;-webkit-user-select:none;cursor:default}
+body{background:radial-gradient(ellipse at 50% 38%,hsl(var(--h) 90% 9%) 0,#000 72%)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;
+ background-image:linear-gradient(hsl(var(--h) 100% 50%/.07) 1px,transparent 1px),linear-gradient(90deg,hsl(var(--h) 100% 50%/.07) 1px,transparent 1px);background-size:38px 38px;
+ -webkit-mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%);mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%)}
+body::after{content:"";position:fixed;left:0;right:0;height:140px;pointer-events:none;background:linear-gradient(#0000,hsl(var(--h) 100% 50%/.12),#0000);animation:scan 4s linear infinite}
+@keyframes scan{from{top:-140px}to{top:100%}}
+.scanl{position:fixed;inset:0;pointer-events:none;opacity:.45;background:repeating-linear-gradient(0deg,hsl(var(--h) 100% 50%/.06) 0 2px,transparent 2px 4px)}
+.frame{position:fixed;inset:10px;border:1px solid var(--dim);pointer-events:none;clip-path:polygon(0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%)}
+.frame::before,.frame::after{content:"";position:absolute;width:26px;height:26px;border:2px solid var(--neon);filter:drop-shadow(0 0 6px var(--neon))}
+.frame::before{left:-1px;top:-1px;border-right:0;border-bottom:0}.frame::after{right:-1px;top:-1px;border-left:0;border-bottom:0}
+
+.wrap{position:relative;height:100%;display:flex;flex-direction:column;padding:26px 34px 22px}
+header{display:flex;align-items:center;gap:16px}
+header img{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 0 10px var(--neon))}
+header .t{font:800 26px Consolas,monospace;letter-spacing:9px;text-shadow:0 0 18px hsl(var(--h) 100% 50%/.7)}
+header .s{font-size:11px;letter-spacing:3px;color:var(--mid)}
+header .chip{margin-left:auto;font-size:11px;letter-spacing:2px;border:1px solid var(--dim);padding:4px 10px;color:var(--mid)}
+header .chip b{color:var(--neon);font-weight:700}
+
+main{flex:1;min-height:0;display:grid;grid-template-columns:230px 1fr;gap:28px;align-items:center;margin-top:6px}
+.ringbox{position:relative;width:230px;height:230px}
+.ringbox svg{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.ringbox .bg{fill:none;stroke:var(--dim);stroke-width:8;opacity:.55}
+.ringbox .fg{fill:none;stroke:var(--neon);stroke-width:8;stroke-linecap:butt;filter:drop-shadow(0 0 9px var(--neon));transition:stroke .4s}
+.ringbox .tick{fill:none;stroke:var(--mid);stroke-width:2;stroke-dasharray:2 10.4;opacity:.8;transform-origin:50% 50%;animation:spin 14s linear infinite}
+.ringbox .tick2{fill:none;stroke:var(--cy);stroke-width:1.5;stroke-dasharray:40 90;opacity:.7;transform-origin:50% 50%;animation:spin 3.2s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.pct b{display:block;font:800 52px Consolas,monospace;text-shadow:0 0 22px hsl(var(--h) 100% 50%/.75);line-height:1}
+.pct small{display:block;margin-top:6px;font-size:10px;letter-spacing:3px;color:var(--mid)}
+
+.side{min-width:0}
+h1{margin:0 0 4px;font:800 21px Consolas,monospace;letter-spacing:5px;text-shadow:0 0 16px hsl(var(--h) 100% 50%/.6)}
+#stage{min-height:22px;color:var(--mid);font-size:13px;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{height:20px;border:2px solid var(--neon);background:#000;overflow:hidden;box-shadow:0 0 22px hsl(var(--h) 100% 50%/.28);position:relative}
+#fill{height:100%;width:0;background:repeating-linear-gradient(115deg,var(--neon) 0 14px,hsl(var(--h) 100% 36%) 14px 28px);background-size:40px 100%;animation:stripe .7s linear infinite;box-shadow:0 0 18px var(--neon)}
+@keyframes stripe{to{background-position:40px 0}}
+ol{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:7px}
+li{display:flex;align-items:center;gap:12px;color:var(--dim);transition:color .3s;font-size:13px;letter-spacing:1px}
+li .ic{width:20px;height:20px;border:2px solid var(--dim);display:grid;place-items:center;font-size:12px;font-weight:800;color:transparent;flex:none;transition:.3s}
+li.on{color:var(--neon)}li.on .ic{border-color:var(--neon);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;box-shadow:0 0 10px var(--neon)}
+li.ok{color:var(--mid)}li.ok .ic{background:var(--neon);border-color:var(--neon);color:#000;box-shadow:0 0 10px var(--neon)}
+.term{margin-top:16px;height:92px;overflow:hidden;border:1px solid var(--dim);background:#0009;padding:7px 10px;font-size:11px;color:var(--dim);display:flex;flex-direction:column;justify-content:flex-end}
+.term div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.term div:last-child{color:var(--mid)}
+.term div:last-child::after{content:"▌";margin-left:3px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+footer{display:flex;align-items:center;gap:12px;margin-top:12px;font-size:11px;letter-spacing:2px;color:var(--mid)}
+footer .sp{flex:1}
+.btn{font:800 15px Consolas,monospace;letter-spacing:4px;padding:11px 34px;color:#000;background:var(--neon);border:2px solid var(--neon);cursor:pointer;
+ clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%);box-shadow:0 0 22px hsl(var(--h) 100% 50%/.5);transition:.15s}
+.btn:hover{background:#fff;border-color:#fff;transform:translateY(-1px)}
+.btn.ghost{background:#000;color:var(--neon)}.btn.ghost:hover{background:var(--neon);color:#000}
+.btns{display:flex;gap:12px;margin-top:18px}
+[hidden]{display:none!important}
+
+body.done{--neon:var(--ok);--mid:#19a86a;--dim:#0d4d33}
+body.done .ringbox .tick2{animation-play-state:paused}
+body.done #fill{animation:none}
+body.done .pct b{animation:pop .6s ease-out}
+@keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+body.fail{--neon:var(--bad);--mid:#b01a4a;--dim:#4d0d22}
+body.fail #fill{animation:none}
+.flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle,hsl(150 100% 60%/.45),transparent 70%);opacity:0}
+body.done .flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{opacity:.9}100%{opacity:0}}
+.errbox{margin-top:12px;max-height:110px;overflow:auto;border:1px solid var(--bad);background:#1a0008cc;color:#ff8fb3;font-size:11px;padding:8px 10px;white-space:pre-wrap;user-select:text;-webkit-user-select:text}
+</style></head><body>
+<div class="scanl"></div><div class="frame"></div><div class="flash"></div>
+<div class="wrap">
+  <header><img alt="" src="__LOGO__" onerror="this.style.display='none'"><div><div class="t">E.N.O.S.</div><div class="s">SYSTÈME DE MISE À JOUR</div></div><div class="chip">BUILD <b id="chip">EN COURS</b></div></header>
+  <main>
+    <div class="ringbox">
+      <svg viewBox="0 0 200 200"><circle class="tick" cx="100" cy="100" r="96"/><circle class="tick2" cx="100" cy="100" r="107" stroke-dasharray="40 632"/>
+        <circle class="bg" cx="100" cy="100" r="86"/><circle class="fg" id="ring" cx="100" cy="100" r="86" stroke-dasharray="540.35" stroke-dashoffset="540.35"/></svg>
+      <div class="pct"><div><b id="pct">0%</b><small id="pcts">PRÉPARATION</small></div></div>
+    </div>
+    <div class="side">
+      <h1 id="title">MISE À JOUR EN COURS</h1>
+      <div id="stage">Initialisation…</div>
+      <div class="track"><div id="fill"></div></div>
+      <ol id="steps"></ol>
+      <div class="term" id="term"></div>
+      <div class="errbox" id="err" hidden></div>
+      <div class="btns"><button class="btn" id="ok" hidden>OK</button><button class="btn ghost" id="old" hidden>RELANCER E.N.O.S.</button><button class="btn ghost" id="close" hidden>FERMER</button></div>
+    </div>
+  </main>
+  <footer><span id="elapsed">00:00</span><span class="sp"></span><span id="foot">NE FERMEZ PAS CETTE FENÊTRE</span></footer>
+</div>
+<script>
+"use strict";
+const $ = (i) => document.getElementById(i);
+const STEPS = ["Fermeture d'E.N.O.S.", "Analyse du code", "Compilation des modules", "Assemblage de ENOS.exe", "Finalisation"];
+$("steps").innerHTML = STEPS.map((s) => `<li><span class="ic">✔</span>${s}</li>`).join("");
+const C = 540.35;
+let shown = 0, target = 0, last = null, finished = false;
+function setRing(p) { $("ring").style.strokeDashoffset = (C * (1 - Math.min(p, 100) / 100)).toFixed(2); }
+function frame() {                                   // la jauge rattrape la progression réelle en douceur
+  shown += (target - shown) * 0.08 + (shown < target ? 0.02 : 0);
+  if (Math.abs(target - shown) < 0.05) shown = target;
+  const p = Math.min(shown, 100);
+  setRing(p); $("fill").style.width = p.toFixed(1) + "%"; $("pct").textContent = Math.floor(p) + "%";
+  requestAnimationFrame(frame);
+}
+const mmss = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+function render(st) {
+  last = st; target = st.pct;
+  $("stage").textContent = st.stage;
+  $("pcts").textContent = st.done ? (st.ok ? "TERMINÉ" : "ÉCHEC") : (STEPS[st.step] || "").toUpperCase();
+  [...$("steps").children].forEach((li, i) => { li.className = st.ok || i < st.step ? "ok" : (i === st.step && !st.done ? "on" : ""); });
+  $("term").innerHTML = st.lines.map((l) => `<div>${l.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]))}</div>`).join("");
+  $("elapsed").textContent = "TEMPS ÉCOULÉ  " + mmss(st.elapsed);
+  if (st.done && !finished) {
+    finished = true;
+    document.body.classList.add(st.ok ? "done" : "fail");
+    $("chip").textContent = st.ok ? "TERMINÉ" : "ÉCHEC";
+    $("title").textContent = st.ok ? "MISE À JOUR TERMINÉE" : "MISE À JOUR ÉCHOUÉE";
+    $("foot").textContent = st.ok ? "TOUT EST PRÊT" : "AUCUNE MODIFICATION APPLIQUÉE";
+    if (st.ok) { target = 100; $("stage").textContent = "ENOS.exe a été reconstruit avec succès. Appuyez sur OK pour relancer E.N.O.S."; $("ok").hidden = false; $("ok").focus(); }
+    else { $("err").hidden = false; $("err").textContent = st.error || "Erreur inconnue"; $("old").hidden = false; $("close").hidden = false; $("term").hidden = true; }
+  }
+}
+async function tick() {
+  try { render(await window.pywebview.api.poll()); } catch (e) {}
+  if (!finished) setTimeout(tick, 400);
+}
+$("ok").onclick = () => window.pywebview.api.launch();
+$("old").onclick = () => window.pywebview.api.launch();
+$("close").onclick = () => window.pywebview.api.close();
+requestAnimationFrame(frame);
+window.addEventListener("pywebviewready", tick);
+</script></body></html>

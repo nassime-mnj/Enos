@@ -1,0 +1,29 @@
+; Visualiseur d'échecs E.N.O.S. : projet Godot minimal, lancé en silence et encastré dans le panneau CHESS.
+config_version=5
+
+[application]
+config/name="ENOS Chess View"
+run/main_scene="res://main.tscn"
+run/max_fps=60
+config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0.0039, 0.0039, 0.0039, 1)
+
+[display]
+window/size/viewport_width=1080
+window/size/viewport_height=1264
+window/size/window_width_override=540
+window/size/window_height_override=632
+window/size/borderless=true
+window/size/transparent=true
+window/per_pixel_transparency/allowed=true
+window/size/resizable=false
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+viewport/transparent_background=true
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.0039, 0.0039, 0.0039, 1)
+textures/canvas_textures/default_texture_filter=2

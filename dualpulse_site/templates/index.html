@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr" class="nojs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{{ studio.name }} — {{ studio.tagline }}</title>
+<meta name="description" content="{{ studio.pitch }}">
+<meta name="theme-color" content="#07080b">
+<meta property="og:title" content="{{ studio.name }}">
+<meta property="og:description" content="{{ studio.tagline }}">
+<link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/css/site.css">
+{% if dev %}<link rel="stylesheet" href="/dev/style.css">{% endif %}
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+
+<header class="top" id="top">
+  <a class="brand" href="#top" aria-label="{{ studio.name }} — accueil"><img src="/static/img/logo.svg" alt="" width="34" height="34"><span>DUAL<b>PULSE</b></span></a>
+  <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="nav"><i></i><i></i><i></i></button>
+  <nav id="nav" aria-label="Navigation principale">
+    <a href="#studio">Studio</a><a href="#jeu">Le jeu</a><a href="#equipe">Équipe</a><a href="#route">Feuille de route</a><a href="#faq">FAQ</a><a href="#contact" class="cta">Contact</a>
+  </nav>
+</header>
+
+{% if dev %}
+<section class="devzone" id="acces-dev" aria-label="Accès développeur">
+  <div class="wrap devrow">
+    <div class="deveye" aria-hidden="true"></div>
+    <div class="devtext">
+      <b>ACCÈS DÉVELOPPEUR</b>
+      <span>Connexion reconnue. Cette zone n'est visible que depuis une adresse autorisée.</span>
+      {% if dev.version %}<small>Version {{ dev.version }}{% if dev.available %} · {{ (dev.size / 1048576) | round(1) }} Mo{% endif %}</small>{% endif %}
+      {% if dev.sha256 %}<small class="hash">SHA-256 {{ dev.sha256 }}</small>{% endif %}
+    </div>
+    {% if dev.available %}<a class="btn-enos" href="/dev/telecharger" download>Télécharger E.N.O.S.</a>{% else %}<span class="btn-enos off">Fichier non déposé sur le serveur</span>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+<main id="contenu">
+  <section class="hero">
+    <div class="pulses" aria-hidden="true"><i class="p a"></i><i class="p a d1"></i><i class="p b"></i><i class="p b d1"></i></div>
+    <div class="wrap hero-in">
+      <p class="eyebrow">Studio indépendant · deux développeurs</p>
+      <h1>Deux <span class="ga">pulsations</span>.<br>Un seul <span class="gb">jeu</span>.</h1>
+      <p class="lead">{{ studio.pitch }}</p>
+      <div class="hero-cta"><a class="btn primary" href="#jeu">Découvrir le jeu</a><a class="btn ghost" href="#contact">Nous écrire</a></div>
+    </div>
+  </section>
+
+  <section id="studio" class="sec">
+    <div class="wrap">
+      <header class="sec-h"><p class="eyebrow">Le studio</p><h2>Petit studio, exigence maximale</h2></header>
+      <div class="grid3">
+        {% for t, d in values %}<article class="card reveal"><h3>{{ t }}</h3><p>{{ d }}</p></article>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section id="jeu" class="sec alt">
+    <div class="wrap two">
+      <div class="reveal">
+        <p class="eyebrow">{{ game.subtitle }}</p>
+        <h2>{{ game.title }}</h2>
+        <p class="lead sm">{{ game.text }}</p>
+        <span class="badge">{{ game.status }}</span>
+      </div>
+    </div>
+    <div class="wrap grid2 feat">
+      {% for t, d in features %}<article class="card reveal"><h3>{{ t }}</h3><p>{{ d }}</p></article>{% endfor %}
+    </div>
+  </section>
+
+  <section id="equipe" class="sec">
+    <div class="wrap">
+      <header class="sec-h"><p class="eyebrow">L'équipe</p><h2>Deux personnes, un seul rythme</h2></header>
+      <div class="team">
+        {% for m in team %}<article class="member reveal"><div class="avatar {{ loop.cycle('a','b') }}" aria-hidden="true">{{ m.name[0] }}</div><h3>{{ m.name }}</h3><p>{{ m.role }}</p></article>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section id="route" class="sec alt">
+    <div class="wrap">
+      <header class="sec-h"><p class="eyebrow">Feuille de route</p><h2>Où en est le projet</h2></header>
+      <ol class="timeline">
+        {% for st, txt in roadmap %}<li class="reveal {{ 'done' if st == 'Fait' else 'now' if st == 'En cours' else '' }}"><b>{{ st }}</b><span>{{ txt | replace('A_COMPLETER', 'à annoncer') }}</span></li>{% endfor %}
+      </ol>
+    </div>
+  </section>
+
+  <section id="faq" class="sec">
+    <div class="wrap narrow">
+      <header class="sec-h"><p class="eyebrow">Questions fréquentes</p><h2>FAQ</h2></header>
+      {% for q, a in faq %}<details class="qa reveal"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
+      <p class="muted">Une autre question ? <button class="linkbtn" id="open-chat-2" type="button">Demandez à l'Assistant Support</button>.</p>
+    </div>
+  </section>
+
+  <section id="contact" class="sec alt">
+    <div class="wrap narrow center">
+      <header class="sec-h"><p class="eyebrow">Contact</p><h2>Parlons-en</h2></header>
+      <p class="lead sm">Presse, partenariat, portfolio, test du jeu ou simple question : écrivez-nous.</p>
+      <a class="btn primary big" href="mailto:{{ studio.contact_email }}">{{ studio.contact_email }}</a>
+    </div>
+  </section>
+</main>
+
+<footer class="foot"><div class="wrap"><span>© {{ studio.year }} {{ studio.name }}</span><span>Tous droits réservés</span></div></footer>
+
+<button class="chat-fab" id="chat-fab" type="button" aria-label="Ouvrir l'Assistant Support" aria-expanded="false" aria-controls="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Assistant</span></button>
+<aside class="chat" id="chat" role="dialog" aria-label="Assistant Support" hidden>
+  <div class="chat-h"><div><b>Assistant Support</b><small>Réponses instantanées · {{ studio.name }}</small></div><button type="button" id="chat-close" aria-label="Fermer">✕</button></div>
+  <div class="chat-log" id="chat-log" aria-live="polite"></div>
+  <div class="chat-sug" id="chat-sug">{% for s in suggestions %}<button type="button" class="chip">{{ s }}</button>{% endfor %}</div>
+  <form class="chat-f" id="chat-form" autocomplete="off"><input id="chat-in" type="text" maxlength="500" placeholder="Posez votre question…" aria-label="Votre question"><button type="submit" aria-label="Envoyer">➤</button></form>
+</aside>
+<script src="/static/js/site.js" defer></script>
+</body>
+</html>

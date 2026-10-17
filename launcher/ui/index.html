@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self' ipc: http://ipc.localhost https: http://127.0.0.1:* http://localhost:*">
+<title>Dual Pulse Launcher</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="css/launcher.css">
+</head>
+<body>
+<div id="frame">
+  <header id="titlebar" data-tauri-drag-region>
+    <div class="brand" data-tauri-drag-region><img src="logo.svg" alt=""><b>DUAL PULSE</b><span style="color:var(--muted);font-weight:600">LAUNCHER</span></div>
+    <span class="sp"></span><span class="preview-tag" id="preview-tag" hidden>APERÇU NAVIGATEUR</span>
+    <div class="wc"><button id="wc-min" aria-label="Réduire">&#8211;</button><button id="wc-max" aria-label="Agrandir">&#9633;</button><button id="wc-close" class="x" aria-label="Fermer">&#10005;</button></div>
+  </header>
+  <div id="root"></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

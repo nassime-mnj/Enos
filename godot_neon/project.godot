@@ -1,0 +1,15 @@
+; Kit CONTOUR NEON GLOBAL : demo + composant reutilisable (voir LISEZ_MOI.md)
+config_version=5
+
+[application]
+config/name="ENOS Neon Outline Demo"
+run/main_scene="res://demo.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+
+[rendering]
+viewport/hdr_2d=true
+textures/canvas_textures/default_texture_filter=0

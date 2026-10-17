@@ -1,0 +1,39 @@
+[Event "Partie Italienne"]
+[Repertoire "white"]
+[Level "1200-1300"]
+[Theory "de l'Italienne"]
+[ECO "C50"]
+[Description "Développement rapide, fou en c4 visé sur f7, centre avec c3 et d4 : le classique des Blancs."]
+
+1. e4 { [%cal Ge2e4] [%csl Ge4,Gd4] On prend le centre et on libère le fou et la dame. } 1... e5 { [%csl Ge5] Les Noirs répondent symétriquement. }
+2. Nf3 { [%cal Gg1f3,Gf3e5] [%csl Re5] On développe un cavalier ET on attaque le pion e5 : deux choses en un coup. } 2... Nc6 { [%cal Gb8c6] [%csl Ge5] Les Noirs défendent e5 en développant. }
+3. Bc4 { [%name Partie Italienne] [%cal Gf1c4,Rc4f7] [%csl Rf7] Le fou vise f7, le point faible des Noirs, protégé seulement par le roi. Principe : on développe vite vers le centre. }
+3... Bc5 { [%name Giuoco Piano] [%cal Gc5f2] [%csl Rf2] Les Noirs font pareil : leur fou vise f2. Position symétrique, la lutte se joue sur le centre. }
+( 3... Nf6 { [%name Défense des Deux Cavaliers] [%cal Gf6e4] [%csl Re4] Les Noirs contre-attaquent e4 au lieu de défendre : jeu plus tranchant. }
+  4. Ng5 { [%cal Gg5f7] [%csl Rf7] Double attaque sur f7 : le fou et le cavalier. On menace de faire très mal. } 4... d5 { [%cal Gd5c4,Gd5e4] [%csl Rc4] La seule bonne réponse : on coupe la pression sur f7 en attaquant le fou. }
+  5. exd5 { [%cal Ge4d5] On prend le pion. }
+  5... Na5 { [%cal Gc6a5] Les Noirs écartent le fou c4 de l'attaque et menacent de prendre. }
+  ( 5... Nxd5 { [%name Piège du Foie Grillé] [%cal Rg5f7] [%csl Rf7] Les Noirs reprennent avec le cavalier : c'est une erreur, et un classique des joueurs de 1200 ! }
+    6. Nxf7 { [%cal Gg5f7] [%csl Rf7,Rg8] BOUM, le sacrifice du Foie Grillé : on prend f7 et on attire le roi dehors. }
+    6... Kxf7 7. Qf3+ { [%cal Gf3f7] Échec : le roi ne peut plus rentrer chez lui. }
+    7... Ke6 8. Nc3 { [%cal Gc3d5] [%csl Rd5] On attaque le cavalier d5 pendant que le roi noir est exposé : on développe avec menace. }
+    8... Ncb4 9. Qe4 { [%cal Ge4d5] [%csl Rd5] Le roi noir reste en danger au centre et on garde l'initiative. }
+  )
+  6. Bb5+ { [%cal Gc4b5] [%csl Re8] On met le roi noir en échec pour gagner un temps. } 6... c6 { [%cal Gc6b5] On bloque l'échec avec un pion et on attaque le fou. }
+  7. dxc6 bxc6 8. Be2 { [%cal Gb5e2] On met le fou en sécurité : il garde la diagonale vers h5 et g4. } 8... h6 { [%cal Gh6g5] [%csl Rg5] Les Noirs chassent le cavalier. }
+  9. Nf3 e4 { [%cal Ge4f3] [%csl Rf3] Le pion attaque notre cavalier : les Noirs gagnent de l'espace. } 10. Ne5 { [%csl Ge5] Le cavalier saute en e5, mais attention : on a un pion de moins et il faudra être précis. }
+)
+4. c3 { [%cal Gc2c3,Gd2d4] [%csl Gd4] Voilà le plan de la Giuoco Piano : on prépare d4 pour dominer le centre. Le pion c3 libère aussi la case c2 pour la dame. }
+4... Nf6 { [%cal Gf6e4] [%csl Re4] On attaque le pion e4. }
+5. d4 { [%cal Gd2d4,Gd4c5,Gd4e5] [%csl Gd4,Re5] Boum : le grand centre. Le pion d4 attaque e5 et le fou c5 en même temps. }
+( 5. d3 { [%name Giuoco Pianissimo] [%cal Gd3d4] Le plan calme : le centre se construit sans tension, avec O-O et Re1. Très solide. }
+  5... d6 6. O-O O-O 7. Re1 { [%cal Ge1e4] [%csl Ge4] La tour soutient le pion e4. } 7... a6 8. Bb3 { [%cal Gc4b3] [%csl Rf7] Le fou garde la diagonale et évite l'attaque a6 puis b5. } 8... Ba7 { [%cal Gc5a7] }
+)
+5... exd4 { [%csl Gd4] Les Noirs prennent d4 : on a un pion en moins, mais pour un instant seulement. }
+( 5... Bb6 { [%cal Gc5b6] Les Noirs retirent le fou : ils gardent leur pion. } 6. dxe5 { [%cal Gd4e5] On prend e5, mais attention au piège Nxe4.} 6... Nxe4 { [%cal Rf6e4] } 7. Bd5 { [%cal Gc4d5,Gd5e4] [%csl Re4] On cloue le cavalier en e4 et on garde l'initiative. } )
+6. cxd4 { [%cal Gc3d4] [%csl Gd4] On reprend avec le pion c : on a de nouveau un centre superbe. } 6... Bb4+ { [%cal Gc5b4] [%csl Re1] Échec du fou : les Noirs gagnent un temps. }
+7. Bd2 { [%cal Gc1d2] Le fou bloque l'échec en développant une pièce. } 7... Bxd2+ { [%csl Rd2] On échange les fous. }
+8. Nbd2 { [%cal Gb1d2] On reprend avec le cavalier : développement et centre sont bons. } 8... d5 { [%cal Gd5e4] [%csl Gd5] Les Noirs frappent au centre. C'est le coup qu'ils doivent jouer. }
+9. exd5 { [%cal Ge4d5] On prend le pion. } 9... Nxd5 { [%cal Gf6d5] } 10. Qb3 { [%cal Gb3d5,Gb3b7] [%csl Rd5,Rb7] La dame attaque d5 ET b7 : double menace. }
+10... Nce7 { [%cal Gc6e7] [%csl Gd5] Les Noirs défendent d5 en reculant. } 11. O-O { [%cal Ge1g1] [%csl Gg1] Le roi est en sécurité et la tour entre dans la partie. Position équilibrée avec un joli jeu pour les Blancs. } 11... O-O
+*

@@ -1,0 +1,4 @@
+Source du paquet `android/assets/mobile/vendor/codemirror.min.js` (CodeMirror 6, MIT, © Marijn Haverbeke et contributeurs ; Lezer, MIT).
+Reconstruction : dans un dossier vide, `npm i codemirror @codemirror/state @codemirror/view @codemirror/commands @codemirror/language @codemirror/autocomplete @codemirror/search @codemirror/lang-javascript @codemirror/lang-html @codemirror/lang-css @codemirror/lang-python @codemirror/lang-cpp @codemirror/lang-java @codemirror/lang-sql @codemirror/legacy-modes @lezer/highlight esbuild`
+puis copier `codemirror-entry.js` en `entry.js` et : `npx esbuild entry.js --bundle --minify --format=iife --target=es2019 --legal-comments=none --outfile=codemirror.min.js`.
+Versions utilisées : codemirror 6.0.2, @codemirror/view 6.43.14, @codemirror/state 6.7.6, esbuild 0.28.2.

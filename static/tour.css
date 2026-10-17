@@ -1,0 +1,36 @@
+/* Visite guidée (tour.js) : voile sombre + projecteur sur la cible + bulle. Suit la couleur d'accent (--ac). */
+#tr[hidden]{display:none!important}
+#tr{position:fixed;inset:0;z-index:9000;font-family:Rajdhani,"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif}
+#tr::before{content:"";position:absolute;inset:0}                       /* bloque les clics sur l'interface pendant la visite */
+#tr-spot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(3,3,6,.82),0 0 0 2px var(--ac,#e0243c),0 0 26px 2px color-mix(in srgb,var(--ac,#e0243c) 55%,transparent);
+  transition:left .38s cubic-bezier(.2,.9,.2,1),top .38s cubic-bezier(.2,.9,.2,1),width .38s cubic-bezier(.2,.9,.2,1),height .38s cubic-bezier(.2,.9,.2,1);pointer-events:none}
+#tr-b{position:fixed;box-sizing:border-box;padding:16px 18px 16px;border-radius:16px;color:#ececf0;background:linear-gradient(165deg,#17171b,#0d0d10);border:1px solid color-mix(in srgb,var(--ac,#e0243c) 55%,#26262b);
+  box-shadow:0 22px 60px #000c,0 0 0 1px #000;transition:left .38s cubic-bezier(.2,.9,.2,1),top .38s cubic-bezier(.2,.9,.2,1);outline:0;animation:trIn .3s cubic-bezier(.2,.9,.2,1)}
+@keyframes trIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+#tr-b.center{left:50%!important;top:50%!important;transform:translate(-50%,-50%);width:min(440px,calc(100vw - 24px))!important;text-align:center}
+#tr-b.center .tr-top{justify-content:space-between}
+#tr-b:not(.center)::before{content:"";position:absolute;left:var(--ax,50%);width:14px;height:14px;margin-left:-7px;background:#17171b;border:1px solid color-mix(in srgb,var(--ac,#e0243c) 55%,#26262b);transform:rotate(45deg)}
+#tr-b[data-side="below"]::before{top:-8px;border-right:0;border-bottom:0}
+#tr-b[data-side="above"]::before{bottom:-8px;border-left:0;border-top:0;background:#0d0d10}
+#tr-b[data-side="right"]::before,#tr-b[data-side="left"]::before{display:none}
+.tr-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+#tr-n{font:800 11px Rajdhani,sans-serif;letter-spacing:2px;color:var(--ac2,#ff4d63)}
+.tr-skip{background:none;border:1px solid #3a3a42;border-radius:20px;padding:4px 12px;color:#c9c9d2;font:700 11px Rajdhani,sans-serif;letter-spacing:1.2px;cursor:pointer;transition:.18s}
+.tr-skip:hover{border-color:var(--ac,#e0243c);color:#fff}
+#tr-h{margin:0 0 6px;font:700 19px Rajdhani,sans-serif;letter-spacing:.8px;color:#fff;text-transform:none}
+#tr-h::first-letter{color:var(--ac,#e0243c)}
+#tr-p{margin:0 0 12px;font-size:15px;line-height:1.45;color:#c4c4cd}
+#tr-p b{color:#fff}
+.tr-role{display:inline-block;margin-top:10px;padding:3px 10px;border-radius:20px;border:1px solid color-mix(in srgb,var(--ac,#e0243c) 60%,transparent);color:var(--ac-lt,#ffb3bd);font:700 11px Rajdhani,sans-serif;letter-spacing:1.5px;text-transform:uppercase}
+.tr-dots{display:flex;gap:5px;justify-content:center;margin-bottom:12px}
+.tr-dots i{width:6px;height:6px;border-radius:50%;background:#34343c;transition:.2s}.tr-dots i.past{background:color-mix(in srgb,var(--ac,#e0243c) 55%,#34343c)}.tr-dots i.on{width:18px;border-radius:4px;background:var(--ac,#e0243c);box-shadow:0 0 8px var(--ac,#e0243c)}
+.tr-row{display:flex;gap:8px;justify-content:flex-end}
+#tr-b.center .tr-row{justify-content:center}
+.tr-b{height:36px;padding:0 18px;border-radius:10px;border:1px solid var(--ac,#e0243c);background:linear-gradient(120deg,var(--acd,#8c1328),var(--ac3,#d71f3a));color:#fff;font:800 12px Rajdhani,sans-serif;letter-spacing:1.5px;cursor:pointer;transition:.18s}
+.tr-b:hover{box-shadow:0 0 0 3px color-mix(in srgb,var(--ac,#e0243c) 30%,transparent)}
+.tr-b.ghost{background:transparent;border-color:#3a3a42;color:#c9c9d2}.tr-b.ghost:hover{border-color:#fff;color:#fff;box-shadow:none}
+.tr-b:focus-visible,.tr-skip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.tr-b[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){#tr-spot,#tr-b{transition:none;animation:none}}
+@media (max-width:560px){#tr-b{padding:14px}}
+body.tour-planning #lx{opacity:0!important;transition:none!important;pointer-events:none}

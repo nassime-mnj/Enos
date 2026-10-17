@@ -1,0 +1,175 @@
+/* DUALITÉ E.N.O.S. / ETO — sélecteur, transition, et le thème « ETO » : blanc nacré, bleu doux, verre dépoli, aurore lente.
+   Le thème repose sur les variables du site (--bg, --panel, --neon, --mid, --dim, --h…) : tous les écrans suivent sans être réécrits. */
+
+/* ---------- visibilité des éléments propres à chaque personnalité */
+.eto-only{display:none}
+html[data-persona="eto"] .eto-only{display:block}
+html[data-persona="eto"] #avatar,html[data-persona="eto"] #logo,html[data-persona="eto"] .dm-img{display:none!important}
+
+/* ---------- sélecteur à bascule (pilule + curseur ressort) */
+.persona-slot{display:inline-flex}
+header .persona-slot{position:absolute;top:9px;right:12px;z-index:5}
+.persona-sw{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;border:1px solid var(--dim);border-radius:999px;background:var(--bg);padding:2px;isolation:isolate}
+.persona-sw .thumb{position:absolute;z-index:-1;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:999px;background:var(--neon);box-shadow:0 0 14px color-mix(in srgb,var(--neon) 60%,transparent);transition:transform .6s cubic-bezier(.34,1.45,.5,1),background .6s,box-shadow .6s}
+.persona-sw[data-on="eto"] .thumb{transform:translateX(100%);background:linear-gradient(135deg,#79e000,#55bb00);box-shadow:0 2px 14px #55bb0066}
+.persona-sw button{appearance:none;border:0;margin:0;min-width:74px;padding:5px 12px;background:transparent;color:var(--mid);font:700 11px Consolas,monospace;letter-spacing:2px;cursor:pointer;border-radius:999px;transition:color .4s}
+.persona-sw button.on{color:#000}
+html[data-persona="eto"] .persona-sw button.on{color:#fff}
+.persona-sw button:not(.on):hover{color:var(--neon)}
+@media (max-width:640px){header .persona-slot{position:static;display:flex;justify-content:center;margin-top:6px}}
+
+/* ---------- transition : le rideau est piloté par persona.js (Web Animations sur ::view-transition) */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+html.fx-to-eto::view-transition-new(root){z-index:9999}
+html.fx-to-eto::view-transition-old(root){z-index:1}
+html.fx-to-enos::view-transition-old(root){z-index:9999}
+html.fx-to-enos::view-transition-new(root){z-index:1}
+html.persona-fx{overflow:hidden}
+
+/* =========================================================================================================== ETO */
+html[data-theme="eto"]{
+  --h:222;--sat:.92;
+  --bg:#f9fff3;--panel:rgba(255,255,255,.74);--bgx:#f9fff3;--surf:#ffffff;--surf2:#f4ffea;--line:#eafad9;
+  --neon:#55bb00;--mid:#8fad6e;--dim:#e6f7d3;--cy:#80c400;--mg:#e0567a;--u:#324a1b;
+  --ink:#324a1b;--glass:rgba(255,255,255,.72);--glass-line:rgba(194,235,150,.38);--shadow:0 12px 40px rgba(75,132,29,.10);
+  --font-ui:"Segoe UI Variable Display","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;--radius:18px;
+  color-scheme:light;
+}
+html[data-theme="eto"],html[data-theme="eto"] body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14.5px}
+html[data-theme="eto"] *:not(pre):not(code):not(#ascii){font-family:var(--font-ui)!important;text-shadow:none!important}
+html[data-theme="eto"] *{clip-path:none!important}
+html[data-theme="eto"] ::selection{background:#e8ffcf;color:#325c14}
+html[data-theme="eto"] body{background:transparent}
+/* aurore : trois halos pastel qui dérivent lentement */
+html[data-theme="eto"] body::before{content:"";position:fixed;inset:-10%;z-index:-2;pointer-events:none;opacity:1;filter:none;transform:none;
+  background:radial-gradient(40% 38% at 18% 22%,#eeffdb 0,transparent 70%),radial-gradient(36% 34% at 82% 18%,#e2ffe3 0,transparent 70%),radial-gradient(42% 40% at 70% 86%,#f8ffd9 0,transparent 70%),radial-gradient(34% 32% at 12% 82%,#e1f7ee 0,transparent 70%),linear-gradient(180deg,#fcfff9,#f7ffee);
+  animation:etoAurora 26s ease-in-out infinite alternate}
+@keyframes etoAurora{0%{transform:translate3d(-1.5%,-1%,0) scale(1)}50%{transform:translate3d(2%,1.5%,0) scale(1.04)}100%{transform:translate3d(-1%,2%,0) scale(1.02)}}
+html[data-theme="eto"] body::after{background:none}
+html[data-theme="eto"] header::after{display:none}
+html[data-theme="eto"] #avatar{display:none}
+
+/* ---------- en-tête : le visage d'ETO flotte à gauche */
+html[data-theme="eto"] header{display:flex;align-items:center;gap:18px;text-align:left;padding:10px 26px;background:var(--glass);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);border-bottom:1px solid var(--glass-line);overflow:visible;z-index:6}
+html[data-theme="eto"] header::before{content:"ETO";order:1;font:200 30px var(--font-ui);letter-spacing:12px;color:var(--neon);padding-left:4px}
+html[data-theme="eto"] #eto-avatar{order:0;width:84px;height:92px;flex:none;margin:-4px 0 -14px;filter:drop-shadow(0 10px 18px rgba(85,187,0,.22))}
+html[data-theme="eto"] #tag{order:3;margin-left:auto;font-size:11px;letter-spacing:3px;color:var(--mid);margin-right:200px}
+html[data-theme="eto"] #greet{order:2;color:var(--mid);margin:0;min-height:0;flex:1;font-size:13px}
+html[data-theme="eto"] header .persona-slot{top:50%;transform:translateY(-50%);right:22px}
+html[data-theme="eto"] .persona-sw{background:rgba(255,255,255,.8);border-color:var(--glass-line);box-shadow:0 4px 16px rgba(75,132,29,.10)}
+@media (max-width:640px){html[data-theme="eto"] #tag{margin-right:0}html[data-theme="eto"] header{flex-wrap:wrap;gap:8px;padding:8px 14px}html[data-theme="eto"] header .persona-slot{position:static;transform:none}}
+
+/* ---------- cartes, boutons, champs */
+html[data-theme="eto"] .box,html[data-theme="eto"] .tm-card{background:var(--glass);backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);border:1px solid var(--glass-line);border-radius:var(--radius);box-shadow:var(--shadow);animation:none;background-image:none!important}
+html[data-theme="eto"] section[role="dialog"]{background:linear-gradient(180deg,#fcfff8,#f6ffed);border:0;border-radius:0;box-shadow:none;animation:none;background-image:none}
+html[data-theme="eto"] .box h3,html[data-theme="eto"] .tm-card h3{background:transparent;border-bottom:1px solid var(--glass-line);color:var(--mid);font-weight:600;letter-spacing:3px;border-radius:var(--radius) var(--radius) 0 0}
+html[data-theme="eto"] .tm-top{background:var(--glass);backdrop-filter:blur(14px);border-bottom:1px solid var(--glass-line)}
+html[data-theme="eto"] .tm-top h2{color:var(--neon);font-weight:300;letter-spacing:7px}
+html[data-theme="eto"] .tm-top h2 small{color:var(--mid);letter-spacing:2px}
+html[data-theme="eto"] .btn{background:rgba(255,255,255,.85);color:var(--ink);border:1px solid var(--glass-line);border-radius:13px;font-weight:600;letter-spacing:.2px;box-shadow:0 2px 8px rgba(75,132,29,.07);transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s,background .25s,border-color .25s,color .25s}
+html[data-theme="eto"] .btn::before{display:none}
+html[data-theme="eto"] .btn small{color:var(--mid);font-weight:400}
+html[data-theme="eto"] .btn:hover{background:#fff;border-color:#cdff9b;color:var(--neon);transform:translateY(-1px);box-shadow:0 8px 22px rgba(85,187,0,.16)}
+html[data-theme="eto"] .btn:active,html[data-theme="eto"] .btn.ico.on{background:linear-gradient(135deg,#70d700,#55bb00);color:#fff;border-color:transparent;transform:translateY(0);box-shadow:0 4px 14px rgba(85,187,0,.35)}
+html[data-theme="eto"] .btn:active small{color:#f3ffe6}
+html[data-theme="eto"] .btn.warn{color:var(--mg);border-color:#f3cdd8}
+html[data-theme="eto"] .btn.prem{border-color:#e2ffc9}
+html[data-theme="eto"] input[type=text],html[data-theme="eto"] input[type=password],html[data-theme="eto"] select,html[data-theme="eto"] textarea{background:rgba(255,255,255,.92);color:var(--ink);border:1px solid var(--glass-line);border-radius:13px;caret-color:var(--neon);padding:9px 12px}
+html[data-theme="eto"] input[type=text]:focus{border-color:#c6ff8d;box-shadow:0 0 0 4px rgba(85,187,0,.12);outline:0}
+html[data-theme="eto"] ::placeholder{color:#b8d09f}
+html[data-theme="eto"] ::-webkit-scrollbar{width:10px;height:10px}html[data-theme="eto"] ::-webkit-scrollbar-thumb{background:#ddf7c4;border-radius:10px;border:2px solid transparent;background-clip:content-box}html[data-theme="eto"] ::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- terminal : bulles douces */
+html[data-theme="eto"] #chatbox .chat-head{display:flex;align-items:center;gap:10px}
+html[data-theme="eto"] #eto-logo{width:38px;height:42px;flex:none;margin:-4px 0}
+html[data-theme="eto"] #log{background:transparent;color:var(--ink)}
+html[data-theme="eto"] .m{margin:7px 0;padding:8px 14px;border-radius:16px 16px 16px 5px;background:#fff;border:1px solid var(--glass-line);box-shadow:0 3px 12px rgba(75,132,29,.06);color:var(--ink);width:fit-content;max-width:min(88%,760px);line-height:1.55}
+html[data-theme="eto"] .m b{color:var(--neon);font-weight:700;letter-spacing:1px}
+html[data-theme="eto"] .m.u{margin-left:auto;border-radius:16px 16px 5px 16px;background:linear-gradient(135deg,#70d700,#55bb00);color:#fff;border-color:transparent}
+html[data-theme="eto"] .m.u b{color:#eeffdc}
+html[data-theme="eto"] .m.sys{background:transparent;border:0;box-shadow:none;color:var(--mid);padding:2px 6px}
+html[data-theme="eto"] .m.err{background:#fff3f6;border-color:#f3cdd8;color:var(--mg)}
+html[data-theme="eto"] .m.think{background:transparent;border:0;box-shadow:none;color:var(--mid)}
+html[data-theme="eto"] footer{color:var(--mid);background:transparent;border-top:1px solid var(--glass-line)}
+html[data-theme="eto"] #led{color:#4fb39a;animation:none}
+html[data-theme="eto"] li.row:hover{background:var(--surf2);border-left-color:var(--neon)}
+html[data-theme="eto"] #vstate{color:var(--mid)}
+
+/* ---------- MODE DISCUSSION : le visage d'ETO en grand */
+html[data-theme="eto"] #dm{background:linear-gradient(180deg,#fcfff8,#f5ffe9);--c:#55bb00;--c2:#a0c47d}
+html[data-theme="eto"] #dm:has(#dm-stage[data-state=listening]),html[data-theme="eto"] #dm:has(#dm-stage[data-state=thinking]),html[data-theme="eto"] #dm:has(#dm-stage[data-state=speaking]){--c:#55bb00;--c2:#a0c47d}
+html[data-theme="eto"] .dm-bg{background:radial-gradient(ellipse at 50% 40%,rgba(116,233,0,.22),transparent 62%),radial-gradient(30% 30% at 12% 85%,#e1f7ee,transparent 70%),radial-gradient(34% 30% at 90% 15%,#e2ffe3,transparent 70%)}
+html[data-theme="eto"] .dm-bg::after{display:none}
+html[data-theme="eto"] .dm-vig{background:radial-gradient(ellipse at center,transparent 60%,rgba(255,255,255,.7) 100%)}
+html[data-theme="eto"] .dm-top h2{text-shadow:none;font-weight:300}
+html[data-theme="eto"] #dm-chip{background:rgba(255,255,255,.85);border-radius:999px;border-color:var(--glass-line);color:var(--neon)}
+html[data-theme="eto"] .dm-ring.r1{border-top-color:#c6ff8d;border-bottom-color:#c6ff8d;opacity:.45}
+html[data-theme="eto"] .dm-ring.r2{border-color:rgba(116,233,0,.35)}
+html[data-theme="eto"] .dm-ring.r3{border-color:rgba(116,233,0,.3);box-shadow:0 0 50px rgba(88,202,0,.18),inset 0 0 40px rgba(116,233,0,.14)}
+html[data-theme="eto"] #dm-face{animation:none!important;filter:drop-shadow(0 18px 30px rgba(85,187,0,.25))}
+html[data-theme="eto"] #dm-eto{position:absolute;inset:-16% -18%}
+html[data-theme="eto"] .dm-sub,html[data-theme="eto"] #dm-bot{color:var(--ink)}
+html[data-theme="eto"] #dm-you{color:var(--mid)}
+html[data-theme="eto"] .dm-form{background:transparent}
+
+/* ---------- CHESS : plateau nacré, visage d'ETO à droite */
+html[data-theme="eto"] #cs-board{border:1px solid var(--glass-line);border-radius:14px;overflow:hidden;box-shadow:0 18px 50px rgba(85,187,0,.16)}
+html[data-theme="eto"] .cs-sq{background:#d7f5b9}
+html[data-theme="eto"] .cs-sq.l{background:#f8fff1}
+html[data-theme="eto"] .cs-sq.sel{background:#c7ff8f;outline-color:var(--neon)}
+html[data-theme="eto"] .cs-sq.last{box-shadow:inset 0 0 0 100px rgba(255,214,102,.30)}
+html[data-theme="eto"] .cs-sq.chk{background:radial-gradient(circle,#ff8aa4 0,#ffc7d3 60%,transparent 100%)}
+html[data-theme="eto"] .cs-sq.tg::after{background:var(--neon);opacity:.4;box-shadow:none}
+html[data-theme="eto"] .cs-sq.tg.cap::after{background:none;border-color:var(--neon);opacity:.5}
+html[data-theme="eto"] .cs-p.w{color:#fff;text-shadow:0 0 1px #324a1b,0 2px 4px rgba(50,74,27,.35)}
+html[data-theme="eto"] .cs-p.b{color:#497a1f;text-shadow:0 1px 2px rgba(255,255,255,.7)}
+html[data-theme="eto"] #cs-status{color:var(--mid)}
+html[data-theme="eto"] #cs-eye{align-self:center;width:190px;height:208px;background:transparent;border:0;box-shadow:none;border-radius:0;filter:drop-shadow(0 14px 26px rgba(85,187,0,.24))}
+html[data-theme="eto"] .cs-judge{background:var(--glass);border:1px solid var(--glass-line);border-radius:14px;color:var(--ink);box-shadow:var(--shadow)}
+html[data-theme="eto"] .cs-evalb{background:#497a1f;border-color:var(--glass-line);border-radius:8px}
+html[data-theme="eto"] #cs-moves{background:rgba(255,255,255,.85);border:1px solid var(--glass-line);border-radius:14px}
+html[data-theme="eto"] .cs-dec{background:#fff;border:1px solid #f0d3dc;border-radius:18px;box-shadow:0 14px 40px rgba(224,86,122,.14);animation:none}
+html[data-theme="eto"] .cs-dec b{color:var(--mg);font-weight:600}
+html[data-theme="eto"] .cs-dec div{color:var(--ink)}
+html[data-theme="eto"] #cs-mic.rec{background:linear-gradient(135deg,#70d700,#55bb00);color:#fff}
+html[data-theme="eto"] .q-best{color:#2f9e6e}.q-good{color:var(--mid)}
+html[data-theme="eto"] .cs-evalw b{color:var(--ink)}
+html[data-theme="eto"] .cs-power{color:var(--neon)}
+html[data-theme="eto"] #cs-hist,html[data-theme="eto"] #cs-rev{background:linear-gradient(180deg,#fcfff8,#f6ffed)}
+html[data-theme="eto"] .cs-hrow{background:var(--glass);border-color:var(--glass-line);border-radius:12px}
+@media (prefers-reduced-motion:reduce){html[data-theme="eto"] body::before{animation:none}}
+
+/* ---------- restes sombres du thème d'origine */
+html[data-theme="eto"] ::-webkit-scrollbar{background:transparent}
+html[data-theme="eto"] ::-webkit-scrollbar-track{background:transparent;border:0;box-shadow:none}
+html[data-theme="eto"] ::-webkit-scrollbar-thumb{background:#ddf7c4;border:3px solid transparent;background-clip:content-box;box-shadow:none;min-height:44px;border-radius:10px}
+html[data-theme="eto"] ::-webkit-scrollbar-thumb:hover{background:#cdff9b;background-clip:content-box;box-shadow:none}
+html[data-theme="eto"] ::-webkit-scrollbar-corner{background:transparent}
+html[data-theme="eto"] .f6-launch{background:#fff;color:var(--neon);border:1px solid var(--glass-line);border-radius:12px}
+html[data-theme="eto"] .f6-launch::before{display:none}
+html[data-theme="eto"] .f6-launch:hover{background:#f7ffee;color:var(--neon)}
+html[data-theme="eto"] .f6-zone{background:linear-gradient(100deg,#ffffff,#f8fff1 70%);border:1px solid var(--glass-line);border-radius:14px;box-shadow:var(--shadow)}
+html[data-theme="eto"] .f6-zone::before{display:none}
+html[data-theme="eto"] .f6-zone::after{background:linear-gradient(180deg,#79e000,#55bb00);box-shadow:none;border-radius:3px 0 0 3px}
+html[data-theme="eto"] .fz-badge{background:linear-gradient(135deg,#70d700,#55bb00)!important;color:#fff!important;box-shadow:0 4px 14px rgba(85,187,0,.3)!important;border-radius:9px}
+html[data-theme="eto"] .fz-txt b{color:var(--ink)!important}
+html[data-theme="eto"] .fz-go{color:var(--neon)!important;border-color:var(--glass-line)!important;border-radius:9px}
+html[data-theme="eto"] #dm-face::before,html[data-theme="eto"] #dm-face::after,html[data-theme="eto"] #dm-stage::before,html[data-theme="eto"] #dm-stage::after{display:none!important}
+html[data-theme="eto"] section[role="dialog"]:not(#dm){background:linear-gradient(180deg,#fcfff8,#f6ffed)!important}
+html[data-theme="eto"] .cs-evalb i{background:linear-gradient(90deg,#ffffff,#eeffdb)}
+
+/* ---------- ÉCHIQUIER ETO : bleu, blanc et noir */
+html[data-theme="eto"] #cs-board{border:3px solid #15200b;border-radius:6px;box-shadow:0 18px 50px rgba(21,32,11,.28)}
+html[data-theme="eto"] .cs-sq{background:#579919}
+html[data-theme="eto"] .cs-sq.l{background:#fafff4}
+html[data-theme="eto"] .cs-sq.sel{background:#448613;outline-color:#ffd23f}
+html[data-theme="eto"] .cs-sq.l.sel{background:#dbffbc}
+html[data-theme="eto"] .cs-sq.last{box-shadow:inset 0 0 0 100px rgba(255,210,63,.34)}
+html[data-theme="eto"] .cs-sq.tg::after{background:#15200b;opacity:.38;box-shadow:none}
+html[data-theme="eto"] .cs-sq.tg.cap::after{background:none;border-color:#15200b;opacity:.5}
+html[data-theme="eto"] .cs-p.w{color:#ffffff;text-shadow:0 0 1px #15200b,0 0 2px #15200b,0 2px 3px rgba(21,32,11,.5)}
+html[data-theme="eto"] .cs-p.b{color:#15200b;text-shadow:0 1px 1px rgba(255,255,255,.45)}
+html[data-theme="eto"] .cs-sq .co{color:#15200b;opacity:.55}
+html[data-theme="eto"] .cs-evalb{background:#15200b}
+html[data-persona="eto"] .cs-right:has(#cs-coach:not([hidden])) #cs-eye{display:none}        /* le coach a déjà son visage : pas de doublon */
+.cc-face{width:64px!important;height:70px!important}

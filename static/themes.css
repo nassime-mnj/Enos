@@ -1,0 +1,144 @@
+/* ============================================================================
+   THÈMES E.N.O.S. — chargé EN DERNIER.
+   Toutes les couleurs de l'interface sont en hsl(var(--h) calc(S% * var(--sat)) L%) :
+     --h   = teinte principale (135 = vert néon d'origine) ; fait pivoter toute la palette
+     --sat = intensité des couleurs (1 = d'origine ; 0,3 = presque monochrome)
+   Les 10 thèmes ci-dessous changent la teinte ET, pour PRO / ENTREPRISE / CHILL / LUXE, le design lui-même
+   (typographie, formes, matières, en-tête). Les variables sont posées sur [data-theme] (pas seulement html)
+   pour que les aperçus des cartes de thème du panneau RÉGLAGES s'affichent avec leurs vraies couleurs.
+   ============================================================================ */
+:root{--h:356;--sat:1;--font:Consolas,"Courier New",monospace;--font-ui:Consolas,"Courier New",monospace;--radius:0px}
+
+[data-theme="menace"]{--h:356;--sat:1;--metal:#0b0a0c}
+[data-theme="neon"]{--h:135;--sat:1}
+[data-theme="violet"]{--h:272;--sat:1}
+[data-theme="rouge"]{--h:2;--sat:1}
+[data-theme="ambre"]{--h:38;--sat:1}
+[data-theme="glace"]{--h:196;--sat:.95}
+[data-theme="synthwave"]{--h:316;--sat:1}
+[data-theme="luxe"]{--h:44;--sat:.9;--font-ui:"Palatino Linotype",Georgia,"Times New Roman",serif}
+[data-theme="pro"]{--h:214;--sat:.28;--font-ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;--radius:6px}
+[data-theme="entreprise"]{--h:212;--sat:.7;--font-ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;--radius:10px}
+[data-theme="chill"]{--h:282;--sat:.62;--font-ui:ui-rounded,"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;--radius:18px}
+
+/* ---- le fond d'écran d'origine est vert : sa teinte suit le thème (hors thèmes qui le remplacent) */
+body::before{filter:hue-rotate(calc((var(--h) - 135) * 1deg)) saturate(var(--sat))}
+#logo,#avatar img{filter:hue-rotate(calc((var(--h) - 356) * 1deg))}
+
+/* =================================================================== LUXE (noir & or, serif) */
+html[data-theme="luxe"] body,html[data-theme="luxe"] button,html[data-theme="luxe"] input{font-family:var(--font-ui)}
+html[data-theme="luxe"] *:not(pre):not(#ascii):not(code){font-family:var(--font-ui)!important}
+html[data-theme="luxe"] *{clip-path:none!important;text-shadow:none!important}
+html[data-theme="luxe"] .box{border-width:1px;animation:none;box-shadow:0 0 0 1px hsl(var(--h) calc(60% * var(--sat)) 30% / .35),0 20px 50px #000a}
+html[data-theme="luxe"] .btn{border-width:1px;letter-spacing:2px}
+html[data-theme="luxe"] .box h3{letter-spacing:5px;font-weight:400}
+html[data-theme="luxe"] body::after{background:radial-gradient(ellipse at center,#00000030 0%,#000000c0 85%)}
+
+/* =================================================================== PRO : graphite, sobre, plat */
+html[data-theme="pro"],html[data-theme="entreprise"],html[data-theme="chill"]{--bgx:#0d1015;--surf:#14181f;--surf2:#1a1f28;--line:#262c37}
+html[data-theme="pro"] *:not(pre):not(#ascii):not(code),html[data-theme="entreprise"] *:not(pre):not(#ascii):not(code),html[data-theme="chill"] *:not(pre):not(#ascii):not(code){font-family:var(--font-ui)!important}
+html[data-theme="pro"] *,html[data-theme="entreprise"] *,html[data-theme="chill"] *{clip-path:none!important;text-shadow:none!important}
+html[data-theme="pro"] body::before,html[data-theme="entreprise"] body::before,html[data-theme="chill"] body::before{background-image:none!important;animation:none;filter:none}
+html[data-theme="pro"] body::after,html[data-theme="entreprise"] body::after,html[data-theme="chill"] body::after{background:none}
+html[data-theme="pro"] .box,html[data-theme="entreprise"] .box,html[data-theme="chill"] .box{animation:none;box-shadow:none}
+html[data-theme="pro"] .btn::before,html[data-theme="entreprise"] .btn::before,html[data-theme="chill"] .btn::before{display:none}
+html[data-theme="pro"] [role="dialog"],html[data-theme="entreprise"] [role="dialog"],html[data-theme="chill"] [role="dialog"]{background-image:none!important}
+html[data-theme="pro"] #avatar::before,html[data-theme="pro"] #avatar::after,html[data-theme="entreprise"] #avatar::before,html[data-theme="entreprise"] #avatar::after{display:none}
+
+/* ---- en-tête : le grand logo ASCII devient une barre de marque sobre */
+html[data-theme="pro"] header,html[data-theme="entreprise"] header,html[data-theme="chill"] header{display:flex;align-items:center;gap:16px;text-align:left;padding:12px 22px;overflow:visible}
+html[data-theme="pro"] header::after,html[data-theme="entreprise"] header::after,html[data-theme="chill"] header::after{display:none}
+html[data-theme="pro"] #avatar,html[data-theme="entreprise"] #avatar,html[data-theme="chill"] #avatar{display:none}
+html[data-theme="pro"] header::before,html[data-theme="entreprise"] header::before,html[data-theme="chill"] header::before{content:var(--brand,"E.N.O.S");font:800 22px var(--font-ui);letter-spacing:5px;color:var(--neon);white-space:nowrap}
+html[data-theme="pro"] #tag,html[data-theme="entreprise"] #tag,html[data-theme="chill"] #tag{order:2;margin-left:auto;font-size:11px;letter-spacing:1px}
+html[data-theme="pro"] #greet,html[data-theme="entreprise"] #greet,html[data-theme="chill"] #greet{order:1;margin:0;min-height:0;font-size:13px;color:var(--mid);flex:1}
+
+/* ---- PRO */
+html[data-theme="pro"] html,html[data-theme="pro"] body,html[data-theme="pro"]{background:var(--bgx)}
+html[data-theme="pro"] body{background:var(--bgx);color:#d6dbe4}
+html[data-theme="pro"] header{background:var(--surf);border-bottom:1px solid var(--line)}
+html[data-theme="pro"] .box{background:var(--surf);border:1px solid var(--line);border-radius:var(--radius)}
+html[data-theme="pro"] .box h3{background:var(--surf2);border-bottom:1px solid var(--line);color:#aeb6c4;font-size:11px;letter-spacing:2px;border-radius:var(--radius) var(--radius) 0 0}
+html[data-theme="pro"] .btn{border:1px solid var(--line);background:var(--surf2);color:#d6dbe4;border-radius:var(--radius);font-weight:600;letter-spacing:.3px}
+html[data-theme="pro"] .btn small{color:#7f8998}
+html[data-theme="pro"] .btn:hover{background:#222a36;border-color:var(--neon);color:#fff}
+html[data-theme="pro"] .btn:active{background:var(--neon);color:#0d1015}
+html[data-theme="pro"] input[type=text]{background:#0f1319;border:1px solid var(--line);border-radius:var(--radius);color:#e6eaf1}
+html[data-theme="pro"] #log{background:var(--bgx)}
+html[data-theme="pro"] footer{color:#6b7584}
+
+/* ---- ENTREPRISE : bleu marine, cartes élevées, dégradés discrets */
+html[data-theme="entreprise"]{--bgx:#0a1020;--surf:#101a30;--surf2:#15223d;--line:#22345a}
+html[data-theme="entreprise"] body{background:linear-gradient(180deg,#0a1020,#0c1426 60%,#0a1020);color:#dbe4f5}
+html[data-theme="entreprise"] header{background:linear-gradient(90deg,#101a30,#14264a);border-bottom:1px solid var(--line);box-shadow:0 4px 24px #0006}
+html[data-theme="entreprise"] header::before{background:linear-gradient(90deg,var(--neon),hsl(calc(var(--h) + 40) calc(80% * var(--sat)) 60%));-webkit-background-clip:text;background-clip:text;color:transparent}
+html[data-theme="entreprise"] .box{background:var(--surf);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 8px 28px #0007}
+html[data-theme="entreprise"] .box h3{background:linear-gradient(90deg,var(--surf2),transparent);border-bottom:1px solid var(--line);color:#a9bde0;font-size:11px;letter-spacing:2px;border-radius:var(--radius) var(--radius) 0 0}
+html[data-theme="entreprise"] .btn{border:1px solid var(--line);background:linear-gradient(180deg,var(--surf2),var(--surf));color:#dbe4f5;border-radius:var(--radius);font-weight:600}
+html[data-theme="entreprise"] .btn small{color:#7c93bd}
+html[data-theme="entreprise"] .btn:hover{background:linear-gradient(180deg,#1b2d52,var(--surf2));border-color:var(--neon);box-shadow:0 0 0 3px hsl(var(--h) calc(70% * var(--sat)) 50% / .18)}
+html[data-theme="entreprise"] .btn:active{background:var(--neon);color:#07101f}
+html[data-theme="entreprise"] input[type=text]{background:#0b1426;border:1px solid var(--line);border-radius:var(--radius);color:#e6eefc}
+html[data-theme="entreprise"] #log{background:#0b1223aa}
+
+/* ---- CHILL : pastel, verre dépoli, très arrondi */
+html[data-theme="chill"]{--bgx:#1b1635}
+html[data-theme="chill"] body{background:linear-gradient(160deg,#2a1f55 0%,#1d2a5e 48%,#173a52 100%);background-attachment:fixed;color:#f0ecff}
+html[data-theme="chill"] header{background:#ffffff0d;backdrop-filter:blur(14px);border-bottom:1px solid #ffffff1f}
+html[data-theme="chill"] header::before{font-weight:600;letter-spacing:8px;color:hsl(var(--h) 70% 82%)}
+html[data-theme="chill"] .box{background:#ffffff0f;border:1px solid #ffffff26;border-radius:var(--radius);backdrop-filter:blur(18px);box-shadow:0 20px 50px #0004,inset 0 1px 0 #ffffff22}
+html[data-theme="chill"] .box h3{background:transparent;border-bottom:1px solid #ffffff1c;color:hsl(var(--h) 60% 82%);letter-spacing:3px;font-weight:500;border-radius:var(--radius) var(--radius) 0 0}
+html[data-theme="chill"] .btn{border:1px solid #ffffff2b;background:#ffffff12;color:#f0ecff;border-radius:999px;padding-left:18px;padding-right:18px;transition:.25s}
+html[data-theme="chill"] .btn small{color:#bdb4e0}
+html[data-theme="chill"] .btn:hover{background:#ffffff26;border-color:hsl(var(--h) 70% 80% / .8);transform:translateY(-1px)}
+html[data-theme="chill"] .btn:active{background:hsl(var(--h) 60% 80%);color:#2a1f55}
+html[data-theme="chill"] input[type=text]{background:#ffffff12;border:1px solid #ffffff2b;border-radius:999px;color:#fff;padding:8px 14px}
+html[data-theme="chill"] #log{background:transparent}
+html[data-theme="chill"] .m{border-radius:14px}
+html[data-theme="chill"] footer{color:#bdb4e0}
+html[data-theme="chill"] form{border-top:1px solid #ffffff1f}
+
+/* =================================================================== SYNTHWAVE : CRT + soleil couchant */
+html[data-theme="synthwave"] body{background:linear-gradient(180deg,#14002e 0%,#2a0a52 55%,#0b0018 100%)}
+html[data-theme="synthwave"] body::before{background-blend-mode:screen;opacity:.55}
+html[data-theme="synthwave"] .box{box-shadow:0 0 22px hsl(var(--h) 100% 55% / .25),inset 0 0 22px hsl(var(--h) 100% 50% / .08)}
+html[data-theme="synthwave"] header::before{content:"";position:absolute;left:0;right:0;bottom:0;height:42%;background:linear-gradient(transparent,hsl(var(--h) 100% 50% / .18));pointer-events:none}
+
+/* =================================================================== sélecteur de thème (panneau RÉGLAGES) */
+.th-card{--hh:var(--h);position:relative;display:flex;flex-direction:column;gap:8px;padding:12px;text-align:left;cursor:pointer;border:2px solid #333;background:#0a0a0a;color:#ddd;font-family:Consolas,monospace;transition:.2s}
+.th-card .mock{height:74px;position:relative;overflow:hidden;border-radius:4px;border:1px solid hsl(var(--h) calc(60% * var(--sat)) 30% / .6)}
+.th-card .mock b{position:absolute;left:8px;top:8px;width:46%;height:8px;background:hsl(var(--h) calc(100% * var(--sat)) 50%)}
+.th-card .mock i{position:absolute;left:8px;bottom:10px;width:34%;height:16px;border:2px solid hsl(var(--h) calc(100% * var(--sat)) 50%)}
+.th-card .mock em{position:absolute;right:8px;top:8px;bottom:10px;width:34%;border:1px solid hsl(var(--h) calc(60% * var(--sat)) 35%)}
+.th-card strong{font-size:13px;letter-spacing:2px}.th-card small{font-size:11px;color:#8a8a8a;line-height:1.4}
+.th-card:hover{border-color:hsl(var(--h) calc(100% * var(--sat)) 50% / .7);transform:translateY(-2px)}
+.th-card.on{border-color:hsl(var(--h) calc(100% * var(--sat)) 55%);box-shadow:0 0 22px hsl(var(--h) calc(100% * var(--sat)) 50% / .45)}
+.th-card.on::after{content:"✔ ACTIF";position:absolute;top:8px;right:10px;font-size:10px;letter-spacing:1px;color:hsl(var(--h) calc(100% * var(--sat)) 60%)}
+.th-card[data-theme="neon"] .mock{background:linear-gradient(#000,hsl(var(--h) 80% 5%))}
+.th-card[data-theme="violet"] .mock,.th-card[data-theme="rouge"] .mock,.th-card[data-theme="ambre"] .mock,.th-card[data-theme="glace"] .mock{background:linear-gradient(#000,hsl(var(--h) 80% 6%))}
+.th-card[data-theme="synthwave"] .mock{background:linear-gradient(#14002e,#2a0a52)}
+.th-card[data-theme="luxe"] .mock{background:#0a0804;border-radius:0}
+.th-card[data-theme="pro"] .mock{background:#14181f;border-color:#262c37;border-radius:6px}
+.th-card[data-theme="pro"] .mock b,.th-card[data-theme="pro"] .mock i{border-radius:3px}
+.th-card[data-theme="entreprise"] .mock{background:linear-gradient(135deg,#101a30,#14264a);border-color:#22345a;border-radius:10px}
+.th-card[data-theme="entreprise"] .mock b,.th-card[data-theme="entreprise"] .mock i{border-radius:4px}
+.th-card[data-theme="chill"] .mock{background:linear-gradient(160deg,#2a1f55,#173a52);border-color:#ffffff33;border-radius:18px}
+.th-card[data-theme="chill"] .mock b,.th-card[data-theme="chill"] .mock i{border-radius:99px}
+
+/* =================================================================== MENACE ROUGE (thème par défaut : l'IA antagoniste E.N.O.S.)
+   Rouge sang lumineux sur noir / gris métallique. Le fond vert d'origine est remplacé par une plaque d'acier brossé sombre,
+   les panneaux deviennent des cloisons de métal noir, le titre ASCII respire comme un voyant d'alarme. */
+html[data-theme="menace"]{--panel:#0d0b0d;--dim:hsl(356 55% 18%);--mid:hsl(356 80% 38%)}
+html[data-theme="menace"] body::before{background:
+  radial-gradient(ellipse at 50% 38%,hsl(356 100% 22% / .38),transparent 58%),
+  repeating-linear-gradient(90deg,#ffffff06 0 1px,transparent 1px 3px),
+  linear-gradient(180deg,#151316 0%,#0a090b 55%,#050405 100%)!important;filter:none;animation:menaceBreath 5.5s ease-in-out infinite}
+@keyframes menaceBreath{0%,100%{opacity:.9}50%{opacity:1}}
+html[data-theme="menace"] body::after{background:radial-gradient(ellipse at center,#00000030 0%,#000000d8 88%)}
+html[data-theme="menace"] .box{border-color:hsl(356 70% 22%);background:linear-gradient(180deg,#121014f2,#0a090bf2)}
+html[data-theme="menace"] #ascii{color:hsl(356 100% 52%);text-shadow:0 0 6px hsl(356 100% 45%),0 0 22px hsl(356 100% 40% / .75),0 0 46px hsl(356 100% 30% / .6);animation:menaceTitle 3.2s ease-in-out infinite}
+@keyframes menaceTitle{0%,100%{filter:brightness(.85)}45%{filter:brightness(1.25)}50%{filter:brightness(.7)}55%{filter:brightness(1.3)}}
+html[data-theme="menace"] #tag{color:hsl(356 80% 42%);letter-spacing:6px}
+html[data-theme="menace"] ::selection{background:hsl(356 100% 45%);color:#fff}
+html[data-theme="menace"] #logo{filter:none}
+.th-card[data-theme="menace"] .mock{background:linear-gradient(#161316,#080708);border-color:hsl(356 80% 30%)}

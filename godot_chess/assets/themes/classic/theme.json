@@ -1,0 +1,12 @@
+{
+ "label": "Menace Rouge (classique)",
+ "pad": 48,
+ "heights": {
+  "k": 1.35,
+  "q": 1.25,
+  "r": 0.95,
+  "b": 1.1,
+  "n": 1.05,
+  "p": 0.82
+ }
+}

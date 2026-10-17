@@ -1,0 +1,31 @@
+fastapi
+uvicorn
+httpx
+truststore
+pywebview
+cryptography
+segno
+sounddevice
+numpy
+pillow
+playwright
+pydub
+audioop-lts; python_version >= "3.13"
+imageio-ffmpeg
+screeninfo
+python-multipart
+websockets
+python-chess
+plyer
+pyinstaller
+# optionnel (dictee locale, hors exe) : faster-whisper
+soundcard
+psutil
+pymupdf
+pdf2docx
+openpyxl
+python-pptx
+# optionnel (OCR de l'éditeur PDF, hors pip) : Tesseract OCR ; (Word/Excel/PowerPoint -> PDF) : LibreOffice
+pillow-heif
+opencv-python-headless<5   # Studio média : floutage (détecteurs Haar : absents d'OpenCV 5)
+pystray   # icône de la zone de notification (Windows)

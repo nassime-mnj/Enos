@@ -1,0 +1,36 @@
+# Déploiement « Blueprint » Render (offre gratuite) : Render > New > Blueprint > ce dépôt. Les secrets sont à saisir dans le tableau de bord (sync: false).
+services:
+  - type: web
+    name: dualpulse
+    runtime: python
+    plan: free
+    rootDir: dualpulse_site
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DP_ADMIN_PATH
+        value: admin-dp
+      - key: DP_REQUIRE_CEO_TOTP
+        value: "1"
+      - key: DP_ADMIN_TOKEN
+        sync: false
+      - key: DP_DATABASE_URL
+        sync: false
+      - key: DP_TOKEN_KEY
+        sync: false
+      - key: DP_MANIFEST_PUBKEY
+        sync: false
+      - key: DP_R2_ENDPOINT
+        sync: false
+      - key: DP_R2_BUCKET
+        sync: false
+      - key: DP_R2_ACCESS_KEY
+        sync: false
+      - key: DP_R2_SECRET_KEY
+        sync: false
+      - key: DP_TRUSTED_PROXIES
+        value: "10.0.0.0/8,172.16.0.0/12,100.64.0.0/10"

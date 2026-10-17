@@ -1,0 +1,43 @@
+/* YOUTUBE UPLOADER */
+#yt[hidden],#yt [hidden]{display:none!important}
+#yt{--a:#ff3b3b;position:fixed;inset:0;z-index:272;display:flex;flex-direction:column;background:#05060af2;backdrop-filter:blur(4px);animation:ytIn .3s ease-out;
+ background-image:linear-gradient(#ff3b3b0b 1px,transparent 1px),linear-gradient(90deg,#ff3b3b0b 1px,transparent 1px);background-size:36px 36px}
+@keyframes ytIn{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+.yt-top{display:flex;align-items:center;gap:12px;padding:12px 18px;padding-top:calc(12px + env(safe-area-inset-top,0px));border-bottom:1px solid #3a1a1a;background:#0a0506e6;flex-wrap:wrap}
+.yt-top h2{margin:0;margin-right:auto;font:800 18px Consolas,monospace;letter-spacing:4px;color:var(--a);text-shadow:0 0 14px #ff3b3b88}
+.yt-top h2 small{display:block;font:400 11px Consolas,monospace;letter-spacing:1px;color:#a85a5a;text-shadow:none}
+.yt-top .btn{width:auto;margin:0;padding:6px 12px;font-size:13px}
+.yt-chip{font:700 12px Consolas,monospace;letter-spacing:1px;color:#8a8aa8}.yt-chip.on{color:#4dff9a}
+#yt-wrap{flex:1;min-height:0;overflow-y:auto;width:100%;max-width:760px;margin:0 auto;padding:22px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+.yt-warn{padding:14px 16px;border:1px solid #ff9a3b;background:#1a0f05cc;color:#ffc58a;font-size:13px;line-height:1.55}
+.yt-warn ol{margin:8px 0 12px 18px;padding:0}.yt-warn code{color:#fff;background:#000;padding:1px 5px}
+.yt-warn .btn{width:auto;margin:4px 6px 0 0}
+#yt-form{display:flex;flex-direction:column;gap:16px}
+.yt-field label{display:flex;justify-content:space-between;margin-bottom:6px;font:700 11px Consolas,monospace;letter-spacing:3px;color:#a85a5a}
+.yt-field label em{font-style:normal;letter-spacing:1px;color:#6c6c88}
+.yt-field input[type=text],.yt-field select{width:100%;box-sizing:border-box;padding:11px 12px;border:2px solid #3a1a1a;background:#000;color:#fff;font:15px Consolas,monospace;outline:0;transition:border-color .2s}
+.yt-field input:focus,.yt-field select:focus{border-color:var(--a)}
+.yt-pickrow{display:flex;gap:12px;align-items:stretch;flex-wrap:wrap}
+.yt-pickrow .btn{width:auto;margin:0;flex:1 1 230px;text-align:left}.yt-pickrow .btn small{display:block;margin-top:3px;opacity:.7;font-size:11px}
+.yt-file{flex:2 1 240px;min-width:0;padding:8px 12px;border:2px dashed #3a1a1a;display:flex;flex-direction:column;justify-content:center}
+.yt-file b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffd1d1}.yt-file small{color:#a85a5a}
+.yt-kids{font-size:11px;color:#6c6c88}
+.yt-err{padding:7px 10px;border-left:3px solid var(--a);background:#2a0808;color:#ff9a9a;font-size:13px;margin-top:6px}
+#yt-go{background:linear-gradient(90deg,#b01212,#ff3b3b);color:#fff;border-color:#ff3b3b}
+#yt-go:hover{box-shadow:0 0 24px #ff3b3b66}
+.yt-bar{height:16px;border:2px solid #3a1a1a;background:#000;overflow:hidden}
+.yt-bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(115deg,#ff3b3b 0 10px,#c42424 10px 20px);transition:width .4s}
+#yt-prog[data-phase=done] .yt-bar i{background:#4dff9a}
+#yt-prog[data-phase=error] .yt-bar i,#yt-prog[data-phase=cancelled] .yt-bar i{background:#6c6c88}
+.yt-pct{display:flex;gap:14px;align-items:baseline;margin-top:6px}.yt-pct b{font:800 22px Consolas,monospace;color:#fff}.yt-pct span{color:#a85a5a;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.yt-done{padding:16px;border:2px solid #4dff9a;background:#04140ccc;text-align:center}
+.yt-done b{display:block;letter-spacing:4px;color:#4dff9a;margin-bottom:6px}.yt-done a{color:#fff;word-break:break-all}.yt-done #yt-note{margin-top:10px;color:#ffc58a;font-size:12px}
+#yt-log{margin:0;padding:10px 12px;max-height:200px;overflow:auto;border:1px solid #2a1a1a;background:#000;color:#8a8aa8;font:12px/1.5 Consolas,monospace;white-space:pre-wrap}
+@media (max-width:768px){#yt-wrap{padding:16px}}
+
+#yt .yt-conn{background:linear-gradient(90deg,#b01212,#ff3b3b);color:#fff;border-color:#ff3b3b;font-weight:700;letter-spacing:1px}
+#yt .yt-conn:hover:not(:disabled){box-shadow:0 0 18px #ff3b3b88}
+#yt .yt-conn.on{background:#04140c;border-color:#4dff9a;color:#4dff9a}
+#yt .yt-conn:disabled{cursor:default;opacity:.9}
+
+.yt-warn p{margin:6px 0 10px}.yt-adv{margin-top:8px;font-size:12px;color:#a85a5a}.yt-adv summary{cursor:pointer}.yt-adv .btn{margin-top:8px}

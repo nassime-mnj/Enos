@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>E.N.O.S.</title>
+<style>
+html,body{margin:0;height:100%;background:#000;color:#ff1a2e;font:16px/1.5 Consolas,"Courier New",monospace}
+body{display:grid;place-items:center;padding:16px}
+.box{width:min(380px,100%);border:2px solid #5a0b14;padding:22px;box-shadow:0 0 24px #ff1a2e22;background:#000000cc}
+h1{margin:0 0 6px;font-size:22px;letter-spacing:3px;text-shadow:0 0 10px #ff1a2e}
+p{color:#8a0b1c;margin:0 0 16px;font-size:13px}
+input{width:100%;box-sizing:border-box;background:#0a0405;color:#ff1a2e;border:2px solid #5a0b14;padding:12px;font:20px Consolas,monospace;letter-spacing:4px;text-transform:uppercase;outline:0}
+input:focus{border-color:#ff1a2e}
+button{margin-top:12px;width:100%;padding:12px;background:#000;color:#ff1a2e;border:2px solid #5a0b14;font:700 16px Consolas,monospace;cursor:pointer}
+button:active{background:#ff1a2e;color:#000}
+#err{color:#ff8a3d;min-height:22px;margin-top:10px;font-size:14px}
+#splash{text-align:center;font-size:26px;letter-spacing:6px;text-shadow:0 0 14px #ff1a2e;animation:p 1.2s ease-in-out infinite}
+@keyframes p{50%{opacity:.35}}
+[hidden]{display:none!important}
+</style></head><body>
+<!-- 1) appareil connu (jeton dans le localStorage) : écran noir « E.N.O.S. » le temps de rétablir la session, puis le chat -->
+<div id="splash" hidden>E.N.O.S.</div>
+<!-- 2) appareil inconnu : code PIN, saisi UNE seule fois -->
+<form class="box" id="f" hidden><h1>E.N.O.S.</h1><p>Première connexion de cet appareil — entrez le code affiché sur le PC. Il ne sera plus jamais demandé.</p>
+<input id="c" autocomplete="off" autocapitalize="characters" inputmode="text" placeholder="CODE">
+<button>CONNEXION</button><div id="err"></div>
+<a href="/nasko.apk" id="apk" style="display:block;margin-top:18px;text-align:center;color:#c4152a;font-size:12px;letter-spacing:2px">⬇ INSTALLER L'APPLICATION ANDROID <span id="apkv"></span></a></form>
+<script>
+const KEY = "nasko_device";
+const $ = (id) => document.getElementById(id);
+const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+function showForm() { $("splash").hidden = true; $("f").hidden = false; $("c").focus(); }
+(async () => {
+  let t = null;
+  try { t = localStorage.getItem(KEY); } catch (e) {}
+  if (!t) return showForm();
+  $("splash").hidden = false;
+  try {
+    const r = await post("/login-token", { token: t });
+    if (r.ok) return location.replace("/");                    // cookie rétabli -> direct sur le chat
+    if (r.status === 403) { try { localStorage.removeItem(KEY); } catch (e) {} }   // appareil révoqué : on l'oublie
+  } catch (e) {}
+  showForm();
+})();
+$("f").onsubmit = async (e) => {
+  e.preventDefault();
+  const r = await post("/login", { code: $("c").value });
+  if (r.ok) {
+    const d = await r.json();
+    try { localStorage.setItem(KEY, d.token); } catch (x) {}   // jeton permanent de l'appareil de confiance
+    location.replace("/");
+  } else { let d = "Erreur"; try { d = (await r.json()).detail; } catch (x) {} $("err").textContent = d; }
+};
+fetch("/api/app/version").then(r => r.ok ? r.json() : null).then(v => { if (v) $("apkv").textContent = "(v" + v.versionName + ")"; else $("apk").hidden = true; }).catch(() => {});
+</script></body></html>

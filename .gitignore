@@ -1,0 +1,48 @@
+# secrets / config locale
+nasko_config.json
+enos_profiles.json
+*.key
+*.pem
+.env
+# donnees utilisateur
+data/
+Stockage/
+archive/
+PourClaude/
+# SÉCURITÉ : clé de signature de l'APK et son mot de passe (ne jamais versionner)
+android/signing/
+*.jks
+*.keystore
+mot_de_passe*.txt
+# binaires / builds
+*.exe
+*.apk
+*.apk.idsig
+*.apk.json
+build_tmp/
+dist/
+__pycache__/
+*.pyc
+*.log
+*.part
+# medias lourds
+voix/
+Audio/
+Audionew/
+Compression/
+Editeur PDF/
+Studio média/
+Notes de frais/
+Traitement d'image/
+*.jpg
+
+# builds distribuables (build_release.py)
+release/
+
+# Launcher (Tauri)
+launcher/target/
+launcher/src-tauri/gen/
+
+# captures des tests
+launcher/tests/e2e/*.png
+android/tests/*.png

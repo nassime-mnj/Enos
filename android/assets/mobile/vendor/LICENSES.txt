@@ -1,0 +1,4 @@
+pdf-lib 1.17.1 — MIT License — https://github.com/Hopding/pdf-lib (© Andrew Dillon)
+pdf.js (pdfjs-dist) 3.11.174 — Apache License 2.0 — https://github.com/mozilla/pdf.js (© Mozilla and contributors)
+Ces fichiers sont embarqués tels quels (aucun chargement réseau : l'application n'a pas de permission de connexion depuis les pages).
+CodeMirror 6 (codemirror, @codemirror/*, @lezer/*) — MIT License — https://codemirror.net (© Marijn Haverbeke et contributeurs) — empaqueté en vendor/codemirror.min.js (source : android/vendor_src)

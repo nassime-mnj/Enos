@@ -1,0 +1,25 @@
+/* Appairage du téléphone — Coreboard (variables locales, indépendant du thème actif) */
+#pr{--red:var(--ac);--red2:var(--ac2);--line:#26262b;--muted:#8b8b94;--ok:#3ddc97;--amber:#f5a524;position:fixed;inset:0;z-index:420;display:grid;place-items:center;padding:20px;box-sizing:border-box;
+  background:#000000c8;backdrop-filter:blur(8px);font-family:Rajdhani,"Segoe UI",system-ui,sans-serif;color:#ececef;animation:prIn .28s cubic-bezier(.2,.9,.2,1)}
+#pr.out{animation:prOut .2s ease-in forwards}@keyframes prIn{from{opacity:0}}@keyframes prOut{to{opacity:0}}
+.pr-card{position:relative;width:min(820px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:32px 36px;border-radius:20px;border:1px solid var(--line);
+  background:radial-gradient(ellipse 60% 100% at 100% 0%,color-mix(in srgb,var(--acd) 33%,transparent),transparent 70%),linear-gradient(165deg,#151518,#0c0c0e);box-shadow:0 30px 90px #000d,0 0 60px color-mix(in srgb,var(--ac) 10%,transparent);animation:prUp .4s cubic-bezier(.2,.9,.25,1)}
+@keyframes prUp{from{opacity:0;transform:translateY(24px) scale(.97)}}
+.pr-x{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#131316;color:#ececef;font-size:16px;cursor:pointer;transition:.2s}.pr-x:hover{border-color:var(--red);rotate:90deg}
+.pr-k{font:700 12px Rajdhani;letter-spacing:3px;color:var(--red2)}
+html.os #pr h2,#pr h2{margin:8px 0 20px;font:400 18px "CB Pixel","Press Start 2P","Silkscreen",Consolas,monospace!important;letter-spacing:2px;text-transform:uppercase}
+.pr-grid{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:center}
+.pr-qr{padding:14px;border-radius:16px;background:#fff;box-shadow:0 0 40px color-mix(in srgb,var(--ac) 20%,transparent)}.pr-qr img{display:block;width:260px;height:260px}.pr-url{width:260px;word-break:break-all;color:#000;font:12px monospace}
+.pr-steps ol{margin:0 0 14px;padding-left:20px;color:#c4c4cc;font-size:17px;line-height:1.5}.pr-steps li{margin-bottom:6px}.pr-steps b{color:#fff}
+html.os #pr .pr-code,#pr .pr-code{display:inline-block;padding:14px 22px;border-radius:14px;border:1px solid color-mix(in srgb,var(--ac) 22%,#0b0b0d);background:#1c0b10;font:400 26px "CB Pixel","Press Start 2P",Consolas,monospace!important;letter-spacing:5px;color:#fff;user-select:all;transition:.3s}
+.pr-code.done{opacity:.35;filter:grayscale(1)}
+.pr-state{display:flex;align-items:center;gap:10px;margin-top:18px;font-weight:700;font-size:16px;color:var(--muted)}
+.pr-state i,.pr-wait i{width:10px;height:10px;border-radius:50%;background:var(--amber);animation:prBl 1s infinite;flex:none}
+.pr-state.go i{background:#9ad1ff}.pr-state.ok{color:var(--ok)}.pr-state.ok i{background:var(--ok);animation:none;box-shadow:0 0 12px var(--ok)}.pr-state.bad{color:#ff8a99}.pr-state.bad i{background:var(--red);animation:none}
+@keyframes prBl{50%{opacity:.3}}
+.pr-wait{display:flex;align-items:center;gap:12px;padding:40px 0;color:var(--muted);font-size:17px}
+.pr-notes{margin:20px 0 0;padding:12px 16px 12px 32px;border-radius:12px;border:1px solid var(--line);background:#0c0c0f;color:#9a9aa4;font-size:14px;line-height:1.5}
+.pr-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px;color:#6c6c76;font-size:13.5px}
+.pr-b{margin-left:auto;height:38px;padding:0 16px;border-radius:11px;border:1px solid var(--line);background:#131316;color:#ececef;font:700 12px Rajdhani;letter-spacing:1.5px;cursor:pointer;transition:.2s}.pr-b+.pr-b{margin-left:0}.pr-b:hover{border-color:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 18%,transparent)}
+.pr-err{padding:16px;border-radius:12px;border:1px solid color-mix(in srgb,var(--ac) 22%,#0b0b0d);background:color-mix(in srgb,var(--ac) 14%,#0b0b0d);color:var(--ac-lt)}
+@media (max-width:760px){.pr-grid{grid-template-columns:1fr;justify-items:center}.pr-card{padding:24px 20px}}
