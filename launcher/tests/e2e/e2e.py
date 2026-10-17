@@ -31,7 +31,7 @@ with sync_playwright() as pw:
     # ---- connexion : erreurs
     login(pg, "ceo@dualpulse.test", "mauvais-mot-de-passe-1")
     pg.wait_for_selector("#lg-err:not([hidden])")
-    check("incorrects" in pg.inner_text("#lg-err").lower(), "mauvais mot de passe : message d'erreur")
+    check("incorrect" in pg.inner_text("#lg-err").lower(), "mauvais mot de passe : message d'erreur")
     pg.click("#tab-register"); pg.wait_for_selector("#lg-invite")
     pg.fill("#lg-invite", "DP-inventé"); pg.fill("#lg-email", "intrus@x.fr"); pg.fill("#lg-pw", PW); pg.click("#lg-go")
     pg.wait_for_selector("#lg-err:not([hidden])")
@@ -39,7 +39,7 @@ with sync_playwright() as pw:
     # ---- serveur injoignable
     pg.evaluate("localStorage.setItem('dp_server','http://127.0.0.1:9')"); pg.reload(); pg.wait_for_selector("#lg-form")
     login(pg, "ceo@dualpulse.test"); pg.wait_for_selector("#lg-err:not([hidden])")
-    check("injoignable" in pg.inner_text("#lg-err").lower(), "serveur injoignable : message clair")
+    check("cannot reach" in pg.inner_text("#lg-err").lower(), "serveur injoignable : message clair")
     pg.evaluate("localStorage.setItem('dp_server','http://127.0.0.1:8800')"); pg.reload(); pg.wait_for_selector("#lg-form")
 
     # ---- CEO
@@ -53,7 +53,7 @@ with sync_playwright() as pw:
     pg.click('[data-nav="software"]'); pg.wait_for_selector("#view-software")
     check("CEO" in pg.inner_text("#enos-channel"), "CEO : canal CEO")
     check("3.3.0" in pg.inner_text("#enos-latest"), "CEO : dernière version 3.3.0")
-    check(pg.inner_text("#enos-go") == "INSTALLER", "bouton « Installer » (rien d'installé)")
+    check(pg.inner_text("#enos-go") == "INSTALL", "bouton « Install » (rien d'installé)")
     check("Notes de frais" in pg.inner_text("#enos-notes"), "notes de version affichées")
     pg.screenshot(path="lc_software.png")
     n0 = len(reqs)
@@ -63,7 +63,7 @@ with sync_playwright() as pw:
     print("   requêtes:", [re.sub(r'/blob/.*', '/blob/…', u) for u in dl])
     check(any("/download/enos/ceo/3.3.0/0" in u for u in dl), "télécharge le build CEO 3.3.0")
     check(not any("/enos/stable" in u or "/enos/dev" in u for u in dl), "aucun autre canal demandé")
-    check(pg.inner_text("#enos-go") == "LANCER", "après installation : bouton « Lancer »")
+    check(pg.inner_text("#enos-go") == "LAUNCH", "après installation : bouton « Launch »")
     pg.screenshot(path="lc_installed.png")
     # ---- jeux : Coming Soon, jamais de bouton Jouer
     pg.click('[data-nav="games"]'); pg.wait_for_selector("#terna-hero")
@@ -71,9 +71,9 @@ with sync_playwright() as pw:
     check("COMING SOON" in txt and "TERNA" in txt, "TERNA : « Coming Soon »")
     check(not re.search(r"\bjouer\b|\bplay\b", txt, re.I), "TERNA : aucun bouton « Jouer »")
     check(pg.locator("#wish-email").count() == 1, "liste de souhaits proposée")
-    check(pg.locator("#terna-alpha").count() == 1 and not re.search(r"\bjouer\b", pg.inner_text("#terna-alpha"), re.I), "CEO : carte « accès équipe » pour l'alpha (jamais de bouton Jouer)")
+    check(pg.locator("#terna-alpha").count() == 1 and not re.search(r"\b(jouer|play)\b", pg.inner_text("#terna-alpha"), re.I), "CEO : carte « accès équipe » pour l'alpha (jamais de bouton Jouer)")
     pg.fill("#wish-email", "joueur@example.com"); pg.click("#wish-go"); pg.wait_for_selector("#wish-msg.ok-msg")
-    check("Merci" in pg.inner_text("#wish-msg"), "inscription à la liste de souhaits")
+    check("Thank you" in pg.inner_text("#wish-msg"), "inscription à la liste de souhaits")
     pg.screenshot(path="lc_games.png")
     # ---- compte CEO : invitations
     pg.click('[data-nav="account"]'); pg.wait_for_selector("#acc-invites")

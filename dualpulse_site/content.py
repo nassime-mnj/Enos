@@ -16,17 +16,13 @@ LANGUE : tout le texte public est en anglais (marché international). Ce fichier
     ROADMAP « Plus tard »     date de sortie
     (le texte « A_COMPLETER » est remplacé par « to be announced » à l'affichage ; il n'apparaît jamais tel quel sur le site)
 
-À VÉRIFIER — L'IA ANTAGONISTE E.N.O.S. (information potentiellement sensible)
-    Le site évoque publiquement E.N.O.S. comme une présence mystérieuse qui veille sur les ruines, sans aucun détail :
-      - dans FEATURES (4e carte « Un adversaire qui apprend »),
-      - dans la base de connaissances de l'assistant (entrée « e.n.o.s »).
-    Ce sont des textes que j'ai rédigés d'après votre description (« E.N.O.S. est l'IA antagoniste principale du jeu ») ; je ne connais pas
-    l'histoire réelle. Relisez-les, corrigez-les, ou masquez-les d'un coup : mettez SHOW_ENOS_LORE = False ci-dessous.
-    ⚠ Le nom E.N.O.S. est aussi celui de votre outil développeur : le citer publiquement ne révèle pas l'outil, mais décidez-en en connaissance de cause.
+E.N.O.S. : SHOW_ENOS_LORE = False (réglage actuel) -> AUCUNE mention publique d'E.N.O.S. (pages, galerie, assistant : une question sur E.N.O.S. reçoit
+    la réponse de repli, sans rien révéler). Mettre True réintroduit une phrase de lore dans la carte « A world left running » et une réponse de l'assistant.
+    ⚠ Le nom E.N.O.S. est aussi celui de l'outil développeur : à ne citer publiquement qu'en connaissance de cause.
 """
 
-# True : le site parle d'E.N.O.S. comme antagoniste du jeu (textes à VÉRIFIER, voir plus haut). False : aucune mention nulle part (page + assistant).
-SHOW_ENOS_LORE = True
+# True : le site évoque E.N.O.S. (IA du jeu). False (actuel) : AUCUNE mention publique, ni sur les pages ni dans l'assistant. Les textes concernés sont repérés plus bas.
+SHOW_ENOS_LORE = False
 
 STUDIO = {
     "name": "Dual Pulse",
@@ -57,7 +53,7 @@ FEATURES = [
     ("Tight controls", "Variable-height jumps, double jump, wall jump, an invincible roll and pogo attacks, all tuned frame by frame so the character does what you meant."),
     ("Punishing but fair combat", "Enemies telegraph their attacks and timing windows stay consistent, so getting better comes from learning the fight, not from luck."),
     ("Deep replayability", "Hand-built room pieces are reassembled on every run, which keeps each attempt different without giving up careful level design."),
-    ("A world left running", "Ruined facilities and machines still following orders nobody gives anymore. An artificial intelligence called E.N.O.S. rules over them. More on that later."),   # lore volontairement léger
+    ("A world left running", "Ruined facilities and machines still following orders nobody gives anymore."),
 ]
 
 VALUES = [
@@ -137,6 +133,7 @@ FALLBACK = ("I don't have an answer for that. I can help with: {topics}. "
 
 
 # ------------------------------------------------------------------ application de SHOW_ENOS_LORE (ne rien modifier ci-dessous)
-if not SHOW_ENOS_LORE:
-    FEATURES = [f for f in FEATURES if "E.N.O.S" not in f[0] + f[1]]
+if SHOW_ENOS_LORE:
+    FEATURES[3] = (FEATURES[3][0], FEATURES[3][1] + " An artificial intelligence called E.N.O.S. rules over them. More on that later.")
+else:
     KB = [e for e in KB if e["id"] != "e.n.o.s"]

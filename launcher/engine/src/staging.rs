@@ -80,10 +80,10 @@ pub fn diff(m: &Manifest, current: &BTreeMap<String, String>) -> (Vec<usize>, Ve
 
 pub fn stage(m: &Manifest, current: &BTreeMap<String, String>, root: &Path, link: &mut dyn FnMut(usize) -> Result<String>, cancel: &AtomicBool, on: &mut dyn FnMut(Overall)) -> Result<Staged> {
     if m.mode != MODE_FILES {
-        return Err(Error::Manifest("staging : seul le mode « files » est pris en charge".into()));
+        return Err(Error::Manifest("staging: only the \"files\" mode is supported".into()));
     }
     if !valid_product(&m.product) {
-        return Err(Error::Manifest("nom de produit invalide".into()));
+        return Err(Error::Manifest("invalid product name".into()));
     }
     let (idx, removed) = diff(m, current);
     let changed: Vec<String> = idx.iter().map(|&i| m.files[i].path.clone()).collect();
@@ -96,7 +96,7 @@ pub fn stage(m: &Manifest, current: &BTreeMap<String, String>, root: &Path, link
                 on(Overall { done: total, total });
                 return Ok(old);
             }
-            Some(Ordering::Greater) => return Err(Error::Other(format!("une version plus récente ({}) est déjà prête", old.manifest.version))),
+            Some(Ordering::Greater) => return Err(Error::Other(format!("a newer version ({}) is already ready", old.manifest.version))),
             _ => {}
         }
     }

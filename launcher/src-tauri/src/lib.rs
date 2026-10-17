@@ -61,7 +61,7 @@ fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 fn err_text(e: &EngineError) -> (String, bool) {
     match e {
-        EngineError::Http(401) => ("Votre session a expiré. Reconnexion…".into(), true),
+        EngineError::Http(401) => ("Your session has expired. Reconnecting…".into(), true),
         other => (other.to_string(), false),
     }
 }
@@ -117,7 +117,7 @@ fn install_product(app: AppHandle, job: State<'_, Job>, req: InstallReq) -> Resu
     {
         let mut running = job.running.lock().map_err(|_| "verrou".to_string())?;
         if *running {
-            return Err("Une installation est déjà en cours.".into());
+            return Err("An installation is already in progress.".into());
         }
         *running = true;
     }
@@ -134,13 +134,13 @@ fn install_product(app: AppHandle, job: State<'_, Job>, req: InstallReq) -> Resu
             emit("verify", 0, 0);
             let m = manifest::open(&req.manifest, &req.signature, MANIFEST_PUBKEY)?;
             if m.product != req.product || m.channel != req.channel {
-                return Err(EngineError::Manifest("le manifeste ne correspond pas à la demande".into()));
+                return Err(EngineError::Manifest("the manifest does not match the request".into()));
             }
             let server = req.server.trim_end_matches('/').to_string();
             let mut link = |i: usize| -> Result<String, EngineError> {
                 let url = format!("{server}/launcher/v1/download/{}/{}/{}/{i}", m.product, m.channel, m.version);
                 match ureq::get(&url).set("Authorization", &format!("Bearer {}", req.token)).call() {
-                    Ok(r) => r.into_json::<Value>().ok().and_then(|v| v["url"].as_str().map(String::from)).ok_or_else(|| EngineError::Net("réponse de lien invalide".into())),
+                    Ok(r) => r.into_json::<Value>().ok().and_then(|v| v["url"].as_str().map(String::from)).ok_or_else(|| EngineError::Net("invalid link response".into())),
                     Err(ureq::Error::Status(c, _)) => Err(EngineError::Http(c)),
                     Err(e) => Err(EngineError::Net(e.to_string())),
                 }
@@ -193,7 +193,7 @@ fn launch_product(app: AppHandle, product: String, app_id: String, run: String) 
                 let _ = app.emit("update-applied", json!({ "product": product, "version": version, "relaunched": false }));
             }
             Ok(Err(e)) => {
-                let _ = app.emit("update-apply-failed", json!({ "product": product, "message": format!("La mise à jour n'a pas pu être appliquée (l'ancienne version a été conservée) : {e}") }));
+                let _ = app.emit("update-apply-failed", json!({ "product": product, "message": format!("The update could not be applied (the previous version was kept): {e}") }));
             }
             _ => {}
         }
@@ -202,10 +202,10 @@ fn launch_product(app: AppHandle, product: String, app_id: String, run: String) 
     let (dir, exe) = match (launch::locate(&app_id), &saved) {
         (Some(f), s) => (f.dir, s.as_ref().map(|x| x.run.clone()).filter(|r| !r.is_empty()).unwrap_or(run)),
         (None, Some(s)) if !s.dir.is_empty() => (PathBuf::from(&s.dir), if s.run.is_empty() { run } else { s.run.clone() }),
-        _ => return Err("Ce produit n'est pas installé.".into()),
+        _ => return Err("This product is not installed.".into()),
     };
     if !simple_exe(&exe) {
-        return Err("Nom d'exécutable refusé.".into());
+        return Err("Executable name rejected.".into());
     }
     launch::spawn(&dir, &exe).map_err(|e| e.to_string())
 }
@@ -271,22 +271,22 @@ fn ready_json(s: &staging::Staged) -> Value {
 fn stage_update(app: AppHandle, bg: State<'_, Bg>, req: StageReq) -> Result<(), String> {
     let m = manifest::open(&req.manifest, &req.signature, MANIFEST_PUBKEY).map_err(|e| e.to_string())?;
     if m.product != req.product || m.channel != req.channel {
-        return Err("Le manifeste ne correspond pas à la demande.".into());
+        return Err("The manifest does not match the request.".into());
     }
     if m.mode != MODE_FILES {
-        return Err("Ce manifeste n'est pas une mise à jour de fichiers.".into());
+        return Err("This manifest is not a files update.".into());
     }
     if !signals::valid_product(&m.product) {
-        return Err("Nom de produit invalide.".into());
+        return Err("Invalid product name.".into());
     }
     let base = data_dir(&app)?;
     let st = store::Store::new(&base).map_err(|e| e.to_string())?;
-    let inst = resolve_installed(&st, &req.product, &req.app_id, &req.channel, &m.run).ok_or_else(|| "Ce produit n'est pas installé (dossier d'installation inconnu).".to_string())?;
+    let inst = resolve_installed(&st, &req.product, &req.app_id, &req.channel, &m.run).ok_or_else(|| "This product is not installed (installation folder unknown).".to_string())?;
     let root = base.join("staging");
     let sig = signals::Signals::from_env();
     let already = staging::staged(&root, &m.product);
     match updater::plan(Some(&inst), &m, already.as_ref()) {
-        Plan::Nothing => return Err("Aucune mise à jour à préparer : la version installée est à jour.".into()),
+        Plan::Nothing => return Err("No update to prepare: the installed version is up to date.".into()),
         Plan::AlreadyStaged => {
             let s = already.expect("staged");
             updater::announce(&sig, &s).map_err(|e| e.to_string())?;
@@ -299,7 +299,7 @@ fn stage_update(app: AppHandle, bg: State<'_, Bg>, req: StageReq) -> Result<(), 
     {
         let mut running = bg.staging.lock().map_err(|_| "verrou".to_string())?;
         if running.contains_key(&m.product) {
-            return Err("Un téléchargement de mise à jour est déjà en cours.".into());
+            return Err("An update download is already in progress.".into());
         }
         running.insert(m.product.clone(), cancel.clone());
     }
@@ -316,7 +316,7 @@ fn stage_update(app: AppHandle, bg: State<'_, Bg>, req: StageReq) -> Result<(), 
             let mut link = |i: usize| -> Result<String, EngineError> {
                 let url = format!("{server}/launcher/v1/download/{}/{}/{}/{i}", m.product, m.channel, m.version);
                 match ureq::get(&url).set("Authorization", &format!("Bearer {}", req.token)).call() {
-                    Ok(r) => r.into_json::<Value>().ok().and_then(|v| v["url"].as_str().map(String::from)).ok_or_else(|| EngineError::Net("réponse de lien invalide".into())),
+                    Ok(r) => r.into_json::<Value>().ok().and_then(|v| v["url"].as_str().map(String::from)).ok_or_else(|| EngineError::Net("invalid link response".into())),
                     Err(ureq::Error::Status(c, _)) => Err(EngineError::Http(c)),
                     Err(e) => Err(EngineError::Net(e.to_string())),
                 }
@@ -363,7 +363,7 @@ fn staged_info(app: AppHandle, product: String) -> Result<Value, String> {
 #[tauri::command]
 fn discard_staged(app: AppHandle, bg: State<'_, Bg>, product: String) -> Result<(), String> {
     if !signals::valid_product(&product) {
-        return Err("Nom de produit invalide.".into());
+        return Err("Invalid product name.".into());
     }
     if let Some(c) = bg.staging.lock().map_err(|_| "verrou".to_string())?.get(&product) {
         c.store(true, Ordering::Relaxed);
@@ -379,7 +379,7 @@ fn discard_staged(app: AppHandle, bg: State<'_, Bg>, product: String) -> Result<
 async fn apply_update(app: AppHandle, product: String) -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
         if !signals::valid_product(&product) {
-            return Err("Nom de produit invalide.".to_string());
+            return Err("Invalid product name.".to_string());
         }
         let bg = app.state::<Bg>();
         let _guard = bg.apply_lock.lock().map_err(|_| "verrou".to_string())?;
@@ -388,9 +388,9 @@ async fn apply_update(app: AppHandle, product: String) -> Result<Value, String> 
                 let _ = app.emit("update-applied", json!({ "product": product, "version": version, "relaunched": false }));
                 Ok(json!({ "version": version }))
             }
-            Ok(ApplyOutcome::Waiting) => Err("L'application est en cours d'exécution. Fermez-la (ou utilisez « Redémarrer pour appliquer » dans l'application) : le Launcher ne la ferme jamais de force.".into()),
-            Ok(ApplyOutcome::Nothing) => Err("Aucune mise à jour prête pour ce produit.".into()),
-            Err(e) => Err(format!("La mise à jour n'a pas pu être appliquée (l'ancienne version a été conservée) : {e}")),
+            Ok(ApplyOutcome::Waiting) => Err("The application is running. Close it (or use \"Restart to apply\" inside the application): the Launcher never closes it by force.".into()),
+            Ok(ApplyOutcome::Nothing) => Err("No update is ready for this product.".into()),
+            Err(e) => Err(format!("The update could not be applied (the previous version was kept): {e}")),
         }
     })
     .await
@@ -420,7 +420,7 @@ fn watcher_tick(app: &AppHandle) {
             }
             Ok(Ok(_)) => {}
             Ok(Err(e)) => {
-                let _ = app.emit("update-apply-failed", json!({ "product": product, "message": format!("La mise à jour n'a pas pu être appliquée (l'ancienne version a été restaurée) : {e}") }));
+                let _ = app.emit("update-apply-failed", json!({ "product": product, "message": format!("The update could not be applied (the previous version was restored): {e}") }));
             }
             Err(_) => {}
         }
@@ -437,11 +437,11 @@ fn start_watcher(app: AppHandle) {
                 }
                 match apply::recover(Path::new(&inst.dir)) {
                     Ok(true) => {
-                        let _ = app.emit("update-apply-failed", json!({ "product": product, "message": "Une mise à jour précédente a été interrompue : l'ancienne version a été restaurée." }));
+                        let _ = app.emit("update-apply-failed", json!({ "product": product, "message": "A previous update was interrupted: the previous version was restored." }));
                     }
                     Ok(false) => {}
                     Err(e) => {
-                        let _ = app.emit("update-apply-failed", json!({ "product": product, "message": format!("Restauration après une mise à jour interrompue impossible : {e}") }));
+                        let _ = app.emit("update-apply-failed", json!({ "product": product, "message": format!("Could not restore after an interrupted update: {e}") }));
                     }
                 }
             }
@@ -473,8 +473,8 @@ fn ensure_tray(app: &AppHandle, enabled: bool) {
         return;
     }
     let build = || -> tauri::Result<()> {
-        let open = MenuItem::with_id(app, "open", "Ouvrir", true, None::<&str>)?;
-        let quit = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
+        let open = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+        let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
         let menu = Menu::with_items(app, &[&open, &quit])?;
         let mut b = TrayIconBuilder::with_id(ID)
             .tooltip("Dual Pulse Launcher")
@@ -531,5 +531,5 @@ pub fn run() {
             settings_get, settings_set, stage_update, staged_info, discard_staged, apply_update
         ])
         .run(tauri::generate_context!())
-        .expect("erreur au lancement du Launcher");
+        .expect("error while starting the Launcher");
 }

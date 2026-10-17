@@ -4,7 +4,7 @@ const T = window.__TAURI__ || null;
 export const isNative = !!(T && T.core);
 
 export async function invoke(cmd, args) {
-  if (!isNative) throw new Error("commande native indisponible en mode aperçu : " + cmd);
+  if (!isNative) throw new Error("native command unavailable in preview mode: " + cmd);
   return T.core.invoke(cmd, args);
 }
 export async function listen(event, cb) {
@@ -54,15 +54,15 @@ async function previewDownload(req, evt) {
   for (let i = 0; i < m.files.length; i++) {
     const f = m.files[i];
     const r = await fetch(`${req.server.replace(/\/$/, "")}/launcher/v1/download/${m.product}/${m.channel}/${m.version}/${i}`, { headers: { Authorization: "Bearer " + req.token } });
-    if (r.status === 401) throw Object.assign(new Error("Votre session a expiré. Reconnexion…"), { expired: true });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || "Téléchargement refusé (" + r.status + ")");
+    if (r.status === 401) throw Object.assign(new Error("Your session has expired. Reconnecting…"), { expired: true });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || "Download refused (" + r.status + ")");
     const link = (await r.json()).url;
     const resp = await fetch(link);
-    if (!resp.ok) throw new Error("Le fichier n'est pas disponible (" + resp.status + ").");
+    if (!resp.ok) throw new Error("The file is not available (" + resp.status + ").");
     const buf = await resp.arrayBuffer();
-    if (previewCancel) throw Object.assign(new Error("Opération annulée."), { cancelled: true });
+    if (previewCancel) throw Object.assign(new Error("Operation cancelled."), { cancelled: true });
     const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", buf))].map((b) => b.toString(16).padStart(2, "0")).join("");
-    if (hash !== f.sha256 || buf.byteLength !== f.size) throw new Error("Empreinte SHA-256 incorrecte pour " + f.path + " : fichier corrompu ou modifié.");
+    if (hash !== f.sha256 || buf.byteLength !== f.size) throw new Error("SHA-256 checksum mismatch for " + f.path + ": the file is corrupted or has been modified.");
     before += f.size;
     emitLocal(evt + "-progress", { product: req.product, phase: "download", done: before, total });
   }
@@ -109,10 +109,10 @@ export async function stagedInfo(product) { if (isNative) return invoke("staged_
 export async function discardStaged(product) { if (isNative) return invoke("discard_staged", { product }); const all = jget(LSS, {}); delete all[product]; localStorage.setItem(LSS, JSON.stringify(all)); }
 export async function applyUpdate(product) {
   if (isNative) return invoke("apply_update", { product });
-  throw new Error("Application indisponible en mode aperçu (application native requise).");
+  throw new Error("Applying updates is unavailable in preview mode (native app required).");
 }
 export async function cancelInstall() { if (isNative) return invoke("cancel_install"); previewCancel = true; }
 export async function launchProduct(product, appId, run) {
   if (isNative) return invoke("launch_product", { product, appId, run });
-  throw new Error("Lancement indisponible en mode aperçu (application native requise).");
+  throw new Error("Launching is unavailable in preview mode (native app required).");
 }

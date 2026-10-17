@@ -40,48 +40,48 @@ def vkey(v: str):
 def validate(m) -> dict:
     """Contrôle de forme : chemins sûrs (pas de .., pas de chemin absolu), empreintes SHA-256, tailles. Retourne le manifeste nettoyé ou lève ValueError."""
     if not isinstance(m, dict):
-        raise ValueError("manifeste invalide")
+        raise ValueError("invalid manifest")
     product, channel, version = m.get("product"), m.get("channel"), str(m.get("version", ""))
     if product not in PRODUCTS:
-        raise ValueError("produit inconnu")
+        raise ValueError("unknown product")
     if channel not in PRODUCTS[product]["channels"]:
-        raise ValueError("canal inconnu pour ce produit")
+        raise ValueError("unknown channel for this product")
     if not _VER.match(version):
-        raise ValueError("version invalide (ex. 3.2.0)")
+        raise ValueError("invalid version (e.g. 3.2.0)")
     files = m.get("files")
     if not isinstance(files, list) or not files or len(files) > 5000:
-        raise ValueError("liste de fichiers invalide")
+        raise ValueError("invalid file list")
     out = []
     for f in files:
         if not isinstance(f, dict):
-            raise ValueError("fichier invalide")
+            raise ValueError("invalid file")
         path, sha, size, key = f.get("path", ""), f.get("sha256", ""), f.get("size"), f.get("key", "")
         if not isinstance(path, str) or not _SAFE.match(path) or ".." in path.split("/"):
-            raise ValueError(f"chemin refusé : {path!r}")
+            raise ValueError(f"path rejected: {path!r}")
         if not isinstance(sha, str) or not _SHA.match(sha):
-            raise ValueError(f"empreinte SHA-256 invalide pour {path}")
+            raise ValueError(f"invalid SHA-256 checksum for {path}")
         if not isinstance(size, int) or isinstance(size, bool) or size < 0:
-            raise ValueError(f"taille invalide pour {path}")
+            raise ValueError(f"invalid size for {path}")
         if not isinstance(key, str) or not _SAFE.match(key) or ".." in key.split("/"):
-            raise ValueError(f"clé de stockage refusée pour {path}")
+            raise ValueError(f"storage key rejected for {path}")
         out.append({"path": path, "sha256": sha, "size": size, "key": key})
     launch = m.get("launch", "")
     if launch and launch not in {f["path"] for f in out}:
-        raise ValueError("« launch » doit désigner un fichier du manifeste")
+        raise ValueError("\"launch\" must name a file listed in the manifest")
     mode = m.get("mode", "installer") or "installer"
     if mode not in ("installer", "files"):
-        raise ValueError("mode inconnu (installer | files)")
+        raise ValueError("unknown mode (installer | files)")
     run = m.get("run", "") or ""
     if mode == "files":
         # mise à jour par remplacement de fichiers (staging puis application par le Launcher) : « run » = exécutable de l'application, jamais un installeur
         if launch:
-            raise ValueError("« launch » n'a pas de sens en mode files")
+            raise ValueError("\"launch\" makes no sense in files mode")
         if run not in {f["path"] for f in out}:
-            raise ValueError("« run » doit désigner un fichier du manifeste (mode files)")
+            raise ValueError("\"run\" must name a file listed in the manifest (files mode)")
         for f in out:
             low = f["path"].lower()
             if low == "nasko_config.json" or low.startswith(("data/", ".update-")):
-                raise ValueError(f"chemin protégé (données de l'utilisateur) : {f['path']}")
+                raise ValueError(f"protected path (user data): {f['path']}")
     return {"product": product, "channel": channel, "version": version, "released": str(m.get("released", ""))[:10], "notes": str(m.get("notes", ""))[:8000],
             "min_launcher": str(m.get("min_launcher", ""))[:20], "launch": launch, "mode": mode, "run": run, "files": out}
 

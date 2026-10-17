@@ -80,20 +80,20 @@ def user_by_email(email):
 def _norm_email(email):
     email = (email or "").strip()
     if not _EMAIL.match(email):
-        raise ValueError("Adresse e-mail invalide.")
+        raise ValueError("Invalid email address.")
     return email.lower()
 
 
 def create_user(email, password, role, name="", invited_by=None):
     email = _norm_email(email)
     if role not in accounts.ROLES:
-        raise ValueError("Rôle inconnu.")
+        raise ValueError("Unknown role.")
     accounts.check_password(password, email)
     h = accounts.hash_password(password)
     with db._lock:
         c = _c()
         if c.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
-            raise ValueError("Ce compte existe déjà.")
+            raise ValueError("This account already exists.")
         cur = c.execute("INSERT INTO users(email,name,pw_hash,role,created_at,invited_by) VALUES(?,?,?,?,?,?)", (email, (name or "").strip()[:60], h, role, now(), invited_by))
         c.commit()
         return cur.lastrowid
@@ -107,7 +107,7 @@ def has_ceo():
 def bootstrap_ceo(email, password):
     """Seul moyen de créer un CEO (jeton d'administration du serveur). Refusé dès qu'un CEO existe."""
     if has_ceo():
-        raise AuthError(409, "Un compte CEO existe déjà.")
+        raise AuthError(409, "A CEO account already exists.")
     try:
         return create_user(email, password, "ceo", "CEO")
     except ValueError as e:
@@ -118,14 +118,14 @@ def authenticate(email, password, totp="", ip=""):
     u = user_by_email(email)
     if not u:
         accounts.dummy_verify(password)
-        raise AuthError(401, "Identifiants incorrects.")
+        raise AuthError(401, "Incorrect email or password.")
     if u["locked_until"] > now():
-        raise AuthError(429, "Compte temporairement bloqué après trop d'essais. Réessayez plus tard.")
+        raise AuthError(429, "Account temporarily locked after too many attempts. Please try again later.")
     ok = accounts.verify_password(password, u["pw_hash"])
     counter = None
     if ok and u["totp_enabled"]:
         if not totp:
-            raise AuthError(401, "Code à 6 chiffres requis.", mfa_required=True)
+            raise AuthError(401, "A 6-digit code is required.", mfa_required=True)
         counter = accounts.totp_check(u["totp_secret"], totp, u["totp_last"])
         ok = counter is not None
     if not ok:
@@ -133,9 +133,9 @@ def authenticate(email, password, totp="", ip=""):
             fails = u["fails"] + 1
             _c().execute("UPDATE users SET fails=?, locked_until=? WHERE id=?", (0 if fails >= LOCK_AFTER else fails, now() + LOCK_FOR if fails >= LOCK_AFTER else 0, u["id"]))
             _c().commit()
-        raise AuthError(401, "Identifiants incorrects.")
+        raise AuthError(401, "Incorrect email or password.")
     if not u["active"]:
-        raise AuthError(403, "Ce compte est désactivé.")
+        raise AuthError(403, "This account is disabled.")
     with db._lock:
         _c().execute("UPDATE users SET fails=0, locked_until=0, last_login=?, totp_last=COALESCE(?,totp_last) WHERE id=?", (now(), counter, u["id"]))
         _c().commit()
@@ -161,16 +161,16 @@ def refresh_session(refresh, device="", ip=""):
     with db._lock:
         r = _c().execute("SELECT * FROM refresh_tokens WHERE token_hash=?", (h,)).fetchone()
         if not r:
-            raise AuthError(401, "Session invalide.")
+            raise AuthError(401, "Invalid session.")
         if r["used"] or r["revoked"]:                       # jeton déjà consommé présenté une 2e fois : vol probable -> toute la famille est révoquée
             _c().execute("UPDATE refresh_tokens SET revoked=1 WHERE family=?", (r["family"],))
             _c().commit()
-            raise AuthError(401, "Session invalide.")
+            raise AuthError(401, "Invalid session.")
         if r["expires_at"] < now():
-            raise AuthError(401, "Session expirée.")
+            raise AuthError(401, "Session expired.")
         u = get_user(r["user_id"])
         if not u or not u["active"]:
-            raise AuthError(401, "Session invalide.")
+            raise AuthError(401, "Invalid session.")
         _c().execute("UPDATE refresh_tokens SET used=1 WHERE id=?", (r["id"],))
         _c().commit()
     return session_for(u, device or r["device"], ip, family=r["family"])
@@ -200,7 +200,7 @@ def user_from_token(token, typ="access"):
         raise AuthError(401, str(e))
     u = get_user(int(claims["sub"]))
     if not u or not u["active"] or u["token_version"] != claims.get("tv"):
-        raise AuthError(401, "Session révoquée.")
+        raise AuthError(401, "Session revoked.")
     return u
 
 
@@ -211,7 +211,7 @@ def attest(u):
 
 def change_password(u, old, new):
     if not accounts.verify_password(old, u["pw_hash"]):
-        raise AuthError(401, "Mot de passe actuel incorrect.")
+        raise AuthError(401, "Current password is incorrect.")
     try:
         accounts.check_password(new, u["email"])
     except ValueError as e:
@@ -234,7 +234,7 @@ def totp_enable(u, code):
     u = get_user(u["id"])
     counter = accounts.totp_check(u["totp_secret"] or "", code, 0) if u["totp_secret"] else None
     if counter is None:
-        raise AuthError(400, "Code incorrect.")
+        raise AuthError(400, "Incorrect code.")
     with db._lock:
         _c().execute("UPDATE users SET totp_enabled=1, totp_last=? WHERE id=?", (counter, u["id"]))
         _c().commit()
@@ -253,19 +253,19 @@ def normalize_code(code):
 
 def _check_custom_code(code, role):
     if not CODE_RE.match(code) or len(code) > CODE_MAX:
-        raise AuthError(400, f"Code invalide : lettres, chiffres, tirets et underscores seulement, {CODE_MAX} caractères au plus, sans commencer ni finir par un tiret.")
+        raise AuthError(400, f"Invalid code: letters, digits, hyphens and underscores only, up to {CODE_MAX} characters, and it cannot start or end with a hyphen.")
     if len(code) < CODE_MIN[role]:
-        raise AuthError(400, f"Code trop court pour le profil {role} : {CODE_MIN[role]} caractères au moins.")
+        raise AuthError(400, f"Code too short for the {role} profile: at least {CODE_MIN[role]} characters.")
     if len(set(code.replace("-", "").replace("_", ""))) < 4:
-        raise AuthError(400, "Code trop simple : varie davantage les caractères.")
+        raise AuthError(400, "Code too simple: use a greater variety of characters.")
 
 
 def create_invite(created_by, role, days=7, note="", code=None):
     """Crée une invitation à usage unique. `code` vide : code aléatoire (DP-…). Sinon : code choisi par le CEO (ex. NASKO-VIP), stocké en MAJUSCULES."""
     if role not in accounts.INVITABLE:
-        raise AuthError(400, "Une invitation ne peut donner que le rôle friends ou dev.")
+        raise AuthError(400, "An invitation can only grant the friends or dev role.")
     if not 1 <= days <= 90:
-        raise AuthError(400, "Durée invalide (1 à 90 jours).")
+        raise AuthError(400, "Invalid duration (1 to 90 days).")
     custom = bool((code or "").strip())
     if custom:
         code = normalize_code(code)
@@ -274,7 +274,7 @@ def create_invite(created_by, role, days=7, note="", code=None):
         code = "DP-" + accounts.new_opaque()[:16]
     with db._lock:
         if custom and _c().execute("SELECT 1 FROM invites WHERE code_hash=?", (accounts.digest(code),)).fetchone():
-            raise AuthError(409, "Ce code existe déjà (même utilisé, révoqué ou expiré) : choisis-en un autre.")
+            raise AuthError(409, "This code already exists (even if used, revoked or expired): please choose another.")
         cur = _c().execute("INSERT INTO invites(code_hash,role,note,created_by,created_at,expires_at) VALUES(?,?,?,?,?,?)",
                            (accounts.digest(code), role, (note or "")[:80], created_by, now(), now() + days * 86400))
         _c().commit()
@@ -292,7 +292,7 @@ def revoke_invite(iid):
         n = _c().execute("UPDATE invites SET revoked=1 WHERE id=? AND used_by IS NULL", (iid,)).rowcount
         _c().commit()
     if not n:
-        raise AuthError(404, "Invitation introuvable ou déjà utilisée.")
+        raise AuthError(404, "Invitation not found or already used.")
 
 
 def register(code, email, password, name=""):
@@ -304,7 +304,7 @@ def register(code, email, password, name=""):
         if not inv:                                                                                              # code choisi : stocké en majuscules, saisie insensible à la casse
             inv = c.execute("SELECT * FROM invites WHERE code_hash=?", (accounts.digest(normalize_code(raw)),)).fetchone()
         if not inv or inv["used_by"] or inv["revoked"] or inv["expires_at"] < now():
-            raise AuthError(400, "Invitation invalide ou expirée.")
+            raise AuthError(400, "Invalid or expired invitation.")
         try:
             uid = create_user(email, password, inv["role"], name, invited_by=inv["created_by"])
         except ValueError as e:
@@ -324,14 +324,14 @@ def list_users():
 def update_user(actor, uid, role=None, active=None):
     t = get_user(uid)
     if not t:
-        raise AuthError(404, "Compte introuvable.")
+        raise AuthError(404, "Account not found.")
     if t["id"] == actor["id"]:
-        raise AuthError(400, "Vous ne pouvez pas modifier votre propre compte ici.")
+        raise AuthError(400, "You cannot modify your own account here.")
     if t["role"] == "ceo":
-        raise AuthError(403, "Un compte CEO ne se modifie pas par l'API.")
+        raise AuthError(403, "A CEO account cannot be modified through the API.")
     if role is not None:
         if role not in accounts.INVITABLE:
-            raise AuthError(400, "Rôle attribuable : friends ou dev.")
+            raise AuthError(400, "Assignable roles: friends or dev.")
         with db._lock:
             _c().execute("UPDATE users SET role=? WHERE id=?", (role, uid))
             _c().commit()
@@ -407,18 +407,18 @@ def catalog(role):
 def publish(manifest, signature):
     pub = manifest_pubkey()
     if pub is None:
-        raise AuthError(503, "Clé publique des manifestes non configurée (DP_MANIFEST_PUBKEY).")
+        raise AuthError(503, "Manifest public key not configured (DP_MANIFEST_PUBKEY).")
     try:
         clean = manifests.validate(manifest)
     except ValueError as e:
         raise AuthError(400, str(e))
     if not manifests.verify(pub, manifest, signature):           # signature calculée sur le manifeste TEL QU'ENVOYÉ : rien n'est réécrit entre la signature et le stockage
-        raise AuthError(400, "Signature du manifeste invalide.")
+        raise AuthError(400, "Invalid manifest signature.")
     with db._lock:
         c = _c()
         rows = c.execute("SELECT version FROM releases WHERE product=? AND channel=?", (clean["product"], clean["channel"])).fetchall()
         if rows and manifests.vkey(clean["version"]) <= max(manifests.vkey(r["version"]) for r in rows):
-            raise AuthError(409, "Version déjà publiée ou plus ancienne que la dernière (protection contre le retour en arrière).")
+            raise AuthError(409, "Version already published or older than the latest (rollback protection).")
         cur = c.execute("INSERT INTO releases(product,channel,version,manifest,signature,published_at) VALUES(?,?,?,?,?,?)",
                         (clean["product"], clean["channel"], clean["version"], json.dumps(manifest, sort_keys=True, ensure_ascii=False), signature, now()))
         c.commit()
@@ -436,14 +436,14 @@ def yank(rid, yanked=True):
         n = _c().execute("UPDATE releases SET yanked=? WHERE id=?", (1 if yanked else 0, rid)).rowcount
         _c().commit()
     if not n:
-        raise AuthError(404, "Version introuvable.")
+        raise AuthError(404, "Version not found.")
 
 
 def release_manifest(role, product, channel, version=None):
     if product not in manifests.PRODUCTS or channel not in manifests.PRODUCTS[product]["channels"]:
-        raise AuthError(404, "Introuvable.")
+        raise AuthError(404, "Not found.")
     if not channel_allowed(role, product, channel):
-        raise AuthError(403, "Accès refusé pour votre profil.")
+        raise AuthError(403, "Access denied for your profile.")
     if version:
         with db._lock:
             r = _c().execute("SELECT * FROM releases WHERE product=? AND channel=? AND version=? AND yanked=0", (product, channel, version)).fetchone()
@@ -451,7 +451,7 @@ def release_manifest(role, product, channel, version=None):
     else:
         rel = latest_release(product, channel)
     if not rel:
-        raise AuthError(404, "Aucune version publiée.")
+        raise AuthError(404, "No version has been published.")
     return rel
 
 
@@ -459,11 +459,11 @@ def download_link(u, product, channel, version, index, ip, base_url=""):
     rel = release_manifest(u["role"], product, channel, version)
     files = rel["manifest"]["files"]
     if not 0 <= index < len(files):
-        raise AuthError(404, "Fichier introuvable.")
+        raise AuthError(404, "File not found.")
     f = files[index]
     url = storage.url_for(signing_key(), f["key"], 300, base_url)
     if not url:
-        raise AuthError(503, "Stockage des binaires non configuré.")
+        raise AuthError(503, "Binary storage is not configured.")
     with db._lock:
         _c().execute("INSERT INTO launcher_downloads(t,user_id,product,channel,version,file,ip) VALUES(?,?,?,?,?,?,?)", (now(), u["id"], product, channel, version, f["path"], str(ip)))
         _c().commit()
@@ -480,7 +480,7 @@ def _clean_news(d, partial=False):
     if "title" in d or not partial:
         t = (d.get("title") or "").strip()
         if not t or len(t) > 120:
-            raise AuthError(400, "Titre requis (120 caractères maximum).")
+            raise AuthError(400, "A title is required (120 characters maximum).")
         out["title"] = t
     if "body" in d:
         out["body"] = (d.get("body") or "").strip()[:600]
@@ -488,15 +488,15 @@ def _clean_news(d, partial=False):
         if k in d:
             v = (d.get(k) or "").strip()
             if v and not _URL.match(v):
-                raise AuthError(400, f"« {k} » doit être une adresse https://.")
+                raise AuthError(400, f"\"{k}\" must be an https:// address.")
             out[k] = v
     if "kind" in d:
         if d["kind"] not in NEWS_KINDS:
-            raise AuthError(400, "Type de bannière inconnu.")
+            raise AuthError(400, "Unknown banner type.")
         out["kind"] = d["kind"]
     if "min_role" in d:
         if d["min_role"] not in ("public",) + accounts.ROLES:
-            raise AuthError(400, "Rôle inconnu.")
+            raise AuthError(400, "Unknown role.")
         out["min_role"] = d["min_role"]
     if "priority" in d:
         out["priority"] = max(-100, min(int(d["priority"] or 0), 100))
@@ -520,12 +520,12 @@ def create_news(d):
 def update_news(nid, d):
     f = _clean_news(d, partial=True)
     if not f:
-        raise AuthError(400, "Rien à modifier.")
+        raise AuthError(400, "Nothing to change.")
     with db._lock:
         n = _c().execute(f"UPDATE news SET {','.join(k + '=?' for k in f)} WHERE id=?", (*f.values(), nid)).rowcount
         _c().commit()
     if not n:
-        raise AuthError(404, "Bannière introuvable.")
+        raise AuthError(404, "Banner not found.")
 
 
 def delete_news(nid):
@@ -533,7 +533,7 @@ def delete_news(nid):
         n = _c().execute("DELETE FROM news WHERE id=?", (nid,)).rowcount
         _c().commit()
     if not n:
-        raise AuthError(404, "Bannière introuvable.")
+        raise AuthError(404, "Banner not found.")
 
 
 def list_news(role, include_all=False):
@@ -579,15 +579,15 @@ _MIME_IMAGE = ("image/png", "image/jpeg", "image/webp", "image/gif")
 def clip_add(uid, kind, content, mime="", device=""):
     if kind == "text":
         if not content or len(content) > CLIP_MAX_TEXT:
-            raise AuthError(400, f"Texte vide ou trop long ({CLIP_MAX_TEXT} caractères maximum).")
+            raise AuthError(400, f"Text is empty or too long ({CLIP_MAX_TEXT} characters maximum).")
         mime = "text/plain"
     elif kind == "image":
         if mime not in _MIME_IMAGE:
-            raise AuthError(400, "Type d'image non pris en charge.")
+            raise AuthError(400, "Unsupported image type.")
         if not content or len(content) > CLIP_MAX_IMAGE or not re.fullmatch(r"[A-Za-z0-9+/=\r\n]+", content):
-            raise AuthError(400, "Image vide, trop lourde (2 Mo maximum) ou mal encodée (base64 attendu).")
+            raise AuthError(400, "Image is empty, too large (2 MB maximum) or badly encoded (base64 expected).")
     else:
-        raise AuthError(400, "Type inconnu (text ou image).")
+        raise AuthError(400, "Unknown type (text or image).")
     with db._lock:
         c = _c()
         cur = c.execute("INSERT INTO clipboard(user_id,device,kind,mime,content,created_at) VALUES(?,?,?,?,?,?)", (uid, (device or "")[:40], kind, mime, content, now()))
@@ -609,7 +609,7 @@ def clip_delete(uid, cid):
         n = _c().execute("DELETE FROM clipboard WHERE id=? AND user_id=?", (cid, uid)).rowcount
         _c().commit()
     if not n:
-        raise AuthError(404, "Élément introuvable.")
+        raise AuthError(404, "Item not found.")
 
 
 _DEVID = re.compile(r"^[A-Za-z0-9_\-]{6,64}$")
@@ -619,11 +619,11 @@ _IP = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
 def device_beat(uid, device_id, name="", platform="android", lan_ips=None, adb_port=0, app_version=""):
     """Le téléphone annonce son nom, ses adresses Wi-Fi et le port ADB sans fil : c'est ce que le PC lit pour se connecter automatiquement (scrcpy)."""
     if not _DEVID.match(device_id or ""):
-        raise AuthError(400, "Identifiant d'appareil invalide.")
+        raise AuthError(400, "Invalid device identifier.")
     ips = [i for i in (lan_ips or []) if isinstance(i, str) and _IP.match(i) and all(0 <= int(x) <= 255 for x in i.split("."))][:6]
     port = int(adb_port or 0)
     if not 0 <= port <= 65535:
-        raise AuthError(400, "Port invalide.")
+        raise AuthError(400, "Invalid port.")
     with db._lock:
         _c().execute("INSERT INTO mobile_devices(user_id,device_id,name,platform,lan_ips,adb_port,app_version,last_seen) VALUES(?,?,?,?,?,?,?,?) "
                      "ON CONFLICT(user_id,device_id) DO UPDATE SET name=excluded.name, platform=excluded.platform, lan_ips=excluded.lan_ips, adb_port=excluded.adb_port, app_version=excluded.app_version, last_seen=excluded.last_seen",
@@ -675,7 +675,7 @@ def mobile_release(u):
 def mobile_version(u):
     rel = mobile_release(u)
     if not rel:
-        raise AuthError(404, "Aucune version mobile publiée.")
+        raise AuthError(404, "No mobile version has been published.")
     m, f = rel["manifest"], rel["manifest"]["files"][0]
     return {"versionCode": int(m.get("version_code") or 0), "versionName": m["version"], "sha256": f["sha256"], "size": f["size"], "notes": m.get("notes", ""), "channel": m["channel"]}
 
@@ -683,7 +683,7 @@ def mobile_version(u):
 def mobile_apk_link(u, ip, base_url=""):
     rel = mobile_release(u)
     if not rel:
-        raise AuthError(404, "Aucune version mobile publiée.")
+        raise AuthError(404, "No mobile version has been published.")
     m = rel["manifest"]
     return download_link(u, "enos-mobile", m["channel"], m["version"], 0, ip, base_url)["url"]
 

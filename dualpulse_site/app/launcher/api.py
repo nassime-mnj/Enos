@@ -21,7 +21,7 @@ def _err(e: service.AuthError):
 
 def _bearer(authorization: str):
     if not authorization.lower().startswith("bearer "):
-        raise service.AuthError(401, "Authentification requise.")
+        raise service.AuthError(401, "Authentication required.")
     return authorization[7:].strip()
 
 
@@ -39,9 +39,9 @@ def require(minimum):
     """Dépendance : rôle minimum (hiérarchie friends < dev < ceo). Le CEO peut en plus être contraint à la double authentification (DP_REQUIRE_CEO_TOTP=1)."""
     def dep(u=Depends(current_user)):
         if not accounts.at_least(u["role"], minimum):
-            raise service.AuthError(403, "Accès refusé pour votre profil.")
+            raise service.AuthError(403, "Access denied for your profile.")
         if minimum == "ceo" and os.environ.get("DP_REQUIRE_CEO_TOTP") == "1" and not u["totp_enabled"]:
-            raise service.AuthError(403, "Activez la double authentification (TOTP) avant d'administrer.", mfa_setup_required=True)
+            raise service.AuthError(403, "Enable two-factor authentication (TOTP) before administering.", mfa_setup_required=True)
         return u
     return dep
 
@@ -146,7 +146,7 @@ def build(admin_guard, admin_path):
     def register(b: Register, request: Request):
         ip = _ip(request)
         if not limits.ok("lreg", ip, 8, per=600):
-            raise service.AuthError(429, "Trop d'essais, réessayez plus tard.")
+            raise service.AuthError(429, "Too many attempts, please try again later.")
         u = service.register(b.invite, b.email, b.password, b.name)
         return service.session_for(u, "", ip)
 
@@ -154,7 +154,7 @@ def build(admin_guard, admin_path):
     def login(b: Login, request: Request):
         ip = _ip(request)
         if not limits.ok("llogin", ip, 12):
-            raise service.AuthError(429, "Trop d'essais, réessayez dans une minute.")
+            raise service.AuthError(429, "Too many attempts, please try again in a minute.")
         u = service.authenticate(b.email, b.password, b.totp, ip)
         return service.session_for(u, b.device, ip)
 
@@ -162,7 +162,7 @@ def build(admin_guard, admin_path):
     def refresh(b: Refresh, request: Request):
         ip = _ip(request)
         if not limits.ok("lref", ip, 60):
-            raise service.AuthError(429, "Trop de requêtes.")
+            raise service.AuthError(429, "Too many requests.")
         return service.refresh_session(b.refresh_token, "", ip)
 
     @r.post(V1 + "/auth/logout")
@@ -228,14 +228,14 @@ def build(admin_guard, admin_path):
     @r.post(V1 + "/users/{uid}/revoke-sessions")
     def user_revoke(uid: int, u=Depends(require("ceo"))):
         if not service.get_user(uid):
-            raise service.AuthError(404, "Compte introuvable.")
+            raise service.AuthError(404, "Account not found.")
         service.revoke_all(uid)
         return {"ok": True}
 
     @r.put(V1 + "/products/terna/status")
     def terna_status(b: Status, u=Depends(require("ceo"))):
         if b.status not in service.TERNA_STATES:
-            raise service.AuthError(400, "État inconnu (wishlist, alpha, released).")
+            raise service.AuthError(400, "Unknown status (wishlist, alpha, released).")
         service.set_setting("terna_status", b.status)
         return {"status": b.status}
 
@@ -243,12 +243,12 @@ def build(admin_guard, admin_path):
     @r.post(V1 + "/mobile/update-token")
     def mobile_token(b: Beat, u=Depends(current_user)):
         if not limits.ok("lupt", u["id"], 10, per=3600):
-            raise service.AuthError(429, "Trop de demandes.")
+            raise service.AuthError(429, "Too many requests.")
         return {"token": service.update_token_create(u["id"], b.device_id), "base": f"/m/", "expires_in": service.UPDATE_TTL}
 
     def _tok_user(token: str, request: Request):
         if not limits.ok("lmob", _ip(request), 120):
-            raise service.AuthError(429, "Trop de requêtes.")
+            raise service.AuthError(429, "Too many requests.")
         u = service.update_token_user(token)
         if not u:
             raise HTTPException(404)                                   # indiscernable d'une page inexistante
@@ -268,7 +268,7 @@ def build(admin_guard, admin_path):
     @r.post(V1 + "/clipboard")
     def clip_new(b: ClipIn, u=Depends(current_user)):
         if not limits.ok("lclip", u["id"], 90):
-            raise service.AuthError(429, "Trop d'envois, réessayez dans une minute.")
+            raise service.AuthError(429, "Too many submissions, please try again in a minute.")
         return {"id": service.clip_add(u["id"], b.kind, b.content, b.mime, b.device)}
 
     @r.get(V1 + "/clipboard")
@@ -293,7 +293,7 @@ def build(admin_guard, admin_path):
     @r.post(V1 + "/agenda/sync")
     def agenda_sync(b: AgendaSync, u=Depends(current_user)):
         if not limits.ok("lagsync", u["id"], 120):
-            raise service.AuthError(429, "Trop de synchronisations, réessayez dans une minute.")
+            raise service.AuthError(429, "Too many syncs, please try again in a minute.")
         tasks, tnow = service.agenda_sync(u["id"], b.tasks, b.since)
         return {"tasks": tasks, "now": tnow}
 
@@ -323,7 +323,7 @@ def build(admin_guard, admin_path):
     @r.post(V1 + "/wishlist")
     def wishlist(b: Wish, request: Request):
         if not limits.ok("lwish", _ip(request), 6, per=600):
-            raise service.AuthError(429, "Trop d'essais, réessayez plus tard.")
+            raise service.AuthError(429, "Too many attempts, please try again later.")
         service.add_wishlist(b.email, _ip(request))
         return {"ok": True}
 
@@ -346,7 +346,7 @@ def build(admin_guard, admin_path):
     def download(product: str, channel: str, version: str, index: int, request: Request, u=Depends(current_user)):
         ip = _ip(request)
         if not limits.ok("ldl", u["id"], 60, per=600):
-            raise service.AuthError(429, "Trop de téléchargements, réessayez dans quelques minutes.")
+            raise service.AuthError(429, "Too many downloads, please try again in a few minutes.")
         return service.download_link(u, product, channel, version, index, ip, str(request.base_url))
 
     @r.get(V1 + "/blob/{token}")

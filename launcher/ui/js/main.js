@@ -33,11 +33,11 @@ const ctx = {
     const c = cmpV(inst.version, p.latest.version);
     return c === -1 || c === null ? "update" : "launch";
   },
-  actionLabel(p) { return { install: "INSTALLER", update: "METTRE À JOUR", launch: "LANCER", busy: "INSTALLATION…", none: "INDISPONIBLE" }[ctx.actionOf(p.id)]; },
-  statusText(p) { const a = ctx.actionOf(p.id); return { install: "Non installé", update: "Mise à jour disponible", launch: "À jour", busy: "Installation en cours", none: "Non disponible" }[a]; },
+  actionLabel(p) { return { install: "INSTALL", update: "UPDATE", launch: "LAUNCH", busy: "INSTALLING…", none: "UNAVAILABLE" }[ctx.actionOf(p.id)]; },
+  statusText(p) { const a = ctx.actionOf(p.id); return { install: "Not installed", update: "Update available", launch: "Up to date", busy: "Installing", none: "Not available" }[a]; },
   go, logout, install, launch, cancel,
   async setSettings(patch) { state.settings = await native.settings.set(patch); scheduleAuto(); if (state.settings.auto_update) autoTick(); return state.settings; },
-  async applyStaged(id) { try { await native.applyUpdate(id); await refreshStaged(); await refreshInstalled(); toast("Mise à jour appliquée.", "ok"); go(state.view); } catch (e) { toast(e.message || String(e), "err"); } },
+  async applyStaged(id) { try { await native.applyUpdate(id); await refreshStaged(); await refreshInstalled(); toast("Update applied.", "ok"); go(state.view); } catch (e) { toast(e.message || String(e), "err"); } },
   async discardStaged(id) { await native.discardStaged(id); await refreshStaged(); go(state.view); },
   async refreshNews() { try { state.news = (await api.news()).items; } catch (e) {} },
   onLeave: (fn) => state.leave.push(fn),
@@ -56,7 +56,7 @@ function paintProgress(id) {
       const pct = p.total ? Math.min(100, Math.round((p.done / p.total) * 100)) : 0;
       const ind = p.phase !== "download" || !p.total;
       fill.classList.toggle("ind", ind); i.style.width = ind ? "" : pct + "%";
-      s.textContent = p.phase === "verify" ? "Vérification de la signature…" : p.phase === "download" ? `Téléchargement ${pct} % · ${bytes(p.done)} / ${bytes(p.total)}` : "Installation… autorisez la fenêtre Windows si elle apparaît.";
+      s.textContent = p.phase === "verify" ? "Verifying signature…" : p.phase === "download" ? `Downloading ${pct}% · ${bytes(p.done)} / ${bytes(p.total)}` : "Installing… allow the Windows prompt if one appears.";
     }
   }
   if (btn) { btn.disabled = !!p.active; const pr = ctx.product(id); if (pr && id !== "terna") btn.textContent = ctx.actionLabel(pr); }
@@ -104,7 +104,7 @@ function scheduleAuto() {
 
 async function install(id) {
   const p = ctx.product(id), m = state.manifests[id];
-  if (!p || !m) return toast("Aucune version disponible pour votre profil.", "err");
+  if (!p || !m) return toast("No version is available for your profile.", "err");
   state.progress[id] = { active: true, phase: "verify", done: 0, total: 0 };
   paintProgress(id);
   try { await native.installProduct({ server: api.session.server, token: api.session.token, product: id, channel: p.channel, manifest: m.manifest, signature: m.signature }); }
@@ -114,7 +114,7 @@ function cancel() { native.cancelInstall().catch(() => {}); }
 
 async function launch(id) {
   const meta = PRODUCTS[id];
-  try { await native.launchProduct(id, meta.app_id || "", meta.run || ""); toast(meta.name + " se lance…", "ok"); }
+  try { await native.launchProduct(id, meta.app_id || "", meta.run || ""); toast("Launching " + meta.name + "…", "ok"); }
   catch (e) { toast(e.message || String(e), "err"); }
 }
 
@@ -122,33 +122,33 @@ async function onNative() {
   await native.listen("stage-progress", (e) => { state.stage[e.product] = { active: true, phase: e.phase, done: e.done, total: e.total }; });
   await native.listen("stage-ready", async (e) => {
     state.stage[e.product] = { active: false }; state.stageRetried[e.product] = false; await refreshStaged();
-    toast((PRODUCTS[e.product] || {}).name + " " + e.version + " est prêt : il s'appliquera au prochain redémarrage.", "ok");
+    toast((PRODUCTS[e.product] || {}).name + " " + e.version + " is ready and will be applied the next time it restarts.", "ok");
     if (["software", "home"].includes(state.view)) go(state.view);
   });
   await native.listen("stage-error", async (e) => {
     state.stage[e.product] = { active: false };
     if (e.token_expired && !state.stageRetried[e.product]) { state.stageRetried[e.product] = true; try { await api.ensureFreshToken(); return autoStage(); } catch (x) { return; } }
     state.stageRetried[e.product] = false;
-    if (!e.cancelled) toast("Mise à jour en arrière-plan : " + e.message, "err");
+    if (!e.cancelled) toast("Background update: " + e.message, "err");
   });
   await native.listen("update-applied", async (e) => {
-    await refreshInstalled(); await refreshStaged(); toast((PRODUCTS[e.product] || {}).name + " a été mis à jour vers " + e.version + ".", "ok");
+    await refreshInstalled(); await refreshStaged(); toast((PRODUCTS[e.product] || {}).name + " was updated to " + e.version + ".", "ok");
     if (["software", "home"].includes(state.view)) go(state.view);
   });
-  await native.listen("update-apply-failed", (e) => toast("Mise à jour non appliquée (ancienne version restaurée) : " + e.message, "err"));
+  await native.listen("update-apply-failed", (e) => toast("Update not applied (previous version restored): " + e.message, "err"));
   await native.listen("install-progress", (e) => { state.progress[e.product] = { active: true, phase: e.phase, done: e.done, total: e.total }; paintProgress(e.product); });
   await native.listen("install-done", async (e) => {
     state.progress[e.product] = { active: false }; state.retried[e.product] = false;
-    await refreshInstalled(); paintProgress(e.product); toast((PRODUCTS[e.product] || {}).name + " " + e.version + " est installé.", "ok"); updateNavDot(); if (["software", "home", "games"].includes(state.view)) go(state.view);
+    await refreshInstalled(); paintProgress(e.product); toast((PRODUCTS[e.product] || {}).name + " " + e.version + " is installed.", "ok"); updateNavDot(); if (["software", "home", "games"].includes(state.view)) go(state.view);
   });
   await native.listen("install-error", async (e) => {
     state.progress[e.product] = { active: false }; paintProgress(e.product);
     if (e.token_expired && !state.retried[e.product]) {                       // jeton expiré pendant un long téléchargement : on le renouvelle et on reprend (le .part est conservé)
       state.retried[e.product] = true;
-      try { await api.ensureFreshToken(); return install(e.product); } catch (x) { return toast("Session expirée : reconnectez-vous.", "err"); }
+      try { await api.ensureFreshToken(); return install(e.product); } catch (x) { return toast("Session expired: please sign in again.", "err"); }
     }
     state.retried[e.product] = false;
-    if (!e.cancelled) toast(e.message, "err"); else toast("Installation annulée.");
+    if (!e.cancelled) toast(e.message, "err"); else toast("Installation cancelled.");
   });
 }
 
@@ -193,7 +193,7 @@ function shell() {
   const nav = (id, label, icon) => h("button", { class: "nav" + (id === state.view ? " on" : ""), dataset: { nav: id }, type: "button", onclick: () => go(id) },
     (() => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = ICON[icon]; return s; })(), h("span", null, label), id === "software" ? h("i", { class: "dot", hidden: true }) : null);
   clear(root).append(h("div", { id: "shell" },
-    h("nav", { id: "side", "aria-label": "Navigation" }, nav("home", "ACCUEIL", "home"), nav("software", "LOGICIELS", "box"), nav("games", "JEUX", "game"), nav("account", "COMPTE", "user"), h("span", { class: "sp" }),
+    h("nav", { id: "side", "aria-label": "Navigation" }, nav("home", "HOME", "home"), nav("software", "SOFTWARE", "box"), nav("games", "GAMES", "game"), nav("account", "ACCOUNT", "user"), h("span", { class: "sp" }),
       h("div", { class: "me", id: "me" }, h("div", { class: "av" }, (u.name || u.email)[0].toUpperCase()), h("div", null, h("b", null, u.name || u.email), h("small", null, ({ ceo: "CEO", dev: "Dev", friends: "Friends" })[u.role])))),
     h("main", { id: "main" })));
 }

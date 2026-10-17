@@ -20,12 +20,12 @@ def at_least(role, minimum) -> bool:
 
 def check_password(pw: str, email: str = ""):
     if len(pw) < PW_MIN:
-        raise ValueError(f"Le mot de passe doit contenir au moins {PW_MIN} caractères.")
+        raise ValueError(f"The password must be at least {PW_MIN} characters long.")
     if len(pw) > 200:
-        raise ValueError("Mot de passe trop long.")
+        raise ValueError("Password too long.")
     low = pw.lower()
     if low in _COMMON or (email and low == email.lower()) or len(set(pw)) < 4:
-        raise ValueError("Mot de passe trop prévisible.")
+        raise ValueError("Password too easy to guess.")
 
 
 _N, _R, _P = 2 ** 15, 8, 1

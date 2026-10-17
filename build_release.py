@@ -9,8 +9,12 @@ PRINCIPE — on ne PURGE JAMAIS ton dossier de travail : on construit une COPIE 
 Ton historique, tes audios, tes logs, tes clés restent intacts chez toi ; ce qui n'est pas dans la liste blanche n'entre simplement jamais dans la version de l'ami.
 
 Étapes : 1) clé de signature OTA (créée une fois)  2) copie en liste blanche  3) nasko_config_template.json + profil vierge
-         4) recherche de fuites (tes vraies clés / liens / chemins cherchés dans la copie)  5) PyInstaller, avec EXACTEMENT les options de build.bat
-         6) Inno Setup (si installé)  7) manifeste OTA signé (Ed25519) pour la mise à jour en un clic.
+         4) recherche de fuites (tes vraies clés / liens / chemins cherchés dans la copie)  5) PyInstaller, avec EXACTEMENT les options de build.bat,
+         puis le Dual Pulse Launcher (Tauri : `cargo tauri build --no-bundle`, clé publique des manifestes synchronisée sur ota_pubkey.txt)
+         6) Inno Setup (si installé) : l'installeur EMBARQUE le Launcher et ses raccourcis pointent vers lui  7) manifeste OTA signé (Ed25519).
+
+Prérequis du Launcher (Windows) : Rust (rustup) + `cargo install tauri-cli --version "^2"` + WebView2. Sans eux le build s'arrête : un installeur sans Launcher serait
+livré sans son point d'entrée (connexion par invitation). `--skip-launcher` permet un build de développement SANS Launcher (raccourcis vers ENOS.exe), avec avertissement.
 """
 import argparse
 import base64
@@ -30,6 +34,11 @@ REL = ROOT / "release"
 STAGE = REL / "stage"                       # redéfinis par édition dans main() : release\stage-<édition>, release\dist-<édition> (jamais mélangés)
 DIST = REL / "dist"
 OUT = REL / "installer"
+LAUNCHER = ROOT / "launcher"                # sources du Dual Pulse Launcher (workspace Cargo : engine/ + src-tauri/)
+LAUNCHER_TARGET = REL / "launcher-target"   # dossier de compilation Cargo, hors des sources (jamais mélangé à ton dossier de travail)
+LAUNCHER_OUT = REL / "launcher-bin"         # DualPulseLauncher.exe prêt à embarquer (volontairement HORS de dist-<édition> : jamais dans les manifestes « files » d'E.N.O.S.)
+LAUNCHER_BIN = "dual-pulse-launcher.exe"    # nom produit par Cargo (package « dual-pulse-launcher »)
+LAUNCHER_FILE = "DualPulseLauncher.exe"     # nom installé (voir installer/enos.iss)
 KEYS = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "ENOS-release" / "keys"    # HORS du dossier du projet (OneDrive/Git) : clé privée de signature, à SAUVEGARDER, jamais publiée ni régénérée
 sys.path.insert(0, str(ROOT))
 
@@ -220,6 +229,69 @@ def build_exe():
     shutil.copy2(STAGE / "logo.ico", DIST / "logo.ico")
 
 
+# ---------------------------------------------------------------- 5b. Dual Pulse Launcher (Tauri)
+def sync_launcher_pubkey():
+    """La clé publique des manifestes est COMPILÉE dans le Launcher (include_str! de src-tauri/manifest_pubkey.txt) : un manifeste non signé par elle est refusé.
+    Elle doit donc être exactement ota_pubkey.txt (la clé qui signe les manifestes de cette version) ; sinon le Launcher refuserait toutes nos mises à jour."""
+    src, dst = ROOT / "ota_pubkey.txt", LAUNCHER / "src-tauri" / "manifest_pubkey.txt"
+    key = src.read_text(encoding="ascii").strip()
+    if not dst.exists() or dst.read_text(encoding="ascii").strip() != key:
+        dst.write_text(key + "\n", encoding="ascii")
+        say("  Clé publique des manifestes du Launcher synchronisée sur ota_pubkey.txt (elle était différente).")
+    return key
+
+
+def launcher_env():
+    """Environnement de compilation : dossier Cargo dédié + chemins locaux masqués dans le binaire (sinon `C:\\Users\\<toi>\\.cargo\\registry\\…` se retrouve dans les
+    messages d'erreur Rust, ce que la recherche de fuites refuserait)."""
+    env = dict(os.environ)
+    env["CARGO_TARGET_DIR"] = str(LAUNCHER_TARGET)
+    remaps = [(str(Path.home()), "~"), (str(LAUNCHER), "launcher"), (str(ROOT), "enos")]
+    flags = " ".join(f"--remap-path-prefix={a}={b}" for a, b in remaps if a)
+    env["RUSTFLAGS"] = (env.get("RUSTFLAGS", "") + " " + flags).strip()
+    return env
+
+
+def build_launcher():
+    """Compile le Launcher (`cargo tauri build --no-bundle` : l'exécutable seul, l'installeur Inno se charge de l'embarquer) et retourne son chemin.
+    S'arrête avec un message clair si l'outillage manque : on ne produit JAMAIS en silence un installeur sans Launcher."""
+    if sys.platform != "win32":
+        die("le Launcher se compile sous Windows (WebView2, coffre d'identifiants Windows). Lance ce build sur ton PC Windows, ou utilise --skip-launcher pour un build sans Launcher.")
+    if not (LAUNCHER / "src-tauri" / "tauri.conf.json").exists():
+        die(f"sources du Launcher introuvables : {LAUNCHER}")
+    cargo = shutil.which("cargo")
+    if not cargo:
+        die("Rust (cargo) est introuvable : installe-le (https://rustup.rs) puis `cargo install tauri-cli --version \"^2\"`, ou utilise --skip-launcher.")
+    if subprocess.run([cargo, "tauri", "--version"], capture_output=True).returncode != 0:
+        die("tauri-cli est absent : `cargo install tauri-cli --version \"^2\"`, ou utilise --skip-launcher.")
+    sync_launcher_pubkey()
+    say("  Launcher Dual Pulse (Tauri)… (plusieurs minutes la première fois)")
+    r = subprocess.run([cargo, "tauri", "build", "--no-bundle"], cwd=LAUNCHER, env=launcher_env())
+    if r.returncode != 0:
+        die("la compilation du Launcher a échoué (voir les messages ci-dessus).")
+    exe = LAUNCHER_TARGET / "release" / LAUNCHER_BIN
+    check_launcher_exe(exe)
+    LAUNCHER_OUT.mkdir(parents=True, exist_ok=True)
+    out = LAUNCHER_OUT / LAUNCHER_FILE
+    shutil.copy2(exe, out)
+    hits = leak_scan(LAUNCHER_OUT)
+    if hits:
+        die("fuite détectée dans le Launcher compilé : " + ", ".join(f"{h[0].name} ({h[1]})" for h in hits[:3]))
+    say(f"  Launcher : {out} ({out.stat().st_size / 1048576:.1f} Mo)")
+    return out
+
+
+def check_launcher_exe(exe):
+    """Le fichier attendu existe, est un exécutable Windows (en-tête « MZ ») et n'est pas une coquille vide."""
+    exe = Path(exe)
+    if not exe.is_file():
+        die(f"le Launcher compilé est introuvable : {exe}")
+    with open(exe, "rb") as f:
+        head = f.read(2)
+    if head != b"MZ" or exe.stat().st_size < 512 * 1024:
+        die(f"{exe} n'est pas un exécutable Windows valide.")
+
+
 # ---------------------------------------------------------------- 6. installeur Inno Setup
 def wizard_images():
     """Bitmaps de l'assistant Inno aux couleurs Coreboard (noir, grille rouge) — générés avec Pillow."""
@@ -255,6 +327,13 @@ def wizard_images():
     return d
 
 
+def iscc_command(iscc, version, edition, assets, launcher_exe=None):
+    cmd = [iscc, f"/DAppVersion={version}", f"/DEdition=-{edition}", f"/DDistDir={DIST}", f"/DOutDir={OUT}", f"/DAssetsDir={assets}", f"/DRootDir={ROOT}"]
+    if launcher_exe:
+        cmd.append(f"/DLauncherExe={launcher_exe}")
+    return cmd + [str(ROOT / "installer" / "enos.iss")]
+
+
 def find_iscc():
     for c in (shutil.which("iscc"), r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe", r"C:\Program Files\Inno Setup 6\ISCC.exe",
               os.path.expandvars(r"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe")):
@@ -263,15 +342,15 @@ def find_iscc():
     return None
 
 
-def build_installer(version, edition="friends"):
+def build_installer(version, edition="friends", launcher_exe=None):
+    """`launcher_exe` : Launcher à embarquer (raccourcis et lancement final pointent alors vers lui). None = build sans Launcher (--skip-launcher)."""
     iscc = find_iscc()
     if not iscc:
         say("  Inno Setup introuvable : installe-le (https://jrsoftware.org/isdl.php ou `winget install JRSoftware.InnoSetup`) puis relance sans --skip-installer.")
         return None
     assets = wizard_images()
     OUT.mkdir(parents=True, exist_ok=True)
-    r = subprocess.run([iscc, f"/DAppVersion={version}", f"/DEdition=-{edition}", f"/DDistDir={DIST}", f"/DOutDir={OUT}", f"/DAssetsDir={assets}", f"/DRootDir={ROOT}",
-                        str(ROOT / "installer" / "enos.iss")])
+    r = subprocess.run(iscc_command(iscc, version, edition, assets, launcher_exe))
     if r.returncode != 0:
         die("Inno Setup a échoué.")
     return OUT / f"ENOS-Setup-{version}-{edition}.exe"
@@ -359,6 +438,8 @@ def main():
     ap.add_argument("--skip-build", action="store_true")
     ap.add_argument("--files-manifest", action="store_true", help="écrit aussi le manifeste « files » (mise à jour en arrière-plan par le Launcher : staging puis remplacement des fichiers modifiés)")
     ap.add_argument("--skip-installer", action="store_true")
+    ap.add_argument("--skip-launcher", action="store_true",
+                    help="build de DÉVELOPPEMENT sans Dual Pulse Launcher (raccourcis vers ENOS.exe). Ne jamais distribuer : l'accès par invitation passe par le Launcher")
     ap.add_argument("--onedir", action="store_true", help="dossier au lieu d'un exe unique : démarrage plus rapide, moins de faux positifs antivirus")
     a = ap.parse_args()
     if not re.fullmatch(r"\d+(\.\d+){1,3}", a.version):
@@ -385,8 +466,13 @@ def main():
     if a.check or a.skip_build:
         say("\nTerminé (aucune compilation).")
         return
-    say("[5/6] Compilation")
+    say("[5/6] Compilation (E.N.O.S. + Launcher)")
     build_exe()
+    launcher_exe = None
+    if a.skip_launcher:
+        say("  !! --skip-launcher : l'installeur sera produit SANS Dual Pulse Launcher (build de développement, ne pas distribuer).")
+    else:
+        launcher_exe = build_launcher()
     hits = leak_scan(DIST)
     if hits:
         die("fuite détectée dans le dossier compilé : " + ", ".join(str(h[0]) for h in hits[:3]))
@@ -396,7 +482,7 @@ def main():
         say(f"\nTerminé : {DIST}")
         return
     say("[6/6] Installeur")
-    setup = build_installer(a.version, a.edition)
+    setup = build_installer(a.version, a.edition, launcher_exe)
     if setup and setup.exists():
         say(f"  Installeur : {setup}")
         if a.base_url:

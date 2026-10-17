@@ -49,7 +49,7 @@ fn already_ok(dest: &Path, size: u64, sha256: &str) -> bool {
 
 pub fn download(url: &str, dest: &Path, size: u64, sha256: &str, cancel: &AtomicBool, mut on: impl FnMut(Progress)) -> Result<()> {
     if !url_allowed(url) {
-        return Err(Error::Net("adresse de téléchargement refusée (https obligatoire)".into()));
+        return Err(Error::Net("download address rejected (https is required)".into()));
     }
     if let Some(dir) = dest.parent() {
         fs::create_dir_all(dir)?;

@@ -37,9 +37,9 @@ pub fn locate(_app_id: &str) -> Option<Found> {
 /// Lance `dir/run` sans attendre sa fin ; refuse tout chemin qui sortirait du dossier d'installation.
 pub fn spawn(dir: &Path, run: &str) -> Result<()> {
     let exe = dir.join(run);
-    let (d, e) = (dir.canonicalize()?, exe.canonicalize().map_err(|_| Error::Other(format!("{run} introuvable dans {}", dir.display())))?);
+    let (d, e) = (dir.canonicalize()?, exe.canonicalize().map_err(|_| Error::Other(format!("{run} not found in {}", dir.display())))?);
     if !e.starts_with(&d) {
-        return Err(Error::Other("chemin d'exécutable refusé".into()));
+        return Err(Error::Other("executable path rejected".into()));
     }
     let mut c = Command::new(&e);
     c.current_dir(&d);

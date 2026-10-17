@@ -91,43 +91,43 @@ pub fn open(manifest: &Value, signature_b64: &str, pubkey_b64: &str) -> Result<M
 pub fn parse(manifest: &Value) -> Result<Manifest> {
     let m: Manifest = serde_json::from_value(manifest.clone()).map_err(|e| Error::Manifest(e.to_string()))?;
     if crate::version::parse(&m.version).is_none() {
-        return Err(Error::Manifest("version invalide".into()));
+        return Err(Error::Manifest("invalid version".into()));
     }
     if m.files.is_empty() || m.files.len() > 5000 {
-        return Err(Error::Manifest("liste de fichiers invalide".into()));
+        return Err(Error::Manifest("invalid file list".into()));
     }
     for f in &m.files {
         if !safe_path(&f.path) {
-            return Err(Error::Manifest(format!("chemin refusé : {}", f.path)));
+            return Err(Error::Manifest(format!("path rejected: {}", f.path)));
         }
         if f.sha256.len() != 64 || !f.sha256.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')) {
-            return Err(Error::Manifest(format!("empreinte invalide pour {}", f.path)));
+            return Err(Error::Manifest(format!("invalid checksum for {}", f.path)));
         }
     }
     if !m.launch.is_empty() && !m.files.iter().any(|f| f.path == m.launch) {
-        return Err(Error::Manifest("« launch » doit désigner un fichier du manifeste".into()));
+        return Err(Error::Manifest("\"launch\" must name a file listed in the manifest".into()));
     }
     if !m.app_id.is_empty() && !m.app_id.bytes().all(|b| b.is_ascii_hexdigit() || matches!(b, b'{' | b'}' | b'-')) {
-        return Err(Error::Manifest("app_id invalide".into()));
+        return Err(Error::Manifest("invalid app_id".into()));
     }
     if !m.run.is_empty() && !safe_path(&m.run) {
-        return Err(Error::Manifest("« run » refusé".into()));
+        return Err(Error::Manifest("\"run\" rejected".into()));
     }
     match m.mode.as_str() {
         MODE_INSTALLER => {}
         MODE_FILES => {
             if m.run.is_empty() || !m.files.iter().any(|f| f.path == m.run) {
-                return Err(Error::Manifest("mode « files » : « run » doit désigner un fichier du manifeste".into()));
+                return Err(Error::Manifest("files mode: \"run\" must name a file listed in the manifest".into()));
             }
             if !m.launch.is_empty() {
                 return Err(Error::Manifest("mode « files » : « launch » doit rester vide".into()));
             }
             if let Some(f) = m.files.iter().find(|f| is_protected(&f.path)) {
-                return Err(Error::Manifest(format!("chemin protégé (données de l'utilisateur) : {}", f.path)));
+                return Err(Error::Manifest(format!("protected path (user data): {}", f.path)));
             }
             let mut seen = std::collections::HashSet::new();
             if let Some(f) = m.files.iter().find(|f| !seen.insert(f.path.to_ascii_lowercase())) {
-                return Err(Error::Manifest(format!("chemin en double : {}", f.path)));
+                return Err(Error::Manifest(format!("duplicate path: {}", f.path)));
             }
         }
         other => return Err(Error::Manifest(format!("mode inconnu : {other}"))),

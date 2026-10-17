@@ -112,10 +112,10 @@ impl Signals {
     }
 
     fn write<T: Serialize>(&self, product: &str, name: &str, v: &T) -> Result<()> {
-        let dir = self.dir(product).ok_or_else(|| Error::Other(format!("nom de produit invalide : {product}")))?;
+        let dir = self.dir(product).ok_or_else(|| Error::Other(format!("invalid product name: {product}")))?;
         let bytes = serde_json::to_vec(v).map_err(|e| Error::Other(e.to_string()))?;
         if bytes.len() as u64 > MAX_SIGNAL_BYTES {
-            return Err(Error::Other("fichier-signal trop volumineux".into()));
+            return Err(Error::Other("signal file too large".into()));
         }
         fs::create_dir_all(&dir)?;
         atomic_write(&dir.join(name), &bytes)
@@ -147,7 +147,7 @@ impl Signals {
             r.notes.truncate(cut);
         }
         if r.product.len() > 64 || r.channel.len() > 64 || r.version.len() > 64 {
-            return Err(Error::Other("champs trop longs".into()));
+            return Err(Error::Other("fields too long".into()));
         }
         self.write(&r.product.clone(), READY, &r)
     }

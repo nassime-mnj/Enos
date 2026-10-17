@@ -48,7 +48,7 @@ with sync_playwright() as pw:
     staged = json.loads(pg.evaluate("localStorage.getItem('dp_preview_staged')"))
     check(staged["enos"]["version"] == "3.4.0", "téléchargement silencieux terminé : 3.4.0 en staging")
     pg.click('[data-nav="software"]'); pg.wait_for_selector("#enos-staged")
-    t = pg.inner_text("#enos-staged"); check("PRÊTE" in t.upper() and "3.4.0" in t and "Redémarrer pour appliquer" in t, "badge « mise à jour prête » : %r" % t[:90])
+    t = pg.inner_text("#enos-staged"); check("READY" in t.upper() and "3.4.0" in t and "Restart to apply" in t, "badge « mise à jour prête » : %r" % t[:90])
     pg.reload(); pg.wait_for_selector("#shell"); pg.click('[data-nav="account"]'); pg.wait_for_selector("#set-auto")
     check(pg.is_checked("#set-auto"), "l'interrupteur reste activé après rechargement")
     pg.click("#set-auto"); pg.wait_for_timeout(300); check(json.loads(pg.evaluate("localStorage.getItem('dp_preview_settings')"))["auto_update"] is False, "désactivation enregistrée")

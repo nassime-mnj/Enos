@@ -26,4 +26,5 @@ rem l'explorateur Windows garde les anciennes icones en cache : on le rafraichit
 ie4uinit.exe -show >nul 2>&1
 echo Termine : ENOS.exe (logiciel de bureau, icone logo.ico) est dans ce dossier.
 echo Pour un raccourci sur le Bureau : py creer_raccourci.py
+echo Installeur de distribution ^(E.N.O.S. + Dual Pulse Launcher^) : py build_release.py --version X.Y.Z
 if not "%1"=="auto" pause

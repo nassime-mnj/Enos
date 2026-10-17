@@ -61,7 +61,7 @@ impl Counter {
         let i = self.n;
         self.n += 1;
         if self.fail_after == Some(i) {
-            return Err(Error::Other(format!("échec injecté à l'opération {i}")));
+            return Err(Error::Other(format!("injected failure at operation {i}")));
         }
         Ok(())
     }
@@ -96,7 +96,7 @@ fn remove_any(p: &Path) {
 /// Chemin de destination sûr : relatif propre, pas protégé, aucun composant existant qui soit un lien symbolique ou un fichier à la place d'un dossier.
 fn checked_dest(install_dir: &Path, rel: &str) -> Result<PathBuf> {
     if !safe_path(rel) || is_protected(rel) {
-        return Err(Error::Manifest(format!("chemin refusé : {rel}")));
+        return Err(Error::Manifest(format!("path rejected: {rel}")));
     }
     let comps: Vec<&str> = rel.split('/').collect();
     let mut cur = install_dir.to_path_buf();
@@ -104,9 +104,9 @@ fn checked_dest(install_dir: &Path, rel: &str) -> Result<PathBuf> {
         cur.push(c);
         let last = i + 1 == comps.len();
         match fs::symlink_metadata(&cur) {
-            Ok(m) if !last && m.file_type().is_symlink() => return Err(Error::Other(format!("lien symbolique refusé dans le chemin : {rel}"))),
-            Ok(m) if !last && !m.is_dir() => return Err(Error::Other(format!("un fichier occupe l'emplacement d'un dossier : {rel}"))),
-            Ok(m) if last && m.is_dir() => return Err(Error::Other(format!("un dossier occupe l'emplacement du fichier : {rel}"))),
+            Ok(m) if !last && m.file_type().is_symlink() => return Err(Error::Other(format!("symbolic link rejected in path: {rel}"))),
+            Ok(m) if !last && !m.is_dir() => return Err(Error::Other(format!("a file occupies the location of a folder: {rel}"))),
+            Ok(m) if last && m.is_dir() => return Err(Error::Other(format!("a folder occupies the location of the file: {rel}"))),
             _ => {}
         }
     }
@@ -235,13 +235,13 @@ pub fn recover(install_dir: &Path) -> Result<bool> {
     let jf = install_dir.join(JOURNAL);
     let meta = match fs::symlink_metadata(&jf) {
         Ok(m) if m.is_file() && m.len() < 4 * 1024 * 1024 => m,
-        Ok(_) => return Err(Error::Other("journal de mise à jour illisible".into())),
+        Ok(_) => return Err(Error::Other("update journal unreadable".into())),
         Err(_) => return Ok(false),
     };
     let _ = meta;
-    let j: Journal = serde_json::from_slice(&fs::read(&jf)?).map_err(|_| Error::Other("journal de mise à jour corrompu : restauration impossible automatiquement".into()))?;
+    let j: Journal = serde_json::from_slice(&fs::read(&jf)?).map_err(|_| Error::Other("update journal corrupted: automatic restore is not possible".into()))?;
     if version::parse(&j.version).is_none() {
-        return Err(Error::Other("journal de mise à jour invalide".into()));
+        return Err(Error::Other("update journal invalid".into()));
     }
     if j.state == "done" {
         cleanup(install_dir);
@@ -253,13 +253,13 @@ pub fn recover(install_dir: &Path) -> Result<bool> {
 }
 
 pub fn apply(sig: &Signals, root: &Path, product: &str, install_dir: &Path, opts: &Options) -> Result<Applied> {
-    let staged: Staged = staging::staged(root, product).ok_or_else(|| Error::Other("aucune mise à jour prête".into()))?;
+    let staged: Staged = staging::staged(root, product).ok_or_else(|| Error::Other("no update is ready".into()))?;
     let m = &staged.manifest;
     if !install_dir.is_dir() {
-        return Err(Error::Other(format!("dossier d'installation introuvable : {}", install_dir.display())));
+        return Err(Error::Other(format!("installation folder not found: {}", install_dir.display())));
     }
     if procs::app_running(sig, product, install_dir, &m.run) {
-        return Err(Error::Other("L'application est en cours d'exécution : elle doit être fermée avant d'appliquer la mise à jour.".into()));
+        return Err(Error::Other("The application is running: it must be closed before the update can be applied.".into()));
     }
     recover(install_dir)?;
     clean_rollback(install_dir);
@@ -269,7 +269,7 @@ pub fn apply(sig: &Signals, root: &Path, product: &str, install_dir: &Path, opts
     let mut ops: Vec<Op> = vec![];
     let mut dests: Vec<(PathBuf, PathBuf, usize)> = vec![];       // (source, destination, index dans m.files)
     for p in &staged.changed {
-        let (i, entry) = m.files.iter().enumerate().find(|(_, f)| &f.path == p).ok_or_else(|| Error::Manifest(format!("fichier inconnu du manifeste : {p}")))?;
+        let (i, entry) = m.files.iter().enumerate().find(|(_, f)| &f.path == p).ok_or_else(|| Error::Manifest(format!("file not listed in the manifest: {p}")))?;
         let dest = checked_dest(install_dir, p)?;
         let src = join(&src_dir, p);
         match fs::symlink_metadata(&src) {

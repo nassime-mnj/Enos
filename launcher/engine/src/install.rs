@@ -59,7 +59,7 @@ pub fn run_installer(m: &Manifest, dir: &Path, runner: &dyn Runner) -> Result<()
     let args: Vec<String> = m.silent_args.split_whitespace().map(String::from).collect();
     let code = runner.run_installer(&dir.join(&m.launch), &args)?;
     if code != 0 {
-        return Err(Error::Other(format!("l'installeur s'est terminé avec le code {code} (installation annulée ou refusée)")));
+        return Err(Error::Other(format!("the installer exited with code {code} (installation cancelled or refused)")));
     }
     Ok(())
 }

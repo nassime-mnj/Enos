@@ -2,21 +2,21 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("erreur de fichier : {0}")]
+    #[error("file error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("erreur réseau : {0}")]
+    #[error("network error: {0}")]
     Net(String),
-    #[error("le serveur a répondu {0}")]
+    #[error("the server responded with {0}")]
     Http(u16),
-    #[error("signature du manifeste invalide")]
+    #[error("invalid manifest signature")]
     BadSignature,
-    #[error("manifeste invalide : {0}")]
+    #[error("invalid manifest: {0}")]
     Manifest(String),
-    #[error("empreinte SHA-256 incorrecte pour {0} : fichier corrompu ou modifié")]
+    #[error("SHA-256 checksum mismatch for {0}: the file is corrupted or has been modified")]
     Hash(String),
-    #[error("taille incorrecte pour {0}")]
+    #[error("incorrect size for {0}")]
     Size(String),
-    #[error("opération annulée")]
+    #[error("operation cancelled")]
     Cancelled,
     #[error("{0}")]
     Other(String),

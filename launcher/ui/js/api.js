@@ -1,5 +1,5 @@
-// Client de l'API Dual Pulse (/launcher/v1). Session : jeton d'accès en mémoire ; jeton de rafraîchissement dans le coffre Windows.
-// Un jeton expiré est renouvelé automatiquement (une seule requête de rafraîchissement à la fois), puis la requête est rejouée une fois.
+// Dual Pulse API client (/launcher/v1). Session: access token in memory; refresh token in the Windows credential vault.
+// An expired token is renewed automatically (one refresh request at a time), then the request is replayed once.
 import { secrets } from "./native.js";
 import { DEFAULT_SERVER } from "./config.js";
 
@@ -35,9 +35,9 @@ async function raw(path, { method = "GET", body, auth = true } = {}) {
   if (auth && state.access) headers.Authorization = "Bearer " + state.access;
   let r;
   try { r = await fetch(state.server + "/launcher/v1" + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined }); }
-  catch (e) { throw new ApiError("Serveur injoignable. Vérifiez votre connexion et l'adresse du serveur.", 0); }
+  catch (e) { throw new ApiError("Cannot reach the server. Check your connection and the server address.", 0); }
   let data = null; try { data = await r.json(); } catch (e) {}
-  if (!r.ok) throw new ApiError((data && (typeof data.detail === "string" ? data.detail : "Requête refusée")) || "Erreur " + r.status, r.status, data || {});
+  if (!r.ok) throw new ApiError((data && (typeof data.detail === "string" ? data.detail : "Request refused")) || "Error " + r.status, r.status, data || {});
   return data;
 }
 
@@ -47,7 +47,7 @@ function adopt(s) {
 }
 
 async function renew() {
-  if (!state.refresh) throw new ApiError("Session expirée.", 401);
+  if (!state.refresh) throw new ApiError("Session expired.", 401);
   if (!refreshing) {
     refreshing = raw("/auth/refresh", { method: "POST", body: { refresh_token: state.refresh }, auth: false })
       .then(adopt).finally(() => { refreshing = null; });
@@ -59,7 +59,7 @@ export async function call(path, opts) {
   try { return await raw(path, opts); }
   catch (e) {
     if (e.status === 401 && (opts || {}).auth !== false && state.refresh) {
-      try { await renew(); } catch (x) { await logoutLocal(); throw new ApiError("Session expirée : reconnectez-vous.", 401); }
+      try { await renew(); } catch (x) { await logoutLocal(); throw new ApiError("Session expired: please sign in again.", 401); }
       return raw(path, opts);
     }
     throw e;
@@ -93,7 +93,7 @@ export async function logout() {
   await logoutLocal();
 }
 
-// ------------------------------------------------------------------ données
+// ------------------------------------------------------------------ data
 export const catalog = () => call("/catalog");
 export const news = () => call("/news");
 export const manifest = (product, channel) => call(`/manifest/${product}/${channel}`);

@@ -449,7 +449,7 @@ fn every_injected_failure_rolls_back_completely() {
         let before = snapshot(&w.install);
         match w.apply(&Options { fail_after: Some(n) }) {
             Err(e) => {
-                assert!(e.to_string().contains("injecté"), "{e}");
+                assert!(e.to_string().contains("injected"), "{e}");
                 assert_eq!(snapshot(&w.install), before, "échec à l'opération {n} : l'installation doit être strictement identique (aucun fichier perdu ni demi-écrit)");
                 assert!(staging::staged(&w.root, "enos").is_some(), "le staging reste utilisable pour une nouvelle tentative");
                 assert!(w.apply(&Options::default()).is_ok(), "la nouvelle tentative réussit");
@@ -666,7 +666,7 @@ fn apply_refuses_while_the_application_runs() {
     w.sig.write_running("enos", &Running { pid: child.0.id(), started_at: NOW, exe: "ENOS.exe".into() }).unwrap();
     assert!(procs::app_running(&w.sig, "enos", &w.install, "ENOS.exe"));
     let e = w.apply(&Options::default()).unwrap_err();
-    assert!(e.to_string().contains("en cours d'exécution"), "{e}");
+    assert!(e.to_string().contains("is running"), "{e}");
     assert_eq!(snapshot(&w.install), before);
     // sans running.json (ancienne version de l'application) : détecté par le processus lui-même
     w.sig.clear_running("enos");

@@ -32,6 +32,16 @@ cargo tauri build        # -> target/release/bundle/nsis/Dual Pulse Launcher_0.1
 ```
 Pour éviter SmartScreen : signer l'exécutable (certificat de signature de code) — pas encore configuré.
 
+## Distribution : le Launcher est embarqué dans l'installeur d'E.N.O.S.
+`py build_release.py --version X.Y.Z` (à la racine du dépôt, sous Windows) fait désormais tout d'un coup :
+1. compile E.N.O.S. (PyInstaller) **puis le Launcher** : `cargo tauri build --no-bundle` (exécutable seul, dans `release/launcher-target`) ;
+2. **synchronise `src-tauri/manifest_pubkey.txt` sur `ota_pubkey.txt`** (la clé publique est compilée dans le Launcher : s'il en avait une autre, il refuserait tous les manifestes) ;
+3. vérifie le binaire (exécutable Windows valide, aucune donnée personnelle : les chemins locaux sont masqués à la compilation) ;
+4. passe `/DLauncherExe=…` à Inno Setup : `installer/enos.iss` installe le Launcher dans `Program Files\Dual Pulse Launcher` (dossier protégé), **crée les raccourcis Menu Démarrer / Bureau vers le Launcher** (plus vers `ENOS.exe`) et propose de le lancer en fin d'installation. La tâche de fond d'E.N.O.S. (option « démarrage de Windows ») reste lancée directement.
+Prérequis : Rust (`rustup`), `cargo install tauri-cli --version "^2"`, WebView2, Inno Setup 6. Sans eux le build s'arrête avec un message clair (jamais d'installeur sans Launcher par accident) ; `--skip-launcher` produit un build de **développement** sans Launcher, à ne pas distribuer.
+Mises à jour : quand le Launcher lance l'installeur en silence (mode « installer »), l'installeur **ne remplace pas le Launcher s'il tourne** (il serait sinon en train de s'écraser lui-même) ; le nouveau Launcher est posé à l'installation suivante, Launcher fermé. L'`AppId` Inno ne doit JAMAIS changer : c'est lui que le Launcher cherche dans le registre pour retrouver E.N.O.S.
+L'installeur est en **anglais ou français** selon la langue de Windows. Tests : `python3 tests/test_installer.py` (le script `.iss` est contrôlé par un préprocesseur simulé ; la compilation réelle demande Windows).
+
 ## Tests
 ```
 cd launcher && cargo test -p dp-engine        # 15 tests : compatibilité JSON canonique + signature avec le serveur Python, reprise de téléchargement, corruption, annulation, lien expiré…
