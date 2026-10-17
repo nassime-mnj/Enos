@@ -47,6 +47,20 @@
   const cloneUrl = el("input", { type: "text", class: "dp-clone-url", placeholder: "https://…, utilisateur@hôte:chemin ou proprietaire/depot", spellcheck: false, autocomplete: "off", "aria-label": "Adresse du dépôt à cloner", onkeydown: (e) => { if (e.key === "Enter") startClone(); } });
   const cloneProg = el("div", { class: "dp-cprog", hidden: true, role: "status", "aria-live": "polite" }, el("div", { class: "dp-bar2" }, el("i")), el("small"));
   const gitBtns = [sendB, pushB, pullB, commitB];
+  // Outils de formatage C (norme EPITA) : injecter le .clang-format de l'espace WSL dans le dépôt courant
+  const fmtMsg = el("span", { class: "dp-fmtmsg", role: "status", "aria-live": "polite" });
+  let fmtTimer = 0;
+  const fmtSay = (text, kind) => { fmtMsg.textContent = text; fmtMsg.className = "dp-fmtmsg " + (kind || ""); clearTimeout(fmtTimer); if (kind === "ok") fmtTimer = setTimeout(() => { fmtMsg.textContent = ""; }, 9000); };
+  async function fmtRun(b, label, url, body, okText) {
+    if (!S.repo) { fmtSay("Choisis d'abord un dépôt.", "bad"); return; }
+    b.disabled = true; b.textContent = "…"; fmtSay("");
+    try { const r = await post(url, { repo: S.repo, ...body }); fmtSay("✔ " + okText(r), "ok"); gitState(); if (S.tab === "git") paintGit(); }
+    catch (e) { fmtSay("✕ " + e.message, "bad"); }
+    b.textContent = label; b.disabled = !S.repo;
+  }
+  const injectB = btn("INJECTER .CLANG-FORMAT", () => fmtRun(injectB, "INJECTER .CLANG-FORMAT", "/api/depot/inject_clang_format", {}, (r) => ".clang-format EPITA " + (r.replaced ? "mis à jour (ancien fichier écrasé)" : "injecté avec succès")));
+  injectB.title = "Copie « clang-format » (racine de ton espace WSL) vers .clang-format à la racine du dépôt courant, en écrasant l'existant";
+  const fmtBtns = [injectB];
   const tabDefs = [["forge", "FORGE"], ["files", "FICHIERS"], ["git", "GIT"], ["subject", "SUJET"], ["train", "ENTRAÎN."], ["shell", "DÉPÔT SHELL"]];
   const tabBar = el("div", { class: "dp-tabs", role: "tablist" }, tabDefs.map(([id, l]) => el("button", { "data-t": id, role: "tab", text: l, onclick: () => tab(id) })));
   const panes = {}; tabDefs.forEach(([id]) => { panes[id] = el("div", { class: "dp-pane", hidden: true, id: "dp-p-" + id }); });
@@ -55,6 +69,7 @@
   const split = el("div", { class: "dp-split", title: "Redimensionner le terminal" });
   root.append(
     el("div", { class: "dp-bar" }, el("h2", { text: "DÉPÔT INTRANET" }), repoSel, chipBranch, chipAB, cloneUrl, cloneB, el("span", { class: "dp-sp" }), ...gitBtns, btn("⟳", () => refresh(true)), btn("✕ FERMER", () => close())),
+    el("div", { class: "dp-bar dp-fmtbar", role: "group", "aria-label": "Formatage C (norme EPITA)" }, el("small", { class: "dp-fmtlab", text: "FORMAT C" }), ...fmtBtns, fmtMsg),
     cloneProg,
     el("div", { class: "dp-main" }, el("aside", { class: "dp-side" }, tabBar, Object.values(panes)), el("div", { class: "dp-work" }, ftabs, editorBox, split, termBox)));
   document.body.appendChild(root);
@@ -84,7 +99,7 @@
       const want = S.repo || S.st.current || (S.repos[0] && S.repos[0].name) || "";
       repoSel.replaceChildren(el("option", { value: "", text: S.repos.length ? "— dépôt —" : "aucun dépôt : clone-en un" }), ...S.repos.map((r) => el("option", { value: r.name, text: r.name + (r.dirty ? "  ●" : "") })));
       if (want && S.repos.some((r) => r.name === want)) { S.repo = want; repoSel.value = want; } else S.repo = "";
-      gitBtns.forEach((b) => { b.disabled = !S.repo; });
+      gitBtns.concat(fmtBtns).forEach((b) => { b.disabled = !S.repo; });
       if (S.repo) await gitState();
       else { chipBranch.textContent = "—"; chipAB.hidden = true; }
     } catch (e) { panes[S.tab].replaceChildren(note(e.message, "bad")); }

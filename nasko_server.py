@@ -4691,6 +4691,17 @@ def depot_shell_drop(file: UploadFile = File(...), repo: str = Form(...), target
     return r
 
 
+class DepotClang(BaseModel):
+    repo: str
+    folder: str = ""
+
+
+@app.post("/api/depot/inject_clang_format", dependencies=_LOCAL)
+def depot_inject_clang_format(b: DepotClang):
+    """Copie « clang-format » (racine de l'espace WSL) vers <dépôt>/.clang-format, en écrasant l'existant. Source fixe : rien n'est choisi par la requête."""
+    return _depot(nasko_depot_git.inject_clang_format, _drepo(b.repo))
+
+
 @app.websocket("/ws/depot-term")
 async def ws_depot_term(ws: WebSocket, repo: str = "", cols: int = 100, rows: int = 30):
     """Terminal Linux interactif (WSL / shell local) : octets bruts = frappes et sortie, JSON {"t":"resize"} / {"t":"exit"}. Authentification et profil : middlewares."""
