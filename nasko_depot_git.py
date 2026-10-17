@@ -114,10 +114,14 @@ class WslRunner(Runner):
 
     def __init__(self, distro, base=None):
         """`base` : dossier Linux ABSOLU de référence (défaut : l'espace de travail WSL, nasko_wsl.DIR). Les `cwd` sont relatifs à ce dossier ; "" = le dossier lui-même."""
-        if not re.match(r"^[A-Za-z0-9._ -]{1,60}$", distro or "") or distro.startswith("-"):
+        native = nasko_wsl.is_linux()                     # Linux natif : pas de distribution, pas de wsl.exe — les commandes s'exécutent directement dans le shell local
+        if not native and (not re.match(r"^[A-Za-z0-9._ -]{1,60}$", distro or "") or distro.startswith("-")):
             raise GitError("Nom de distribution WSL invalide.")
         base = base or nasko_wsl.DIR
-        if not re.fullmatch(r"/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*", base) or any(s in (".", "..") for s in base.split("/")):
+        if native:
+            if not base.startswith("/") or "\x00" in base or "\n" in base or any(s in (".", "..") for s in base.split("/")[1:] if s):
+                raise GitError("Dossier de base invalide (chemin absolu, sans « .. »).")
+        elif not re.fullmatch(r"/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*", base) or any(s in (".", "..") for s in base.split("/")):
             raise GitError("Dossier de base WSL invalide (chemin absolu, lettres, chiffres, . _ - uniquement).")
         self.distro = distro
         self.base = base
@@ -138,6 +142,8 @@ class WslRunner(Runner):
 
     def argv(self, args, cwd):
         """Ligne de commande complète (pure, testable sans WSL)."""
+        if nasko_wsl.is_linux():                        # sans surcouche : bash local direct (le script cite déjà chaque valeur avec shlex)
+            return ["bash", "-c", self.script(args, cwd)]
         b64 = base64.b64encode(self.script(args, cwd).encode("utf-8")).decode()
         return ["wsl.exe", "-d", self.distro, "--", "bash", "-c", "bash <(echo " + b64 + "|base64 -d)"]
 

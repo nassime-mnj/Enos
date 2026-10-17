@@ -178,11 +178,19 @@ class FormatWsl(Base):
         self.assertEqual(self.called(), [])
 
     def test_clang_format_not_installed(self):
-        os.unlink(os.path.join(self.bin, "clang-format"))
-        with mock_path_without("clang-format"):
-            with self.assertRaises(G.GitError) as cm:
-                G.format_c(self.repo(True))
+        # Le script quitte avec 90 quand `command -v clang-format` échoue : on simule ce code de sortie (modifier le PATH retirerait aussi git sur un vrai Linux).
+        repo = self.repo(True)
+        real = repo.runner.run
+
+        def run(args, cwd, **kw):
+            if args[:2] == ["sh", "-c"] and "command -v clang-format" in args[2]:
+                return 90, "", ""
+            return real(args, cwd, **kw)
+        repo.runner.run = run
+        with self.assertRaises(G.GitError) as cm:
+            G.format_c(repo)
         self.assertIn("pas installé", str(cm.exception))
+        self.assertIn("apt install clang-format", str(cm.exception))
 
     def test_symlink_escape_refused(self):
         outside = os.path.join(self.tmp, "outside")

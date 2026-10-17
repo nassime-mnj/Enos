@@ -10,6 +10,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import nasko_depot_term as T  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from platform_pin import windows  # noqa: E402
 
 POSIX = os.name == "posix" and os.path.isdir("/proc")
 
@@ -222,6 +224,7 @@ class RealPty(Base):
         self.assertIsNone(T.get(s.id))
 
 
+@windows
 class Logic(Base):
     def fake(self, store=None):
         def spawn(argv, cwd, env, cols, rows):
@@ -309,6 +312,7 @@ class Logic(Base):
 
 
 class Pure(unittest.TestCase):
+    @windows
     def test_wsl_argv(self):
         self.assertEqual(T.wsl_argv("Ubuntu", "r"), ["wsl.exe", "-d", "Ubuntu", "--cd", "/home/nasko/r"])
         self.assertEqual(T.wsl_argv("Ubuntu"), ["wsl.exe", "-d", "Ubuntu", "--cd", "/home/nasko"])

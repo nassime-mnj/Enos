@@ -4725,6 +4725,15 @@ def depot_workspace_set(b: DepotWorkspace):
     return r
 
 
+@app.post("/api/depot/workspace/pick", dependencies=_LOCAL)
+def depot_workspace_pick():
+    """Bouton « Choisir le dossier d'espace de travail » : boîte de dialogue NATIVE (sur ce PC), puis enregistrement du dossier choisi. Rend la main quand la boîte est fermée."""
+    r = _dev(lambda cfg: nasko_devmanager.pick_workspace())
+    if not r.get("cancelled"):
+        nasko_depot_term.close_all()                      # un shell resté ouvert serait encore dans l'ancien dossier
+    return r
+
+
 @app.post("/api/depot/workspace/detect", dependencies=_LOCAL)
 def depot_workspace_detect():
     return _dev(lambda cfg: nasko_devmanager.detect_workspace())

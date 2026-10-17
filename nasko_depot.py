@@ -29,7 +29,7 @@ def _devmanager():
 
 def mode(cfg=None):
     dm = _devmanager()
-    if os.name == "nt" and dm is not None:
+    if nasko_wsl.is_windows() and dm is not None:                  # Linux natif (et macOS) : jamais de WSL, les commandes s'exécutent directement dans le shell local
         try:
             if dm.available():
                 return "wsl"
@@ -39,8 +39,13 @@ def mode(cfg=None):
 
 
 def local_root(cfg=None):
+    """Dossier des dépôts en mode « local ». Linux natif : le dossier d'espace de travail choisi (`wsl_workspace`), sinon l'ancien `depot_local_root`, sinon le défaut de
+    nasko_wsl (dossier personnel). Autres systèmes : `depot_local_root`, défaut ~/Nasko."""
     cfg = cfg if cfg is not None else nasko_core.load_config()
-    r = (cfg.get("depot_local_root") or "").strip() or os.path.join(os.path.expanduser("~"), "Nasko")
+    r = (cfg.get(nasko_wsl.CONFIG_KEY) or "").strip() if nasko_wsl.is_linux() else ""
+    r = r or (cfg.get("depot_local_root") or "").strip()
+    if not r:
+        r = nasko_wsl.default_workspace() if nasko_wsl.is_linux() else os.path.join(os.path.expanduser("~"), "Nasko")
     return os.path.realpath(os.path.expanduser(r))
 
 

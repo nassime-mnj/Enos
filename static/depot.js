@@ -70,22 +70,37 @@
   const fmtGo = btn("FORMATTER C/H", () => fmtRun(fmtGo, "FORMATTER C/H", "/api/depot/format_c", { folder: fmtDir.value.trim() }, (r) => r.files ? r.files + " fichier" + (r.files > 1 ? "s" : "") + " .c/.h formaté" + (r.files > 1 ? "s" : "") + " (" + r.target + ")" : "Aucun fichier .c/.h trouvé dans " + r.target));
   fmtGo.title = "Lance clang-format -i sur tous les .c et .h du dossier indiqué (tout le dépôt si vide). Exige le .clang-format dans le dépôt.";
   const fmtBtns = [injectB, fmtGo];
-  // Espace de travail WSL : chaque utilisateur renseigne SON dossier (\\wsl.localhost\<distribution>\home\<son-nom>) ; le clone, les scripts et le terminal l'utilisent
-  const wsB = btn("⚙ ESPACE WSL", () => workspaceDlg(), "ghost");
-  wsB.title = "Dossier de travail WSL où sont clonés les dépôts et déposés les scripts (\\\\wsl.localhost\\Ubuntu\\home\\toi)";
+  // Espace de travail : chaque utilisateur CHOISIT son dossier dans une boîte de dialogue NATIVE (aucune saisie de chemin). Windows : un dossier de WSL ; Linux : un dossier local.
+  const wsB = btn("⚙ ESPACE DE TRAVAIL", () => workspaceDlg(), "ghost");
+  wsB.title = "Dossier où sont clonés les dépôts et déposés les scripts (se choisit dans une boîte de dialogue)";
   async function workspaceDlg() {
-    const inp = el("input", { type: "text", placeholder: "\\\\wsl.localhost\\Ubuntu\\home\\toi", spellcheck: false, autocomplete: "off", "aria-label": "Dossier de travail WSL" });
+    const pathLine = el("code", { class: "dp-wspath", text: "…" });
     const status = el("div", { class: "dp-msg", text: "Chargement…" });
-    const paint = (st) => { inp.value = st.unc; status.className = "dp-msg " + (st.exists ? "ok" : "bad"); status.textContent = st.exists ? "✔ Dossier trouvé dans WSL" + (st.default ? " (valeur par défaut)" : "") : "✕ " + (st.reason || "Dossier introuvable."); };
-    const m = modal("ESPACE DE TRAVAIL WSL", el("div", {}, el("label", { text: "Dossier racine (là où sont tes dépôts)" }), inp, status,
-      el("div", { class: "dp-note", text: "Format : \\\\wsl.localhost\\<distribution>\\home\\<ton-utilisateur-linux>. « Détecter » le lit dans WSL. Laisse vide pour revenir à la valeur par défaut. Le terminal ouvert sera relancé." })), [
-      { label: "DÉTECTER", fn: async () => { try { const r = await post("/api/depot/workspace/detect", {}); inp.value = r.unc; status.className = "dp-msg"; status.textContent = "Trouvé : clique ENREGISTRER pour l'appliquer."; } catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; } } },
-      { label: "ENREGISTRER", cls: "dp-send", fn: async (d) => {
-        try { const st = await post("/api/depot/workspace", { unc: inp.value.trim() }); closeTerm(); d.remove(); S.repo = ""; await refresh(true); fmtSay("✔ Espace de travail : " + st.unc, "ok"); }
-        catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; } } },
-      { label: "ANNULER", fn: (d) => d.remove() }]);
+    const help = el("div", { class: "dp-note", text: "" });
+    const paint = (st) => {
+      pathLine.textContent = st.unc || "—";
+      status.className = "dp-msg " + (st.exists ? "ok" : "bad");
+      status.textContent = st.exists ? "✔ Dossier trouvé" + (st.default ? " (dossier par défaut)" : "") : "✕ " + (st.reason || "Dossier introuvable.");
+      help.textContent = st.platform === "Linux" ? "Choisis n'importe quel dossier de ton ordinateur : tes dépôts Git y seront listés et clonés."
+        : "Choisis un dossier DANS WSL : dans la fenêtre qui s'ouvre, tape \\\\wsl.localhost\\Ubuntu dans la barre d'adresse (ou clique « Linux » dans le volet de gauche), puis ouvre ton dossier personnel.";
+    };
+    let busy = false;
+    const applied = async (st) => { closeTerm(); S.repo = ""; paint(st); await refresh(true); fmtSay("✔ Espace de travail : " + st.unc, "ok"); };
+    const guarded = (fn) => async () => {
+      if (busy) return;
+      busy = true;
+      try { await fn(); } catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; }
+      busy = false;
+    };
+    modal("ESPACE DE TRAVAIL", el("div", {}, el("label", { text: "Dossier actuel" }), pathLine, status, help), [
+      { label: "CHOISIR LE DOSSIER D'ESPACE DE TRAVAIL", cls: "dp-send", fn: guarded(async () => {
+        status.className = "dp-msg"; status.textContent = "Une fenêtre de sélection est ouverte sur ton écran…";
+        const r = await post("/api/depot/workspace/pick", {});
+        if (r.cancelled) { paint(r); status.textContent += " (sélection annulée)"; } else await applied(r);
+      }) },
+      { label: "DÉTECTER AUTOMATIQUEMENT", fn: guarded(async () => { const r = await post("/api/depot/workspace/detect", {}); await applied(await post("/api/depot/workspace", { unc: r.unc })); }) },
+      { label: "FERMER", fn: (d) => d.remove() }]);
     try { paint(await api("/api/depot/workspace")); } catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; }
-    return m;
   }
   const tabDefs = [["forge", "FORGE"], ["files", "FICHIERS"], ["git", "GIT"], ["subject", "SUJET"], ["train", "ENTRAÎN."], ["shell", "DÉPÔT SHELL"]];
   const tabBar = el("div", { class: "dp-tabs", role: "tablist" }, tabDefs.map(([id, l]) => el("button", { "data-t": id, role: "tab", text: l, onclick: () => tab(id) })));

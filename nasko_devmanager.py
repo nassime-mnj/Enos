@@ -46,7 +46,7 @@ BSET = ('B=' + WS_DIR_MARK + '; G=1; [ -d "$B" ] || { echo \'Dossier de travail 
 
 def _subst(script):
     """Remplace les marqueurs d'espace de travail par le dossier ACTUEL (déjà validé par nasko_wsl : lettres, chiffres, . _ - uniquement)."""
-    return script.replace(WS_DIR_MARK, shlex.quote(W.DIR)).replace(WS_UNC_MARK, W.WORKSPACE_UNC)
+    return script.replace(WS_DIR_MARK, shlex.quote(W.DIR)).replace(WS_UNC_MARK, W.WORKSPACE_UNC.replace("'", "'\\''"))      # le marqueur UNC est dans une chaîne entre apostrophes
 WRAP = (BSET + 'cd "$B/$2" || exit 97\n'
         'export GIT_TERMINAL_PROMPT=0 TERM=dumb\n'
         'set -m\nbash -lc "$3" </dev/null &\np=$!\necho "$p" > "$1"\nwait "$p"\nexit $?\n')
@@ -65,12 +65,21 @@ def distro(cfg=None):
 
 
 def available():
-    return bool(shutil.which("wsl"))
+    """Windows : WSL installé. Linux natif : bash présent (les commandes s'exécutent directement, sans wrapper WSL)."""
+    return bool(shutil.which("bash")) if W.is_linux() else bool(shutil.which("wsl"))
 
 
 def _need_wsl():
     if not available():
-        raise DevError("WSL n'est pas installé sur ce PC.")
+        raise DevError("bash est introuvable sur ce système." if W.is_linux() else "WSL n'est pas installé sur ce PC.")
+
+
+def _argv(script, args=(), d=None):
+    """Ligne de commande d'exécution d'un script bash. Windows : surcouche wsl.exe (valeurs transmises en base64, voir _launcher). Linux natif : `bash -c` DIRECT,
+    sans aucun wrapper — les arguments positionnels ($1, $2…) passent tels quels."""
+    if W.is_linux():
+        return ["bash", "-c", _subst(script), "bash", *[str(a) for a in args]]
+    return ["wsl.exe", "-d", d or W.DISTRO, "--", "bash", "-c", _launcher(script, args)]
 
 
 def _launcher(script, args=(), prefix=""):
@@ -83,13 +92,13 @@ def _launcher(script, args=(), prefix=""):
 def _wsl_raw(d, script, *args, timeout=60, data=None):
     """Comme _wsl mais en octets : retourne (code, stdout brut, stderr texte). Sert à lire/écrire des fichiers sans rien altérer."""
     _need_wsl()
-    cmd = ["wsl.exe", "-d", d, "--", "bash", "-c", _launcher(script, args)]
+    cmd = _argv(script, args, d)
     try:
         p = subprocess.run(cmd, capture_output=True, input=data, timeout=timeout, stdin=None if data is not None else subprocess.DEVNULL, creationflags=NOWIN)
     except subprocess.TimeoutExpired:
-        raise DevError("Délai dépassé (WSL ne répond pas).")
+        raise DevError("Délai dépassé (le shell ne répond pas)." if W.is_linux() else "Délai dépassé (WSL ne répond pas).")
     except OSError as e:
-        raise DevError(f"Lancement de WSL impossible : {e}")
+        raise DevError(f"Lancement du shell impossible : {e}" if W.is_linux() else f"Lancement de WSL impossible : {e}")
     return p.returncode, p.stdout or b"", (p.stderr or b"").decode("utf-8", "replace").replace(chr(0), "").strip()
 
 
@@ -254,10 +263,10 @@ def start_job(kind, repo, cmd, cfg=None):
         job = {"id": jid, "kind": kind, "repo": repo, "cmd": cmd, "running": True, "rc": None, "t0": time.time(), "t1": 0, "stopping": False,
                "out": "", "dropped": 0, "pend": "", "proc": None, "pidfile": pidfile, "distro": d}
         try:
-            job["proc"] = subprocess.Popen(["wsl.exe", "-d", d, "--", "bash", "-c", _launcher(WRAP, (pidfile, repo, cmd))],
+            job["proc"] = subprocess.Popen(_argv(WRAP, (pidfile, repo, cmd), d),
                                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=NOWIN)
         except OSError as e:
-            raise DevError(f"Lancement de WSL impossible : {e}")
+            raise DevError(f"Lancement du shell impossible : {e}" if W.is_linux() else f"Lancement de WSL impossible : {e}")
         JOBS[jid] = job
         for old in [k for k in JOBS if len(JOBS) > MAX_JOBS and not JOBS[k]["running"]][: max(0, len(JOBS) - MAX_JOBS)]:
             JOBS.pop(old, None)                             # on garde les 24 dernières tâches
@@ -464,14 +473,20 @@ def open_vscode(repo, cfg=None):
     d = distro(cfg)
     repo = repo_name(repo)
     path = _repo_path(d, repo)
-    code = shutil.which("code.cmd") or shutil.which("code")
-    if not code:
-        raise DevError("VS Code introuvable (commande « code » absente du PATH Windows).")
-    cmd = [code, "--remote", f"wsl+{d}", path]
-    if code.lower().endswith((".cmd", ".bat")):
-        cmd = ["cmd.exe", "/c", *cmd]
+    if W.is_linux():                                                 # Linux natif : VS Code ouvre directement le dossier (pas de session distante)
+        code = shutil.which("code") or shutil.which("codium")
+        if not code:
+            raise DevError("VS Code introuvable (commande « code » absente du PATH).")
+        cmd = [code, path]
+    else:
+        code = shutil.which("code.cmd") or shutil.which("code")
+        if not code:
+            raise DevError("VS Code introuvable (commande « code » absente du PATH Windows).")
+        cmd = [code, "--remote", f"wsl+{d}", path]
+        if code.lower().endswith((".cmd", ".bat")):
+            cmd = ["cmd.exe", "/c", *cmd]
     try:
-        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NOWIN | 0x00000008)
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NOWIN | (0 if W.is_linux() else 0x00000008))
     except OSError as e:
         raise DevError(f"Lancement de VS Code impossible : {e}")
     return path
@@ -482,8 +497,11 @@ def open_explorer(repo, cfg=None):
     repo = repo_name(repo)
     _repo_path(d, repo)
     unc = W.unc_path(repo)
+    opener = "xdg-open" if W.is_linux() else "explorer.exe"
+    if W.is_linux() and not shutil.which(opener):
+        raise DevError("xdg-open est introuvable : impossible d'ouvrir le gestionnaire de fichiers.")
     try:
-        subprocess.Popen(["explorer.exe", unc], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen([opener, unc], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
         raise DevError(f"Explorateur impossible : {e}")
     return unc
@@ -494,6 +512,8 @@ _HOME_RE = re.compile(r"/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*")
 
 
 def _dir_exists(distro_name, path):
+    if W.is_linux():
+        return os.path.isdir(path)
     rc, out = _wsl(distro_name, '[ -d "$1" ] && echo ok', path, timeout=40)
     return rc == 0 and out.strip().endswith("ok")
 
@@ -502,28 +522,29 @@ def workspace_state(cfg=None):
     """Dossier de travail courant + s'il existe réellement dans WSL. Ne lève jamais : `reason` explique un éventuel problème."""
     unc, ok, reason = W.workspace_unc(), False, ""
     if not available():
-        reason = "WSL n'est pas installé sur ce PC."
+        reason = "bash est introuvable sur ce système." if W.is_linux() else "WSL n'est pas installé sur ce PC."
     else:
         try:
             ok = _dir_exists(W.DISTRO, W.DIR)
             if not ok:
-                reason = "Dossier introuvable dans WSL : vérifie le nom de la distribution et de l'utilisateur."
+                reason = "Ce dossier n'existe pas : choisis un dossier existant." if W.is_linux() else "Dossier introuvable dans WSL : vérifie le nom de la distribution et de l'utilisateur."
         except DevError as e:
             reason = str(e)
-    return {"unc": unc, "distro": W.DISTRO, "linux": W.DIR, "default": W.is_default(), "exists": ok, "reason": reason, "wsl": available(), "example": "\\\\wsl.localhost\\Ubuntu\\home\\toi"}
+    return {"unc": unc, "distro": W.DISTRO, "linux": W.DIR, "default": W.is_default(), "exists": ok, "reason": reason, "wsl": available(), "platform": W.system(),
+            "example": "/home/toi/projets" if W.is_linux() else "\\\\wsl.localhost\\Ubuntu\\home\\toi"}
 
 
 def set_workspace(unc, cfg=None):
     """Enregistre le dossier de travail WSL. Forme contrôlée ET existence vérifiée dans WSL avant d'être appliqué (vide = dossier par défaut)."""
     unc = (unc or "").strip()
     try:
-        new = W.clean_unc(unc) if unc else W.DEFAULT_UNC
-        dist, path = W.parse_unc(new)
+        new = W.clean_unc(unc) if unc else W.default_workspace()
+        dist, path = W.parse_posix(new) if W.is_linux() else W.parse_unc(new)
     except ValueError as e:
         raise DevError(str(e))
     _need_wsl()
     if not _dir_exists(dist, path):
-        raise DevError(f"Dossier introuvable dans WSL : {new}. Vérifie la distribution et le nom d'utilisateur (le bouton DÉTECTER les trouve pour toi).")
+        raise DevError(f"Ce dossier n'existe pas : {new}" if W.is_linux() else f"Dossier introuvable dans WSL : {new}. Vérifie la distribution et le nom d'utilisateur (le bouton DÉTECTER les trouve pour toi).")
     try:
         W.set_workspace(unc)
     except ValueError as e:
@@ -533,6 +554,11 @@ def set_workspace(unc, cfg=None):
 
 def detect_workspace(cfg=None):
     """Propose \\\\wsl.localhost\\<distribution par défaut>\\<home de l'utilisateur WSL>, lu dans WSL lui-même."""
+    if W.is_linux():
+        home = os.path.expanduser("~")
+        if not os.path.isdir(home):
+            raise DevError("Dossier personnel introuvable : choisis un dossier.")
+        return {"unc": home}
     _need_wsl()
     cmd = ["wsl.exe", "--", "bash", "-c", _launcher('printf "%s\\n%s\\n" "$WSL_DISTRO_NAME" "$HOME"')]
     try:
@@ -550,6 +576,83 @@ def detect_workspace(cfg=None):
     except ValueError as e:
         raise DevError(str(e))
     return {"unc": unc}
+
+
+PICK_TIMEOUT = 600
+
+
+def _ps_literal(text):
+    return "'" + str(text).replace("'", "''") + "'"
+
+
+def _pick_windows(title, start):
+    """FolderBrowserDialog (boîte Windows « Parcourir les dossiers ») lancée dans un PowerShell STA : indépendante de la fenêtre d'E.N.O.S., avec un propriétaire invisible
+    au premier plan (sinon la boîte s'ouvre parfois DERRIÈRE les autres fenêtres). Le script voyage en -EncodedCommand : aucun problème de guillemets."""
+    ps = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8; Add-Type -AssemblyName System.Windows.Forms; [Windows.Forms.Application]::EnableVisualStyles();"
+          "$o = New-Object Windows.Forms.Form; $o.TopMost = $true; $o.ShowInTaskbar = $false; $o.StartPosition = 'Manual'; $o.Location = New-Object Drawing.Point(-3000,-3000); $o.Size = New-Object Drawing.Size(1,1); $o.Show();"
+          "$f = New-Object Windows.Forms.FolderBrowserDialog; $f.Description = " + _ps_literal(title) + "; $f.ShowNewFolderButton = $true;" +
+          ("$f.SelectedPath = " + _ps_literal(start) + ";" if start else "") +
+          "if ($f.ShowDialog($o) -eq [Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($f.SelectedPath) }; $o.Close()")
+    # Le script passe par l'ENTRÉE STANDARD (`-Command -`) : -EncodedCommand est bloqué par les protections anti-scripts obfusqués de Windows Defender / AppLocker.
+    return ["powershell.exe", "-NoProfile", "-NonInteractive", "-Sta", "-WindowStyle", "Hidden", "-Command", "-"], ps + "\r\n"
+
+
+def _pick_linux(title, start):
+    """Premier sélecteur graphique disponible : zenity, kdialog, yad, puis tkinter (python3 système). Retourne la commande, ou None."""
+    if shutil.which("zenity"):
+        return ["zenity", "--file-selection", "--directory", "--title=" + title] + (["--filename=" + start.rstrip("/") + "/"] if start else [])
+    if shutil.which("kdialog"):
+        return ["kdialog", "--title", title, "--getexistingdirectory", start or os.path.expanduser("~")]
+    if shutil.which("yad"):
+        return ["yad", "--file", "--directory", "--title=" + title] + (["--filename=" + start.rstrip("/") + "/"] if start else [])
+    py = shutil.which("python3")
+    if py:
+        code = ("import sys,tkinter as t,tkinter.filedialog as d\nr=t.Tk();r.withdraw();r.attributes('-topmost',True)\n"
+                "p=d.askdirectory(title=sys.argv[1],initialdir=sys.argv[2] or None,mustexist=True)\nsys.stdout.write(p or '')")
+        return [py, "-c", code, title, start or os.path.expanduser("~")]
+    return None
+
+
+def pick_folder(title="Choisir le dossier d'espace de travail", start="", runner=None):
+    """Boîte de dialogue NATIVE de sélection de dossier (affichée sur CE PC). Retourne le chemin choisi, ou None si l'utilisateur annule. `runner` : injectable (tests).
+    Pourquoi pas window.showDirectoryPicker() côté navigateur : elle ne donne JAMAIS le chemin complet (un nom et un handle opaque), inutilisable pour l'enregistrer."""
+    run = runner or subprocess.run
+    script = None
+    if W.is_windows():
+        cmd, script = _pick_windows(title, start)
+    else:
+        cmd = _pick_linux(title, start) if W.is_linux() else None
+    if not cmd:
+        raise DevError("Aucun sélecteur de dossier disponible : installe zenity (sudo apt install zenity) ou kdialog." if W.is_linux()
+                       else "Le sélecteur de dossier n'est pas disponible sur ce système.")
+    try:
+        kw = {"input": script.encode("utf-8")} if script is not None else {"stdin": subprocess.DEVNULL}
+        p = run(cmd, capture_output=True, timeout=PICK_TIMEOUT, creationflags=NOWIN if W.is_windows() else 0, **kw)
+    except subprocess.TimeoutExpired:
+        raise DevError("Aucun dossier choisi (délai dépassé).")
+    except OSError as e:
+        raise DevError(f"Impossible d'ouvrir le sélecteur de dossier : {e}")
+    out = (p.stdout or b"").decode("utf-8", "replace").replace(chr(0), "").strip()
+    if p.returncode not in (0, 1) and not out:                       # zenity / kdialog : 1 = annulé ; autre code = vrai échec
+        raise DevError("Le sélecteur de dossier a échoué : " + ((p.stderr or b"").decode("utf-8", "replace").strip()[:200] or f"code {p.returncode}"))
+    return out or None
+
+
+def pick_workspace(cfg=None, runner=None):
+    """Bouton « Choisir le dossier d'espace de travail » : ouvre la boîte native, valide le choix puis l'enregistre. Retourne {cancelled, ...état}."""
+    start = W.workspace_unc()
+    if W.is_linux() and not os.path.isdir(start):
+        start = os.path.expanduser("~")
+    path = pick_folder("Choisis le dossier d'espace de travail (là où sont tes dépôts)", start, runner)
+    if not path:
+        return {"cancelled": True, **workspace_state()}
+    if W.is_windows():
+        try:
+            W.parse_unc(path)
+        except ValueError:
+            raise DevError("Ce dossier n'est pas dans WSL (" + path + "). Dans la fenêtre, tape \\\\wsl.localhost\\Ubuntu dans la barre d'adresse (ou ouvre « Linux » dans le volet "
+                           "de gauche), puis choisis ton dossier personnel ou un sous-dossier.")
+    return {"cancelled": False, **set_workspace(path)}
 
 
 # ------------------------------------------------------------------ désinstallation des versions de test (Inno Setup)

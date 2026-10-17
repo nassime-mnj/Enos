@@ -12,6 +12,8 @@ import nasko_depot_git as G  # noqa: E402
 import nasko_devmanager as D  # noqa: E402
 import nasko_server as S  # noqa: E402
 import nasko_wsl as W  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from platform_pin import windows  # noqa: E402
 
 DEFAULT = "\\\\wsl.localhost\\Ubuntu\\home\\nasko"
 DIMITRI = "\\\\wsl.localhost\\Ubuntu\\home\\dimitri"
@@ -27,6 +29,7 @@ class Base(unittest.TestCase):
         self.addCleanup(W.reset)
 
 
+@windows
 class Workspace(Base):
     def test_default_when_nothing_configured(self):
         self.assertEqual(W.workspace_unc(), DEFAULT)
@@ -63,6 +66,7 @@ class Workspace(Base):
             self.assertEqual(upd.call_count, n)                                  # rien d'invalide n'est jamais enregistré
 
 
+@windows
 class DevManager(Base):
     def test_scripts_carry_markers_resolved_at_send_time(self):
         self.assertNotIn("/home/", D.BSET)
@@ -122,6 +126,7 @@ class DevManager(Base):
             self.assertIn("WSL", D.workspace_state()["reason"])
 
 
+@windows
 class Routes(Base):
     def test_terminals_closed_only_after_a_successful_change(self):
         with mock.patch.object(S.nasko_devmanager, "set_workspace", side_effect=D.DevError("non")), mock.patch.object(S.nasko_depot_term, "close_all") as ca:
@@ -131,6 +136,32 @@ class Routes(Base):
         with mock.patch.object(S.nasko_devmanager, "set_workspace", return_value={"unc": DIMITRI}), mock.patch.object(S.nasko_depot_term, "close_all") as ca:
             self.assertEqual(S.depot_workspace_set(S.DepotWorkspace(unc=DIMITRI)), {"unc": DIMITRI})
             ca.assert_called_once()
+
+
+@windows
+class PickRoute(Base):
+    def test_pick_applies_the_choice_and_closes_terminals_only_when_something_changed(self):
+        chosen = {"cancelled": False, "unc": DIMITRI, "exists": True}
+        with mock.patch.object(S.nasko_devmanager, "pick_workspace", return_value=chosen), mock.patch.object(S.nasko_depot_term, "close_all") as ca:
+            self.assertEqual(S.depot_workspace_pick(), chosen)
+            ca.assert_called_once()
+        with mock.patch.object(S.nasko_devmanager, "pick_workspace", return_value={"cancelled": True, "unc": DEFAULT}), mock.patch.object(S.nasko_depot_term, "close_all") as ca:
+            self.assertTrue(S.depot_workspace_pick()["cancelled"])
+            ca.assert_not_called()                                                     # boîte fermée sans choix : rien ne change, le terminal reste ouvert
+
+    def test_pick_errors_become_http_400(self):
+        with mock.patch.object(S.nasko_devmanager, "pick_workspace", side_effect=D.DevError("pas dans WSL")):
+            with self.assertRaises(S.HTTPException) as cm:
+                S.depot_workspace_pick()
+        self.assertEqual(cm.exception.status_code, 400)
+
+    def test_route_is_local_only_and_mapped_to_the_depot_capability(self):
+        import nasko_roles
+        self.assertEqual(nasko_roles.capability_for("/api/depot/workspace/pick"), "depot")
+        route = next(r for r in S.app.routes if getattr(r, "path", "") == "/api/depot/workspace/pick")
+        deps = [d.call.__name__ for d in route.dependant.dependencies]
+        self.assertIn("local_only", deps)
+        self.assertIn("need_token", deps)
 
 
 class EmbeddedStyle(unittest.TestCase):

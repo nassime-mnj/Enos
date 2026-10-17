@@ -6,16 +6,18 @@ import os, shlex, stat, subprocess, sys, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tests"))
 import nasko_wsl as W  # noqa: E402
 import nasko_devmanager as D  # noqa: E402
 import nasko_depot_git as G  # noqa: E402
 import nasko_depot_term as T  # noqa: E402
 import release_editions  # noqa: E402
+from platform_pin import windows  # noqa: E402
 
 UNC = "\\\\wsl.localhost\\Ubuntu\\home\\nasko"
 
 
+@windows
 class Workspace(unittest.TestCase):
     def setUp(self):
         self.patch_cfg = mock.patch.object(W, "_configured", return_value="")      # hermétique : jamais le réglage réel de la machine (dossier par défaut du CEO)

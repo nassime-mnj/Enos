@@ -1,4 +1,5 @@
-"""Fabrique une version DISTRIBUABLE d'E.N.O.S. (installeur .exe) sans une seule donnée personnelle.
+"""Fabrique une version DISTRIBUABLE d'E.N.O.S. (installeur .exe sous Windows ; archive .tar.gz / AppImage sous Linux, voir docs/BUILD_LINUX.md) sans une seule donnée personnelle.
+LINUX : à lancer SUR Linux (ou dans WSL) — PyInstaller ne fait pas de compilation croisée. La clé de signature se désigne avec ENOS_RELEASE_KEYS.
 
     py build_release.py --version 3.1.0 --base-url https://github.com/TOI/ENOS/releases/download/v3.1.0
     py build_release.py --version 3.1.0 --check          (analyse seulement : ce qui est exclu + recherche de fuites, rien n'est construit)
@@ -37,15 +38,49 @@ OUT = REL / "installer"
 LAUNCHER = ROOT / "launcher"                # sources du Dual Pulse Launcher (workspace Cargo : engine/ + src-tauri/)
 LAUNCHER_TARGET = REL / "launcher-target"   # dossier de compilation Cargo, hors des sources (jamais mélangé à ton dossier de travail)
 LAUNCHER_OUT = REL / "launcher-bin"         # DualPulseLauncher.exe prêt à embarquer (volontairement HORS de dist-<édition> : jamais dans les manifestes « files » d'E.N.O.S.)
-LAUNCHER_BIN = "dual-pulse-launcher.exe"    # nom produit par Cargo (package « dual-pulse-launcher »)
+LAUNCHER_BIN = "dual-pulse-launcher.exe"    # nom produit par Cargo (package « dual-pulse-launcher ») — sans « .exe » sous Linux, voir launcher_bin() / launcher_file()
 LAUNCHER_FILE = "DualPulseLauncher.exe"     # nom installé (voir installer/enos.iss)
-KEYS = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "ENOS-release" / "keys"    # HORS du dossier du projet (OneDrive/Git) : clé privée de signature, à SAUVEGARDER, jamais publiée ni régénérée
+
+
+def is_windows():
+    return sys.platform == "win32"
+
+
+def is_linux():
+    return sys.platform.startswith("linux")
+
+
+def launcher_bin():
+    return LAUNCHER_BIN if is_windows() else LAUNCHER_BIN[:-4]
+
+
+def launcher_file():
+    return LAUNCHER_FILE if is_windows() else "dual-pulse-launcher"
+
+
+def app_exe():
+    """Nom du binaire principal produit par PyInstaller (ENOS.exe sous Windows, ENOS sous Linux)."""
+    return "ENOS.exe" if is_windows() else "ENOS"
+
+
+def keys_dir():
+    """Dossier de la clé privée de signature OTA — HORS du dossier du projet (OneDrive/Git), à SAUVEGARDER, jamais publiée ni régénérée.
+    ENOS_RELEASE_KEYS le force (ex. compiler sous WSL avec la clé de Windows : /mnt/c/Users/<toi>/AppData/Local/ENOS-release/keys). Windows : %LOCALAPPDATA%\\ENOS-release\\keys ;
+    Linux : $XDG_DATA_HOME/ENOS-release/keys (défaut ~/.local/share)."""
+    if os.environ.get("ENOS_RELEASE_KEYS"):
+        return Path(os.environ["ENOS_RELEASE_KEYS"])
+    if os.environ.get("LOCALAPPDATA"):
+        return Path(os.environ["LOCALAPPDATA"]) / "ENOS-release" / "keys"
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "ENOS-release" / "keys"
+
+
+KEYS = keys_dir()
 sys.path.insert(0, str(ROOT))
 
 # ---------------------------------------------------------------- liste blanche (tout le reste est ignoré)
 ROOT_FILES = ("*.py", "build.bat", "requirements.txt", "logo.png", "logo-192.png", "logo-512.png", "logo.ico", "updater_ui.html")
 SKIP_ROOT_PY = {"build_release.py", "diagnostic_reveil.py", "creer_voix_eto.py", "generer_voix.py", "renommer_audio.py", "construire_apk.py",
-                "creer_relais.py", "wake_relay.py", "release_editions.py", "configurer_llm.py", "creer_raccourci.py", "updater.py"}   # outils de développement, inutiles à l'ami
+                "creer_relais.py", "wake_relay.py", "release_editions.py", "configurer_llm.py", "creer_raccourci.py", "updater.py", "release_linux.py"}   # outils de développement, inutiles à l'ami
 TREES = {                                  # dossiers livrés tels quels (assets graphiques, thème Coreboard, audio de l'OS, projets Godot de l'Œil et des échecs)
     "static": None, "voix": None, "openings": None, "cascades": None,
     "godot_eye": None, "godot_chess": None, "godot_neon": None,
@@ -196,6 +231,31 @@ def pyinstaller_args():
     return out
 
 
+WINDOWS_ONLY_OPTS = ("--noconsole", "--windowed", "-w")                 # sans effet (ou avertissement) hors Windows
+WINDOWS_ONLY_PREFIX = ("--icon=", "--version-file=", "--manifest=", "--uac-admin", "--uac-uiaccess")
+
+
+def posix_pyinstaller_args(args):
+    """Options de build.bat -> options PyInstaller pour Linux : `--add-data SRC;DEST` devient `SRC:DEST` et les options propres à Windows (icône .ico, console, manifeste…) sont retirées.
+    Fonction pure (testée sans Linux)."""
+    out, i = [], 0
+    while i < len(args):
+        a = args[i]
+        if a in WINDOWS_ONLY_OPTS or a.startswith(WINDOWS_ONLY_PREFIX):
+            i += 1
+            continue
+        if a == "--icon" and i + 1 < len(args):                      # forme « --icon X »
+            i += 2
+            continue
+        if a == "--add-data" and i + 1 < len(args):
+            out += [a, args[i + 1].replace(";", ":", 1)]
+            i += 2
+            continue
+        out.append(a)
+        i += 1
+    return out
+
+
 def drop_missing_data(args):
     """--add-data dont la source n'existe pas dans le dossier de build (ex. « openings » retiré de l'édition Friends) : retiré de la commande au lieu de faire échouer PyInstaller."""
     out, i = [], 0
@@ -213,7 +273,9 @@ def drop_missing_data(args):
 
 def build_exe():
     args = drop_missing_data(pyinstaller_args())
-    sep = ";"
+    if not is_windows():
+        args = posix_pyinstaller_args(args)
+    sep = ";" if is_windows() else ":"
     args = [a for a in args if a != "--onefile"] + (["--onefile"] if "--onedir" not in sys.argv else ["--onedir"])
     extra = ["--add-data", f"{STAGE / 'version.txt'}{sep}.", "--add-data", f"{STAGE / 'ota_pubkey.txt'}{sep}.", "--add-data", f"{STAGE / 'enos_edition.json'}{sep}.",
              "--distpath", str(DIST), "--workpath", str(REL / "build_tmp"), "--specpath", str(REL / "build_tmp")]
@@ -260,8 +322,14 @@ def launcher_env():
 def build_launcher():
     """Compile le Launcher (`cargo tauri build --no-bundle` : l'exécutable seul, l'installeur Inno se charge de l'embarquer) et retourne son chemin.
     S'arrête avec un message clair si l'outillage manque : on ne produit JAMAIS en silence un installeur sans Launcher."""
-    if sys.platform != "win32":
-        die("le Launcher se compile sous Windows (WebView2, coffre d'identifiants Windows). Lance ce build sur ton PC Windows, ou utilise --skip-launcher pour un build sans Launcher.")
+    if not (is_windows() or is_linux()):
+        die("le Launcher se compile sous Windows (WebView2, coffre d'identifiants Windows) ou sous Linux (WebKitGTK, Secret Service). Utilise --skip-launcher pour un build sans Launcher.")
+    if is_linux():
+        import release_linux
+        problems = release_linux.preflight(with_launcher=True)
+        problems = [p for p in problems if "Launcher" in p or "pkg-config" in p]            # le reste (binutils, pywebview) est contrôlé avant PyInstaller
+        if problems:
+            die("outillage Linux incomplet pour le Launcher :\n    - " + "\n    - ".join(problems) + "\n  (ou utilise --skip-launcher)")
     if not (LAUNCHER / "src-tauri" / "tauri.conf.json").exists():
         die(f"sources du Launcher introuvables : {LAUNCHER}")
     cargo = shutil.which("cargo")
@@ -274,10 +342,10 @@ def build_launcher():
     r = subprocess.run([cargo, "tauri", "build", "--no-bundle"], cwd=LAUNCHER, env=launcher_env())
     if r.returncode != 0:
         die("la compilation du Launcher a échoué (voir les messages ci-dessus).")
-    exe = LAUNCHER_TARGET / "release" / LAUNCHER_BIN
+    exe = LAUNCHER_TARGET / "release" / launcher_bin()
     check_launcher_exe(exe)
     LAUNCHER_OUT.mkdir(parents=True, exist_ok=True)
-    out = LAUNCHER_OUT / LAUNCHER_FILE
+    out = LAUNCHER_OUT / launcher_file()
     shutil.copy2(exe, out)
     hits = leak_scan(LAUNCHER_OUT)
     if hits:
@@ -287,14 +355,52 @@ def build_launcher():
 
 
 def check_launcher_exe(exe):
-    """Le fichier attendu existe, est un exécutable Windows (en-tête « MZ ») et n'est pas une coquille vide."""
+    """Le fichier attendu existe, est un exécutable de la plateforme (Windows : en-tête « MZ » ; Linux : « \\x7fELF ») et n'est pas une coquille vide."""
     exe = Path(exe)
     if not exe.is_file():
         die(f"le Launcher compilé est introuvable : {exe}")
     with open(exe, "rb") as f:
-        head = f.read(2)
-    if head != b"MZ" or exe.stat().st_size < 512 * 1024:
-        die(f"{exe} n'est pas un exécutable Windows valide.")
+        head = f.read(4)
+    magic, label = (b"MZ", "Windows") if is_windows() else (b"\x7fELF", "Linux")
+    if not head.startswith(magic) or exe.stat().st_size < 512 * 1024:
+        die(f"{exe} n'est pas un exécutable {label} valide.")
+
+
+# ---------------------------------------------------------------- 6bis. paquet Linux (tar.gz avec install.sh, AppImage en option)
+def build_linux_package(version, edition, launcher_exe=None, fmt="tar"):
+    """Assemble ce que PyInstaller (et Cargo) ont produit en livrables Linux (voir release_linux.py). Retourne la liste des fichiers créés (+ leur .sha256)."""
+    import release_linux as L
+    app_root = DIST / "ENOS" if (DIST / "ENOS").is_dir() else DIST           # --onedir : PyInstaller crée dist/ENOS/
+    if app_root != DIST:
+        for d in ("godot_eye", "godot_chess", "godot_neon"):
+            if (DIST / d).is_dir():
+                shutil.copytree(DIST / d, app_root / d, dirs_exist_ok=True)
+    icon = STAGE / "logo-512.png"
+    OUT.mkdir(parents=True, exist_ok=True)
+    made = []
+    if fmt in ("tar", "both"):
+        pkg = L.assemble_tree(REL / "linux-pkg" / f"ENOS-{version}-{edition}-linux-{L.arch()}", app_root, version, edition, launcher_exe, icon)
+        made.append(L.make_tarball(pkg, OUT / L.package_name(version, edition)))
+    if fmt in ("appimage", "both"):
+        tool = L.find_appimagetool()
+        if not tool:
+            msg = "appimagetool introuvable (https://github.com/AppImage/appimagetool/releases) : pose-le dans le PATH ou définis APPIMAGETOOL."
+            if fmt == "appimage":
+                die(msg)
+            say("  !! " + msg + " AppImage ignorée.")
+        else:
+            appdir = L.assemble_appdir(REL / "linux-appdir" / f"ENOS-{version}-{edition}.AppDir", app_root, version, edition, icon)
+            out = L.build_appimage(appdir, OUT / L.package_name(version, edition, "AppImage"), tool)
+            if not out:
+                die("appimagetool a échoué.")
+            made.append(out)
+    for f in list(made):
+        digest = hashlib.sha256(Path(f).read_bytes()).hexdigest()
+        sha = Path(str(f) + ".sha256")
+        sha.write_text(f"{digest}  {Path(f).name}\n", encoding="utf-8")
+        made.append(sha)
+        say(f"  {Path(f).name} : {Path(f).stat().st_size / 1048576:.1f} Mo, sha256 {digest[:16]}…")
+    return made
 
 
 # ---------------------------------------------------------------- 6. installeur Inno Setup
@@ -417,10 +523,10 @@ def write_launcher_files_manifest(priv, version, dist, notes, edition, out=None)
     import release_editions
     channel = release_editions.CHANNEL[edition]
     entries = files_manifest_entries(dist, channel, version)
-    if not any(e["path"] == "ENOS.exe" for e in entries):
-        die("ENOS.exe absent du dossier de l'édition construite.")
+    if not any(e["path"] == app_exe() for e in entries):
+        die(f"{app_exe()} absent du dossier de l'édition construite.")
     manifest = {"product": "enos", "channel": channel, "version": version, "released": datetime.date.today().isoformat(), "notes": notes, "min_launcher": "0.2.0",
-                "mode": "files", "run": "ENOS.exe", "files": entries}
+                "mode": "files", "run": app_exe(), "files": entries}
     canon = json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     name = f"launcher-enos-{channel}-{version}-files"
     dest = Path(out) if out else OUT
@@ -446,6 +552,8 @@ def main():
     ap.add_argument("--skip-launcher", action="store_true",
                     help="build de DÉVELOPPEMENT sans Dual Pulse Launcher (raccourcis vers ENOS.exe). Ne jamais distribuer : l'accès par invitation passe par le Launcher")
     ap.add_argument("--onedir", action="store_true", help="dossier au lieu d'un exe unique : démarrage plus rapide, moins de faux positifs antivirus")
+    ap.add_argument("--linux-format", choices=("tar", "appimage", "both"), default="tar",
+                    help="Linux seulement : tar (archive .tar.gz avec install.sh, défaut) | appimage (nécessite appimagetool) | both")
     a = ap.parse_args()
     if not re.fullmatch(r"\d+(\.\d+){1,3}", a.version):
         die("version invalide (ex. 3.1.0)")
@@ -471,6 +579,13 @@ def main():
     if a.check or a.skip_build:
         say("\nTerminé (aucune compilation).")
         return
+    if not (is_windows() or is_linux()):
+        die("ce script compile sous Windows (installeur Inno Setup) ou sous Linux (archive .tar.gz / AppImage). macOS n'est pas pris en charge.")
+    if is_linux():
+        import release_linux
+        problems = release_linux.preflight(with_launcher=False)
+        if problems:
+            die("outillage Linux incomplet :\n    - " + "\n    - ".join(problems))
     say("[5/6] Compilation (E.N.O.S. + Launcher)")
     build_exe()
     launcher_exe = None
@@ -485,6 +600,11 @@ def main():
         write_launcher_files_manifest(priv, a.version, DIST, a.notes, a.edition)
     if a.skip_installer:
         say(f"\nTerminé : {DIST}")
+        return
+    if is_linux():
+        say("[6/6] Paquet Linux")
+        made = build_linux_package(a.version, a.edition, launcher_exe, a.linux_format)
+        say("\nTerminé : " + ", ".join(str(m) for m in made) + "\n  Teste-le sur une machine Linux propre (./install.sh) avant de l'envoyer. Pas de manifeste Launcher/OTA : le Launcher ne sait pas encore installer un paquet Linux.")
         return
     say("[6/6] Installeur")
     setup = build_installer(a.version, a.edition, launcher_exe)

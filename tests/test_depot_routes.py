@@ -9,6 +9,8 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, W
 from fastapi.testclient import TestClient  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 import nasko_core, nasko_depot, nasko_depot_forge, nasko_depot_git, nasko_depot_study, nasko_depot_term, nasko_devmanager, nasko_roles  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from platform_pin import windows  # noqa: E402
 
 SRC = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nasko_server.py"), encoding="utf-8").read()
 BLOCK = SRC[SRC.index("# ----------------------------------------------------------------------------- DÉPÔT INTRANET"):SRC.index("class PetOptions(BaseModel):")]
@@ -126,6 +128,7 @@ class Routes(unittest.TestCase):
         self.assertEqual(self.c.delete("/api/depot/trainings/%s" % t["id"]).json(), {"ok": True})
         self.assertIn(self.c.get("/api/depot/trainings/zzz").status_code, (400, 404))
 
+    @windows
     def test_terminal_websocket(self):
         with self.c.websocket_connect("/ws/depot-term?repo=ex00&cols=80&rows=24") as ws:
             ws.send_bytes(b"echo $((6*7))\n")

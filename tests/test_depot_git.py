@@ -10,6 +10,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import nasko_depot_git as G  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from platform_pin import windows  # noqa: E402
 
 ENV = {"GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "t@example.org", "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "t@example.org",
        "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
@@ -429,6 +431,7 @@ class TestDropShell(Base):
         self.assertFalse(os.path.exists(os.path.join(self.tmp, "victim")))
 
 
+@windows
 class TestWslRunner(unittest.TestCase):
     @staticmethod
     def decode(argv):

@@ -125,6 +125,10 @@ def resource_path(*parts):
 
 
 def app_dir():
+    """Dossier des données et réglages (data/, nasko_config.json…). Par défaut à côté de l'exécutable ; ENOS_HOME le déplace (AppImage Linux : l'image est en lecture seule)."""
+    home = os.environ.get("ENOS_HOME", "").strip()
+    if home:
+        return home
     return os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__))
 
 
