@@ -415,7 +415,7 @@ Au premier lancement (ou via Réglages → CHANGER DE PROFIL) E.N.O.S. demande q
 - **BRB** : annonce ton absence et chronomètre. E.N.O.S. ne simule volontairement PAS le clavier/la souris (« Smart AFK ») : cela contourne la détection d'inactivité des jeux et expose au bannissement.
 
 ## Dépôt Intranet (bouton « DÉPÔT INTRANET » — CEO / Dev)
-Module d'école d'informatique (piscines, rendus stricts). Windows : les dépôts sont ceux de `~/Nasko` dans WSL (comme le Dev Manager) ; ailleurs : un dossier local (`depot_local_root`, défaut `~/Nasko`).
+Module d'école d'informatique (piscines, rendus stricts). Windows : les dépôts sont ceux de l'espace de travail WSL `\\wsl.localhost\Ubuntu\home\nasko` (comme le Dev Manager) ; ailleurs : un dossier local (`depot_local_root`, défaut `~/Nasko`).
 - **Forge** : colle le lien d'agenda **.ics** de la Forge (comme Zeus/Moodle) dans l'onglet FORGE. Chaque rendu / piscine devient une carte avec compte à rebours à la seconde, barre de temps écoulé et urgence colorée (< 24 h, < 1 h) ; bandeau « prochaine échéance ». Lien secret : stocké en local, jamais réaffiché (seul l'hôte l'est), https obligatoire.
 - **Éditeur Monaco** (le moteur de VS Code) : 4 espaces et auto-indentation, règle à 80 colonnes, vraies tabulations pour les Makefile, Ctrl+S.
 - **Terminal Linux** (xterm.js) : WSL via ConPTY si `pywinpty` est installé (`pip install pywinpty`), sinon repli sans TTY (pas d'éditeurs plein écran). Strictement local, secrets d'Enos non hérités. Pas de terminal vers le bac à sable cloud (il exécute un programme à la fois, ce n'est pas un shell).
@@ -426,4 +426,11 @@ Module d'école d'informatique (piscines, rendus stricts). Windows : les dépôt
 
 ## Smart AFK (Ctrl+K → « AFK », édition gaming)
 `nasko_afk.py` : armé → attend 5 s de calme (le temps de basculer sur le jeu) → toutes les 10-20 s, balayage de caméra de quelques pixels (avec retour) ou frappe légère ZQSD suivie de la touche opposée. **Kill-switch absolu** : Échap, mouvement manuel de la souris, clic, molette ou touche = arrêt instantané, touches relâchées. Sous Windows, ses propres événements sont écartés grâce au drapeau « injecté » du crochet bas niveau. Garde-fous : `afk_max_minutes` (120), `afk_only_process` (ex. `"VALORANT-Win64-Shipping.exe"`). Routes `/api/afk/*`, réservées au PC local et à la capacité « gaming ». ⚠ Les entrées simulées sont détectables : anti-triche kernel (Vanguard, EAC…) et CGU de nombreux jeux interdisent l'anti-AFK ; ne pas l'utiliser en ligne sans vérifier.
+
+## Espace de travail WSL du CEO (Dev Manager, module Dépôt)
+Règle absolue, définie à un seul endroit (`nasko_wsl.py`) : **`\\wsl.localhost\Ubuntu\home\nasko`** (= `/home/nasko` dans la distribution « Ubuntu »). Ni la configuration (`wsl_distro` n'a plus d'effet), ni l'interface, ni une requête ne peuvent le changer ; pour le déplacer, modifier `WORKSPACE_UNC` dans ce fichier.
+- **`git clone`** : tout clone lancé depuis Enos (Dev Manager, module Dépôt) atterrit dans ce dossier ; la destination est un chemin absolu (`/home/nasko/<nom>`), indépendant du dossier courant. Le dossier doit exister : sinon message explicite, jamais de repli ailleurs. La liste des dépôts ne montre que les dossiers Git de cet espace.
+- **Zone de dépôt `.sh`** (Dev Manager, visible dès l'ouverture, sans dépôt à choisir ; tout le panneau accepte le glisser-déposer) : le backend enregistre le script **dans ce dossier**, fins de ligne converties en LF, BOM retiré, `chmod +x`, écriture atomique (un lien symbolique existant est remplacé, jamais suivi). Il n'est jamais exécuté automatiquement : le bouton « ▶ EXÉCUTER » le lance, au choix, dans l'espace de travail. Un nom déjà pris demande confirmation (« REMPLACER »). Route : `POST /api/dev/drop`. L'import dans un dépôt précis (`/api/dev/import`) reste disponible côté API.
+- Le terminal WSL du module Dépôt démarre aussi dans ce dossier. Le module `nasko_wsl.py` nomme l'utilisateur Linux du CEO : il est exclu de l'édition Friends (lot « devtools »).
+- Non concerné : la synchronisation du projet Godot (`nasko_godotsync.py`) clone dans le dossier de projet Windows choisi, pas dans WSL.
 

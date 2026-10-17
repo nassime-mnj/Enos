@@ -3186,7 +3186,7 @@ def git_abort():
     return {"result": nasko_git.abort(load_config().get("project_dir", ""))}
 
 
-# --- DEV MANAGER : dépôts ~/Nasko du WSL, clonage, VS Code distant, scripts .sh détectés dans chaque dépôt (ce PC uniquement)
+# --- DEV MANAGER : dépôts de l'espace de travail WSL (\\\\wsl.localhost\\Ubuntu\\home\\nasko, voir nasko_wsl.py), clonage, VS Code distant, zone de dépôt des scripts .sh (ce PC uniquement)
 class DevClone(BaseModel):
     url: str
 
@@ -3220,6 +3220,12 @@ class DevScript(BaseModel):
 
 class DevImport(BaseModel):
     repo: str
+    name: str
+    content: str
+    overwrite: bool = False
+
+
+class DevDrop(BaseModel):
     name: str
     content: str
     overwrite: bool = False
@@ -3272,6 +3278,15 @@ def dev_import(b: DevImport):
     except nasko_devmanager.DevError as e:
         raise HTTPException(409 if str(e) == "exists" else 400, str(e))
     return {"ok": True}
+
+
+@app.post("/api/dev/drop", dependencies=_LOCAL)
+def dev_drop(b: DevDrop):
+    """Zone de dépôt : un .sh glissé est enregistré dans l'espace de travail WSL (LF, exécutable), prêt à être lancé côté Linux. Jamais exécuté ici."""
+    try:
+        return {"ok": True, **nasko_devmanager.drop_script(b.name, b.content, b.overwrite, load_config())}
+    except nasko_devmanager.DevError as e:
+        raise HTTPException(409 if str(e) == "exists" else 400, str(e))
 
 
 @app.get("/api/dev/jobs", dependencies=_LOCAL)

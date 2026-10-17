@@ -25,7 +25,7 @@ EXCLUDED_CAPS = {
 PY_MODULES = {                                    # modules Python propres à une capacité (remplacés par une coquille dans les éditions qui l'excluent)
     "receipts": ["nasko_receipts"],
     "apimon": ["nasko_apimon"],
-    "devtools": ["nasko_env", "nasko_git", "nasko_godotsync", "nasko_godotdiag", "nasko_devmanager", "nasko_anim", "nasko_audio", "nasko_depot", "nasko_depot_git", "nasko_depot_study", "nasko_depot_forge", "nasko_depot_term"],
+    "devtools": ["nasko_env", "nasko_git", "nasko_godotsync", "nasko_godotdiag", "nasko_wsl", "nasko_devmanager", "nasko_anim", "nasko_audio", "nasko_depot", "nasko_depot_git", "nasko_depot_study", "nasko_depot_forge", "nasko_depot_term"],
     "leisure": ["nasko_chess", "nasko_chessbridge", "nasko_mobchess", "nasko_pet", "opening_manager"],
     "creator": ["nasko_compress", "nasko_youtube"],
     "system": ["nasko_cleaner", "nasko_sysctl", "nasko_sysmon", "nasko_diag", "nasko_power"],

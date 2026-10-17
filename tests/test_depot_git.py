@@ -438,30 +438,36 @@ class TestWslRunner(unittest.TestCase):
         return base64.b64decode(m.group(1)).decode()
 
     def test_argv_pure(self):
-        w = G.WslRunner("Ubuntu")
+        home = tempfile.mkdtemp(); base = os.path.join(home, "Nasko"); os.makedirs(os.path.join(base, "ex00"))
+        w = G.WslRunner("Ubuntu", base)                                          # base ABSOLUE ; par défaut : l'espace de travail WSL (nasko_wsl.DIR)
         evil = "a b; $(touch PWNED) `x` \"q\" 'z'"
-        a = w.argv(["git", "commit", "-m", evil], "Nasko/ex00")
+        a = w.argv(["git", "commit", "-m", evil], "ex00")
         self.assertEqual(a[:6], ["wsl.exe", "-d", "Ubuntu", "--", "bash", "-c"])
         self.assertTrue(re.fullmatch(r"bash <\(echo [A-Za-z0-9+/=]+\|base64 -d\)", a[6]), "commande 100 % alphanumérique")
         body = self.decode(a)
         # le script décodé, exécuté pour de vrai avec printf à la place de git, restitue EXACTEMENT les arguments sans rien interpréter
-        home = tempfile.mkdtemp(); os.makedirs(os.path.join(home, "Nasko", "ex00"))
         out = subprocess.run(["bash", "-c", body.replace("exec git", "exec printf '%s\\n'")], capture_output=True, text=True, env={"HOME": home, "PATH": os.environ["PATH"]}, cwd="/")
         self.assertEqual(out.stdout.split("\n")[:-1], ["commit", "-m", evil], out.stderr)
         self.assertFalse(os.path.exists(os.path.join(home, "Nasko", "ex00", "PWNED")) or os.path.exists("/PWNED"))
 
     def test_cwd_validation(self):
         w = G.WslRunner("Ubuntu")
-        for c in ["../x", "Nasko/../x", "/etc", "a b", "-x", "a;b", "a\nb", "", ".", "a//b", "Nasko/.", "$HOME"]:
+        for c in ["../x", "Nasko/../x", "/etc", "a b", "-x", "a;b", "a\nb", ".", "a//b", "Nasko/.", "$HOME"]:
             with self.assertRaises(G.GitError, msg=c):
                 w.argv(["git"], c)
         with self.assertRaises(G.GitError):
             G.WslRunner("-d x")
-        self.assertIn('cd "$HOME"/Nasko ||', w.script(["git"], "Nasko"))
+        for bad in ("relatif", "/a/../b", "/a b", "/a;b", "~/x", "$HOME"):
+            with self.assertRaises(G.GitError, msg=bad):
+                G.WslRunner("Ubuntu", bad)                                       # la base doit être un chemin absolu propre
+        self.assertEqual(G.WslRunner("Ubuntu").base, "/home/nasko")              # défaut : l'espace de travail du CEO
+        self.assertIn("cd /home/nasko ||", w.script(["git"], ""))               # "" = l'espace de travail lui-même (clone)
+        self.assertIn("cd /home/nasko/ex00 ||", w.script(["git"], "ex00"))
+        self.assertNotIn("$HOME", w.script(["git"], "ex00"))                      # plus aucune dépendance au dossier personnel de l'utilisateur Linux
 
     def test_clone_argv_in_wsl(self):
         w = G.WslRunner("Ubuntu")
-        body = w.script(G.clone_argv("https://github.com/u/r.git", "r"), "Nasko")
+        body = w.script(G.clone_argv("https://github.com/u/r.git", "r"), "")
         self.assertIn("clone -- https://github.com/u/r.git r", body)
 
 

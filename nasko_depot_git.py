@@ -5,7 +5,7 @@ Pensé pour des étudiants en école d'informatique (piscines, rendus stricts) :
 MODÈLE DE MENACE
   * Aucune commande n'est jamais construite par concaténation de texte et AUCUN shell n'interprète une valeur saisie : tout est une liste
     d'arguments (`shell=False`). Sous WSL, les valeurs variables voyagent en ARGUMENTS POSITIONNELS d'un `sh -c` à script constant
-    (`cd "$HOME/$1" && shift && exec "$@"`), jamais dans le script lui-même.
+    (`cd <espace de travail>/<dépôt>` en chemin absolu, puis `exec` des arguments cités), jamais interprétés.
   * Les chemins fournis par l'utilisateur sont relatifs à la racine du dépôt ; chemin absolu, `..`, pathspec magique (`:(top)`, `:/`…),
     retour chariot / caractère de contrôle, nom commençant par `-` sont refusés ; `--` précède toujours les chemins et `--literal-pathspecs`
     neutralise les jokers. Noms de branche / tag validés par `git check-ref-format`.
@@ -31,6 +31,8 @@ import shutil
 import signal
 import subprocess
 import tempfile
+
+import nasko_wsl
 
 __all__ = ["GitError", "Runner", "LocalRunner", "WslRunner", "GitRepo", "clone", "clone_argv", "validate_url", "drop_shell",
            "URL_RE", "SHELL_NAME_RE"]
@@ -109,16 +111,20 @@ class WslRunner(Runner):
     valeur citée par shlex — voyage en base64 dans une commande 100 % alphanumérique, exécutée par `bash <(…)` ; l'entrée standard reste libre (écriture de fichiers)."""
     PRE = 'export GIT_TERMINAL_PROMPT=0 GIT_ASKPASS= GIT_EDITOR=true GIT_PAGER=cat LC_ALL=C.UTF-8 GIT_SSH_COMMAND="ssh -o BatchMode=yes"\n'
 
-    def __init__(self, distro, base="Nasko"):
+    def __init__(self, distro, base=None):
+        """`base` : dossier Linux ABSOLU de référence (défaut : l'espace de travail WSL, nasko_wsl.DIR). Les `cwd` sont relatifs à ce dossier ; "" = le dossier lui-même."""
         if not re.match(r"^[A-Za-z0-9._ -]{1,60}$", distro or "") or distro.startswith("-"):
             raise GitError("Nom de distribution WSL invalide.")
+        base = base or nasko_wsl.DIR
+        if not re.fullmatch(r"/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*", base) or any(s in (".", "..") for s in base.split("/")):
+            raise GitError("Dossier de base WSL invalide (chemin absolu, lettres, chiffres, . _ - uniquement).")
         self.distro = distro
         self.base = base
 
     @staticmethod
     def check_cwd(cwd):
-        if not isinstance(cwd, str) or not WSL_PATH_RE.fullmatch(cwd) or any(s in (".", "..") or s.startswith("-") for s in cwd.split("/")):
-            raise GitError("Chemin WSL invalide (relatif à ~, lettres, chiffres, . _ - uniquement).")
+        if not isinstance(cwd, str) or (cwd and (not WSL_PATH_RE.fullmatch(cwd) or any(s in (".", "..") or s.startswith("-") for s in cwd.split("/")))):
+            raise GitError("Chemin WSL invalide (relatif à l'espace de travail, lettres, chiffres, . _ - uniquement).")
         return cwd
 
     def script(self, args, cwd):
@@ -126,7 +132,8 @@ class WslRunner(Runner):
         self.check_cwd(cwd)
         if not args:
             raise GitError("Commande vide.")
-        return self.PRE + 'cd "$HOME"/' + shlex.quote(cwd) + " || exit 97\nexec " + " ".join(shlex.quote(str(a)) for a in args) + "\n"
+        where = shlex.quote(self.base) + ("/" + shlex.quote(cwd) if cwd else "")
+        return self.PRE + "cd " + where + " || exit 97\nexec " + " ".join(shlex.quote(str(a)) for a in args) + "\n"
 
     def argv(self, args, cwd):
         """Ligne de commande complète (pure, testable sans WSL)."""
@@ -203,7 +210,7 @@ def _strip_creds(url):
 
 # ----------------------------------------------------------------------------- dépôt
 class GitRepo:
-    """Opérations Git sur un dépôt. `path` = racine du dépôt (absolu pour LocalRunner, relatif à ~ pour WslRunner, ex. « Nasko/ex00 »)."""
+    """Opérations Git sur un dépôt. `path` = racine du dépôt (absolu pour LocalRunner, relatif à l'espace de travail WSL pour WslRunner, ex. « ex00 »)."""
 
     def __init__(self, runner, path):
         self.runner = runner
@@ -558,8 +565,8 @@ def clone_argv(url, name, allow_local=False):
 
 
 def clone(runner, url, base_dir, name=None, allow_local=False):
-    """Clone `url` dans base_dir/name. Local : base_dir absolu ; WslRunner : base_dir relatif à ~ (ex. « Nasko », doit exister).
-    Retourne {path, name} (path : absolu en local, relatif à ~ en WSL, utilisable tel quel dans GitRepo)."""
+    """Clone `url` dans base_dir/name. Local : base_dir absolu ; WslRunner : base_dir relatif à l'espace de travail ("" = l'espace de travail lui-même, qui doit exister).
+    Retourne {path, name} (path : absolu en local, relatif à l'espace de travail en WSL, utilisable tel quel dans GitRepo)."""
     url = validate_url(url, allow_local)
     name = _clone_name(url, name)
     local = getattr(runner, "is_local", False)
@@ -570,7 +577,7 @@ def clone(runner, url, base_dir, name=None, allow_local=False):
             raise GitError(f"Le dossier « {name} » existe déjà.")
         os.makedirs(base_dir, exist_ok=True)
     else:
-        dest = base_dir.rstrip("/") + "/" + name
+        dest = base_dir.rstrip("/") + "/" + name if base_dir else name
         if runner.run(["sh", "-c", '[ -e "$1" ]', "sh", name], base_dir)[0] == 0:
             raise GitError(f"Le dossier « {name} » existe déjà.")
     rc, out, err = runner.run(clone_argv(url, name, allow_local), base_dir, timeout=300)

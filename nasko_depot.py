@@ -1,6 +1,6 @@
 """DÉPÔT INTRANET : colle entre l'interface (routes /api/depot/*) et les moteurs — Git (nasko_depot_git), Forge + sujets PDF + entraînements (nasko_depot_study),
 terminal (nasko_depot_term). Deux espaces de travail :
-  * « wsl »   (Windows + WSL) : dépôts de ~/Nasko dans la distribution WSL, fichiers et clone via nasko_devmanager, Git exécuté DANS WSL ;
+  * « wsl »   (Windows + WSL) : dépôts de l'espace de travail WSL (\\\\wsl.localhost\\Ubuntu\\home\\nasko, voir nasko_wsl.py), fichiers et clone via nasko_devmanager, Git exécuté DANS WSL ;
   * « local » (Linux / macOS / développement) : dépôts d'un dossier de cette machine (config depot_local_root, défaut ~/Nasko).
 Sécurité : le nom de dépôt est validé (pas de chemin), toute opération fichier est confinée au dépôt (.git inaccessible), les exécutions passent par les moteurs
 (jamais de shell construit avec du texte utilisateur). Les routes sont strictement locales (jeton + ce PC) et réservées aux profils avec la capacité « devtools »."""
@@ -9,6 +9,7 @@ import re
 
 import nasko_core
 import nasko_depot_git as G
+import nasko_wsl
 
 REPO_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 FILE_MAX = 1_500_000
@@ -64,7 +65,7 @@ def git_repo(name, cfg=None):
     valid_repo(name)
     if mode(cfg) == "wsl":
         dm = _devmanager()
-        return G.GitRepo(G.WslRunner(dm.distro(cfg), dm.BASE), dm.BASE + "/" + name)
+        return G.GitRepo(G.WslRunner(dm.distro(cfg), nasko_wsl.DIR), name)
     return G.GitRepo(G.LocalRunner(), repo_dir(name, cfg))
 
 
@@ -93,7 +94,7 @@ def repos(cfg=None):
 
 def state(cfg=None):
     cfg = cfg if cfg is not None else nasko_core.load_config()
-    return {"mode": mode(cfg), "repos": repos(cfg), "current": cfg.get("depot_repo", ""), "base": "~/Nasko" if mode(cfg) == "wsl" else local_root(cfg),
+    return {"mode": mode(cfg), "repos": repos(cfg), "current": cfg.get("depot_repo", ""), "base": nasko_wsl.WORKSPACE_UNC if mode(cfg) == "wsl" else local_root(cfg),
             "options": {"shell_target": "parent" if cfg.get("depot_shell_target") == "parent" else "root"}}
 
 

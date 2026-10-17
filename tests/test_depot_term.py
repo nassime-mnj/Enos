@@ -282,15 +282,16 @@ class Logic(Base):
         store = []
         s = T.open_session("wsl", repo="mon-depot", cfg={"wsl_distro": "Debian"}, spawn=self.fake(store))
         argv, cwd, env, cols, rows, _ = store[0]
-        self.assertEqual(argv, ["wsl.exe", "-d", "Debian", "--cd", "~/Nasko/mon-depot"])
+        self.assertEqual(argv, ["wsl.exe", "-d", "Ubuntu", "--cd", "/home/nasko/mon-depot"])      # distribution et dossier imposés : « wsl_distro » n'a plus d'effet
         self.assertIsNone(cwd)
         self.assertNotIn("GROQ_API_KEY", env)
-        self.assertEqual(s.cwd, "~/Nasko/mon-depot")
+        self.assertEqual(s.cwd, "\\\\wsl.localhost\\Ubuntu\\home\\nasko\\mon-depot")
         for bad in ("../x", "a;b", ""):
             with self.assertRaises(T.TermError):
                 T.open_session("wsl", repo=bad, spawn=self.fake())
-        with self.assertRaises(T.TermError):
-            T.open_session("wsl", cfg={"wsl_distro": "x;rm -rf /"}, spawn=self.fake())
+        evil = []
+        T.open_session("wsl", cfg={"wsl_distro": "x;rm -rf /"}, spawn=self.fake(evil))             # la configuration ne peut pas rediriger le terminal
+        self.assertEqual(evil[0][0], ["wsl.exe", "-d", "Ubuntu", "--cd", "/home/nasko"])
 
     @unittest.skipIf(os.name == "nt", "pas de WSL réel ici")
     def test_wsl_unavailable_here(self):
@@ -309,8 +310,8 @@ class Logic(Base):
 
 class Pure(unittest.TestCase):
     def test_wsl_argv(self):
-        self.assertEqual(T.wsl_argv("Ubuntu", "r"), ["wsl.exe", "-d", "Ubuntu", "--cd", "~/Nasko/r"])
-        self.assertEqual(T.wsl_argv("Ubuntu"), ["wsl.exe", "-d", "Ubuntu", "--cd", "~/Nasko"])
+        self.assertEqual(T.wsl_argv("Ubuntu", "r"), ["wsl.exe", "-d", "Ubuntu", "--cd", "/home/nasko/r"])
+        self.assertEqual(T.wsl_argv("Ubuntu"), ["wsl.exe", "-d", "Ubuntu", "--cd", "/home/nasko"])
         self.assertEqual(T.wsl_argv("Ubuntu", "r", pipe=True)[-3:], ["--", "bash", "-i"])
         for d in ("", "-x", "a b", "a;b", "$(x)", "x" * 65, None):
             with self.assertRaises(T.TermError):

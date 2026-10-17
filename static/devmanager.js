@@ -1,5 +1,5 @@
 "use strict";
-// DEV MANAGER : dépôts ~/Nasko (WSL) · VS Code distant · scripts .sh (import + exécution) · terminal Linux à sortie en direct.
+// DEV MANAGER : dépôts de l'espace de travail WSL (\\wsl.localhost\Ubuntu\home\nasko) · VS Code distant · zone de dépôt des scripts .sh · terminal Linux à sortie en direct.
 // Performance : aucune requête tant que la fenêtre est fermée ; pendant une tâche, UNE requête de suite (offset) + la liste des tâches ;
 // le texte des tâches reste côté serveur (plafonné), le navigateur n'affiche que la tâche regardée.
 (() => {
@@ -156,31 +156,31 @@
     $("dv-chips").innerHTML = favs + DEFAULT_CMDS.map((c) => `<button data-c="${esc(c)}">${esc(c)}</button>`).join("");
   }
 
-  // ------------------------------------------------------------------ import .sh
-  async function importFiles(files, overwrite) {
-    if (!S.cur) return msg("bad", "Choisissez d'abord un dépôt.", "dv-import-msg");
+  // ------------------------------------------------------------------ zone de dépôt .sh : TOUJOURS enregistré dans l'espace de travail WSL (\\wsl.localhost\Ubuntu\home\nasko), jamais dans un dépôt
+  async function dropFiles(files, overwrite) {
+    const box = "dv-import-msg";
     for (const f of files) {
-      if (!/\.sh$/i.test(f.name)) { msg("bad", `« ${f.name} » n'est pas un .sh.`, "dv-import-msg"); continue; }
-      if (f.size > 1.5 * 1048576) { msg("bad", `« ${f.name} » dépasse 1,5 Mo.`, "dv-import-msg"); continue; }
+      if (!/\.sh$/i.test(f.name)) { msg("bad", `« ${f.name} » n'est pas un script .sh.`, box); continue; }
+      if (f.size > 1.5 * 1048576) { msg("bad", `« ${f.name} » dépasse 1,5 Mo.`, box); continue; }
       const name = f.name.replace(/[^A-Za-z0-9._-]/g, "_");
       try {
-        await post("/api/dev/import", { repo: S.cur, name, content: await f.text(), overwrite: !!overwrite });
-        msg("ok", `${name} importé à la racine de ${S.cur} (exécutable, fins de ligne LF).`, "dv-import-msg");
+        const r = await post("/api/dev/drop", { name, content: await f.text(), overwrite: !!overwrite });
+        $(box).innerHTML = `<div class="gt-msg ok">✔ ${esc(r.name)} enregistré dans <code>${esc(r.path)}</code> (exécutable, fins de ligne LF). <button class="btn sm" id="dv-run-dropped">▶ EXÉCUTER</button></div>`;
+        $("dv-run-dropped").onclick = () => launch(post("/api/dev/script", { repo: "", script: r.name, args: "" }));
       } catch (e) {
         if (e.status === 409) {
-          $("dv-import-msg").innerHTML = `<div class="gt-msg bad">⚠ ${esc(name)} existe déjà. <button class="btn sm" id="dv-ow">REMPLACER</button></div>`;
-          $("dv-ow").onclick = () => importFiles([f], true);
-        } else msg("bad", e.message, "dv-import-msg");
+          $(box).innerHTML = `<div class="gt-msg bad">⚠ ${esc(name)} existe déjà dans l'espace de travail. <button class="btn sm" id="dv-ow">REMPLACER</button></div>`;
+          $("dv-ow").onclick = () => dropFiles([f], true);
+        } else msg("bad", e.message, box);
       }
     }
-    refreshInfo();
   }
 
   // ------------------------------------------------------------------ branchements
   function open() {
     $("dv").hidden = false; document.body.classList.remove("menu-open");
     $("dv-term").hidden = false; renderChips(); renderJobs();
-    api("/api/dev/status").then((s) => { if (!s.wsl) msg("bad", "WSL n'est pas installé sur ce PC."); }).catch(() => {});
+    api("/api/dev/status").then((s) => { if (!s.wsl) msg("bad", "WSL n'est pas installé sur ce PC."); if (s.workspace) { $("dv-sub").textContent = "WSL · " + s.workspace; $("dv-drop").querySelector("code").textContent = s.workspace; } }).catch(() => {});
     loadRepos().then(() => { const last = S.cur || store.get("enos_dev_last", ""); if (last && S.repos.some((r) => r.name === last)) select(last, true); });
     api("/api/dev/jobs").then((l) => { S.jobs = l.jobs; if (!S.view && S.jobs.length) view(S.jobs[S.jobs.length - 1].id); tick(); }).catch(() => {});
   }
@@ -207,11 +207,12 @@
   };
   $("dv-sh").onkeydown = (e) => { if (e.key === "Enter" && e.target.dataset.a) { const b = $("dv-sh").querySelector(`button[data-s="${CSS.escape(e.target.dataset.a)}"]`); if (b) b.click(); } };
   $("dv-import").onclick = () => $("dv-file").click();
-  $("dv-file").onchange = (e) => { importFiles([...e.target.files]); e.target.value = ""; };
-  const dz = $("dv-scripts");
-  ["dragenter", "dragover"].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.add("drop"); }));
-  ["dragleave", "drop"].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); if (t === "drop" || e.target === dz) dz.classList.remove("drop"); }));
-  dz.addEventListener("drop", (e) => importFiles([...e.dataTransfer.files]));
+  $("dv-file").onchange = (e) => { dropFiles([...e.target.files]); e.target.value = ""; };
+  // toute la fenêtre du Dev Manager est une zone de dépôt (sinon WebView2 ouvrirait le fichier lâché à côté de la zone) ; l'éditeur garde ses propres glisser-déposer
+  const dz = $("dv"), card = $("dv-drop"), inEditor = (e) => e.target.closest && e.target.closest("#dv-ide");
+  ["dragenter", "dragover"].forEach((t) => dz.addEventListener(t, (e) => { if (inEditor(e)) return; e.preventDefault(); card.classList.add("drop"); }));
+  dz.addEventListener("dragleave", (e) => { if (!dz.contains(e.relatedTarget)) card.classList.remove("drop"); });
+  dz.addEventListener("drop", (e) => { if (inEditor(e)) return; e.preventDefault(); card.classList.remove("drop"); dropFiles([...e.dataTransfer.files]); });
   $("dv-form").onsubmit = (e) => { e.preventDefault(); runCmd($("dv-cmd").value); };
   $("dv-cmd").onkeydown = (e) => {
     if (e.key === "ArrowUp" && S.hist.length) { e.preventDefault(); S.hi = Math.min(S.hi + 1, S.hist.length - 1); $("dv-cmd").value = S.hist[S.hi]; }

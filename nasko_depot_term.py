@@ -1,7 +1,7 @@
 """E.N.O.S. - terminal interactif pour le dépôt (xterm.js côté interface).
 
 Un vrai shell avec TTY (couleurs, vim/less/top, complétion, Ctrl-C) :
-  * "wsl"   : WSL local sous Windows (distribution `distro(cfg)`, départ ~/Nasko/<dépôt>) ;
+  * "wsl"   : WSL local sous Windows (distribution imposée par nasko_wsl, départ <espace de travail>/<dépôt>) ;
   * "local" : shell POSIX local (Linux/macOS), limité à un répertoire racine autorisé.
 Jamais de terminal vers le sandbox du serveur cloud.
 
@@ -32,6 +32,8 @@ import signal
 import subprocess
 import threading
 import time
+
+import nasko_wsl
 
 __all__ = ["TermError", "Session", "backends", "open_session", "get", "close", "close_all", "list_sessions",
            "parse_client_message", "pump", "wsl_argv", "sanitized_env", "set_clock"]
@@ -77,10 +79,8 @@ def _winpty_ok():
 
 
 def _distro(cfg):
-    d = str((cfg or {}).get("wsl_distro") or "Ubuntu").strip()
-    if not DISTRO_RE.match(d):
-        raise TermError("Nom de distribution WSL invalide.")
-    return d
+    """Distribution de l'espace de travail : imposée par nasko_wsl (le réglage `wsl_distro` n'a plus d'effet)."""
+    return nasko_wsl.DISTRO
 
 
 def backends(cfg=None):
@@ -103,11 +103,11 @@ def _check_repo(repo):
 
 
 def wsl_argv(distro, repo=None, pipe=False):
-    """Fonction pure : argv (liste, jamais de shell) pour lancer WSL dans ~/Nasko[/<repo>].
+    """Fonction pure : argv (liste, jamais de shell) pour lancer WSL dans l'espace de travail (/home/nasko)[/<repo>].
     pipe=True : repli sans TTY (bash interactif explicite)."""
     if not isinstance(distro, str) or not DISTRO_RE.match(distro):
         raise TermError("Nom de distribution WSL invalide.")
-    path = "~/Nasko"
+    path = nasko_wsl.DIR
     if repo is not None:
         path += "/" + _check_repo(repo)
     argv = ["wsl.exe", "-d", distro, "--cd", path]
@@ -644,7 +644,7 @@ def open_session(kind="auto", repo=None, cols=100, rows=30, cfg=None, spawn=None
         if spawn is None and not backends(cfg)["wsl"]:
             raise TermError("WSL n'est pas disponible sur cette machine.")
         argv, cwd = wsl_argv(d, repo), None
-        shown = "~/Nasko" + ("/" + repo if repo else "")
+        shown = nasko_wsl.WORKSPACE_UNC + ("\\" + repo if repo else "")
         env = sanitized_env()
     else:
         if spawn is None and _is_windows():

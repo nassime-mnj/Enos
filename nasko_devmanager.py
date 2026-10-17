@@ -1,8 +1,11 @@
 """DEV MANAGER : console de développement WSL (Ubuntu) + VS Code, sans jamais ouvrir de terminal.
 
-  * dépôts de ~/Nasko (nom, branche, modifications, dernier commit) : liste instantanée, infos Git chargées ensuite en UNE seule commande WSL ;
+ESPACE DE TRAVAIL (règle absolue, voir nasko_wsl.py) : \\\\wsl.localhost\\Ubuntu\\home\\nasko. Tous les clones y atterrissent ; la zone de dépôt y enregistre les .sh.
+
+  * dépôts de l'espace de travail (nom, branche, modifications, dernier commit) : liste instantanée, infos Git chargées ensuite en UNE seule commande WSL ;
   * clonage silencieux, VS Code relié au WSL (code --remote wsl+<distro>), Explorateur Windows sur le dossier ;
-  * scripts .sh de la racine du dépôt : détection, IMPORT de n'importe quel .sh (fins de ligne converties en LF, chmod +x), exécution avec arguments ;
+  * scripts .sh : ZONE DE DÉPÔT (tout .sh glissé est enregistré dans l'espace de travail, fins de ligne LF, chmod +x, prêt à être exécuté côté Linux) ;
+    scripts de la racine d'un dépôt : détection, import, exécution avec arguments ;
   * N'IMPORTE QUELLE commande Linux dans le dépôt choisi : sortie en direct (flux incrémental), plusieurs tâches en parallèle, arrêt propre
     (tout le groupe de processus est tué, pas seulement wsl.exe).
 
@@ -21,7 +24,9 @@ import subprocess
 import threading
 import time
 
-BASE = "Nasko"                                   # dossier des dépôts : ~/Nasko
+import nasko_wsl as W
+
+WORKSPACE = W.DIR                               # /home/nasko : dossier unique des dépôts et des scripts déposés (règle absolue)
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 DISTRO_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 REPO_RE = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
@@ -33,9 +38,9 @@ OUT_MAX, OUT_KEEP = 2_000_000, 1_500_000
 MAX_RUNNING, MAX_JOBS = 4, 24
 MAX_IMPORT = 2 * 1024 * 1024
 # $1 = fichier PID, $2 = dépôt, $3 = commande. `set -m` : la commande a son PROPRE groupe de processus (pgid = pid), tué en bloc par stop_job.
-# Dossier des dépôts $B : ~/Nasko s'il contient au moins un sous-dossier, sinon le dossier personnel (là où vivent la plupart des dépôts WSL ;
-# dans ce cas G=1 et seuls les dossiers Git sont listés). Rien n'est créé.
-BSET = ('B="$HOME/' + BASE + '"; G=0; if [ -z "$(find "$B" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -print -quit 2>/dev/null)" ]; then B="$HOME"; G=1; fi; ')
+# Dossier des dépôts $B : TOUJOURS l'espace de travail (nasko_wsl.DIR) ; G=1 : seuls les dossiers Git sont listés (le dossier personnel contient aussi autre chose).
+# S'il est introuvable : code 99 et message explicite (jamais de repli sur un autre dossier). Rien n'est créé.
+BSET = ('B=' + shlex.quote(W.DIR) + '; G=1; [ -d "$B" ] || { echo \'Dossier de travail introuvable : ' + W.WORKSPACE_UNC + '\' >&2; exit 99; }; ')
 WRAP = (BSET + 'cd "$B/$2" || exit 97\n'
         'export GIT_TERMINAL_PROMPT=0 TERM=dumb\n'
         'set -m\nbash -lc "$3" </dev/null &\np=$!\necho "$p" > "$1"\nwait "$p"\nexit $?\n')
@@ -49,10 +54,8 @@ class DevError(Exception):
 
 
 def distro(cfg=None):
-    d = str((cfg or {}).get("wsl_distro") or "Ubuntu").strip()
-    if not DISTRO_RE.match(d):
-        raise DevError("Nom de distribution WSL invalide.")
-    return d
+    """Distribution de l'espace de travail : imposée par nasko_wsl (le réglage `wsl_distro` n'a plus d'effet : le dossier de travail est sous cette distribution)."""
+    return W.DISTRO
 
 
 def available():
@@ -106,10 +109,8 @@ LIST_FULL = (BSET + 'echo "#$B"; cd "$B" || exit 0; for d in */; do d=${d%/}; [ 
 
 
 def _base(out):
-    """Première ligne « #<chemin> » de la sortie : dossier réellement utilisé, présenté en ~/…"""
-    first = out.splitlines()[0] if out else ""
-    path = first[1:] if first.startswith("#") else ""
-    return "~/" + path.rsplit("/", 1)[-1] if path.count("/") > 2 else "~"
+    """Dossier des dépôts, tel qu'affiché (chemin Windows de l'espace de travail)."""
+    return W.WORKSPACE_UNC
 
 
 def list_repos(cfg=None, full=False):
@@ -118,14 +119,14 @@ def list_repos(cfg=None, full=False):
     if not full:
         rc, out = _wsl(d, LIST_LIGHT, timeout=40)
         if rc:
-            raise DevError(f"Lecture de ~/{BASE} impossible : {out[-200:] or 'distribution « ' + d + ' » inaccessible'}")
+            raise DevError(f"Lecture de {W.WORKSPACE_UNC} impossible : {out[-200:] or 'distribution « ' + d + ' » inaccessible'}")
         return {"distro": d, "base": _base(out), "repos": [{"name": n} for n in out.splitlines() if REPO_RE.match(n)]}
     t, v = _cache["repos"]
     if v and v["distro"] == d and time.time() - t < 8:
         return v
     rc, out = _wsl(d, LIST_FULL, timeout=90)
     if rc:
-        raise DevError(f"Lecture de ~/{BASE} impossible : {out[-200:]}")
+        raise DevError(f"Lecture de {W.WORKSPACE_UNC} impossible : {out[-200:]}")
     repos = []
     for line in out.splitlines():
         p = line.split("\t")
@@ -147,7 +148,7 @@ def repo_info(name, cfg=None):
     name = repo_name(name)
     rc, out = _wsl(d, INFO, name, timeout=40)
     if rc == 97:
-        raise DevError(f"« {name} » n'existe pas dans ~/{BASE}.")
+        raise DevError(f"« {name} » n'existe pas dans {W.WORKSPACE_UNC}.")
     if rc:
         raise DevError(out[-200:] or f"Erreur WSL ({rc}).")
     info = {"name": name, "scripts": []}
@@ -217,7 +218,7 @@ def _reader(job):
         pass
     rc = proc.wait()
     if rc == 97:
-        _append(job, "Dépôt introuvable dans ~/" + BASE + ".\n")
+        _append(job, "Dépôt introuvable dans " + W.WORKSPACE_UNC + ".\n")
     job.update(rc=rc, t1=time.time(), running=False)
     try:                                                    # nettoyage du fichier de PID côté Linux (sans bloquer)
         threading.Thread(target=_wsl, args=(job["distro"], 'rm -f "$1"', job["pidfile"]), kwargs={"timeout": 15}, daemon=True).start()
@@ -232,7 +233,7 @@ def public(job):
 
 
 def start_job(kind, repo, cmd, cfg=None):
-    """Lance `cmd` (texte bash libre) dans ~/Nasko/<repo> ; retourne l'id. repo='' : dans ~/Nasko (clonage)."""
+    """Lance `cmd` (texte bash libre) dans <espace de travail>/<repo> ; retourne l'id. repo='' : dans l'espace de travail (clonage, scripts déposés)."""
     d = distro(cfg)
     _need_wsl()
     cmd = (cmd or "").strip()
@@ -301,37 +302,67 @@ def stop_all():
 
 
 def clone(text, cfg=None):
+    """`git clone` d'un dépôt : la destination est TOUJOURS <espace de travail>/<nom> (chemin absolu, indépendant du dossier courant). Retourne (id de tâche, nom)."""
     url = normalize_url(text)
-    name = re.sub(r"(\.git)?/*$", "", url).replace(":", "/").rsplit("/", 1)[-1]
-    return start_job("clone", "", "git clone --progress -- " + shlex.quote(url), cfg), name
+    name = repo_name(re.sub(r"(\.git)?/*$", "", url).replace(":", "/").rsplit("/", 1)[-1])
+    dest = W.linux_path(name)
+    return start_job("clone", "", "git clone --progress -- " + shlex.quote(url) + " " + shlex.quote(dest), cfg), name
 
 
 def run_script(repo, script, args="", cfg=None):
+    """Exécute un .sh : à la racine du dépôt `repo`, ou dans l'espace de travail si `repo` est vide (script déposé dans la zone de dépôt)."""
     if not SCRIPT_RE.match(script or ""):
         raise DevError("Nom de script invalide (lettres, chiffres, . _ - et extension .sh).")
     args = (args or "").strip()
-    cmd = f'[ -f "./{script}" ] || {{ echo "{script} est absent à la racine du dépôt."; exit 98; }}; bash "./{script}" {args}'
+    cmd = f'[ -f "./{script}" ] || {{ echo "{script} est absent du dossier courant."; exit 98; }}; bash "./{script}" {args}'
     return start_job("script", repo, cmd, cfg)
 
 
-def import_script(repo, name, content, overwrite=False, cfg=None):
-    """Dépose un .sh à la racine du dépôt (LF, exécutable). Retourne True ; lève DevError('exists') si présent et overwrite faux."""
-    d = distro(cfg)
-    repo = repo_name(repo)
+def _script_bytes(name, content):
+    """Contrôle le nom et prépare le contenu : LF, BOM retiré (sinon le shebang casse), 2 Mo max. Retourne les octets UTF-8."""
     if not SCRIPT_RE.match(name or ""):
         raise DevError("Nom invalide : lettres, chiffres, . _ - et extension .sh.")
     text = (content or "").replace("\r\n", "\n").replace("\r", "\n")
-    data = (text[1:] if text.startswith(chr(0xFEFF)) else text).encode("utf-8")        # BOM éventuel retiré (sinon le shebang casse)
+    data = (text[1:] if text.startswith(chr(0xFEFF)) else text).encode("utf-8")
     if not data or len(data) > MAX_IMPORT:
         raise DevError("Fichier vide ou trop gros (2 Mo max).")
-    rc, out = _wsl(d, BSET + 'cd "$B/$1" || exit 97; [ -e "$2" ] && [ "$3" != 1 ] && exit 96; cat > "$2" && chmod +x "$2"',
-                   repo, name, "1" if overwrite else "0", data=data, timeout=40)
+    if b"\x00" in data:
+        raise DevError("Fichier binaire refusé.")
+    return data
+
+
+# $1 = sous-dossier ('' = espace de travail), $2 = nom, $3 = 1 pour remplacer. Écriture ATOMIQUE (fichier temporaire + renommage : jamais de script à moitié écrit,
+# et un lien symbolique existant est remplacé, pas suivi), puis chmod +x. 97 = dossier introuvable, 96 = existe déjà, 95 = c'est un dossier.
+PUT_SCRIPT = (BSET + 'cd "$B/$1" || exit 97; [ -d "$2" ] && exit 95; [ -e "$2" ] && [ "$3" != 1 ] && exit 96; '
+              't=$(mktemp "./.enos-XXXXXX") && cat > "$t" && chmod +x "$t" && mv -fT -- "$t" "$2" || { [ -n "$t" ] && rm -f -- "$t"; exit 1; }')
+
+
+def _put_script(d, repo, name, data, overwrite):
+    rc, out = _wsl(d, PUT_SCRIPT, repo, name, "1" if overwrite else "0", data=data, timeout=40)
     if rc == 96:
         raise DevError("exists")
+    if rc == 95:
+        raise DevError("Un dossier porte déjà ce nom.")
     if rc == 97:
         raise DevError("Dépôt introuvable.")
     if rc:
-        raise DevError("Import impossible : " + out[-200:])
+        raise DevError("Import impossible : " + (out[-200:] or f"erreur WSL ({rc})"))
+
+
+def drop_script(name, content, overwrite=False, cfg=None):
+    """ZONE DE DÉPÔT : enregistre un .sh dans l'espace de travail (\\\\wsl.localhost\\Ubuntu\\home\\nasko), fins de ligne LF, exécutable : prêt à être lancé côté Linux.
+    Ne l'exécute JAMAIS. Lève DevError('exists') si le fichier existe et overwrite est faux. Retourne {name, path (Windows), linux, bytes, executable}."""
+    d = distro(cfg)
+    data = _script_bytes(name, content)
+    _put_script(d, "", name, data, overwrite)
+    return {"name": name, "path": W.unc_path(name), "linux": W.linux_path(name), "bytes": len(data), "executable": True}
+
+
+def import_script(repo, name, content, overwrite=False, cfg=None):
+    """Dépose un .sh à la racine du dépôt `repo` (LF, exécutable). Retourne True ; lève DevError('exists') si présent et overwrite faux."""
+    d = distro(cfg)
+    repo = repo_name(repo)
+    _put_script(d, repo, name, _script_bytes(name, content), overwrite)
     return True
 
 
@@ -418,12 +449,12 @@ def delete_entry(repo, path, cfg=None):
 def _repo_path(d, repo):
     rc, out = _wsl(d, BSET + 'test -d "$B/$1" && printf %s "$B/$1"', repo, timeout=40)
     if rc or not out.startswith("/"):
-        raise DevError(f"« {repo} » n'existe pas dans ~/{BASE} (ou la distribution « {d} » est inaccessible).")
+        raise DevError(f"« {repo} » n'existe pas dans {W.WORKSPACE_UNC} (ou la distribution « {d} » est inaccessible).")
     return out.splitlines()[-1]
 
 
 def open_vscode(repo, cfg=None):
-    """VS Code relié au WSL sur ~/Nasko/<repo> (fenêtre détachée, aucune console)."""
+    """VS Code relié au WSL sur <espace de travail>/<repo> (fenêtre détachée, aucune console)."""
     d = distro(cfg)
     repo = repo_name(repo)
     path = _repo_path(d, repo)
@@ -443,8 +474,8 @@ def open_vscode(repo, cfg=None):
 def open_explorer(repo, cfg=None):
     d = distro(cfg)
     repo = repo_name(repo)
-    path = _repo_path(d, repo)
-    unc = "\\\\wsl.localhost\\" + d + path.replace("/", "\\")
+    _repo_path(d, repo)
+    unc = W.unc_path(repo)
     try:
         subprocess.Popen(["explorer.exe", unc], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
@@ -453,4 +484,4 @@ def open_explorer(repo, cfg=None):
 
 
 def status(cfg=None):
-    return {"wsl": available(), "running": sum(1 for j in JOBS.values() if j["running"])}
+    return {"wsl": available(), "running": sum(1 for j in JOBS.values() if j["running"]), "workspace": W.WORKSPACE_UNC, "distro": W.DISTRO}

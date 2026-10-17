@@ -941,10 +941,10 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
   </div>
 </section>
 <section id="dv" class="local-only" role="dialog" aria-label="Dev Manager" hidden>
-  <div class="tm-top"><h2>DEV MANAGER<small id="dv-sub">WSL · ~/Nasko</small></h2><span id="dv-busy" class="dv-chip" hidden></span><button class="btn sm" id="dv-close">✕ FERMER</button></div>
+  <div class="tm-top"><h2>DEV MANAGER<small id="dv-sub">WSL · \\wsl.localhost\Ubuntu\home\nasko</small></h2><span id="dv-busy" class="dv-chip" hidden></span><button class="btn sm" id="dv-close">✕ FERMER</button></div>
   <div class="dv-wrap">
     <aside class="dv-side">
-      <div class="tm-card"><h3>CLONER <small>dans le dossier des dépôts</small></h3>
+      <div class="tm-card"><h3>CLONER <small>→ \\wsl.localhost\Ubuntu\home\nasko</small></h3>
         <div class="tm-row"><input type="text" id="dv-url" placeholder="URL ou proprietaire/depot" spellcheck="false" autocomplete="off" aria-label="Adresse du dépôt"><button class="btn sm" id="dv-clone">GIT CLONE</button></div></div>
       <div class="tm-card dv-repos"><h3>DÉPÔTS <small id="dv-count"></small><button class="btn sm" id="dv-refresh" title="Actualiser">⟳</button></h3>
         <select id="dv-select" aria-label="Mes dépôts"><option value="">— Mes dépôts —</option></select>
@@ -984,11 +984,15 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
         <form id="ide-bar" hidden></form>
         <div id="ide-msg"></div>
       </div>
-      <div class="tm-card dv-scripts" id="dv-scripts" hidden>
-        <h3>SCRIPTS .SH <small>racine du dépôt · glissez-déposez vos .sh ici</small><button class="btn sm" id="dv-import">⬆ IMPORTER UN .SH</button></h3>
+      <div class="tm-card dv-drop" id="dv-drop" tabindex="0">
+        <h3>ZONE DE DÉPÔT .SH <small>glissez-déposez un script n'importe où dans le Dev Manager</small><button class="btn sm" id="dv-import">⬆ CHOISIR UN .SH</button></h3>
+        <div class="dv-dropbox"><b>⬇ Déposez un script .sh</b><span>Il est enregistré dans <code>\\wsl.localhost\Ubuntu\home\nasko</code> (fins de ligne LF, exécutable) : prêt à être lancé côté Linux.</span></div>
         <input type="file" id="dv-file" accept=".sh,text/x-shellscript" multiple hidden>
-        <div id="dv-sh" class="dv-sh"></div>
         <div id="dv-import-msg"></div>
+      </div>
+      <div class="tm-card dv-scripts" id="dv-scripts" hidden>
+        <h3>SCRIPTS .SH <small>racine du dépôt</small></h3>
+        <div id="dv-sh" class="dv-sh"></div>
       </div>
       <div class="tm-card dv-term" id="dv-term" hidden>
         <h3>TERMINAL LINUX <small id="dv-cwd"></small><span class="dv-spacer"></span><button class="btn sm" id="dv-copy">COPIER</button><button class="btn sm" id="dv-clear">VIDER</button></h3>
