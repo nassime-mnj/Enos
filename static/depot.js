@@ -242,9 +242,26 @@
     try {
       loadCss(EXT + "xterm/xterm.css");
       if (!window.Terminal) { await loadScript(EXT + "xterm/xterm.js"); await loadScript(EXT + "xterm/addon-fit.js"); }
-      const term = new window.Terminal({ cursorBlink: true, fontFamily: "Consolas, 'Cascadia Code', monospace", fontSize: 13, theme: { background: "#0b0d10" }, scrollback: 5000, convertEol: false });
+      // Police strictement monospace, sans espacement ni ligature : xterm mesure UNE cellule puis aligne toute la grille dessus (le moindre écart = caractères qui se chevauchent)
+      const term = new window.Terminal({ cursorBlink: true, fontFamily: "Consolas, 'Courier New', monospace", fontSize: 13, fontWeight: "normal", fontWeightBold: "bold", letterSpacing: 0, lineHeight: 1, theme: { background: "#0b0d10" }, scrollback: 5000, convertEol: false, rightClickSelectsWord: false });
       const fit = new window.FitAddon.FitAddon(); term.loadAddon(fit);
       termBox.replaceChildren(); term.open(termBox); fit.fit();
+      const refit = () => { try { fit.fit(); } catch (x) { /* conteneur masqué */ } };
+      requestAnimationFrame(refit); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { term.options.fontFamily = "Consolas, 'Courier New', monospace"; refit(); });   // re-mesure la cellule quand les polices sont chargées
+      // Copier-coller. Ctrl+V / Maj+Inser : l'événement « paste » natif est repris ici (xterm gère le mode « bracketed paste ») ; la touche n'est PAS envoyée au shell (^V).
+      const pasteText = (t) => { if (t) term.paste(t.replace(/\r?\n/g, "\r")); };
+      const pasteClip = async () => { try { pasteText(await navigator.clipboard.readText()); } catch (x) { term.write("\r\n\x1b[33m[collage refusé par le navigateur : autorise le presse-papiers ou utilise Ctrl+V]\x1b[0m\r\n"); } };
+      const copySel = () => { const s = term.getSelection(); if (s) { try { navigator.clipboard.writeText(s); } catch (x) { /* refusé */ } } return !!s; };
+      termBox.addEventListener("paste", (e) => { e.preventDefault(); e.stopImmediatePropagation(); pasteText((e.clipboardData || window.clipboardData).getData("text")); }, true);
+      term.attachCustomKeyEventHandler((e) => {
+        if (e.type !== "keydown") return true;
+        const k = e.key.toLowerCase();
+        if ((e.ctrlKey && !e.altKey && k === "v") || (e.shiftKey && e.key === "Insert")) return false;                       // laisse l'événement « paste » faire le travail, sans envoyer ^V
+        if (e.ctrlKey && e.shiftKey && k === "c") { copySel(); return false; }                                              // Ctrl+Maj+C : copier
+        if (e.ctrlKey && !e.shiftKey && !e.altKey && k === "c" && term.hasSelection()) { copySel(); return false; }          // Ctrl+C avec sélection : copier ; sans sélection : interruption (^C) comme d'habitude
+        return true;
+      });
+      termBox.addEventListener("contextmenu", (e) => { e.preventDefault(); if (!copySel()) pasteClip(); else term.clearSelection(); });   // clic droit : copie la sélection, sinon colle
       const url = (await window.naskoSec.wsUrl("/ws/depot-term")) + "&" + q({ repo: S.repo, cols: term.cols, rows: term.rows });
       const ws = new WebSocket(url); ws.binaryType = "arraybuffer";
       const enc = new TextEncoder();
