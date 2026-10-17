@@ -4702,6 +4702,12 @@ def depot_inject_clang_format(b: DepotClang):
     return _depot(nasko_depot_git.inject_clang_format, _drepo(b.repo))
 
 
+@app.post("/api/depot/format_c", dependencies=_LOCAL)
+def depot_format_c(b: DepotClang):
+    """`clang-format -i` sur les .c/.h du dossier cible (racine du dépôt si vide). Dossier validé, chemin résolu côté WSL, aucune commande fournie par la requête."""
+    return _depot(nasko_depot_git.format_c, _drepo(b.repo), b.folder)
+
+
 @app.websocket("/ws/depot-term")
 async def ws_depot_term(ws: WebSocket, repo: str = "", cols: int = 100, rows: int = 30):
     """Terminal Linux interactif (WSL / shell local) : octets bruts = frappes et sortie, JSON {"t":"resize"} / {"t":"exit"}. Authentification et profil : middlewares."""

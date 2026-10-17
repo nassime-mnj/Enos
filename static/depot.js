@@ -60,7 +60,10 @@
   }
   const injectB = btn("INJECTER .CLANG-FORMAT", () => fmtRun(injectB, "INJECTER .CLANG-FORMAT", "/api/depot/inject_clang_format", {}, (r) => ".clang-format EPITA " + (r.replaced ? "mis à jour (ancien fichier écrasé)" : "injecté avec succès")));
   injectB.title = "Copie « clang-format » (racine de ton espace WSL) vers .clang-format à la racine du dépôt courant, en écrasant l'existant";
-  const fmtBtns = [injectB];
+  const fmtDir = el("input", { type: "text", placeholder: "Dossier (ex: src/ ou vide pour tout)", spellcheck: false, autocomplete: "off", "aria-label": "Dossier à formater", onkeydown: (e) => { if (e.key === "Enter") fmtGo.click(); } });
+  const fmtGo = btn("FORMATTER C/H", () => fmtRun(fmtGo, "FORMATTER C/H", "/api/depot/format_c", { folder: fmtDir.value.trim() }, (r) => r.files ? r.files + " fichier" + (r.files > 1 ? "s" : "") + " .c/.h formaté" + (r.files > 1 ? "s" : "") + " (" + r.target + ")" : "Aucun fichier .c/.h trouvé dans " + r.target));
+  fmtGo.title = "Lance clang-format -i sur tous les .c et .h du dossier indiqué (tout le dépôt si vide). Exige le .clang-format dans le dépôt.";
+  const fmtBtns = [injectB, fmtGo];
   const tabDefs = [["forge", "FORGE"], ["files", "FICHIERS"], ["git", "GIT"], ["subject", "SUJET"], ["train", "ENTRAÎN."], ["shell", "DÉPÔT SHELL"]];
   const tabBar = el("div", { class: "dp-tabs", role: "tablist" }, tabDefs.map(([id, l]) => el("button", { "data-t": id, role: "tab", text: l, onclick: () => tab(id) })));
   const panes = {}; tabDefs.forEach(([id]) => { panes[id] = el("div", { class: "dp-pane", hidden: true, id: "dp-p-" + id }); });
@@ -69,7 +72,7 @@
   const split = el("div", { class: "dp-split", title: "Redimensionner le terminal" });
   root.append(
     el("div", { class: "dp-bar" }, el("h2", { text: "DÉPÔT INTRANET" }), repoSel, chipBranch, chipAB, cloneUrl, cloneB, el("span", { class: "dp-sp" }), ...gitBtns, btn("⟳", () => refresh(true)), btn("✕ FERMER", () => close())),
-    el("div", { class: "dp-bar dp-fmtbar", role: "group", "aria-label": "Formatage C (norme EPITA)" }, el("small", { class: "dp-fmtlab", text: "FORMAT C" }), ...fmtBtns, fmtMsg),
+    el("div", { class: "dp-bar dp-fmtbar", role: "group", "aria-label": "Formatage C (norme EPITA)" }, el("small", { class: "dp-fmtlab", text: "FORMAT C" }), injectB, fmtDir, fmtGo, fmtMsg),
     cloneProg,
     el("div", { class: "dp-main" }, el("aside", { class: "dp-side" }, tabBar, Object.values(panes)), el("div", { class: "dp-work" }, ftabs, editorBox, split, termBox)));
   document.body.appendChild(root);

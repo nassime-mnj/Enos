@@ -101,5 +101,148 @@ class InjectWsl(Base):
             G.inject_clang_format(self.repo(True), source=self.src)
 
 
+class CleanSubfolder(unittest.TestCase):
+    def test_accepts(self):
+        for raw, exp in (("", []), (None, []), ("  ", []), ("src", ["src"]), ("src/", ["src"]), ("./src/lib/", ["src", "lib"]), ("src\\lib", ["src", "lib"]), ("a-b_c.d/x", ["a-b_c.d", "x"])):
+            self.assertEqual(G.clean_subfolder(raw), exp, raw)
+
+    def test_rejects(self):
+        for raw in ("..", "../x", "a/../b", "/etc", "C:\\x", "C:/x", "-rf", "a/-b", ".git", "src/.git", "a b", "a;b", "a$(x)", "a`b`", "a\x00b", "a\nb", "x" * 301, 5):
+            with self.assertRaises(G.GitError, msg=repr(raw)):
+                G.clean_subfolder(raw)
+
+
+def _fake_clang(dirpath, log):
+    """Faux clang-format : consigne les fichiers reçus (un par ligne) et ajoute une ligne au fichier, pour prouver qu'il a bien été « formaté »."""
+    p = os.path.join(dirpath, "clang-format")
+    with open(p, "w", newline="\n") as f:
+        f.write('#!/bin/sh\nfor a in "$@"; do case "$a" in -i|--style=*|--fallback-style=*) ;; *) echo "$a" >> "%s"; echo "// formaté" >> "$a";; esac; done\n' % log.replace("\\", "/"))
+    os.chmod(p, 0o755)
+    return p
+
+
+@unittest.skipUnless(HAVE_SH, "sh/cp/mktemp/find/wc introuvables dans le PATH")
+class FormatWsl(Base):
+    def setUp(self):
+        super().setUp()
+        self.bin = os.path.join(self.tmp, "bin")
+        os.makedirs(self.bin)
+        self.log = os.path.join(self.tmp, "calls.log")
+        _fake_clang(self.bin, self.log)
+        self._path = os.environ["PATH"]
+        os.environ["PATH"] = self.bin + os.pathsep + self._path
+        self.addCleanup(lambda: os.environ.__setitem__("PATH", self._path))
+        for rel in ("main.c", "util.h", "src/a.c", "src/lib/b.h", "src/notes.txt", "src/UP.C", "my dir/c.c", ".git/hooks/x.c"):
+            p = os.path.join(self.work, rel)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "w", newline="\n") as f:
+                f.write("int x;\n")
+        with open(os.path.join(self.work, ".clang-format"), "w") as f:
+            f.write("IndentWidth: 4\n")
+
+    def called(self):
+        # le faux clang-format tourne sous sh (chemins style /tmp/… avec Git Bash) : on ne garde que la partie relative au dépôt
+        return sorted(l.strip().replace("\\", "/").split("/work/", 1)[1] for l in rd(self.log).splitlines()) if os.path.exists(self.log) else []
+
+    def test_whole_repo_only_c_and_h_not_git(self):
+        r = G.format_c(self.repo(True))
+        self.assertEqual(r, {"ok": True, "files": 5, "target": "."})
+        self.assertEqual(self.called(), ["main.c", "my dir/c.c", "src/a.c", "src/lib/b.h", "util.h"])
+        self.assertEqual(rd(os.path.join(self.work, "src", "notes.txt")), "int x;\n")
+        self.assertEqual(rd(os.path.join(self.work, ".git", "hooks", "x.c")), "int x;\n")
+
+    def test_subfolder(self):
+        r = G.format_c(self.repo(True), "src/")
+        self.assertEqual((r["files"], r["target"]), (2, "src"))
+        self.assertEqual(self.called(), ["src/a.c", "src/lib/b.h"])
+        self.assertEqual(rd(os.path.join(self.work, "main.c")), "int x;\n")
+
+    def test_nested_subfolder(self):
+        self.assertEqual(G.format_c(self.repo(True), "src/lib")["files"], 1)
+        self.assertEqual(self.called(), ["src/lib/b.h"])
+
+    def test_missing_folder_and_no_files(self):
+        with self.assertRaises(G.GitError) as cm:
+            G.format_c(self.repo(True), "nope")
+        self.assertIn("introuvable", str(cm.exception))
+        os.makedirs(os.path.join(self.work, "vide"))
+        r = G.format_c(self.repo(True), "vide")
+        self.assertEqual(r["files"], 0)
+        self.assertEqual(self.called(), [])
+
+    def test_requires_clang_format_file(self):
+        os.unlink(os.path.join(self.work, ".clang-format"))
+        with self.assertRaises(G.GitError) as cm:
+            G.format_c(self.repo(True))
+        self.assertIn("INJECTER", str(cm.exception))
+        self.assertEqual(self.called(), [])
+
+    def test_clang_format_not_installed(self):
+        os.unlink(os.path.join(self.bin, "clang-format"))
+        with mock_path_without("clang-format"):
+            with self.assertRaises(G.GitError) as cm:
+                G.format_c(self.repo(True))
+        self.assertIn("pas installé", str(cm.exception))
+
+    def test_symlink_escape_refused(self):
+        outside = os.path.join(self.tmp, "outside")
+        os.makedirs(outside)
+        with open(os.path.join(outside, "z.c"), "w") as f:
+            f.write("int z;\n")
+        try:
+            os.symlink(outside, os.path.join(self.work, "evil"), target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("liens symboliques indisponibles")
+        with self.assertRaises(G.GitError):
+            G.format_c(self.repo(True), "evil")
+        self.assertEqual(rd(os.path.join(outside, "z.c")), "int z;\n")
+
+    def test_injection_attempt_in_folder_is_rejected_before_any_command(self):
+        for bad in ("src; touch PWNED", "$(touch PWNED)", "`touch PWNED`", "src && touch PWNED"):
+            with self.assertRaises(G.GitError):
+                G.format_c(self.repo(True), bad)
+        self.assertFalse(os.path.exists(os.path.join(self.work, "PWNED")))
+
+
+class mock_path_without:
+    """Retire du PATH tout dossier contenant `exe` pendant le test."""
+    def __init__(self, exe):
+        self.exe = exe
+
+    def __enter__(self):
+        self.old = os.environ["PATH"]
+        os.environ["PATH"] = os.pathsep.join(d for d in self.old.split(os.pathsep) if not os.path.isfile(os.path.join(d, self.exe)))
+
+    def __exit__(self, *a):
+        os.environ["PATH"] = self.old
+
+
+class FormatLocalGuards(Base):
+    def test_no_clang_format_file(self):
+        with mock_which(None):
+            with self.assertRaises(G.GitError):
+                G.format_c(self.repo())
+        with mock_which("/x/clang-format"):
+            with self.assertRaises(G.GitError) as cm:
+                G.format_c(self.repo())
+            self.assertIn("INJECTER", str(cm.exception))
+
+    def test_folder_validated_first(self):
+        with self.assertRaises(G.GitError):
+            G.format_c(self.repo(), "../x")
+
+
+class mock_which:
+    def __init__(self, value):
+        self.value = value
+
+    def __enter__(self):
+        self.old = G.shutil.which
+        G.shutil.which = lambda *_a, **_k: self.value
+
+    def __exit__(self, *a):
+        G.shutil.which = self.old
+
+
 if __name__ == "__main__":
     unittest.main()

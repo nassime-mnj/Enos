@@ -727,3 +727,88 @@ def inject_clang_format(repo, source=None):
     if rc != 0:
         raise GitError(f"Copie impossible : {_clean(err or out, repo.path, top)}")
     return {"ok": True, "path": dest, "replaced": existed}
+
+
+# ----------------------------------------------------------------------------- formatage C/H (clang-format -i)
+_FMT_PART = re.compile(r"[A-Za-z0-9._-]{1,100}")
+# $1 = dossier cible (absolu), $2 = racine du dépôt. Chemins résolus (pwd -P) : un lien symbolique ne peut pas faire sortir du dépôt. Valeurs jamais interprétées.
+_FORMAT_SH = (
+    'command -v clang-format >/dev/null 2>&1 || exit 90; '
+    'top=$(cd -- "$2" 2>/dev/null && pwd -P) || exit 91; tgt=$(cd -- "$1" 2>/dev/null && pwd -P) || exit 91; '
+    'case "$tgt" in "$top"|"$top"/*) ;; *) exit 93;; esac; '
+    '[ -f "$top/.clang-format" ] || exit 92; '
+    r'n=$(find "$tgt" -type f \( -name "*.c" -o -name "*.h" \) -not -path "*/.git/*" | wc -l); '
+    '[ "$n" -gt 0 ] || { echo 0; exit 0; }; '
+    r'find "$tgt" -type f \( -name "*.c" -o -name "*.h" \) -not -path "*/.git/*" -exec clang-format -i --style=file --fallback-style=none {} + || exit 94; '
+    'echo "$n"')
+
+
+def clean_subfolder(folder):
+    """Dossier cible relatif à la racine du dépôt : "" = tout le dépôt. Séparateurs / ou antislash, « ./ » et « / » de fin tolérés ; jamais « .. », chemin absolu, tiret
+    en tête ni dossier .git. Retourne la liste des segments (vide pour la racine)."""
+    if folder is None:
+        return []
+    if not isinstance(folder, str) or len(folder) > 300 or "\x00" in folder:
+        raise GitError("Dossier cible invalide.")
+    f = folder.strip().replace("\\", "/")
+    if f.startswith("/") or re.match(r"^[A-Za-z]:", f):
+        raise GitError("Le dossier doit être relatif à la racine du dépôt (pas de chemin absolu).")
+    parts = [p for p in f.split("/") if p not in ("", ".")]
+    for p in parts:
+        if p == ".." or not _FMT_PART.fullmatch(p) or p.startswith("-"):
+            raise GitError("Dossier cible invalide : lettres, chiffres, . _ - uniquement, sans « .. » (ex. src ou src/lib).")
+        if p.lower() == ".git":
+            raise GitError("Le dossier .git ne se formate pas.")
+    return parts
+
+
+def format_c(repo, folder=""):
+    """`clang-format -i` sur tous les .c et .h du dossier cible (racine du dépôt par défaut). Exige un .clang-format à la racine du dépôt (sinon clang-format
+    retomberait sur son style LLVM par défaut et réécrirait tout le code). Retourne {ok, files, target}."""
+    parts = clean_subfolder(folder)
+    local = getattr(repo.runner, "is_local", False)
+    top = repo.toplevel()
+    shown = "/".join(parts) or "."
+    if local:
+        exe = shutil.which("clang-format")
+        if not exe:
+            raise GitError("clang-format est introuvable sur ce PC (installe LLVM ou utilise le mode WSL).")
+        if not os.path.isfile(os.path.join(top, CLANG_NAME)):
+            raise GitError("Aucun .clang-format dans le dépôt : clique d'abord sur « INJECTER .CLANG-FORMAT ».")
+        tgt = os.path.realpath(os.path.join(top, *parts))
+        base = os.path.realpath(top)
+        if tgt != base and not tgt.startswith(base + os.sep):
+            raise GitError("Le dossier cible sort du dépôt : refusé.")
+        if not os.path.isdir(tgt):
+            raise GitError(f"Dossier introuvable dans le dépôt : {shown}")
+        files = []
+        for d, dirs, names in os.walk(tgt):
+            dirs[:] = [x for x in dirs if x != ".git"]
+            files += [os.path.join(d, n) for n in names if n.endswith((".c", ".h")) and not os.path.islink(os.path.join(d, n))]
+        for i in range(0, len(files), 40):
+            try:
+                p = subprocess.run([exe, "-i", "--style=file", "--fallback-style=none", *files[i:i + 40]], cwd=top, capture_output=True, timeout=300, creationflags=NOWIN)
+            except subprocess.TimeoutExpired:
+                raise GitError("clang-format a dépassé le délai (5 min).")
+            if p.returncode != 0:
+                raise GitError("clang-format a échoué : " + _clean(_decode(p.stderr, False), top))
+        return {"ok": True, "files": len(files), "target": shown}
+    target = top.rstrip("/") + ("/" + "/".join(parts) if parts else "")
+    rc, out, err = repo.runner.run(["sh", "-c", _FORMAT_SH, "sh", target, top], repo.path, timeout=300)
+    if rc == 90:
+        raise GitError("clang-format n'est pas installé dans WSL (sudo apt install clang-format).")
+    if rc == 91:
+        raise GitError(f"Dossier introuvable dans le dépôt : {shown}")
+    if rc == 92:
+        raise GitError("Aucun .clang-format dans le dépôt : clique d'abord sur « INJECTER .CLANG-FORMAT ».")
+    if rc == 93:
+        raise GitError("Le dossier cible sort du dépôt (lien symbolique) : refusé.")
+    if rc == 124:
+        raise GitError("clang-format a dépassé le délai (5 min).")
+    if rc != 0:
+        raise GitError("clang-format a échoué : " + _clean(err or out, repo.path, top))
+    try:
+        n = int((out or "0").strip().split("\n")[-1])
+    except ValueError:
+        n = 0
+    return {"ok": True, "files": n, "target": shown}
