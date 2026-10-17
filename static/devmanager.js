@@ -180,7 +180,7 @@
   function open() {
     $("dv").hidden = false; document.body.classList.remove("menu-open");
     $("dv-term").hidden = false; renderChips(); renderJobs();
-    api("/api/dev/status").then((s) => { if (!s.wsl) msg("bad", "WSL n'est pas installé sur ce PC."); if (s.workspace) { $("dv-sub").textContent = "WSL · " + s.workspace; $("dv-drop").querySelector("code").textContent = s.workspace; } }).catch(() => {});
+    api("/api/dev/status").then((s) => { if (!s.wsl) msg("bad", "WSL n'est pas installé sur ce PC."); if (s.workspace) { $("dv-sub").textContent = "WSL · " + s.workspace; $("dv-drop").querySelector("code").textContent = s.workspace; } $("dv-uninstall").disabled = !s.uninstaller; $("dv-uninstall").title = s.uninstaller ? $("dv-uninstall").title : "Aucune version installée par l'installeur n'a été trouvée sur ce PC."; }).catch(() => {});
     loadRepos().then(() => { const last = S.cur || store.get("enos_dev_last", ""); if (last && S.repos.some((r) => r.name === last)) select(last, true); });
     api("/api/dev/jobs").then((l) => { S.jobs = l.jobs; if (!S.view && S.jobs.length) view(S.jobs[S.jobs.length - 1].id); tick(); }).catch(() => {});
   }
@@ -238,6 +238,12 @@
     b.disabled = false;
   };
   $("dv-explorer").onclick = async () => { if (!S.cur) return; try { await post("/api/dev/explorer", { repo: S.cur }); } catch (e) { msg("bad", e.message); } };
+  $("dv-uninstall").onclick = async () => {
+    if (!confirm("Désinstaller la version de test ?\n\nLe désinstalleur Inno Setup retire E.N.O.S. ET le Dual Pulse Launcher installés par l'installeur (un seul désinstalleur pour les deux), puis ferme E.N.O.S. s'il tourne.\nUne fenêtre administrateur Windows (UAC) va s'afficher.")) return;
+    const b = $("dv-uninstall"); b.disabled = true; msg("run", "Envoi de la commande…", "dv-un-msg");
+    try { await post("/api/dev/uninstall-launcher", { confirm: true, silent: true }); msg("ok", "Commande envoyée : valide la fenêtre administrateur Windows. La désinstallation se fait ensuite en arrière-plan.", "dv-un-msg"); }
+    catch (e) { msg("bad", e.message, "dv-un-msg"); b.disabled = false; }
+  };
   $("dv-info").addEventListener("click", (e) => { const b = e.target.closest("[data-q]"); if (b) runCmd(b.dataset.q); });
   $("dv-sh").onclick = (e) => {
     const b = e.target.closest("[data-s]"); if (!b) return;

@@ -3251,6 +3251,19 @@ def dev_clone(b: DevClone):
     return {"id": jid, "repo": name}
 
 
+class DevUninstall(BaseModel):
+    confirm: bool = False
+    silent: bool = True
+
+
+@app.post("/api/dev/uninstall-launcher", dependencies=_LOCAL)
+def dev_uninstall_launcher(b: DevUninstall):
+    """Désinstalle la version de test (E.N.O.S. + Launcher : un seul désinstalleur Inno). Lance et rend la main : l'UAC s'affiche à l'écran. `confirm` obligatoire."""
+    if not b.confirm:
+        raise HTTPException(400, "Confirmation requise.")
+    return _dev(lambda cfg: nasko_devmanager.uninstall_launcher(b.silent))
+
+
 @app.post("/api/dev/open", dependencies=_LOCAL)
 def dev_open(b: DevRepo):
     return {"path": _dev(nasko_devmanager.open_vscode, b.repo)}

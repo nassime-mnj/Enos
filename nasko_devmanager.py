@@ -483,5 +483,57 @@ def open_explorer(repo, cfg=None):
     return unc
 
 
+# ------------------------------------------------------------------ désinstallation des versions de test (Inno Setup)
+# Inno ne crée qu'UN désinstalleur (unins000.exe), dans le dossier de l'application : {autopf}\ENOS, pas dans « Dual Pulse Launcher ». Il retire donc E.N.O.S.
+# ET le Launcher installés par enos.iss. On le retrouve par la clé Uninstall de l'AppId (le dossier peut avoir été changé à l'installation), avec repli.
+INNO_APP_ID = "{6F1E2B7A-4C3D-4E8B-9A57-E905A1C0D3B2}"            # = AppId de installer/enos.iss : ne doit jamais changer
+_UNINS_NAME = re.compile(r"unins\d{3}\.exe", re.I)
+
+
+def _registry_uninstaller():
+    """Chemin lu dans la clé Uninstall\\{AppId}_is1 (machine 64/32 bits, puis utilisateur), ou ''."""
+    try:
+        import winreg
+    except ImportError:                                            # pas Windows
+        return ""
+    sub = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\%s_is1" % INNO_APP_ID
+    for hive, view in ((winreg.HKEY_LOCAL_MACHINE, winreg.KEY_WOW64_64KEY), (winreg.HKEY_LOCAL_MACHINE, winreg.KEY_WOW64_32KEY), (winreg.HKEY_CURRENT_USER, 0)):
+        try:
+            with winreg.OpenKey(hive, sub, 0, winreg.KEY_READ | view) as k:
+                raw = winreg.QueryValueEx(k, "UninstallString")[0]
+        except OSError:
+            continue
+        m = re.match(r'\s*"([^"]+)"', raw) or re.match(r"\s*(\S+)", raw)          # Inno écrit : "C:\...\unins000.exe" (+ éventuellement des options)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def find_uninstaller():
+    """Chemin de l'exécutable de désinstallation Inno (unins000.exe), ou None. Jamais fourni par l'appelant : registre, puis emplacements par défaut."""
+    pf = os.environ.get("ProgramFiles", r"C:\Program Files")
+    for cand in (_registry_uninstaller(), os.path.join(pf, "ENOS", "unins000.exe"), os.path.join(pf, "Dual Pulse Launcher", "unins000.exe")):
+        if cand and _UNINS_NAME.fullmatch(os.path.basename(cand)) and os.path.isfile(cand):
+            return os.path.normpath(cand)
+    return None
+
+
+def uninstall_launcher(silent=True):
+    """Lance le désinstalleur Inno SANS attendre. Droits administrateur : ShellExecute « runas » affiche l'UAC (Popen échouerait avec l'erreur 740 : l'exécutable
+    exige l'élévation). Retourne immédiatement ; l'utilisateur peut refuser l'UAC (rien n'est alors désinstallé)."""
+    exe = find_uninstaller()
+    if not exe:
+        raise DevError("Désinstalleur introuvable (aucune version installée par l'installeur Inno Setup, ou déjà désinstallée).")
+    try:
+        import ctypes
+        rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, "/SILENT" if silent else "", os.path.dirname(exe), 1)
+    except (AttributeError, OSError) as e:
+        raise DevError(f"Lancement du désinstalleur impossible : {e}")
+    if rc <= 32:                                                    # <= 32 : échec de ShellExecute (5 = accès refusé / UAC refusé)
+        raise DevError("Désinstallation annulée (fenêtre administrateur refusée) ou impossible à lancer." if rc in (0, 5) else f"Désinstalleur non lancé (code {rc}).")
+    return {"path": exe, "silent": bool(silent)}
+
+
 def status(cfg=None):
-    return {"wsl": available(), "running": sum(1 for j in JOBS.values() if j["running"]), "workspace": W.WORKSPACE_UNC, "distro": W.DISTRO}
+    return {"wsl": available(), "running": sum(1 for j in JOBS.values() if j["running"]), "workspace": W.WORKSPACE_UNC, "distro": W.DISTRO,
+            "uninstaller": bool(find_uninstaller())}
