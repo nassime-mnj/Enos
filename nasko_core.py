@@ -67,6 +67,8 @@ DEFAULT_CONFIG = {
     "chess_takebacks": 2,           # takebacks proposés par partie après une gaffe catastrophique
     "notify_enabled": True,        # notification Windows à la fin d'une tâche
     "notify_voice": True,          # + phrase réflexe vocale (ElevenLabs)
+    "afk_max_minutes": 120,        # Smart AFK : arrêt automatique (0 = jamais) ; afk_only_process limite aux fenêtres d'un jeu (voir nasko_afk.py)
+    "afk_only_process": "",
     "tray_enabled": True,          # icône dans la zone de notification : E.N.O.S. reste actif (sans fenêtre) quand on ferme la fenêtre
     "briefing_enabled": True,      # briefing quotidien silencieux (notification native)
     "briefing_time": "08:00",      # heure du briefing (HH:MM) ; envoyé au démarrage si le PC était éteint à cette heure (jusqu'à 13 h)

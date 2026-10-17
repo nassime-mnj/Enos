@@ -423,3 +423,7 @@ Module d'école d'informatique (piscines, rendus stricts). Windows : les dépôt
 - **Git complet** : push, pull, commit seul, fetch, créer / basculer / supprimer / fusionner une branche (et annuler une fusion en conflit), supprimer un tag local ou distant, **CLONER** (`git clone`). Jamais de `--force`, `reset --hard` ni `clean`.
 - **Sujet** : dépose le PDF du sujet → explication, contraintes, livrables et roadmap à cocher (liée au dépôt). **Entraînement** : les sujets sont gardés dans `data/depot.db` ; « refaire avec ETO » = un tuteur qui guide sans donner la solution.
 - **Dépôt Shell** : un `.sh` glissé est déposé à la racine du dépôt courant (le dossier qui contient `.git`, à côté du code), converti en LF, rendu exécutable, jamais exécuté.
+
+## Smart AFK (Ctrl+K → « AFK », édition gaming)
+`nasko_afk.py` : armé → attend 5 s de calme (le temps de basculer sur le jeu) → toutes les 10-20 s, balayage de caméra de quelques pixels (avec retour) ou frappe légère ZQSD suivie de la touche opposée. **Kill-switch absolu** : Échap, mouvement manuel de la souris, clic, molette ou touche = arrêt instantané, touches relâchées. Sous Windows, ses propres événements sont écartés grâce au drapeau « injecté » du crochet bas niveau. Garde-fous : `afk_max_minutes` (120), `afk_only_process` (ex. `"VALORANT-Win64-Shipping.exe"`). Routes `/api/afk/*`, réservées au PC local et à la capacité « gaming ». ⚠ Les entrées simulées sont détectables : anti-triche kernel (Vanguard, EAC…) et CGU de nombreux jeux interdisent l'anti-AFK ; ne pas l'utiliser en ligne sans vérifier.
+

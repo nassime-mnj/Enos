@@ -67,6 +67,7 @@ import nasko_update_signal
 import nasko_pet
 import nasko_babel
 import nasko_brb
+import nasko_afk
 import nasko_clipper
 import nasko_tilt
 import nasko_power
@@ -4222,6 +4223,23 @@ def clipper_delete(name: str):
     return {"ok": bool(_gaming(nasko_clipper.delete_clip, name))}
 
 
+# Smart AFK : simule souris/clavier (micro-mouvements, ZQSD) avec kill-switch absolu. Réservé à ce PC, jamais lancé sans action explicite (Palette Ctrl+K).
+@app.get("/api/afk/status", dependencies=_LOCAL)
+def afk_status():
+    return nasko_afk.afk.status()
+
+
+@app.post("/api/afk/{action}", dependencies=_LOCAL)
+def afk_action(action: str):
+    if action not in ("start", "stop", "toggle"):
+        raise HTTPException(404, "Action inconnue")
+    try:
+        st = {"start": nasko_afk.afk.start, "stop": nasko_afk.afk.stop, "toggle": nasko_afk.afk.toggle}[action]()
+    except nasko_afk.AFKError as e:
+        return {"ok": False, "error": str(e)}
+    return {"ok": True, **st}
+
+
 @app.get("/api/babel/status", dependencies=_LOCAL)
 def babel_status():
     return nasko_babel.status()
@@ -5325,6 +5343,7 @@ atexit.register(nasko_depot_term.close_all)
 for _m in (nasko_clipper, nasko_babel, nasko_tilt):
     atexit.register(_m.stop)
 atexit.register(nasko_agent.stop)
+atexit.register(nasko_afk.afk.stop)
 atexit.register(nasko_mobchess.close)
 atexit.register(nasko_devmanager.stop_all)
 

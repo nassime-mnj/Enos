@@ -254,6 +254,8 @@
   function collect() {
     const out = [{ id: "__agenda", name: "Agenda", sub: "Emploi du temps Zeus · rendus Moodle · tâches · IA proactive", icon: "cal", cat: "school", badge: "NEW" }];
     out.push({ id: "__pair", name: "Appairer le téléphone", sub: "QR code : clés, agenda et jumelage envoyés en un scan", icon: "phone", cat: "sys", badge: "NEW" });
+    out.push({ id: "__afk", name: "Smart AFK", sub: "Anti-AFK jeu : micro-mouvements caméra + ZQSD · Échap ou souris = arrêt immédiat", icon: "play", cat: "ia", badge: "PREMIUM" });
+    out.push({ id: "__clipper", name: "Auto-Clipper IA", sub: "Moments forts (cri de victoire…) → clip vertical 9:16 · activer / désactiver", icon: "film", cat: "ia", badge: "PREMIUM" });
     out.push({ id: "__setup", name: "Assistant de configuration", sub: "Clés API, agenda, projet Godot, téléphone, YouTube : relancer pas à pas", icon: "gear", cat: "sys" });
     const sec = sideMods();
     if (!sec) return out;
@@ -270,6 +272,19 @@
   }
   function launch(id) {
     if (id === "__pair") { closeLx(true); return window.enosPair && window.enosPair.open(); }
+    if (id === "__afk" || id === "__clipper") {
+      closeLx(true);
+      bump(id);
+      const afk = id === "__afk", name = afk ? "Smart AFK" : "Auto-Clipper";
+      const post = (u, body) => J(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+      const call = afk ? post("/api/afk/toggle")
+        : J("/api/clipper/status").then((st) => post("/api/clipper/config", { values: { clipper_enabled: !st.running } }));
+      return call.then((r) => {
+        if (afk && r.ok === false) return toast({ level: "warn", title: name, message: r.error });
+        if (afk) { if (r.armed) toast({ level: "info", title: "Smart AFK armé", message: "Lâche la souris et le clavier : il démarre après quelques secondes de calme. Échap annule." }); }      // l'arrêt notifie côté serveur
+        else toast({ level: "info", title: name, message: r.clipper_enabled ? "Activé : tampon en mémoire en cours." : "Désactivé." });
+      }).catch(() => toast({ level: "warn", title: name, message: "Module indisponible (réservé au PC local)." }));
+    }
     if (id === "__setup") { closeLx(true); return window.enosOnboarding && window.enosOnboarding.open(); }
     bump(id);
     closeLx(true);

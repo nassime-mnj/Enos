@@ -44,7 +44,7 @@ class Routes(unittest.TestCase):
         nasko_core.config_path, nasko_core.data_dir = cls._cp, cls._dd
 
     def test_all_gaming_paths_are_role_gated(self):
-        for p in ("/api/clipper/status", "/api/babel/say", "/api/tilt/death", "/api/brb/start", "/api/pet/options"):
+        for p in ("/api/clipper/status", "/api/babel/say", "/api/tilt/death", "/api/brb/start", "/api/afk/status", "/api/pet/options"):
             self.assertFalse(nasko_roles.allowed("friends", p)[0] and p != "/api/pet/options", p)
             self.assertTrue(nasko_roles.allowed("dev", p)[0], p)
 

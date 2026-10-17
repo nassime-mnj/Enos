@@ -77,7 +77,7 @@ PREFIX_CAPS = (
     ("/api/site", "devtools"), ("/api/assistant", "devtools"), ("/api/imgproc", "devtools"), ("/api/anim", "devtools"), ("/api/audio", "devtools"),
     ("/api/screen", "devtools"), ("/api/narration", "devtools"), ("/ws/chat", "devtools"),
     # --- création avancée, jeux et loisirs
-    ("/api/cloud", "cloud"), ("/api/mirror", "mirror"), ("/api/clipper", "gaming"), ("/api/babel", "gaming"), ("/api/tilt", "gaming"), ("/api/brb", "gaming"), ("/api/compress", "creator"), ("/api/youtube", "creator"),
+    ("/api/cloud", "cloud"), ("/api/mirror", "mirror"), ("/api/clipper", "gaming"), ("/api/afk", "gaming"), ("/api/babel", "gaming"), ("/api/tilt", "gaming"), ("/api/brb", "gaming"), ("/api/compress", "creator"), ("/api/youtube", "creator"),
     ("/api/chess", "leisure"), ("/api/study", "leisure"), ("/api/pet", "leisure"), ("/api/chill", "leisure"), ("/ws/chess", "leisure"), ("/ws/pet", "leisure"),
     ("/api/mobile/chess", "leisure"),
 )

@@ -31,7 +31,7 @@ PY_MODULES = {                                    # modules Python propres à un
     "system": ["nasko_cleaner", "nasko_sysctl", "nasko_sysmon", "nasko_diag", "nasko_power"],
     "google": ["nasko_tabs", "nasko_ext", "nasko_webauto"],
     "mirror": ["nasko_mirror"],
-    "gaming": ["nasko_clipper", "nasko_capture", "nasko_babel", "nasko_tilt", "nasko_brb"],
+    "gaming": ["nasko_clipper", "nasko_capture", "nasko_babel", "nasko_tilt", "nasko_brb", "nasko_afk"],
 }
 DIRS = {"leisure": ["godot_chess", "openings"], "devtools": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
 KEEP_STATIC = {"quick.js", "updatebar.js", "roles.js", "app.js", "sec.js", "team.js", "onboarding.js", "home.js", "defi.js"}   # partagés : jamais supprimés (quick.js appelle /api/receipts mais sert aussi Friends)
