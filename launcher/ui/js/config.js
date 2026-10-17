@@ -5,7 +5,7 @@ export const PRODUCTS = {
   terna: { id: "terna", name: "TERNA", tagline: "Solo & co-op roguelike. Pilot remotely. Take Earth back." },
 };
 export const TERNA_PITCH = {
-  main: "Earth has fallen. A ruthless AI, ENOS, has taken control of every machine. What remains is TERNA, a ship-planet in orbit, and you: a pilot linked by thought to a combat robot standing where humanity was born. Every descent is different. Every death brings you closer to victory. Alone or together, take Earth back, one run at a time.",
+  main: "Earth has fallen. A ruthless AI, the Core, has taken control of every machine. What remains is TERNA, a ship-planet in orbit, and you: a pilot linked by thought to a combat robot standing where humanity was born. Every descent is different. Every death brings you closer to victory. Alone or together, take Earth back, one run at a time.",
   banner: "Pilot remotely. Destroy. Start over.",
 };
 // Banners shown while the server has published none
