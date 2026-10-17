@@ -26,7 +26,6 @@ import time
 
 import nasko_wsl as W
 
-WORKSPACE = W.DIR                               # /home/nasko : dossier unique des dépôts et des scripts déposés (règle absolue)
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 DISTRO_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 REPO_RE = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
@@ -38,9 +37,16 @@ OUT_MAX, OUT_KEEP = 2_000_000, 1_500_000
 MAX_RUNNING, MAX_JOBS = 4, 24
 MAX_IMPORT = 2 * 1024 * 1024
 # $1 = fichier PID, $2 = dépôt, $3 = commande. `set -m` : la commande a son PROPRE groupe de processus (pgid = pid), tué en bloc par stop_job.
-# Dossier des dépôts $B : TOUJOURS l'espace de travail (nasko_wsl.DIR) ; G=1 : seuls les dossiers Git sont listés (le dossier personnel contient aussi autre chose).
+# Dossier des dépôts $B : TOUJOURS l'espace de travail (nasko_wsl.DIR, réglable) ; G=1 : seuls les dossiers Git sont listés (le dossier personnel contient aussi autre chose).
 # S'il est introuvable : code 99 et message explicite (jamais de repli sur un autre dossier). Rien n'est créé.
-BSET = ('B=' + shlex.quote(W.DIR) + '; G=1; [ -d "$B" ] || { echo \'Dossier de travail introuvable : ' + W.WORKSPACE_UNC + '\' >&2; exit 99; }; ')
+# Les scripts portent des MARQUEURS (@@WSDIR@@, @@WSUNC@@) remplacés à l'envoi par _subst() : le réglage peut changer sans recharger le module.
+WS_DIR_MARK, WS_UNC_MARK = "@@WSDIR@@", "@@WSUNC@@"
+BSET = ('B=' + WS_DIR_MARK + '; G=1; [ -d "$B" ] || { echo \'Dossier de travail introuvable : ' + WS_UNC_MARK + '\' >&2; exit 99; }; ')
+
+
+def _subst(script):
+    """Remplace les marqueurs d'espace de travail par le dossier ACTUEL (déjà validé par nasko_wsl : lettres, chiffres, . _ - uniquement)."""
+    return script.replace(WS_DIR_MARK, shlex.quote(W.DIR)).replace(WS_UNC_MARK, W.WORKSPACE_UNC)
 WRAP = (BSET + 'cd "$B/$2" || exit 97\n'
         'export GIT_TERMINAL_PROMPT=0 TERM=dumb\n'
         'set -m\nbash -lc "$3" </dev/null &\np=$!\necho "$p" > "$1"\nwait "$p"\nexit $?\n')
@@ -70,7 +76,7 @@ def _need_wsl():
 def _launcher(script, args=(), prefix=""):
     """wsl.exe ne transmet NI les arguments positionnels NI les guillemets imbriqués : tout le script (valeurs comprises, citées par shlex)
     voyage donc en base64 dans une commande 100 % alphanumérique, exécutée par `bash <(…)` — l'entrée standard reste libre pour des données."""
-    body = "set -- " + " ".join(shlex.quote(str(a)) for a in args) + "\n" + script
+    body = "set -- " + " ".join(shlex.quote(str(a)) for a in args) + "\n" + _subst(script)
     return f"{prefix}bash <(echo {base64.b64encode(body.encode('utf-8')).decode()}|base64 -d)"
 
 
@@ -481,6 +487,69 @@ def open_explorer(repo, cfg=None):
     except OSError as e:
         raise DevError(f"Explorateur impossible : {e}")
     return unc
+
+
+# ------------------------------------------------------------------ espace de travail WSL réglable (chaque utilisateur a son propre dossier)
+_HOME_RE = re.compile(r"/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*")
+
+
+def _dir_exists(distro_name, path):
+    rc, out = _wsl(distro_name, '[ -d "$1" ] && echo ok', path, timeout=40)
+    return rc == 0 and out.strip().endswith("ok")
+
+
+def workspace_state(cfg=None):
+    """Dossier de travail courant + s'il existe réellement dans WSL. Ne lève jamais : `reason` explique un éventuel problème."""
+    unc, ok, reason = W.workspace_unc(), False, ""
+    if not available():
+        reason = "WSL n'est pas installé sur ce PC."
+    else:
+        try:
+            ok = _dir_exists(W.DISTRO, W.DIR)
+            if not ok:
+                reason = "Dossier introuvable dans WSL : vérifie le nom de la distribution et de l'utilisateur."
+        except DevError as e:
+            reason = str(e)
+    return {"unc": unc, "distro": W.DISTRO, "linux": W.DIR, "default": W.is_default(), "exists": ok, "reason": reason, "wsl": available(), "example": "\\\\wsl.localhost\\Ubuntu\\home\\toi"}
+
+
+def set_workspace(unc, cfg=None):
+    """Enregistre le dossier de travail WSL. Forme contrôlée ET existence vérifiée dans WSL avant d'être appliqué (vide = dossier par défaut)."""
+    unc = (unc or "").strip()
+    try:
+        new = W.clean_unc(unc) if unc else W.DEFAULT_UNC
+        dist, path = W.parse_unc(new)
+    except ValueError as e:
+        raise DevError(str(e))
+    _need_wsl()
+    if not _dir_exists(dist, path):
+        raise DevError(f"Dossier introuvable dans WSL : {new}. Vérifie la distribution et le nom d'utilisateur (le bouton DÉTECTER les trouve pour toi).")
+    try:
+        W.set_workspace(unc)
+    except ValueError as e:
+        raise DevError(str(e))
+    return workspace_state()
+
+
+def detect_workspace(cfg=None):
+    """Propose \\\\wsl.localhost\\<distribution par défaut>\\<home de l'utilisateur WSL>, lu dans WSL lui-même."""
+    _need_wsl()
+    cmd = ["wsl.exe", "--", "bash", "-c", _launcher('printf "%s\\n%s\\n" "$WSL_DISTRO_NAME" "$HOME"')]
+    try:
+        p = subprocess.run(cmd, capture_output=True, timeout=40, stdin=subprocess.DEVNULL, creationflags=NOWIN)
+    except subprocess.TimeoutExpired:
+        raise DevError("Délai dépassé (WSL ne répond pas).")
+    except OSError as e:
+        raise DevError(f"Lancement de WSL impossible : {e}")
+    lines = (p.stdout or b"").decode("utf-8", "replace").replace(chr(0), "").split()
+    if p.returncode != 0 or len(lines) < 2 or not DISTRO_RE.match(lines[0]) or not _HOME_RE.fullmatch(lines[1]):
+        raise DevError("Détection impossible : saisis le chemin à la main (ex. \\\\wsl.localhost\\Ubuntu\\home\\toi).")
+    unc = "\\\\wsl.localhost\\" + lines[0] + lines[1].replace("/", "\\")
+    try:
+        W.parse_unc(unc)
+    except ValueError as e:
+        raise DevError(str(e))
+    return {"unc": unc}
 
 
 # ------------------------------------------------------------------ désinstallation des versions de test (Inno Setup)

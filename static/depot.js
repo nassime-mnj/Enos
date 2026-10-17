@@ -65,11 +65,28 @@
     b.textContent = label; b.disabled = !S.repo;
   }
   const injectB = btn("INJECTER .CLANG-FORMAT", () => fmtRun(injectB, "INJECTER .CLANG-FORMAT", "/api/depot/inject_clang_format", {}, (r) => ".clang-format EPITA " + (r.replaced ? "mis à jour (ancien fichier écrasé)" : "injecté avec succès")));
-  injectB.title = "Copie « clang-format » (racine de ton espace WSL) vers .clang-format à la racine du dépôt courant, en écrasant l'existant";
+  injectB.title = "Écrit le style EPITA (intégré à E.N.O.S.) dans .clang-format à la racine du dépôt courant, en écrasant l'existant";
   const fmtDir = el("input", { type: "text", placeholder: "Dossier (ex: src/ ou vide pour tout)", spellcheck: false, autocomplete: "off", "aria-label": "Dossier à formater", onkeydown: (e) => { if (e.key === "Enter") fmtGo.click(); } });
   const fmtGo = btn("FORMATTER C/H", () => fmtRun(fmtGo, "FORMATTER C/H", "/api/depot/format_c", { folder: fmtDir.value.trim() }, (r) => r.files ? r.files + " fichier" + (r.files > 1 ? "s" : "") + " .c/.h formaté" + (r.files > 1 ? "s" : "") + " (" + r.target + ")" : "Aucun fichier .c/.h trouvé dans " + r.target));
   fmtGo.title = "Lance clang-format -i sur tous les .c et .h du dossier indiqué (tout le dépôt si vide). Exige le .clang-format dans le dépôt.";
   const fmtBtns = [injectB, fmtGo];
+  // Espace de travail WSL : chaque utilisateur renseigne SON dossier (\\wsl.localhost\<distribution>\home\<son-nom>) ; le clone, les scripts et le terminal l'utilisent
+  const wsB = btn("⚙ ESPACE WSL", () => workspaceDlg(), "ghost");
+  wsB.title = "Dossier de travail WSL où sont clonés les dépôts et déposés les scripts (\\\\wsl.localhost\\Ubuntu\\home\\toi)";
+  async function workspaceDlg() {
+    const inp = el("input", { type: "text", placeholder: "\\\\wsl.localhost\\Ubuntu\\home\\toi", spellcheck: false, autocomplete: "off", "aria-label": "Dossier de travail WSL" });
+    const status = el("div", { class: "dp-msg", text: "Chargement…" });
+    const paint = (st) => { inp.value = st.unc; status.className = "dp-msg " + (st.exists ? "ok" : "bad"); status.textContent = st.exists ? "✔ Dossier trouvé dans WSL" + (st.default ? " (valeur par défaut)" : "") : "✕ " + (st.reason || "Dossier introuvable."); };
+    const m = modal("ESPACE DE TRAVAIL WSL", el("div", {}, el("label", { text: "Dossier racine (là où sont tes dépôts)" }), inp, status,
+      el("div", { class: "dp-note", text: "Format : \\\\wsl.localhost\\<distribution>\\home\\<ton-utilisateur-linux>. « Détecter » le lit dans WSL. Laisse vide pour revenir à la valeur par défaut. Le terminal ouvert sera relancé." })), [
+      { label: "DÉTECTER", fn: async () => { try { const r = await post("/api/depot/workspace/detect", {}); inp.value = r.unc; status.className = "dp-msg"; status.textContent = "Trouvé : clique ENREGISTRER pour l'appliquer."; } catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; } } },
+      { label: "ENREGISTRER", cls: "dp-send", fn: async (d) => {
+        try { const st = await post("/api/depot/workspace", { unc: inp.value.trim() }); closeTerm(); d.remove(); S.repo = ""; await refresh(true); fmtSay("✔ Espace de travail : " + st.unc, "ok"); }
+        catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; } } },
+      { label: "ANNULER", fn: (d) => d.remove() }]);
+    try { paint(await api("/api/depot/workspace")); } catch (e) { status.className = "dp-msg bad"; status.textContent = "✕ " + e.message; }
+    return m;
+  }
   const tabDefs = [["forge", "FORGE"], ["files", "FICHIERS"], ["git", "GIT"], ["subject", "SUJET"], ["train", "ENTRAÎN."], ["shell", "DÉPÔT SHELL"]];
   const tabBar = el("div", { class: "dp-tabs", role: "tablist" }, tabDefs.map(([id, l]) => el("button", { "data-t": id, role: "tab", text: l, onclick: () => tab(id) })));
   const panes = {}; tabDefs.forEach(([id]) => { panes[id] = el("div", { class: "dp-pane", hidden: true, id: "dp-p-" + id }); });
@@ -81,7 +98,7 @@
   const termBar = el("div", { class: "dp-termbar" }, el("small", { text: "TERMINAL" }), el("span", { class: "dp-sp" }), purgeB);
   root.append(
     el("div", { class: "dp-bar" }, el("h2", { text: "DÉPÔT INTRANET" }), repoSel, chipBranch, chipAB, cloneUrl, cloneB, el("span", { class: "dp-sp" }), ...gitBtns, btn("⟳", () => refresh(true)), btn("✕ FERMER", () => close())),
-    el("div", { class: "dp-bar dp-fmtbar", role: "group", "aria-label": "Formatage C (norme EPITA)" }, el("small", { class: "dp-fmtlab", text: "FORMAT C" }), injectB, fmtDir, fmtGo, fmtMsg),
+    el("div", { class: "dp-bar dp-fmtbar", role: "group", "aria-label": "Formatage C (norme EPITA)" }, el("small", { class: "dp-fmtlab", text: "FORMAT C" }), injectB, fmtDir, fmtGo, el("span", { class: "dp-sp" }), wsB, fmtMsg),
     cloneProg,
     el("div", { class: "dp-main" }, el("aside", { class: "dp-side" }, tabBar, Object.values(panes)), el("div", { class: "dp-work" }, ftabs, editorBox, split, termBar, termBox)));
   document.body.appendChild(root);

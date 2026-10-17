@@ -4708,6 +4708,28 @@ def depot_format_c(b: DepotClang):
     return _depot(nasko_depot_git.format_c, _drepo(b.repo), b.folder)
 
 
+class DepotWorkspace(BaseModel):
+    unc: str = ""
+
+
+@app.get("/api/depot/workspace", dependencies=_LOCAL)
+def depot_workspace_get():
+    return nasko_devmanager.workspace_state()
+
+
+@app.post("/api/depot/workspace", dependencies=_LOCAL)
+def depot_workspace_set(b: DepotWorkspace):
+    """Règle le dossier de travail WSL (\\\\wsl.localhost\\<distribution>\\home\\<toi>). Forme validée, existence vérifiée dans WSL, vide = dossier par défaut."""
+    r = _dev(lambda cfg: nasko_devmanager.set_workspace(b.unc))
+    nasko_depot_term.close_all()                          # un shell resté ouvert serait encore dans l'ancien dossier
+    return r
+
+
+@app.post("/api/depot/workspace/detect", dependencies=_LOCAL)
+def depot_workspace_detect():
+    return _dev(lambda cfg: nasko_devmanager.detect_workspace())
+
+
 class DepotTermReset(BaseModel):
     repo: str = ""
 

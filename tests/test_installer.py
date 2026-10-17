@@ -138,7 +138,13 @@ class BuildScript(unittest.TestCase):
     def test_env_isolates_target_and_masks_local_paths(self):
         e = B.launcher_env()
         self.assertEqual(e["CARGO_TARGET_DIR"], str(B.LAUNCHER_TARGET))
-        self.assertIn(f"--remap-path-prefix={Path.home()}=~", e["RUSTFLAGS"])
+        # CARGO_ENCODED_RUSTFLAGS (séparateur \x1f) : RUSTFLAGS se découpe sur les espaces, or « Logiciel ENOS » en contient un -> « --remap-path-prefix must contain '=' »
+        self.assertNotIn("RUSTFLAGS", e)
+        flags = e["CARGO_ENCODED_RUSTFLAGS"].split("\x1f")
+        self.assertIn(f"--remap-path-prefix={Path.home()}=~", flags)
+        self.assertTrue(all(f.startswith("--remap-path-prefix=") and f.count("=") >= 2 for f in flags), flags)
+        with mock.patch.dict(B.os.environ, {"RUSTFLAGS": "-C target-cpu=native"}, clear=False):
+            self.assertEqual(B.launcher_env()["CARGO_ENCODED_RUSTFLAGS"].split("\x1f")[:2], ["-C", "target-cpu=native"])      # RUSTFLAGS existant conservé
 
     def test_build_stops_clearly_when_tooling_or_platform_is_missing(self):
         with mock.patch.object(B.sys, "platform", "linux"), self.assertRaises(SystemExit):

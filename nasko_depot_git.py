@@ -667,33 +667,38 @@ def drop_shell(repo, filename, content, target="root", overwrite=False, executab
 
 # ----------------------------------------------------------------------------- .clang-format (norme EPITA)
 CLANG_NAME = ".clang-format"
-CLANG_SRC_NAME = "clang-format"                       # SANS point : à la racine de l'espace de travail WSL (\wsl.localhost\Ubuntu\home\nasko\clang-format)
+CLANG_ASSET = ("static", "assets", "epita.clang-format")   # style EPITA EMBARQUÉ dans l'application (jamais lu dans le dossier personnel de quelqu'un)
 MAX_CLANG = 64 * 1024
-_CLANG_COPY = ('[ -f "$1" ] || exit 3; [ "$(wc -c < "$1")" -le ' + str(MAX_CLANG) + ' ] || exit 6; '
-               'if [ -L "$2" ]; then exit 4; elif [ -d "$2" ]; then exit 5; fi; '
-               'd=$(dirname -- "$2") && [ -d "$d" ] && t=$(mktemp "$d/.nasko-XXXXXX") && cp -- "$1" "$t" && chmod 644 "$t" && mv -f -- "$t" "$2" '
-               '|| { [ -n "$t" ] && rm -f -- "$t"; exit 1; }')
+
+
+def clang_asset_path():
+    import nasko_core
+    return nasko_core.resource_path(*CLANG_ASSET)
 
 
 def inject_clang_format(repo, source=None):
-    """Copie le fichier de formatage EPITA (nasko_wsl : « clang-format », sans point) à la racine du dépôt sous le nom strict « .clang-format », en écrasant
-    l'existant. `source` : chemin Windows de remplacement (tests, mode local). Retourne {ok, path, bytes, replaced}."""
-    local = getattr(repo.runner, "is_local", False)
+    """Écrit le style EPITA embarqué à la racine du dépôt sous le nom strict « .clang-format » (point en tête), en écrasant l'existant. Écriture atomique, fin de
+    ligne LF, jamais à travers un lien symbolique. `source` : fichier de remplacement (tests uniquement). Retourne {ok, path, bytes, replaced}."""
+    src = source or clang_asset_path()
+    try:
+        with open(src, "rb") as f:
+            data = f.read(MAX_CLANG + 1)
+    except FileNotFoundError:
+        raise GitError("Le style EPITA embarqué est introuvable (installation incomplète) : réinstalle E.N.O.S.")
+    except OSError as e:
+        raise GitError(f"Lecture du style EPITA impossible : {e.strerror or e}")
+    if not data:
+        raise GitError("Le style EPITA embarqué est vide.")
+    if len(data) > MAX_CLANG:
+        raise GitError("Le fichier de style est trop gros pour un .clang-format (64 Ko maximum).")
+    if b"\x00" in data:
+        raise GitError("Le fichier de style est binaire : refusé.")
+    data = data.replace(b"\r\n", b"\n")
+    if not data.endswith(b"\n"):
+        data += b"\n"
     top = repo.toplevel()
-    if local:
-        src = source or nasko_wsl.unc_path(CLANG_SRC_NAME)
+    if getattr(repo.runner, "is_local", False):
         dest = os.path.join(top, CLANG_NAME)
-        try:
-            with open(src, "rb") as f:
-                data = f.read(MAX_CLANG + 1)
-        except FileNotFoundError:
-            raise GitError(f"Fichier source introuvable : {src}. Place ton fichier « {CLANG_SRC_NAME} » (sans point) à la racine de l'espace de travail WSL.")
-        except OSError as e:
-            raise GitError(f"Lecture de la source impossible ({src}) : {e.strerror or e}")
-        if not data:
-            raise GitError(f"Le fichier source est vide : {src}")
-        if len(data) > MAX_CLANG:
-            raise GitError("Le fichier source est trop gros pour un .clang-format (64 Ko maximum).")
         if os.path.islink(dest):
             raise GitError("Le .clang-format du dépôt est un lien symbolique : refusé.")
         if os.path.isdir(dest):
@@ -712,21 +717,16 @@ def inject_clang_format(repo, source=None):
                 pass
             raise GitError(f"Écriture impossible : {e.strerror or e}")
         return {"ok": True, "path": dest, "bytes": len(data), "replaced": replaced}
-    src = source or nasko_wsl.linux_path(CLANG_SRC_NAME)
-    dest = top.rstrip("/") + "/" + CLANG_NAME
-    existed = repo.runner.run(["test", "-e", dest], repo.path, timeout=20)[0] == 0
-    rc, out, err = repo.runner.run(["sh", "-c", _CLANG_COPY, "sh", src, dest], repo.path, timeout=30)
+    dest = top.rstrip("/") + "/" + CLANG_NAME                     # WSL : le contenu voyage par l'entrée standard (aucune lecture dans le dossier de l'utilisateur)
+    rc = repo.runner.run(["sh", "-c", _PROBE, "sh", dest], repo.path, timeout=20)[0]
     if rc == 3:
-        raise GitError(f"Fichier source introuvable : {nasko_wsl.WORKSPACE_UNC + chr(92) + CLANG_SRC_NAME}. Crée ton fichier « {CLANG_SRC_NAME} » (sans point) à la racine de l'espace de travail WSL.")
-    if rc == 4:
         raise GitError("Le .clang-format du dépôt est un lien symbolique : refusé.")
     if rc == 5:
         raise GitError("Un dossier nommé .clang-format existe déjà dans le dépôt.")
-    if rc == 6:
-        raise GitError("Le fichier source est trop gros pour un .clang-format (64 Ko maximum).")
-    if rc != 0:
-        raise GitError(f"Copie impossible : {_clean(err or out, repo.path, top)}")
-    return {"ok": True, "path": dest, "replaced": existed}
+    rc2, out, err = repo.runner.run(["sh", "-c", _WRITE, "sh", dest, "644"], repo.path, timeout=30, stdin=data)
+    if rc2 != 0:
+        raise GitError(f"Écriture impossible : {_clean(err or out, repo.path, top)}")
+    return {"ok": True, "path": dest, "bytes": len(data), "replaced": rc == 4}
 
 
 # ----------------------------------------------------------------------------- formatage C/H (clang-format -i)

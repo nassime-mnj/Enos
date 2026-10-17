@@ -1,0 +1,2 @@
+# Le style EPITA embarqué reste en LF dans le dépôt ET dans le dossier de travail (clang-format sous Linux) : jamais converti en CRLF par autocrlf.
+static/assets/epita.clang-format text eol=lf

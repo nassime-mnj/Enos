@@ -18,12 +18,15 @@ UNC = "\\\\wsl.localhost\\Ubuntu\\home\\nasko"
 
 class Workspace(unittest.TestCase):
     def setUp(self):
+        self.patch_cfg = mock.patch.object(W, "_configured", return_value="")      # hermétique : jamais le réglage réel de la machine (dossier par défaut du CEO)
+        self.patch_cfg.start()
+        W.reset()
         self.ws = tempfile.mkdtemp(prefix="nasko_ws_")
         self.calls = []
 
         def fake_wsl_raw(d, script, *args, timeout=60, data=None):
             self.calls.append(d)
-            body = "set -- " + " ".join(shlex.quote(str(a)) for a in args) + "\n" + script.replace(W.DIR, self.ws)
+            body = "set -- " + " ".join(shlex.quote(str(a)) for a in args) + "\n" + D._subst(script).replace(W.DIR, self.ws)
             p = subprocess.run(["bash", "-c", body], capture_output=True, input=data, stdin=None if data is not None else subprocess.DEVNULL, cwd="/")
             return p.returncode, p.stdout, p.stderr.decode("utf-8", "replace").strip()
 
@@ -34,7 +37,7 @@ class Workspace(unittest.TestCase):
         self.patch_job.start()
 
     def tearDown(self):
-        self.patch.stop(); self.patch_job.stop()
+        self.patch.stop(); self.patch_job.stop(); self.patch_cfg.stop(); W.reset()
 
     # ------------------------------------------------------------------ la règle
     def test_constants_are_the_ceo_workspace(self):
@@ -53,7 +56,7 @@ class Workspace(unittest.TestCase):
         self.assertEqual(D.distro({"wsl_distro": "Debian"}), "Ubuntu")
         self.assertEqual(D.status({})["workspace"], UNC)
         self.assertEqual(T._distro({"wsl_distro": "x;rm -rf /"}), "Ubuntu")
-        self.assertIn("B=/home/nasko;", D.BSET)
+        self.assertIn("B=/home/nasko;", D._subst(D.BSET))
 
     def test_no_leftover_of_the_old_base_in_wsl_code(self):
         for f in ("nasko_devmanager.py", "nasko_depot_git.py", "nasko_depot_term.py"):
@@ -74,12 +77,12 @@ class Workspace(unittest.TestCase):
 
     def test_jobs_without_repo_start_in_the_workspace(self):
         os.makedirs(os.path.join(self.ws, "r"))
-        script = D.WRAP.replace(W.DIR, self.ws)
+        script = D._subst(D.WRAP).replace(W.DIR, self.ws)
         for repo, want in (("", self.ws), ("r", os.path.join(self.ws, "r"))):
             pidf = os.path.join(self.ws, ".pid")
             out = subprocess.run(["bash", "-c", "set -- " + " ".join(shlex.quote(x) for x in (pidf, repo, "pwd")) + "\n" + script], capture_output=True, text=True).stdout.strip()
             self.assertEqual(out, want)
-        missing = subprocess.run(["bash", "-c", D.BSET.replace(W.DIR, self.ws + "/absent") + "echo ok"], capture_output=True, text=True)
+        missing = subprocess.run(["bash", "-c", D._subst(D.BSET).replace(W.DIR, self.ws + "/absent") + "echo ok"], capture_output=True, text=True)
         self.assertEqual(missing.returncode, 99)
         self.assertIn(UNC, missing.stderr)                                              # message explicite, aucun repli sur un autre dossier
         self.assertFalse(os.path.exists(self.ws + "/absent"), "rien n'est créé")

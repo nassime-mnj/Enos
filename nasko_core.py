@@ -115,6 +115,7 @@ DEFAULT_CONFIG = {
     "elevenlabs_eto_tempo": 1.15,         # accélération locale FFmpeg par-dessus : 1.2 x 1.15 ≈ x1.38 au total (1.0 = désactivée)
     "elevenlabs_eto_model": "eleven_v3",   # le seul modèle ElevenLabs qui interprète les Audio Tags [laugh] [sigh] [hmm]…
     "tts_dynamic": True,
+    "wsl_workspace": "",        # dossier de travail WSL (\\wsl.localhost\<distribution>\home\<toi>) ; vide = dossier par défaut de nasko_wsl.py. Réglé depuis le module Dépôt.
 }
 
 
