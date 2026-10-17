@@ -74,8 +74,17 @@ async def security_headers(request: Request, call_next):
 
 
 # ----------------------------------------------------------------------------- page publique
+def _dev_entry(request: Request):
+    """Entrée de liste blanche de ce visiteur : son IP (liste blanche) ou, via `tailscale serve`, son identité Tailscale autorisée (« tailscale:<login> »). None sinon."""
+    entry = db.match_dev(whitelist.client_ip(request))
+    if entry:
+        return entry
+    who = whitelist.tailscale_user(request)
+    return "tailscale:" + who if who else None
+
+
 def _is_dev(request: Request):
-    return db.match_dev(whitelist.client_ip(request))
+    return bool(_dev_entry(request))
 
 
 def _dev_ctx(request: Request):
@@ -175,17 +184,17 @@ def support(b: Ask, request: Request):
 @app.get("/dev/style.css")
 def dev_css(request: Request):
     """Feuille de style de la zone développeur : servie seulement aux IP autorisées (aucune trace dans le CSS public)."""
-    if not db.match_dev(whitelist.client_ip(request)):
+    if not _dev_entry(request):
         raise HTTPException(404)
     return FileResponse(BASE / "private_assets" / "dev.css", media_type="text/css")
 
 
 @app.get("/dev/telecharger")
 def dev_download(request: Request):
-    ip = whitelist.client_ip(request)
-    entry = db.match_dev(ip)
+    entry = _dev_entry(request)
     if not entry:
         raise HTTPException(404)                           # exactement la réponse d'une page qui n'existe pas
+    ip = whitelist.client_ip(request) or whitelist.forwarded_ip(request) or "tailscale"      # clé de journal et de limitation de débit
     f = download_file()
     if not f.is_file():
         db.log_download(entry, ip, False)

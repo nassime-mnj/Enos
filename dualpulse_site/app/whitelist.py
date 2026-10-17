@@ -45,6 +45,49 @@ def matches(entry: str, ip) -> bool:
         return False
 
 
+TAILSCALE_NETS = (ipaddress.ip_network("100.64.0.0/10"), ipaddress.ip_network("fd7a:115c:a1e0::/48"))      # adresses attribuées par Tailscale
+
+
+def _in_tailscale(ip):
+    return ip is not None and any(ip.version == net.version and ip in net for net in TAILSCALE_NETS)
+
+
+def forwarded_ip(request):
+    """Premier saut de X-Forwarded-For (l'appareil Tailscale qui a fait la requête quand elle passe par `tailscale serve`), sinon None."""
+    first = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    return normalize(first) if first else None
+
+
+def tailscale_user(request):
+    """Login Tailscale de l'appelant quand la requête arrive par `tailscale serve`, s'il est autorisé à l'accès développeur ; sinon None.
+
+    client_ip() refuse (à raison) de traiter le trafic d'un tunnel comme local : `tailscale serve` arrive de 127.0.0.1 avec un Host et un X-Forwarded-For étrangers. Ce chemin-ci est
+    donc une EXCEPTION volontaire, étroite : elle exige TOUT ceci —
+      * DP_TAILSCALE_HOST (nom MagicDNS du serveur, ex. sami.tail8e71e8.ts.net) ET DP_TAILSCALE_USERS (logins autorisés, ou *) sont définis ;
+      * la connexion directe vient de la boucle locale (c'est tailscaled qui relaie) ;
+      * l'en-tête Host est exactement ce nom : un autre tunnel (localhost.run…) arrive avec SON nom d'hôte et échoue ici, même s'il forge l'en-tête d'identité ;
+      * X-Forwarded-For désigne une adresse du réseau Tailscale (100.64.0.0/10) ;
+      * l'en-tête Tailscale-User-Login (ajouté par tailscaled, que le client ne peut pas imposer) est présent et fait partie des logins autorisés."""
+    allowed = {u.strip().lower() for u in os.environ.get("DP_TAILSCALE_USERS", "").split(",") if u.strip()}
+    want_host = os.environ.get("DP_TAILSCALE_HOST", "").strip().lower().rstrip(".")
+    if not allowed or not want_host:
+        return None
+    peer = normalize(request.client.host if request.client else "")
+    # Le pair est la boucle locale (tailscaled relaie) OU une adresse Tailscale : uvicorn remplace l'adresse du client par le premier saut de X-Forwarded-For quand la
+    # connexion vient de 127.0.0.1 (--proxy-headers, activé par défaut). Une adresse d'un autre réseau (LAN, internet) n'est jamais acceptée.
+    if peer is None or not (peer.is_loopback or _in_tailscale(peer)):
+        return None
+    if request.headers.get("host", "").rsplit(":", 1)[0].strip().lower().rstrip(".") != want_host:
+        return None
+    hop = forwarded_ip(request)
+    if hop is None or not _in_tailscale(hop):
+        return None
+    login = request.headers.get("tailscale-user-login", "").strip().lower()
+    if not login or "@" not in login:
+        return None
+    return login if ("*" in allowed or login in allowed) else None
+
+
 def trusted_proxies():
     return [p.strip() for p in os.environ.get("DP_TRUSTED_PROXIES", "").split(",") if p.strip()]
 
