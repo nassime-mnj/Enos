@@ -195,6 +195,29 @@ def test_public_copy_uses_pseudonyms_only_and_new_baseline():
     assert "un seul jeu" not in pages.lower()
 
 
+def test_gallery_placeholders_and_real_media(monkeypatch):
+    """Galerie /studio : emplacements réservés par défaut ; un média n'apparaît que si son fichier existe dans static/media/ (extension autorisée, aucun détour de chemin)."""
+    import content
+    c = cl(STRANGER)
+    h = c.get("/studio").text
+    assert h.count('class="ph"') == len(content.MEDIA) == 7 and "Signal en attente" in h and "<img" not in h.split('id="galerie"')[1].split("</section>")[0]
+    media = ROOT / "static" / "media"
+    f = media / "zz-test.png"
+    f.write_bytes(b"\x89PNG\r\n\x1a\n")
+    try:
+        slots = [dict(m) for m in content.MEDIA]
+        slots[0].update(src="/static/media/zz-test.png", alt="Combat", caption="Gardien 01")
+        slots[1].update(src="/static/media/../content.py", alt="x")                       # détour de chemin : refusé
+        slots[2].update(src="/static/media/absent.png", alt="x")                         # fichier absent : placeholder
+        slots[3].update(src="/static/media/zz-test.png.exe", alt="x")                    # extension non autorisée
+        monkeypatch.setattr(content, "MEDIA", slots)
+        g = c.get("/studio").text.split('id="galerie"')[1].split("</section>")[0]
+        assert g.count("<img") == 1 and 'alt="Combat"' in g and "Gardien 01" in g and g.count('class="ph"') == 6 and "content.py" not in g
+        assert 'style="' not in g and c.get("/static/media/zz-test.png").status_code == 200
+    finally:
+        f.unlink()
+
+
 def test_security_headers_and_robots():
     r = cl(STRANGER).get("/")
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"] and r.headers["x-content-type-options"] == "nosniff"

@@ -19,7 +19,7 @@
   <a class="brand" href="#top" aria-label="{{ studio.name }} — accueil"><img src="/static/img/logo.svg" alt="" width="34" height="34"><span>DUAL<b>PULSE</b></span></a>
   <button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="nav"><i></i><i></i><i></i></button>
   <nav id="nav" aria-label="Navigation principale">
-    <a href="/">Télécharger</a><a href="#studio">Studio</a><a href="#jeu">Le jeu</a><a href="#equipe">Équipe</a><a href="#route">Feuille de route</a><a href="#faq">FAQ</a><a href="#contact" class="cta">Contact</a>
+    <a href="/">Télécharger</a><a href="#studio">Studio</a><a href="#jeu">Le jeu</a><a href="#galerie">Galerie</a><a href="#equipe">Équipe</a><a href="#route">Feuille de route</a><a href="#faq">FAQ</a><a href="#contact" class="cta">Contact</a>
   </nav>
 </header>
 
@@ -42,16 +42,17 @@
   <section class="hero">
     <div class="pulses" aria-hidden="true"><i class="p a"></i><i class="p a d1"></i><i class="p b"></i><i class="p b d1"></i></div>
     <div class="wrap hero-in">
-      <p class="eyebrow">Studio indépendant · deux développeurs</p>
+      <p class="eyebrow">Studio indépendant</p>
       <h1>Deux <span class="ga">pulsations</span>,<br>une seule <span class="gb">vision</span>.</h1>
       <p class="lead">{{ studio.pitch }}</p>
-      <div class="hero-cta"><a class="btn primary" href="#jeu">Découvrir le jeu</a><a class="btn ghost" href="#contact">Nous écrire</a></div>
+      <div class="hero-cta"><a class="btn primary" href="#jeu">Voir le projet</a><a class="btn ghost" href="#contact">Contact</a></div>
     </div>
   </section>
 
   <section id="studio" class="sec">
     <div class="wrap">
-      <header class="sec-h"><p class="eyebrow">Le studio</p><h2>Petit studio, exigence maximale</h2></header>
+      <header class="sec-h"><p class="eyebrow">Le studio</p><h2>Forgé, pas fabriqué</h2></header>
+      <blockquote class="manifesto reveal"><p>{{ studio.manifesto }}</p><cite>Nasko &amp; Hydra</cite></blockquote>
       <div class="grid3">
         {% for t, d in values %}<article class="card reveal"><h3>{{ t }}</h3><p>{{ d }}</p></article>{% endfor %}
       </div>
@@ -72,36 +73,60 @@
     </div>
   </section>
 
-  <section id="equipe" class="sec">
+  <section id="galerie" class="sec" aria-labelledby="gal-t">
+    <svg class="sprite" aria-hidden="true" focusable="false"><symbol id="mark" viewBox="0 0 64 64"><circle cx="24" cy="32" r="17" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="40" cy="32" r="17" fill="none" stroke="currentColor" stroke-width="3"/><path d="M6 32h14l4-9 6 18 5-14 3 5h20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
     <div class="wrap">
-      <header class="sec-h"><p class="eyebrow">L'équipe</p><h2>Deux personnes, un seul rythme</h2></header>
+      <header class="sec-h"><p class="eyebrow">Archives</p><h2 id="gal-t">Fragments</h2></header>
+      <div class="gallery" role="list" aria-label="Images et séquences du jeu">
+        {% for m in media %}
+        <figure class="shot s-{{ m.slot }}{% if m.ok %} live{% else %} empty{% endif %}{% if m.pixel %} px{% endif %} reveal" role="listitem">
+          {% if m.ok %}
+            {% if m.kind == 'video' %}<video src="{{ m.src }}" autoplay muted loop playsinline preload="metadata" aria-label="{{ m.alt }}"></video>
+            {% else %}<img src="{{ m.src }}" alt="{{ m.alt }}" loading="lazy" decoding="async">{% endif %}
+            {% if m.caption %}<figcaption>{{ m.caption }}</figcaption>{% endif %}
+          {% else %}
+            <div class="ph" role="img" aria-label="Emplacement réservé : {{ m.label }}">
+              <svg class="ph-mark" aria-hidden="true" focusable="false"><use href="#mark"/></svg>
+              <span class="ph-id">{{ '%02d' % loop.index }}</span><span class="ph-t">{{ m.label }}</span>
+            </div>
+          {% endif %}
+        </figure>
+        {% endfor %}
+      </div>
+      <p class="gal-hint" aria-hidden="true">Faites glisser →</p>
+    </div>
+  </section>
+
+  <section id="equipe" class="sec alt">
+    <div class="wrap">
+      <header class="sec-h"><p class="eyebrow">Signatures</p><h2>Deux noms. Aucun visage.</h2></header>
       <div class="team">
         {% for m in team %}<article class="member reveal"><div class="avatar {{ loop.cycle('a','b') }}" aria-hidden="true">{{ m.name[0] }}</div><h3>{{ m.name }}</h3><p>{{ m.role }}</p></article>{% endfor %}
       </div>
     </div>
   </section>
 
-  <section id="route" class="sec alt">
+  <section id="route" class="sec">
     <div class="wrap">
-      <header class="sec-h"><p class="eyebrow">Feuille de route</p><h2>Où en est le projet</h2></header>
+      <header class="sec-h"><p class="eyebrow">Feuille de route</p><h2>État d'avancement</h2></header>
       <ol class="timeline">
         {% for st, txt in roadmap %}<li class="reveal {{ 'done' if st == 'Fait' else 'now' if st == 'En cours' else '' }}"><b>{{ st }}</b><span>{{ txt | replace('A_COMPLETER', 'à annoncer') }}</span></li>{% endfor %}
       </ol>
     </div>
   </section>
 
-  <section id="faq" class="sec">
+  <section id="faq" class="sec alt">
     <div class="wrap narrow">
       <header class="sec-h"><p class="eyebrow">Questions fréquentes</p><h2>FAQ</h2></header>
       {% for q, a in faq %}<details class="qa reveal"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
-      <p class="muted">Une autre question ? <button class="linkbtn" id="open-chat-2" type="button">Demandez à l'Assistant Support</button>.</p>
+      <p class="muted">Autre question ? <button class="linkbtn" id="open-chat-2" type="button">Assistant Support</button>.</p>
     </div>
   </section>
 
-  <section id="contact" class="sec alt">
+  <section id="contact" class="sec">
     <div class="wrap narrow center">
-      <header class="sec-h"><p class="eyebrow">Contact</p><h2>Parlons-en</h2></header>
-      <p class="lead sm">Presse, partenariat, portfolio, test du jeu ou simple question : écrivez-nous.</p>
+      <header class="sec-h"><p class="eyebrow">Contact</p><h2>Un seul canal</h2></header>
+      <p class="lead sm">Presse, partenariat, test, portfolio.</p>
       <a class="btn primary big" href="mailto:{{ studio.contact_email }}">{{ studio.contact_email }}</a>
     </div>
   </section>

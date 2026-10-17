@@ -93,10 +93,23 @@ def index(request: Request):
     return templates.TemplateResponse(request, "index.html", ctx)
 
 
+def _media():
+    """Galerie du jeu (content.MEDIA). Un média n'est servi que si son fichier existe dans static/media/ avec une extension autorisée ; sinon : emplacement réservé."""
+    out = []
+    for m in content.MEDIA:
+        item = dict(m, ok=False)
+        src = (m.get("src") or "").strip()
+        if src.startswith("/static/media/") and ".." not in src and Path(src).suffix.lower() in content.MEDIA_EXT and (BASE / src.lstrip("/")).is_file():
+            item["ok"] = True
+            item["kind"] = "video" if Path(src).suffix.lower() in (".mp4", ".webm") else "image"
+        out.append(item)
+    return out
+
+
 @app.get("/studio", response_class=HTMLResponse)
 def studio(request: Request):
     ctx = {"request": request, "studio": content.STUDIO, "game": content.GAME, "features": content.FEATURES, "values": content.VALUES, "team": content.TEAM,
-           "roadmap": content.ROADMAP, "faq": content.FAQ, "suggestions": content.SUGGESTIONS, "dev": _dev_ctx(request)}
+           "roadmap": content.ROADMAP, "faq": content.FAQ, "suggestions": content.SUGGESTIONS, "media": _media(), "dev": _dev_ctx(request)}
     return templates.TemplateResponse(request, "studio.html", ctx)
 
 

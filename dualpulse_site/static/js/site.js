@@ -15,13 +15,16 @@
     els.forEach((el) => io.observe(el));
   } else els.forEach((el) => el.classList.add("in"));
 
+  // ---- galerie : vidéos en boucle, sauf si l'utilisateur demande moins d'animations
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) document.querySelectorAll(".shot video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); });
+
   // ---- Assistant Support
   const chat = $("chat"), log = $("chat-log"), input = $("chat-in"), sug = $("chat-sug"), fab = $("chat-fab");
   let greeted = false, busy = false;
   const add = (cls, text) => { const d = document.createElement("div"); d.className = "msg " + cls; d.textContent = text; log.appendChild(d); log.scrollTop = log.scrollHeight; return d; };
   function openChat() {
     chat.hidden = false; fab.hidden = true; fab.setAttribute("aria-expanded", "true");
-    if (!greeted) { greeted = true; add("bot", "Bonjour ! Je suis l'Assistant Support de Dual Pulse. Posez-moi une question sur le studio, le jeu ou la sortie."); }
+    if (!greeted) { greeted = true; add("bot", "Assistant Support de Dual Pulse. Studio, jeu, sortie, tests : posez votre question."); }
     setTimeout(() => input.focus(), 50);
   }
   function closeChat() { chat.hidden = true; fab.hidden = false; fab.setAttribute("aria-expanded", "false"); fab.focus(); }
