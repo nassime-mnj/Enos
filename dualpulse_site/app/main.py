@@ -1,6 +1,8 @@
 """Site officiel Dual Pulse (FastAPI).
 
-  /                       page publique (rendue côté serveur) ; la section « Accès Dev » n'existe dans le HTML QUE si l'IP du visiteur est en liste blanche
+  /                       page d'accueil publique : téléchargement du Launcher ; la section « Accès Dev » n'existe dans le HTML QUE si l'IP du visiteur est en liste blanche
+  /studio                 présentation du studio et du jeu (ancienne page d'accueil)
+  /get/windows            redirection vers le programme d'installation du Launcher (DP_LAUNCHER_URL, hébergé sur R2)
   /api/support            Assistant Support (chatbot public)
   /dev/telecharger        téléchargement d'E.N.O.S. : 404 identique à une page inexistante pour tout visiteur non autorisé
   {ADMIN}/…               administration de la liste blanche (jeton DP_ADMIN_TOKEN) — chemin configurable DP_ADMIN_PATH
@@ -15,13 +17,13 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 import content
-from . import assistant, db, whitelist
+from . import assistant, db, distribution, whitelist
 from .launcher import api as launcher_api
 from .codelab import api as codelab_api
 
@@ -65,7 +67,7 @@ async def security_headers(request: Request, call_next):
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["Referrer-Policy"] = "same-origin"
     resp.headers["X-Frame-Options"] = "DENY"
-    if "text/html" in resp.headers.get("content-type", "") or request.url.path.startswith(("/api/", "/dev/", "/launcher/", "/m/", ADMIN_PATH)):
+    if "text/html" in resp.headers.get("content-type", "") or request.url.path.startswith(("/api/", "/dev/", "/get/", "/launcher/", "/m/", ADMIN_PATH)):
         resp.headers["Cache-Control"] = "private, no-store"
         resp.headers["Vary"] = "Cookie, X-Forwarded-For"
     return resp
@@ -76,15 +78,38 @@ def _is_dev(request: Request):
     return db.match_dev(whitelist.client_ip(request))
 
 
+def _dev_ctx(request: Request):
+    """Données de la zone développeur : None pour tout visiteur non autorisé (rien de ceci n'existe alors dans le HTML)."""
+    if not _is_dev(request):
+        return None
+    f = download_file()
+    return {"available": f.is_file(), "size": f.stat().st_size if f.is_file() else 0, "version": os.environ.get("DP_ENOS_VERSION", ""), "sha256": _sha(f) if f.is_file() else ""}
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    entry = _is_dev(request)
-    ctx = {"request": request, "studio": content.STUDIO, "game": content.GAME, "features": content.FEATURES, "values": content.VALUES, "team": content.TEAM,
-           "roadmap": content.ROADMAP, "faq": content.FAQ, "suggestions": content.SUGGESTIONS, "dev": None}
-    if entry:                                              # ← ces données n'existent dans le gabarit que pour un visiteur autorisé
-        f = download_file()
-        ctx["dev"] = {"available": f.is_file(), "size": f.stat().st_size if f.is_file() else 0, "version": os.environ.get("DP_ENOS_VERSION", ""), "sha256": _sha(f) if f.is_file() else ""}
+    ctx = {"request": request, "studio": content.STUDIO, "dl": distribution.launcher(), "dev": _dev_ctx(request),
+           "hero_art": (BASE / "static" / "img" / "hero.webp").is_file()}      # fond plein écran : déposer static/img/hero.webp (sinon dégradés + particules)
     return templates.TemplateResponse(request, "index.html", ctx)
+
+
+@app.get("/studio", response_class=HTMLResponse)
+def studio(request: Request):
+    ctx = {"request": request, "studio": content.STUDIO, "game": content.GAME, "features": content.FEATURES, "values": content.VALUES, "team": content.TEAM,
+           "roadmap": content.ROADMAP, "faq": content.FAQ, "suggestions": content.SUGGESTIONS, "dev": _dev_ctx(request)}
+    return templates.TemplateResponse(request, "studio.html", ctx)
+
+
+@app.get("/get/windows")
+def get_windows(request: Request):
+    """Téléchargement public du Launcher : redirection vers le lien R2 configuré. Rien n'est servi par ce serveur."""
+    ip = whitelist.client_ip(request)
+    if not rate_ok("launcher-dl", ip, 30, per=600):
+        raise HTTPException(429, "Trop de téléchargements, réessayez dans quelques minutes.")
+    d = distribution.launcher()
+    if not d["available"]:
+        return PlainTextResponse("Le téléchargement n'est pas encore disponible. Revenez très bientôt.", status_code=503, headers={"Retry-After": "3600"})
+    return RedirectResponse(d["url"], status_code=302, headers={"X-Robots-Tag": "noindex"})
 
 
 _sha_cache = {}
@@ -105,7 +130,7 @@ def _sha(path: Path):
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
 def robots():
-    return "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /dev/\nDisallow: /launcher/\nDisallow: /m/\n"
+    return "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /dev/\nDisallow: /get/\nDisallow: /launcher/\nDisallow: /m/\n"
 
 
 @app.get("/healthz", response_class=PlainTextResponse)

@@ -145,6 +145,45 @@ def test_assistant():
     assert codes[0] == 200 and 429 in codes
 
 
+def test_homepage_is_download_page_without_secrets():
+    """Accueil publique : bouton de téléchargement du Launcher + section d'accès ; rien de l'outil développeur."""
+    os.environ.pop("DP_LAUNCHER_URL", None)
+    c = cl(STRANGER)
+    h = c.get("/").text
+    assert "Télécharger pour Windows" in h and "Accès sur invitation" in h and "code d'invitation" in h
+    assert "Dev" in h and "Friends" in h and "Bientôt disponible" in h and 'href="/get/windows"' not in h      # pas configuré : bouton inactif
+    assert 'style="' not in h and "<style" not in h and "onclick" not in h                                         # la politique de sécurité interdit le code en ligne
+    assert c.get("/studio").status_code == 200 and "Dual Pulse" in c.get("/studio").text
+
+
+def test_launcher_download_redirects_only_to_configured_https_url():
+    from app import distribution
+    c = cl(STRANGER)
+    os.environ.pop("DP_LAUNCHER_URL", None)
+    assert c.get("/get/windows", follow_redirects=False).status_code == 503
+    url = "https://downloads.example.com/DualPulse-Launcher-Setup.exe"
+    os.environ.update(DP_LAUNCHER_URL=url, DP_LAUNCHER_VERSION="0.2.0", DP_LAUNCHER_SIZE="88080384", DP_LAUNCHER_SHA256="ab" * 32)
+    try:
+        r = c.get("/get/windows", follow_redirects=False)
+        assert r.status_code == 302 and r.headers["location"] == url and "no-store" in r.headers["cache-control"]
+        h = c.get("/").text
+        assert 'href="/get/windows"' in h and "v0.2.0" in h and "84.0 Mo" in h and "ab" * 32 in h
+        for bad in ("http://evil.example.com/x.exe", "javascript:alert(1)", "https://user:pw@h.example.com/x", "https://a.example.com/a b", "//evil.example.com/x", "file:///etc/passwd"):
+            os.environ["DP_LAUNCHER_URL"] = bad
+            assert not distribution.launcher()["available"], bad
+        os.environ["DP_LAUNCHER_URL"] = "http://127.0.0.1:9000/test.exe"                                          # essais locaux seulement
+        assert distribution.launcher()["available"]
+    finally:
+        for k in ("DP_LAUNCHER_URL", "DP_LAUNCHER_VERSION", "DP_LAUNCHER_SIZE", "DP_LAUNCHER_SHA256"):
+            os.environ.pop(k, None)
+    assert "Disallow: /get/" in c.get("/robots.txt").text
+
+
+def test_dev_zone_still_only_for_whitelisted_on_new_homepage():
+    assert "ACCÈS DÉVELOPPEUR" in cl(DEV).get("/").text and "ACCÈS DÉVELOPPEUR" not in cl(STRANGER).get("/").text
+    assert "ACCÈS DÉVELOPPEUR" not in cl(STRANGER).get("/studio").text
+
+
 def test_security_headers_and_robots():
     r = cl(STRANGER).get("/")
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"] and r.headers["x-content-type-options"] == "nosniff"
