@@ -27,11 +27,12 @@
         <div class="seg" id="ch-seg" data-p="enos"><button data-t="play" class="on">JOUER</button><button data-t="review">ANALYSER</button><i class="seg-ind"></i></div>
         <div id="ch-play">
           <div class="card" style="padding:12px">
-            <div class="ch-top"><span id="ch-status" class="muted">À toi de jouer</span><span id="ch-lvl" class="chip"></span></div>
+            <div class="ch-top"><span id="ch-status" class="muted">À toi de jouer</span><span id="ch-lvl" class="chip"></span><button class="chip" id="ch-snd" aria-label="Son des coups" style="min-width:44px;min-height:34px">🔊</button></div>
             <div class="ch-evalbar"><i id="ch-eval"></i><b id="ch-evtxt">0,0</b></div>
             <div id="ch-board"></div>
             <div class="ch-moves" id="ch-moves"></div>
             <div class="ch-say" id="ch-say" hidden title="Toucher pour écouter"></div>
+            <div class="ch-credit">Pièces : Vecteezy « Chess board with pieces set »</div>
             <div class="row"><button class="btn" id="ch-new">NOUVELLE PARTIE</button><button class="btn" id="ch-hint">INDICE</button></div>
             <div class="row" style="margin-top:8px"><button class="btn" id="ch-undo">ANNULER</button><button class="btn" id="ch-flip">RETOURNER</button></div>
           </div>
@@ -56,10 +57,10 @@
   const myTurn = () => !G.over && !G.busy && turnOf() === G.me;
   const status = (t) => { $("#ch-status").textContent = t; };
 
-  function paint() {
+  function paint(anim) {
     const pos = B.parse(G.fen);
     const targets = G.sel ? G.legal.filter((u) => u.startsWith(G.sel)).map((u) => u.slice(2, 4)) : [];
-    B.render($("#ch-board"), pos.m, { flip: G.flip, last: G.last, hint: G.hint, sel: G.sel, targets, check: G.check ? B.kingSquare(pos.m, pos.turn) : "", onTap });
+    B.render($("#ch-board"), pos.m, { flip: G.flip, last: G.last, hint: G.hint, sel: G.sel, targets, check: G.check ? B.kingSquare(pos.m, pos.turn) : "", onTap, anim });
     $("#ch-lvl").textContent = `Niveau ${B.powerToElo(G.power)} Elo`;
     const e = G.ev;
     if (e) {
@@ -88,8 +89,10 @@
     G.busy = true; G.sel = ""; G.hint = null;
     const fenBefore = G.fen;
     G.last = [from, to];
-    G.fen = fenBefore;                                                      // affichage immédiat du coup (la FEN officielle arrive avec la réponse)
-    B.render($("#ch-board"), B.applyUci(pos, uci), { flip: G.flip, last: G.last, onTap });
+    let san0 = "", anim = "";
+    try { const m0 = new Chess(fenBefore).move({ from, to, promotion: uci[4] }); san0 = m0 ? m0.san : ""; } catch (e) { /* le moteur dira si le coup est illégal */ }
+    B.render($("#ch-board"), B.applyUci(pos, uci), { flip: G.flip, last: G.last, onTap, anim: uci });      // la pièce glisse aussitôt (la FEN officielle arrive avec la réponse)
+    E.chessSound.forSan(san0 || uci);
     status(`${E.settings.get("persona", "enos") === "eto" ? "ETO" : "E.N.O.S."} réfléchit…`);
     E.vibrate(10);
     try {
@@ -98,12 +101,13 @@
       if (r.reply) G.hist.push({ fen: null, san: r.reply.san });
       G.fen = r.fen; G.legal = r.legal; G.check = r.check; G.over = r.over; G.ev = r.eval;
       G.last = r.reply ? [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)] : [from, to];
+      if (r.reply) { anim = r.reply.uci; E.chessSound.forSan(r.reply.san); }
       status(r.over || (r.check ? "Échec !" : "À toi de jouer"));
       if (r.over) E.vibrate(40);
       comment(r);
-    } catch (e) { G.fen = fenBefore; G.last = null; status("✕ " + e.message); }
+    } catch (e) { G.fen = fenBefore; G.last = null; anim = ""; status("✕ " + e.message); }
     G.busy = false;
-    paint();
+    paint(anim);
   }
 
   // E.N.O.S. commente la partie (Groq, une phrase) ; toucher la phrase la fait lire à voix haute. Sans clé Groq : silence.
@@ -125,16 +129,18 @@
     G.me = color; G.power = power; G.fen = START; G.hist = []; G.last = null; G.sel = ""; G.hint = null; G.over = ""; G.check = false; G.ev = null; G.flip = color === "b";
     E.settings.set("chess.power", power);
     G.busy = true; paint(); status("Préparation…");
+    let anim = "";
     try {
       if (color === "b") {
         const r = await api("/api/mobile/chess/engine", { fen: START, power });
         G.hist.push({ fen: START, san: r.reply.san }); G.fen = r.fen; G.legal = r.legal; G.last = [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)]; G.ev = r.eval;
+        anim = r.reply.uci; E.chessSound.forSan(r.reply.san);
       } else {
         G.legal = (await api("/api/mobile/chess/state", { fen: START })).legal;
       }
       status("À toi de jouer");
     } catch (e) { status("✕ " + e.message); }
-    G.busy = false; paint();
+    G.busy = false; paint(anim);
   }
 
   function newSheet() {
@@ -222,6 +228,9 @@
       $("#ch-play").hidden = b.dataset.t !== "play"; $("#ch-review").hidden = b.dataset.t !== "review";
     }));
     $("#ch-new").onclick = newSheet;
+    const snd = () => { $("#ch-snd").textContent = E.settings.get("chess.sound", true) ? "🔊" : "🔇"; };
+    $("#ch-snd").onclick = () => { E.settings.set("chess.sound", !E.settings.get("chess.sound", true)); snd(); E.chessSound.play("move"); };
+    snd();
     $("#ch-flip").onclick = () => { G.flip = !G.flip; paint(); };
     $("#ch-hint").onclick = async () => {
       if (!myTurn()) return;

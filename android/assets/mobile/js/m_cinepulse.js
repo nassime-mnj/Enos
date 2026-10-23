@@ -4,7 +4,7 @@
 // Même logique que CinePulse/ sur PC (snap, zoom à la milliseconde, rognage), en événements « pointer » pour le doigt.
 (() => {
   const E = window.ENOS;
-  const HEAD = 44, SNAP_PX = 14, MIN_PPS = 2, MAX_PPS = 40000, MIN_DUR = 0.01;
+  const HEAD = 48, SNAP_PX = 14, MIN_PPS = 2, MAX_PPS = 40000, MIN_DUR = 0.01;
   const TRACKS = [["V2", "video"], ["V1", "video"], ["A1", "audio"], ["A2", "audio"], ["A3", "audio"]];
   const STEPS = [[0.001, 5], [0.002, 4], [0.005, 5], [0.01, 5], [0.02, 4], [0.05, 5], [0.1, 5], [0.2, 4], [0.5, 5], [1, 5], [2, 4], [5, 5], [10, 5], [30, 6], [60, 6], [300, 5]];
   const r3 = (x) => Math.round(x * 1000) / 1000;
@@ -17,7 +17,8 @@
     id: "cinepulse", group: "pro", title: "CinePulse", sub: "Montage · Soundboard · Timeline",
     icon: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M7 4v5M12 4v5M17 4v5"/>',
     build(el, A) {
-      const S = { assets: [], clips: [], markers: [], ph: 0, pps: 80, snap: true, sel: null, playing: false, fps: 25 };
+      const S = { assets: [], clips: [], markers: [], ph: 0, pps: 80, snap: true, sel: null, playing: false, fps: 25, track: "A1" };
+      let dragging = false;
       let ctx = null, sources = [], t0 = 0, c0 = 0, raf = 0, gen = 0;
       const $ = (s) => el.querySelector(s);
       const uid = () => Math.random().toString(36).slice(2, 9);
@@ -27,16 +28,18 @@
       const overlaps = (tr, s, e, ex) => S.clips.some((c) => c.id !== ex && c.track === tr && c.start < e - 1e-6 && end(c) > s + 1e-6);
 
       el.innerHTML = `<div class="cp">
-        <div class="card cp-mon"><div class="cp-screen"><video playsinline hidden></video><span class="cp-empty">Aucun plan vidéo sous le curseur</span></div>
-          <div class="cp-tr"><button class="btn" data-a="start">⏮</button><button class="btn" data-a="back">◀▏</button><button class="btn pri" data-a="play">▶</button><button class="btn" data-a="fwd">▕▶</button><b class="cp-tc">00:00:00:00</b></div></div>
-        <div class="card"><h3>Soundboard<span class="sp"><button class="mini" id="cp-imp">+ IMPORTER</button></span></h3>
-          <div class="cp-pads"></div><p class="muted" style="font-size:13px;margin-top:8px">Glisse ⠿ sur une piste, ou touche ＋ pour poser le média au curseur. ▶ pour pré-écouter.</p></div>
-        <div class="card cp-tlc"><div class="cp-bar"><button class="mini on" id="cp-snap">🧲 Magnétisme</button><button class="mini" id="cp-split">✂ Couper</button><button class="mini" id="cp-del">🗑 Suppr.</button><button class="mini" id="cp-mark">📍 Repère</button></div>
-          <div class="cp-bar"><button class="mini" id="cp-zo">−</button><input type="range" id="cp-zoom" min="0" max="1000" aria-label="Zoom"><button class="mini" id="cp-zi">+</button><button class="mini" id="cp-fit">Ajuster</button><span class="muted" id="cp-sc"></span></div>
+        <div class="card cp-mon"><div class="cp-screen"><video playsinline hidden></video><span class="cp-empty">Aucun plan vidéo sous le curseur</span><b class="cp-tc cp-tcv">00:00:00:00</b></div></div>
+        <div class="card cp-tlc"><div class="cp-bar cp-top"><button class="cpb" id="cp-zo" aria-label="Zoom arrière">−</button><input type="range" id="cp-zoom" min="0" max="1000" aria-label="Zoom"><button class="cpb" id="cp-zi" aria-label="Zoom avant">+</button><button class="cpb wide" id="cp-fit">Ajuster</button><span class="muted" id="cp-sc"></span></div>
           <div class="cp-scroll"><div class="cp-content"><div class="cp-rrow"><div class="cp-corner"></div><canvas class="cp-ruler"></canvas></div>
-            ${TRACKS.map(([id, ty]) => `<div class="cp-row ${ty}"><div class="cp-head">${id}</div><div class="cp-lane" data-t="${id}"></div></div>`).join("")}
+            ${TRACKS.map(([id, ty]) => `<div class="cp-row ${ty}"><div class="cp-head" data-t="${id}" role="button" aria-label="Piste ${id}">${id}</div><div class="cp-lane" data-t="${id}"></div></div>`).join("")}
             <div class="cp-ov"><div class="cp-guide"></div><div class="cp-ph"></div></div></div></div>
-          <div class="cp-tip" hidden></div></div></div>`;
+          <div class="cp-tip" hidden></div>
+          <div class="cp-clipbar" hidden><button class="cpb" id="cp-nl" aria-label="Reculer d'une image">◀</button><button class="cpb" id="cp-nr" aria-label="Avancer d'une image">▶</button><button class="cpb wide" id="cp-ts" title="Début du clip au curseur">⇤ Début</button><button class="cpb wide" id="cp-te" title="Fin du clip au curseur">Fin ⇥</button><button class="cpb" id="cp-del" aria-label="Supprimer le clip">🗑</button></div></div>
+        <div class="card"><h3>Soundboard<span class="sp"><button class="cpb wide" id="cp-imp">+ Importer</button></span></h3>
+          <div class="cp-pads"></div><p class="muted" style="font-size:13px;margin-top:8px">Maintiens ⠿ et glisse sur une piste, ou touche ＋ pour poser au curseur (piste active : touche son nom).</p></div>
+        <div class="cp-dock"><div class="cp-dg"><button class="cpb" data-a="start" aria-label="Début">⏮</button><button class="cpb" data-a="back" aria-label="Image précédente">◀▏</button><button class="cpb play" data-a="play" aria-label="Lecture">▶</button><button class="cpb" data-a="fwd" aria-label="Image suivante">▕▶</button></div>
+          <b class="cp-tc">00:00:00:00</b>
+          <div class="cp-dg"><button class="cpb on" id="cp-snap" aria-label="Magnétisme">🧲</button><button class="cpb" id="cp-split" aria-label="Couper au curseur">✂</button><button class="cpb" id="cp-mark" aria-label="Repère">📍</button></div></div></div>`;
       const video = $("video"), scroller = $(".cp-scroll"), content = $(".cp-content"), ruler = $(".cp-ruler"), ph = $(".cp-ph"), guide = $(".cp-guide"), tip = $(".cp-tip");
       const lanes = {};
       el.querySelectorAll(".cp-lane").forEach((l) => (lanes[l.dataset.t] = l));
@@ -78,12 +81,13 @@
         const box = $(".cp-pads");
         if (!S.assets.length) { box.innerHTML = '<p class="muted">Aucun média. Touche « + IMPORTER » (sons, vidéos).</p>'; return; }
         box.replaceChildren(...S.assets.map((a) => {
-          const d = A.h(`<div class="cp-pad ${a.kind}${pvId === a.id ? " on" : ""}"><span class="cp-grip" title="Glisser vers la timeline">⠿</span><button class="cp-pp">${pvId === a.id ? "■" : "▶"}</button><div class="cp-nm"></div><canvas width="160" height="28"></canvas><button class="cp-add" title="Poser au curseur">＋</button></div>`);
+          const d = A.h(`<div class="cp-pad ${a.kind}${pvId === a.id ? " on" : ""}"><span class="cp-grip" role="button" aria-label="Glisser vers la timeline">⠿</span><button class="cpb cp-pp" aria-label="Pré-écouter">${pvId === a.id ? "■" : "▶"}</button><div class="cp-pm"><div class="cp-nm"></div><canvas width="160" height="28"></canvas></div><button class="cpb cp-add" aria-label="Poser au curseur">＋</button></div>`);
           d.querySelector(".cp-nm").textContent = a.name;
           wave(d.querySelector("canvas"), a, 0, 1, "rgba(47,191,166,.9)");
           d.querySelector(".cp-pp").onclick = () => preview(a);
           d.querySelector(".cp-add").onclick = () => addAtPlayhead(a);
-          d.querySelector(".cp-grip").onpointerdown = (e) => padDrag(e, a);
+          const g = d.querySelector(".cp-grip");
+          g.onpointerdown = (e) => padDrag(e, a, g);                 // touch-action:none sur la poignée : le doigt ne fait pas défiler
           return d;
         }));
       }
@@ -114,7 +118,7 @@
       const step = (n) => { pause(); setPh(Math.max(0, (Math.round(S.ph * S.fps) + n) / S.fps)); };
 
       function syncVideo() {
-        $(".cp-tc").textContent = tc(S.ph, S.fps);
+        el.querySelectorAll(".cp-tc").forEach((x) => (x.textContent = tc(S.ph, S.fps)));
         let c = null;
         for (const [id, ty] of TRACKS) { if (ty !== "video") continue; c = S.clips.find((x) => x.track === id && S.ph >= x.start && S.ph < end(x)); if (c) break; }
         const a = c && asset(c.asset);
@@ -186,10 +190,14 @@
           if (a.kind === "audio") { const cv = d.querySelector("canvas"); cv.width = clamp(Math.ceil(c.dur * S.pps), 1, 1500); cv.height = 44; wave(cv, a, c.in / a.dur, (c.in + c.dur) / a.dur, "rgba(255,255,255,.8)"); }
         });
       }
-      function changed() { layout(); renderClips(); drawRuler(); syncVideo(); restart(); }
+      function syncBar() {
+        $(".cp-clipbar").hidden = !S.clips.some((c) => c.id === S.sel);
+        el.querySelectorAll(".cp-head").forEach((h) => h.classList.toggle("act", h.dataset.t === S.track));
+      }
+      function changed() { layout(); renderClips(); drawRuler(); syncVideo(); restart(); syncBar(); }
       function addClip(a, track, start) { const c = { id: uid(), asset: a.id, track, start, in: 0, dur: a.dur }; S.clips.push(c); S.sel = c.id; changed(); }
       function addAtPlayhead(a) {
-        const cands = TRACKS.filter(([, ty]) => ty === a.kind).map(([id]) => id), s = S.ph;
+        const cands = TRACKS.filter(([, ty]) => ty === a.kind).map(([id]) => id).sort((x, y) => (y === S.track) - (x === S.track)), s = S.ph;
         const tr = cands.find((id) => !overlaps(id, s, s + a.dur));
         if (!tr) return A.toast("Aucune piste libre à cet endroit.", "warn");
         addClip(a, tr, s);
@@ -199,15 +207,30 @@
         return null;
       }
 
+      // Au doigt, le clip se déplace après un APPUI LONG (sinon le glissement fait défiler la timeline) ; les poignées de rognage (clip sélectionné) et la souris agissent tout de suite.
+      function holdThen(e, node, fn) {
+        const x = e.clientX, y = e.clientY;
+        const clean = () => { node.removeEventListener("pointermove", mv); node.removeEventListener("pointerup", stop); node.removeEventListener("pointercancel", stop); };
+        const stop = () => { clearTimeout(t); clean(); };
+        const mv = (ev) => { if (Math.hypot(ev.clientX - x, ev.clientY - y) > 9) stop(); };
+        const t = setTimeout(() => { clean(); if (E.vibrate) E.vibrate(15); fn(); }, 260);
+        node.addEventListener("pointermove", mv); node.addEventListener("pointerup", stop); node.addEventListener("pointercancel", stop);
+      }
       scroller.addEventListener("pointerdown", (e) => {
         const d = e.target.closest(".cp-clip");
         if (!d) { if (e.target.closest(".cp-lane")) { S.sel = null; renderSel(); } return; }
-        const c = S.clips.find((x) => x.id === d.dataset.id), a = asset(c.asset);
+        const c = S.clips.find((x) => x.id === d.dataset.id);
         S.sel = c.id; renderSel();
         const mode = e.target.classList.contains("l") ? "L" : e.target.classList.contains("r") ? "R" : "M";
+        if (mode === "M" && e.pointerType !== "mouse") holdThen(e, d, () => clipDrag(e, d, c, mode)); else clipDrag(e, d, c, mode);
+      });
+      scroller.addEventListener("touchmove", (e) => { if (dragging && e.cancelable) e.preventDefault(); }, { passive: false });
+      function clipDrag(e, d, c, mode) {
+        const a = asset(c.asset);
         const o = { ...c }, x0 = e.clientX, top0 = lanes[c.track].getBoundingClientRect().top, tg = targets(c.id);
         let cur = { ...o }, bad = false;
-        d.setPointerCapture(e.pointerId); d.classList.add("drag");
+        try { d.setPointerCapture(e.pointerId); } catch (x) { /* pointeur déjà relâché */ }
+        d.classList.add("drag"); dragging = true;
         const edge = (t) => { const s = S.snap ? snapTo([t], tg) : null; return { t: s ? t + s.d : t, sn: s }; };
         const move = (ev) => {
           const dx = (ev.clientX - x0) / S.pps; let sn = null;
@@ -221,17 +244,17 @@
         };
         const up = () => {
           d.removeEventListener("pointermove", move); d.removeEventListener("pointerup", up); d.removeEventListener("pointercancel", up);
-          showGuide(null); showTip("");
+          dragging = false; showGuide(null); showTip("");
           if (!bad) Object.assign(c, { start: cur.start, in: cur.in, dur: cur.dur, track: cur.track });
           if (bad || cur.start !== o.start || cur.dur !== o.dur || cur.track !== o.track) changed(); else d.classList.remove("drag");
         };
         d.addEventListener("pointermove", move); d.addEventListener("pointerup", up); d.addEventListener("pointercancel", up);
-      });
-      const renderSel = () => el.querySelectorAll(".cp-clip").forEach((d) => d.classList.toggle("sel", d.dataset.id === S.sel));
+      }
+      const renderSel = () => { el.querySelectorAll(".cp-clip").forEach((d) => d.classList.toggle("sel", d.dataset.id === S.sel)); syncBar(); };
 
       // glisser un média de la soundboard (poignée ⠿) vers une piste
-      function padDrag(e, a) {
-        e.preventDefault(); const grip = e.currentTarget; grip.setPointerCapture(e.pointerId);
+      function padDrag(e, a, grip) {
+        e.preventDefault(); grip.setPointerCapture(e.pointerId);
         const ghost = A.h('<div class="cp-gp"></div>'); ghost.textContent = a.name; document.body.append(ghost);
         let drop = null, bar = null;
         const move = (ev) => {
@@ -273,7 +296,15 @@
 
       // ------------------------------------------------------------ commandes
       const act = { start: () => { pause(); setPh(0); }, back: () => step(-1), fwd: () => step(1), play: () => (S.playing ? pause() : play()) };
-      $(".cp-tr").onclick = (e) => { const a = e.target.closest("button")?.dataset.a; if (a) act[a](); };
+      $(".cp-dock").addEventListener("click", (e) => { const a = e.target.closest("button")?.dataset.a; if (a) act[a](); });
+      el.querySelectorAll(".cp-head").forEach((h) => (h.onclick = () => { S.track = h.dataset.t; syncBar(); }));
+      const sel = () => S.clips.find((c) => c.id === S.sel);
+      const stepT = () => (S.pps >= 1000 ? 0.001 : 1 / S.fps);
+      const nudge = (dir) => { const c = sel(); if (!c) return; const s = Math.max(0, r3(c.start + dir * stepT())); if (overlaps(c.track, s, s + c.dur, c.id)) return A.toast("Collision avec un autre clip.", "warn"); c.start = s; changed(); };
+      $("#cp-nl").onclick = () => nudge(-1);
+      $("#cp-nr").onclick = () => nudge(1);
+      $("#cp-ts").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); const d = S.ph - c.start; c.in = r3(c.in + d); c.start = S.ph; c.dur = r3(c.dur - d); changed(); };
+      $("#cp-te").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); c.dur = r3(S.ph - c.start); changed(); };
       $("#cp-imp").onclick = importFiles;
       $("#cp-snap").onclick = (e) => { S.snap = !S.snap; e.currentTarget.classList.toggle("on", S.snap); };
       $("#cp-zi").onclick = () => setZoom(S.pps * 1.6, viewW() / 2);
@@ -287,7 +318,7 @@
         if (!c) return A.toast("Place le curseur dans un clip.", "warn");
         S.clips.push({ ...c, id: uid(), start: S.ph, in: r3(c.in + S.ph - c.start), dur: r3(end(c) - S.ph) }); c.dur = r3(S.ph - c.start); changed();
       };
-      layout(); drawRuler(); pads(); updatePh(true);
+      layout(); drawRuler(); pads(); updatePh(true); syncBar();
     },
   });
 })();

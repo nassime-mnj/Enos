@@ -33,6 +33,37 @@ with sync_playwright() as pw:
     pg.click('#ch-board [data-sq="e2"]'); pg.click('#ch-board [data-sq="e4"]')
     pg.wait_for_function("document.querySelectorAll('#ch-moves span').length >= 2", timeout=60000)
     check(True, "partie jouée dans l'interface : " + pg.inner_text("#ch-moves"))
+    g = pg.evaluate("""() => { const b = document.querySelector('#ch-board'), r = b.getBoundingClientRect(), p = b.parentElement, cs = getComputedStyle(p);
+      const inner = p.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const sq = b.querySelector('.sq.l'), sd = b.querySelector('.sq.d');
+      return { w: r.width, h: r.height, inner, pieces: b.querySelectorAll('img.pce').length, imgs: [...b.querySelectorAll('img.pce')].every(i => i.naturalWidth > 0),
+               light: getComputedStyle(sq).backgroundColor, dark: getComputedStyle(sd).backgroundColor, tr: getComputedStyle(b.querySelector('img.pce')).transitionDuration }; }""")
+    check(abs(g["w"] - g["h"]) < 1.5 and g["w"] >= g["inner"] - 2, "plateau carré (aspect 1/1) et pleine largeur : %.0fx%.0f / %.0f" % (g["w"], g["h"], g["inner"]))
+    check(g["pieces"] >= 30 and g["imgs"], "pièces en images (PNG chargés) : %d" % g["pieces"])
+    check(g["light"] == "rgb(238, 238, 210)" and g["dark"] == "rgb(118, 150, 86)", "couleurs Chess.com : %s / %s" % (g["light"], g["dark"]))
+    snd = pg.evaluate("""async () => { await ENOS.chessSound.play('capture'); await ENOS.chessSound.play('move'); await ENOS.chessSound.play('check'); return typeof AudioContext; }""")
+    check(snd == "function", "effets sonores Web Audio sans erreur")
+
+    slide = pg.evaluate("""async () => {
+      const b = document.querySelector('#ch-board'), E = ENOS, START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+      const after = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+      E.board.render(b, E.board.parse(START).m, {});
+      const img = [...b.querySelectorAll('img.pce')].find(i => i.style.transform.replace(/ /g, '') === 'translate(400%,600%)');
+      E.board.render(b, E.board.parse(after).m, { anim: 'e2e4' });
+      const mid = new Promise(r => setTimeout(() => r(getComputedStyle(img).transform), 90));
+      await new Promise(r => setTimeout(r, 400));
+      return { same: img.isConnected && img.style.transform.replace(/ /g, '') === 'translate(400%,400%)', mid: await mid, n: b.querySelectorAll('img.pce').length };
+    }""")
+    check(slide["same"] and slide["n"] == 32, "le MÊME pion glisse de e2 vers e4 (32 pièces conservées)")
+    m = slide["mid"]
+    check(m not in ("none", "matrix(1, 0, 0, 1, 0, 0)"), "position intermédiaire pendant l'animation : " + m)
+
+    # ---------------------------------------------------------------- grille des modules
+    pg.evaluate("ENOS.tools.show('')"); pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_selector(".mtile")
+    over = pg.evaluate("""() => [...document.querySelectorAll('.mtile')].filter(t => t.scrollWidth > t.clientWidth + 1 || [...t.querySelectorAll('b,small')].some(x => x.scrollWidth > x.clientWidth + 1)).map(t => t.dataset.m)""")
+    check(not over, "aucune carte de module ne déborde (412 px) : %s" % over[:6])
+    cols = pg.evaluate("getComputedStyle(document.querySelector('.mod-grid')).gridTemplateColumns.split(' ').length")
+    check(cols == 2, "grille en 2 colonnes sur téléphone : %d" % cols)
 
     # ---------------------------------------------------------------- CinePulse mobile
     pg.evaluate("ENOS.tools.show('')")
@@ -49,6 +80,10 @@ with sync_playwright() as pw:
     tracks = pg.evaluate("[...document.querySelectorAll('.cp-clip')].map(c => c.parentElement.dataset.t)")
     check(n == 2 and sorted(tracks) == ["A1", "A2"], "clips posés sur des pistes libres : %s" % tracks)
 
+    small = pg.evaluate("""() => [...document.querySelectorAll('.cp button, .cp .cp-grip')].filter(b => b.offsetParent && !b.closest('[hidden]')).map(b => { const r = b.getBoundingClientRect(); return [b.id || b.className, Math.round(r.width), Math.round(r.height)]; }).filter(x => x[1] < 44 || x[2] < 44)""")
+    check(not small, "toutes les cibles tactiles >= 44x44 px : %s" % small[:5])
+    ov = pg.evaluate("getComputedStyle(document.querySelector('.cp-scroll')).overflowX + '/' + getComputedStyle(document.querySelector('.cp-scroll')).webkitOverflowScrolling")
+    check(ov.startswith("scroll"), "timeline en overflow-x:scroll : " + ov)
     # déplacer le kick (A2) vers le bord droit de la nappe (≈ 6 s) : doit s'aimanter à 6.000
     pg.set_viewport_size({"width": 900, "height": 860}); pg.wait_for_timeout(300); pg.click("#cp-fit")
     pg.locator('.cp-lane[data-t="A2"] .cp-clip').scroll_into_view_if_needed()

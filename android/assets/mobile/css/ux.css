@@ -1,0 +1,10 @@
+/* Ergonomie mobile : grille des modules sans débordement, cibles tactiles >= 44 px */
+.mod-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr));gap:12px}
+.mtile{min-width:0;min-height:128px;padding:14px;gap:6px;-webkit-hyphens:auto;hyphens:auto}
+.mtile .ic{flex:none}
+.mtile b{display:block;max-width:100%;font-size:clamp(12px,3.4vw,14px);line-height:1.2;letter-spacing:.4px;overflow-wrap:anywhere;word-break:break-word}
+.mtile small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;max-width:100%;overflow:hidden;overflow-wrap:anywhere;font-size:clamp(11px,3vw,12.5px)}
+.card h3,.card p,.mstat{overflow-wrap:anywhere}
+button,.btn,.chip,.mini,[role=button]{touch-action:manipulation}
+.btn{min-height:44px}
+.chip{min-height:36px}

@@ -1,0 +1,23 @@
+/* Plateau d'échecs — thème Chess.com : cases #eeeed2 / #769656, pièces img/chess (Vecteezy), surbrillance jaune */
+.cboard{position:relative;display:block;width:100%;max-width:min(100%,560px);margin:0 auto;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:#769656;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.cb-sq{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr))}
+.cb-pc{position:absolute;inset:0;pointer-events:none}
+.sq{position:relative;min-width:0;min-height:0;overflow:hidden}
+.sq.l{background:#eeeed2}.sq.d{background:#769656}
+.sq i{position:absolute;font:700 clamp(9px,2.6vw,12px) var(--ui,system-ui);font-style:normal;line-height:1}
+.sq.l i{color:#769656}.sq.d i{color:#eeeed2}
+.sq i.rk{top:3px;left:3px}.sq i.fl{bottom:2px;right:3px}
+.sq.last::before,.sq.hint::before,.sq.sel::before{content:"";position:absolute;inset:0;z-index:0}
+.sq.last::before{background:rgba(255,255,51,.5)}
+.sq.sel::before{background:rgba(255,255,51,.55)}
+.sq.hint::before{background:rgba(26,207,214,.5)}
+.sq.chk{background:radial-gradient(circle,#ff0000 0%,#e70000 28%,rgba(169,0,0,0) 72%),var(--sqbg,#eeeed2)}
+.sq.chk.d{--sqbg:#769656}.sq.chk.l{--sqbg:#eeeed2}
+.sq.tgt::after{content:"";position:absolute;left:50%;top:50%;width:30%;height:30%;margin:-15% 0 0 -15%;border-radius:50%;background:rgba(0,0,0,.16);z-index:3}
+.sq.cap::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,transparent 58%,rgba(0,0,0,.16) 60%);z-index:3}
+.pce{position:absolute;left:0;top:0;width:12.5%;height:12.5%;object-fit:contain;transition:transform .2s cubic-bezier(.3,.8,.3,1),opacity .22s;will-change:transform;-webkit-user-drag:none}
+.pce.nt{transition:none}
+.pce.cap-out{opacity:0;transition:opacity .22s}
+#ch-board{margin-bottom:6px}
+.ch-credit{margin:8px 2px 0;font-size:11px;color:var(--muted,#888);text-align:right}
+@media (prefers-reduced-motion:reduce){.pce{transition-duration:.01s}}

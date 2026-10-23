@@ -111,6 +111,22 @@ def cloud_candidates():
     return out
 
 
+def open_cloud_page(apk):
+    """Pas de dossier synchronisé : ouvre la page web du cloud (secure_cloud_url) et l'Explorateur sur l'APK, prêt à glisser-déposer."""
+    try:
+        sys.path.insert(0, ROOT)
+        import nasko_core
+        url = str(nasko_core.load_config().get("secure_cloud_url") or "https://drive.proton.me/")
+        if url.startswith("https://"):
+            import webbrowser
+            webbrowser.open(url, new=2)
+        if hasattr(os, "startfile"):
+            subprocess.Popen(["explorer", "/select,", apk])
+        print("  Page du cloud et dossier de l'APK ouverts : glisse le fichier dans la page.")
+    except Exception as e:                                         # noqa: BLE001 — jamais bloquer la fin du build
+        print("  (ouverture automatique impossible :", e, ")")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Build mobile automatisé")
     ap.add_argument("--cloud-dir", default=os.environ.get("ENOS_CLOUD_DIR", ""))
@@ -150,6 +166,7 @@ def main():
                 os.remove(APK + s)
         print(f"  {'Dossier introuvable : ' + dest if dest else 'Aucun dossier Proton Drive / Tresorit détecté sur ce PC.'}")
         print(f"  APK rangé ici : {keep}\n  À copier dans ton cloud (ou relance avec --cloud-dir \"<dossier>\").")
+        open_cloud_page(keep)
         return
     target = unique(os.path.join(dest, name))
     shutil.copyfile(APK, target)
