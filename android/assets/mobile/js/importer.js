@@ -11,22 +11,37 @@
     N.importApply(blob, code).then(res);
   });
 
-  function ask(blob) {
-    const s = U.sheet({ title: "Importer depuis le PC", html: `
-      <p class="muted" style="margin-bottom:12px">Tes clés, liens et le jumelage du PC sont prêts. Saisis le <b>code à 10 caractères affiché sur l'écran du PC</b> pour les déchiffrer.</p>
-      <div class="f"><label for="imp-code">Code du PC</label><div class="r"><input id="imp-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX" maxlength="14" style="letter-spacing:3px;text-transform:uppercase"></div></div>
+  // Préférences connues du téléphone (liste blanche, valeurs validées) ; le reste du paquet est ignoré.
+  const PREFS = { persona: (v) => (v === "enos" || v === "eto" ? v : undefined), hue: (v) => (Number.isFinite(+v) ? Math.max(0, Math.min(360, Math.round(+v))) : undefined),
+    "chess.power": (v) => (Number.isFinite(+v) ? Math.max(1, Math.min(100, Math.round(+v))) : undefined), "chess.comment": (v) => (typeof v === "boolean" ? v : undefined) };
+  function applyExtras(r) {
+    Object.entries(r.prefs || {}).forEach(([k, v]) => { const ok = PREFS[k] && PREFS[k](v); if (ok !== undefined) E.settings.set(k, ok); });
+    if (E.theme && r.prefs && PREFS.hue(r.prefs.hue) !== undefined) E.theme.apply(PREFS.hue(r.prefs.hue));
+    const have = new Set(E.agenda.tasks.map((t) => t.id));
+    const fresh = (r.tasks || []).filter((t) => !have.has(t.id)).map((t) => ({ ...t, updated: Date.now() / 1000 }));
+    if (fresh.length) { E.agenda.tasks.push(...fresh); E.store.set("tasks", E.agenda.tasks); E.emit("agenda", {}); }
+    return fresh.length;
+  }
+
+  // ceo=true : paquet intégré à l'application (exporter_donnees_ceo.py) -> phrase secrète libre au lieu du code à 10 caractères
+  function ask(blob, ceo) {
+    const s = U.sheet({ title: ceo ? "Données CEO" : "Importer depuis le PC", html: `
+      <p class="muted" style="margin-bottom:12px">${ceo ? "Cette application contient tes clés, ton emploi du temps et tes préférences, <b>chiffrés</b>. Saisis ta <b>phrase secrète</b> (choisie sur le PC à l'export) pour les ranger dans le coffre du téléphone." : "Tes clés, liens et le jumelage du PC sont prêts. Saisis le <b>code à 10 caractères affiché sur l'écran du PC</b> pour les déchiffrer."}</p>
+      <div class="f"><label for="imp-code">${ceo ? "Phrase secrète" : "Code du PC"}</label><div class="r"><input id="imp-code" type="${ceo ? "password" : "text"}" autocomplete="off" autocapitalize="${ceo ? "none" : "characters"}" spellcheck="false" placeholder="${ceo ? "••••••••••••" : "XXXXX-XXXXX"}" maxlength="${ceo ? 120 : 14}" style="${ceo ? "" : "letter-spacing:3px;text-transform:uppercase"}"></div></div>
       <div id="imp-msg" class="muted" style="min-height:22px;margin-bottom:10px"></div>
       <div class="row"><button class="btn pri" id="imp-go">IMPORTER</button></div>` });
     const inp = s.querySelector("#imp-code"), msg = s.querySelector("#imp-msg"), go = s.querySelector("#imp-go");
     setTimeout(() => inp.focus(), 280);
     const run = async () => {
-      if (inp.value.replace(/[^A-Za-z0-9]/g, "").length < 10) { msg.textContent = "Le code fait 10 caractères."; return; }
+      if (inp.value.replace(/[^A-Za-z0-9]/g, "").length < (ceo ? 12 : 10)) { msg.textContent = ceo ? "Phrase trop courte (12 lettres ou chiffres minimum)." : "Le code fait 10 caractères."; return; }
       go.disabled = true; msg.textContent = "Déchiffrement…";
       const r = await apply(blob, inp.value);
       if (!r.ok) { msg.textContent = r.error || "Échec."; go.disabled = false; return; }
       Object.entries(r.settings || {}).forEach(([k, v]) => E.settings.set(k, v));
+      const nt = applyExtras(r);
+      if (ceo) E.store.set("ceo.done", blob.slice(0, 40));                           // ne redemande plus pour CE paquet (le sel est unique)
       U.closeSheet();
-      U.toast("Importé : " + (r.imported || []).map((n) => NAMES[n] || n).join(", "), "ok", 7000);
+      U.toast("Importé : " + (r.imported || []).map((n) => NAMES[n] || n).join(", ") + (nt ? ` · ${nt} tâche(s)` : ""), "ok", 7000);
       E.emit("settings", "pcAddrs"); E.emit("settings", "pcPaired"); E.emit("settings", "name");
       E.agenda.refresh(true); E.views.renderDay();
       E.link.probeNow();
@@ -40,6 +55,13 @@
     if (!N.available) return;
     const blob = N.pendingImport();
     if (blob) ask("");                                   // « » = le fichier gardé en mémoire par Java
+  };
+
+  // Paquet CEO embarqué dans l'APK (js/ceo_bundle.js, généré juste avant la compilation) : proposé une seule fois par paquet
+  I.checkBundled = () => {
+    const b = window.ENOS_CEO;
+    if (!N.available || !b || E.store.get("ceo.done", "") === b.slice(0, 40)) return;
+    ask(b, true);
   };
 
   // Secours : coller le fichier (page du PC › « Copier le fichier »)

@@ -46,3 +46,6 @@ launcher/src-tauri/gen/
 # captures des tests
 launcher/tests/e2e/*.png
 android/tests/*.png
+
+# export CEO : donnees personnelles du telephone
+ceo_prefs.json

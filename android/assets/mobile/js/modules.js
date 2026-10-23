@@ -23,6 +23,7 @@
   const GROUPS = [
     ["Sur ton téléphone", [
       { id: "agenda", n: "Agenda", s: "Cours, rendus, tâches", i: "cal", k: "native" },
+      { id: "chess", n: "Échecs", s: "Contre E.N.O.S. · hors ligne", i: "chess", k: "native", sub: true },
       { id: "eye", n: "Œil", s: "E.N.O.S. · ETO en face à face", i: "eye", k: "native" },
       { id: "img", n: "Photos", s: "Compresser la pellicule", i: "img", k: "native" },
       { id: "files", n: "Dossiers", s: "Ranger Téléchargements, documents", i: "folder", k: "native" },
@@ -31,7 +32,6 @@
       { id: "theme", n: "Thèmes", s: "Couleur de l'application", i: "palette", k: "native" },
     ]],
     ["Avec ton PC", [
-      { id: "chess", n: "Échecs", s: "Jouer · analyser tes parties", i: "chess", k: "pc", sub: true },
       { id: "pc", n: "Tests F6", s: "Lancer ton jeu à distance", i: "play", k: "pc", tab: "pc" },
       { id: "b-ch", n: "Mode Chill", s: "Ambiance audio du PC", i: "music", k: "pc" },
       { id: "b-dm", n: "Discussion", s: "L'Œil du PC · plein écran", i: "eye", k: "pc" },

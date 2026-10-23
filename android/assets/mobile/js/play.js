@@ -8,7 +8,9 @@
   const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null };
   const KEYLAB = { brilliant: ["Brillant", "#1acfd6"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
 
+  // Parties : moteur local (chess_local.js), sans PC. Seule l'ANALYSE de partie (review) passe par le PC.
   const api = async (path, body) => {
+    if (!/\/review/.test(path)) return E.chessLocal.call(path, body);
     const r = await L.api(path, { method: "POST", body });
     const j = r.json() || {};
     if (r.status !== 200) throw new Error(j.detail || "Erreur " + r.status);
@@ -29,6 +31,7 @@
             <div class="ch-evalbar"><i id="ch-eval"></i><b id="ch-evtxt">0,0</b></div>
             <div id="ch-board"></div>
             <div class="ch-moves" id="ch-moves"></div>
+            <div class="ch-say" id="ch-say" hidden title="Toucher pour écouter"></div>
             <div class="row"><button class="btn" id="ch-new">NOUVELLE PARTIE</button><button class="btn" id="ch-hint">INDICE</button></div>
             <div class="row" style="margin-top:8px"><button class="btn" id="ch-undo">ANNULER</button><button class="btn" id="ch-flip">RETOURNER</button></div>
           </div>
@@ -97,9 +100,25 @@
       G.last = r.reply ? [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)] : [from, to];
       status(r.over || (r.check ? "Échec !" : "À toi de jouer"));
       if (r.over) E.vibrate(40);
+      comment(r);
     } catch (e) { G.fen = fenBefore; G.last = null; status("✕ " + e.message); }
     G.busy = false;
     paint();
+  }
+
+  // E.N.O.S. commente la partie (Groq, une phrase) ; toucher la phrase la fait lire à voix haute. Sans clé Groq : silence.
+  let cmtSeq = 0;
+  function comment(r) {
+    const box = $("#ch-say");
+    if (!box || !E.ai.configured() || !E.settings.get("chess.comment", true) || !r.reply) { if (box) box.hidden = true; return; }
+    const seq = ++cmtSeq, persona = E.settings.get("persona", "enos") === "eto" ? "eto" : "enos";
+    const moves = G.hist.slice(-6).map((h) => h.san).join(" ");
+    const ev = r.eval ? (r.eval.mate != null ? "mat en " + Math.abs(r.eval.mate) + (r.eval.mate > 0 ? " pour les Blancs" : " pour les Noirs") : "évaluation " + (r.eval.cp / 100).toFixed(1) + " (positif = avantage Blancs)") : "";
+    const q = `Partie d'échecs. Tu joues les ${G.me === "w" ? "Noirs" : "Blancs"}, ${E.ai.name()} les ${G.me === "w" ? "Blancs" : "Noirs"}. Derniers coups : ${moves}. Ton coup : ${r.reply.san}. ${ev}. ${r.over ? "La partie est finie : " + r.over + "." : ""} Commente en UNE phrase courte, dans ton style, sans notation en liste.`;
+    box.hidden = false; box.textContent = "…";
+    E.ai.chat(persona, q, () => {}, { oneShot: true, system: E.ai.PERSONAS[persona].system(E.ai.name()) + " Tu es en pleine partie d'échecs : une seule phrase." })
+      .then((t) => { if (seq === cmtSeq) { box.textContent = t; box.onclick = () => E.ai.speak(persona, t); } })
+      .catch(() => { if (seq === cmtSeq) box.hidden = true; });
   }
 
   async function newGame(color, power) {
@@ -137,6 +156,7 @@
     const pgn = $("#rv-pgn").value.trim();
     if (pgn.length < 20) return U.toast("Colle d'abord le PGN de la partie.", "warn");
     E.settings.set("chesscom", $("#rv-user").value.trim());
+    if (L.state !== "online") return U.toast("L'analyse de partie utilise le PC : allume-le et reste sur le même Wi-Fi.", "warn", 5000);
     $("#rv-go").disabled = true; $("#rv-prog").hidden = false; $("#rv-prog i").style.width = "4%"; $("#rv-out").innerHTML = "";
     api("/api/mobile/chess/review", { pgn, me: "auto", username: $("#rv-user").value.trim() }).then((j) => poll(j.job)).catch((e) => { U.toast(e.message, "warn", 6000); $("#rv-go").disabled = false; $("#rv-prog").hidden = true; });
   }
@@ -191,8 +211,7 @@
 
   // ------------------------------------------------------------------ branchement
   function applyLink() {
-    const on = L.state === "online";
-    $("#ch-lock").hidden = on; $("#ch-main").hidden = !on;
+    $("#ch-lock").hidden = true; $("#ch-main").hidden = false;                 // jouer ne demande plus le PC
   }
   function init() {
     build();

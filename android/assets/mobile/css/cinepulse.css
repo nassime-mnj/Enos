@@ -1,0 +1,44 @@
+/* CinePulse mobile + commentaire d'échecs */
+.ch-say{margin:8px 0;padding:9px 12px;border-left:3px solid var(--red);background:#0f0f12;border-radius:8px;font-size:14px;line-height:1.4;color:#d8d8de}
+.cp-screen{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;display:grid;place-items:center}
+.cp-screen video{width:100%;height:100%;object-fit:contain}
+.cp-empty{position:absolute;color:#555;font-size:13px}
+.cp-tr{display:flex;align-items:center;gap:6px;margin-top:8px}
+.cp-tr .btn{min-width:44px;padding:0 10px}
+.cp-tc{margin-left:auto;font:700 17px ui-monospace,Consolas,monospace}
+.cp-pads{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.cp-pad{flex:none;width:176px;display:grid;grid-template-columns:22px 32px 1fr 32px;grid-template-rows:auto 28px;gap:4px 6px;align-items:center;padding:7px;background:#16161a;border:1px solid #2a2a30;border-radius:9px}
+.cp-pad.on{border-color:#2fbfa6}
+.cp-pad canvas{grid-column:1/-1;width:100%;height:28px;background:#0c0c0e;border-radius:4px}
+.cp-pad button{height:30px;border-radius:50%;padding:0}
+.cp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.cp-grip{font-size:20px;color:#888;touch-action:none;text-align:center;cursor:grab}
+.cp-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.cp-bar input[type=range]{flex:1;min-width:90px;accent-color:var(--red)}
+.mini.on{border-color:#2fbfa6;color:#2fbfa6}
+.cp-scroll{overflow:auto;position:relative;background:#0b0b0e;border-radius:8px;max-height:46vh;overscroll-behavior:contain}
+.cp-content{position:relative;min-width:100%}
+.cp-rrow{position:sticky;top:0;z-index:8;display:flex;height:24px;background:#141418}
+.cp-corner{position:sticky;left:0;z-index:9;flex:none;width:44px;background:#141418}
+.cp-ruler{position:sticky;left:44px;display:block;touch-action:none}
+.cp-row{display:flex;border-top:1px solid #222}
+.cp-row.video{height:40px}.cp-row.audio{height:52px}
+.cp-head{position:sticky;left:0;z-index:7;flex:none;width:44px;background:#141418;display:grid;place-items:center;font:700 11px system-ui;color:#999;border-right:1px solid #222}
+.cp-lane{position:relative;flex:1}
+.cp-clip{position:absolute;top:2px;bottom:2px;border-radius:5px;overflow:hidden;border:1px solid rgba(255,255,255,.2);touch-action:none;min-width:3px}
+.cp-clip.audio{background:#1f9e88}.cp-clip.video{background:#3d63d6}
+.cp-clip canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cp-clip span{position:absolute;left:5px;top:1px;font-size:10px;font-weight:700;text-shadow:0 1px 2px #000;white-space:nowrap;pointer-events:none}
+.cp-clip.sel{border-color:#fff;box-shadow:0 0 0 1px #fff;z-index:2}
+.cp-clip.drag{z-index:20;opacity:.9}.cp-clip.bad{background:#b3263e!important}
+.cp-clip.ghost{opacity:.55;pointer-events:none;border-style:dashed}
+.cp-clip .h{position:absolute;top:0;bottom:0;width:16px;z-index:3}.cp-clip .h.l{left:0}.cp-clip .h.r{right:0}
+.cp-clip.sel .h{background:rgba(255,255,255,.28)}
+.cp-ov{position:absolute;inset:0;pointer-events:none;z-index:5}
+.cp-ph{position:absolute;top:0;bottom:0;left:0;width:0;border-left:2px solid #ff4d6d;will-change:transform}
+.cp-guide{position:absolute;top:24px;bottom:0;width:0;border-left:1px dashed #f5b942;display:none}
+.cp-tip{margin-top:6px;font:12px ui-monospace,Consolas,monospace;color:#f5b942;min-height:16px}
+.cp-gp{position:fixed;left:0;top:0;z-index:999;pointer-events:none;background:#1f9e88;color:#fff;padding:4px 10px;border-radius:7px;font-size:12px;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* la largeur de la timeline ne doit jamais dépendre de son contenu (sinon boucle ResizeObserver → agrandissement infini) */
+.cp,.cp>.card,.cp-tlc{min-width:0;max-width:100%}
+.cp-scroll{width:100%;max-width:100%;contain:inline-size}

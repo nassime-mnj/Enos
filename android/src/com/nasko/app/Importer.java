@@ -6,6 +6,7 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Iterator;
 import java.util.Locale;
 
 import javax.crypto.AEADBadTagException;
@@ -77,7 +78,29 @@ final class Importer {
                 if (!val.isEmpty() && val.length() <= 100) outSettings.put(k, val);
             }
             if (o.optString("name", "").length() > 0 && o.optString("name").length() <= 30) outSettings.put("name", o.optString("name"));
-            return new JSONObject().put("ok", true).put("imported", done).put("settings", outSettings).toString();
+            // Export CEO (exporter_donnees_ceo.py) : préférences simples et tâches de l'agenda. Rien de secret ici, mais tout est borné et filtré.
+            JSONObject outPrefs = new JSONObject();
+            JSONObject pf = o.optJSONObject("prefs");
+            if (pf != null) {
+                Iterator<String> it = pf.keys();
+                while (it.hasNext() && outPrefs.length() < 40) {
+                    String k = it.next();
+                    Object pv = pf.opt(k);
+                    if (!k.matches("[a-zA-Z0-9_.]{1,40}")) continue;
+                    if ((pv instanceof String && ((String) pv).length() <= 100) || pv instanceof Boolean || pv instanceof Integer || pv instanceof Long || pv instanceof Double) outPrefs.put(k, pv);
+                }
+            }
+            JSONArray outTasks = new JSONArray();
+            JSONArray ts = o.optJSONArray("tasks");
+            if (ts != null) for (int i = 0; i < ts.length() && outTasks.length() < 500; i++) {
+                JSONObject t = ts.optJSONObject(i);
+                if (t == null) continue;
+                String id = t.optString("id", ""), title = t.optString("title", "");
+                if (!id.matches("[a-zA-Z0-9]{1,24}") || title.isEmpty()) continue;
+                outTasks.put(new JSONObject().put("id", id).put("title", cut(title, 200)).put("due", cut(t.optString("due", ""), 25))
+                        .put("notes", cut(t.optString("notes", ""), 1000)).put("done", t.optBoolean("done", false)).put("created", cut(t.optString("created", ""), 25)));
+            }
+            return new JSONObject().put("ok", true).put("imported", done).put("settings", outSettings).put("prefs", outPrefs).put("tasks", outTasks).toString();
         } catch (SecurityException e) {
             return fail("Code incorrect.");
         } catch (IllegalArgumentException e) {
@@ -85,6 +108,10 @@ final class Importer {
         } catch (Exception e) {
             return fail("Import impossible.");
         }
+    }
+
+    private static String cut(String v, int max) {
+        return v.length() <= max ? v : v.substring(0, max);
     }
 
     private static String fail(String m) {

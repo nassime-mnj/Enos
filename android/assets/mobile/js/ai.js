@@ -29,13 +29,13 @@
   A.model = () => E.settings.get("model", "openai/gpt-oss-120b");
 
   // ------------------------------------------------------------------ chat en flux (SSE de Groq). onDelta(texte) à chaque morceau ; résout avec le texte final.
-  A.chat = (persona, text, onDelta) => new Promise((resolve, reject) => {
+  A.chat = (persona, text, onDelta, opts) => new Promise((resolve, reject) => {
     if (!A.configured()) return reject(new Error("Clé Groq absente : Réglages → Clés d'API."));
     const P = A.PERSONAS[persona];
-    const hist = A.history(persona);
+    const hist = opts && opts.oneShot ? [] : A.history(persona);       // oneShot : question isolée (commentaire d'échecs), hors historique
     hist.push({ role: "user", content: text });
     const body = { model: A.model(), stream: true, stream_options: { include_usage: true }, max_tokens: 500, temperature: 0.7,
-      messages: [{ role: "system", content: P.system(A.name()) }, ...hist.slice(-MAX_CTX)] };
+      messages: [{ role: "system", content: (opts && opts.system) || P.system(A.name()) }, ...hist.slice(-MAX_CTX)] };
     if (/gpt-oss/.test(body.model)) body.reasoning_effort = "low";             // réflexion courte : première syllabe en < 1 s
     let buf = "", out = "", status = 0, errBody = "";
     A.current = N.request({ provider: "groq", path: "/openai/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, {
@@ -68,7 +68,7 @@
         out = out.trim();
         if (!out) return reject(new Error("Réponse vide."));
         hist.push({ role: "assistant", content: out });
-        A.saveHistory(persona, hist);
+        if (!(opts && opts.oneShot)) A.saveHistory(persona, hist);
         resolve(out);
       },
       error: (m) => { A.current = null; reject(new Error(m)); },

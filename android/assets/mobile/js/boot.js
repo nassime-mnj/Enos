@@ -16,7 +16,8 @@
     E.$$("[data-back]").forEach((b) => (b.onclick = () => E.tools.show("")));
     E.settingsInit();
     E.agenda.refresh(false);                                        // .ics lus directement par le téléphone (cache si hors ligne)
-    E.importer.check();                                             // un fichier envoyé par le PC (enos://import) attend-il ?
+    E.importer.check();
+    E.importer.checkBundled();                                             // un fichier envoyé par le PC (enos://import) attend-il ?
     E.link.start();                                                 // recherche du PC en tâche de fond (Wi-Fi puis Tailscale)
     setInterval(() => E.agenda.refresh(false), 5 * 60 * 1000);
     if (!E.ai.configured() && !E.store.get("welcomed", false)) {
