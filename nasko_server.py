@@ -5467,6 +5467,26 @@ def site_tunnel_stop():
     return {"ok": True}
 
 
+def _secure_cloud_url():
+    """URL du cloud sécurisé (réglage secure_cloud_url, https uniquement : jamais un fichier local ni un autre schéma)."""
+    from urllib.parse import urlparse
+    url = str(load_config().get("secure_cloud_url") or "https://drive.proton.me/").strip()
+    p = urlparse(url)
+    if p.scheme != "https" or not p.hostname:
+        raise HTTPException(400, "secure_cloud_url doit être une adresse https:// valide (nasko_config.json).")
+    return url
+
+
+@app.post("/api/cloud/open", dependencies=_LOCAL)
+def cloud_open():
+    """Bouton « OUVRIR MON CLOUD SÉCURISÉ » : nouvel onglet du navigateur par défaut de CE PC."""
+    import webbrowser
+    url = _secure_cloud_url()
+    if not webbrowser.open(url, new=2):
+        raise HTTPException(500, "Aucun navigateur n'a pu être ouvert.")
+    return {"ok": True, "url": url}
+
+
 @app.post("/api/site/open", dependencies=_LOCAL)
 def site_open():
     if not _site_online():

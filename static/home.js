@@ -19,6 +19,7 @@
     globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
     users: '<circle cx="9" cy="8" r="4"/><path d="M1 21a8 8 0 0 1 16 0M17 4a4 4 0 0 1 0 8M23 21a8 8 0 0 0-5-7"/>',
     git: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M18 11.5c0 4-12 2-12 4"/>',
+    cloud: '<path d="M7 18a4.5 4.5 0 0 1-.5-8.97A6 6 0 0 1 18 10.5 3.75 3.75 0 0 1 17.5 18z"/>',
     phone: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/>',
     chess: '<path d="M8 21h8M9 21c0-4 1-6 1-9-2-1-3-3-3-5a5 5 0 0 1 10 0c0 2-1 4-3 5 0 3 1 5 1 9"/>',
     shield: '<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/>',
@@ -104,6 +105,7 @@
         <div class="hm-cta">
           <button class="hm-chat" id="hm-chat">${svg("chat")}<span><b>ACCÉDER AU CHAT IA</b><small>Discuter avec E.N.O.S. · voix, vision, actions</small></span></button>
           <button class="hm-apps dev-ok" id="hm-pair">${svg("phone")}<span><b>APPAIRER LE TÉLÉPHONE</b><small>Un QR code · tout est envoyé</small></span></button>
+          <button class="hm-apps dev-ok" id="hm-cloud">${svg("cloud")}<span><b>OUVRIR MON CLOUD SÉCURISÉ</b><small>Déposer / récupérer l'APK mobile</small></span></button>
           <button class="hm-apps" id="hm-apps">${svg("grid")}<span><b>APPLICATIONS</b><small>Tous les modules · Ctrl+K</small></span></button>
         </div>
       </article>
@@ -120,6 +122,13 @@
     $("hm-chat").onclick = () => setView("chat");
     $("hm-apps").onclick = () => openLx();
     $("hm-pair").onclick = () => window.enosPair && window.enosPair.open();
+    $("hm-cloud").onclick = async (e) => {
+      const b = e.currentTarget, sm = b.querySelector("small"), old = sm.textContent;
+      b.disabled = true;
+      try { await J("/api/cloud/open", { method: "POST" }); sm.textContent = "Ouvert dans ton navigateur ✓"; }
+      catch (x) { sm.textContent = "✕ " + (x.message || "impossible"); }
+      setTimeout(() => { sm.textContent = old; b.disabled = false; }, 2500);
+    };
     $("hm-open-ag").onclick = openAgenda;
     $("hm-run").onclick = async (e) => { const b = e.currentTarget; b.disabled = true; try { await J("/api/agent/run", { method: "POST" }); } catch (x) {} b.disabled = false; feedTick(); };
     $("hm-brief").onclick = async (e) => { const b = e.currentTarget; b.disabled = true; try { await J("/api/agent/run?brief=true", { method: "POST" }); } catch (x) {} b.disabled = false; feedTick(); };

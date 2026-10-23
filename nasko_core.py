@@ -82,6 +82,7 @@ DEFAULT_CONFIG = {
     "allow_network_access": False,
     "network_access_code": "",
     "trusted_ips": [],            # IP locales (ou reseaux CIDR) admises sans code ni jeton ; ex. ["192.168.1.45"]
+    "secure_cloud_url": "https://drive.proton.me/",   # bouton « OUVRIR MON CLOUD SÉCURISÉ » (accueil) : https uniquement
     "incognito_urls": ["https://temp-mail.org/fr/", "https://pixellab.ai/signup"],
     # --- LLM : "anthropic" ou "openai" (tout serveur compatible OpenAI via llm_base_url)
     "llm_provider": "anthropic",
