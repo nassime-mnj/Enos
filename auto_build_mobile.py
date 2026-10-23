@@ -4,8 +4,8 @@
     py auto_build_mobile.py --cloud-dir D:\\Proton\\Drive     dossier de dépôt imposé (sinon détection automatique)
     py auto_build_mobile.py --sans-cloud     garde l'APK dans mobile_build/
 
-Étapes : 1) NASKO.apk existant -> mobile_build/sauvegardes/NASKO_<version>_<date>.apk (+ .json, .idsig, version.txt)
-         2) exporter_donnees_ceo.py --build  3) NASKO.apk neuf -> dossier Proton Drive / Tresorit / équivalent (déplacé, SHA-256 vérifié).
+Étapes : 1) ENOS.apk existant (ou ancien NASKO.apk) -> mobile_build/sauvegardes/ENOS_<version>_<date>.apk (+ .json, .idsig, version.txt)
+         2) exporter_donnees_ceo.py --build  3) ENOS.apk neuf -> dossier Proton Drive / Tresorit / équivalent (déplacé, SHA-256 vérifié).
 Si la compilation échoue, l'ancien APK et version.txt sont remis en place. Aucun dossier de cloud trouvé : l'APK est rangé dans
 mobile_build/ sous un nom daté et le script le dit (il n'utilise jamais OneDrive à ta place : ce n'est pas un cloud chiffré).
 """
@@ -20,7 +20,8 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-APK = os.path.join(ROOT, "NASKO.apk")
+APK = os.path.join(ROOT, "ENOS.apk")
+LEGACY = os.path.join(ROOT, "NASKO.apk")                  # ancien nom (versions <= 1.8) : sauvegardé lui aussi
 SIDE = (".json", ".idsig")
 VERSION_TXT = os.path.join(ROOT, "android", "version.txt")
 BACKUPS = os.path.join(ROOT, "mobile_build", "sauvegardes")
@@ -54,15 +55,21 @@ def unique(path):
 
 def backup_old():
     """Renomme (déplace) l'APK actuel avec sa version et la date. Retourne la liste [(sauvegarde, original)] pour une restauration."""
+    moved = backup_one(APK) + backup_one(LEGACY)
+    if not moved:
+        print("  Aucun APK existant : rien à sauvegarder.")
+    return moved
+
+
+def backup_one(old):
     moved = []
-    if not os.path.isfile(APK):
-        print("  Aucun NASKO.apk existant : rien à sauvegarder.")
+    if not os.path.isfile(old):
         return moved
     os.makedirs(BACKUPS, exist_ok=True)
-    stem = f"NASKO_{version_of(APK) or 'inconnue'}_{datetime.date.today().isoformat()}"
+    stem = f"ENOS_{version_of(old) or 'inconnue'}_{datetime.date.today().isoformat()}"
     dst = unique(os.path.join(BACKUPS, stem + ".apk"))
     stem = os.path.splitext(dst)[0]
-    for src, target in [(APK, dst)] + [(APK + s, stem + ".apk" + s) for s in SIDE if os.path.isfile(APK + s)]:
+    for src, target in [(old, dst)] + [(old + s, stem + ".apk" + s) for s in SIDE if os.path.isfile(old + s)]:
         shutil.move(src, target)
         moved.append((target, src))
     if os.path.isfile(VERSION_TXT):
@@ -118,14 +125,14 @@ def main():
     try:
         subprocess.run([sys.executable, os.path.join(ROOT, "exporter_donnees_ceo.py"), "--build"], check=True, cwd=ROOT)
         if not os.path.isfile(APK) or os.path.getmtime(APK) < started:
-            raise RuntimeError("NASKO.apk n'a pas été regénéré")
+            raise RuntimeError("ENOS.apk n'a pas été regénéré")
     except (subprocess.CalledProcessError, RuntimeError, KeyboardInterrupt) as e:
         restore(moved)
         sys.exit(f"\nÉchec : {e}")
 
     ver = version_of(APK) or "nouvelle"
     digest = sha(APK)
-    name = f"NASKO_{ver}_{datetime.date.today().isoformat()}.apk"
+    name = f"ENOS_{ver}_{datetime.date.today().isoformat()}.apk"
 
     print("\n[3/3] Dépôt dans le cloud chiffré")
     dest = a.cloud_dir or ""

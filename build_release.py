@@ -88,7 +88,7 @@ TREES = {                                  # dossiers livrés tels quels (assets
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", "*.log", ".godot", "*.tmp", "*.part")
 # Jamais copiés (données personnelles ou volumineuses) — listés par --check pour que tu voies ce qui est exclu
 PERSONAL = ["data", "Audio", "Audionew", "Stockage", "Compression", "Traitement d'image", "PourClaude", "archive", "android", "dualpulse_site",
-            "nasko_config.json", "enos_profiles.json", "*.log", "NASKO.apk*", "NASKO.exe", "ENOS.exe", "*.jpg", "GUIDE.md"]
+            "nasko_config.json", "enos_profiles.json", "*.log", "ENOS.apk*", "NASKO.apk*", "NASKO.exe", "ENOS.exe", "*.jpg", "GUIDE.md"]
 
 TEMPLATE_EXTRA = {"zeus_ics_url": "", "moodle_ics_url": "", "update_manifest_url": "", "onboarding_done": False, "agent_enabled": True}
 BLANK_PROFILES = {"version": 1, "active": "", "profiles": {"user": {

@@ -14,7 +14,7 @@ Pourquoi pas Capacitor : le projet a déjà une coque WebView native (JDK + SDK,
 Capacitor apporterait des plugins prêts à l'emploi au prix de Node + Gradle (~1 Go) ; à reconsidérer si le besoin natif grossit (notifications en arrière-plan, caméra).
 
 ## Compiler
-`py construire_apk.py` (JDK 11+ et SDK Android déjà installés) → `NASKO.apk` signé (clé `android/signing/enos-release.jks`, ignorée par Git, à sauvegarder hors du dépôt) + `NASKO.apk.json`.
+`py construire_apk.py` (JDK 11+ et SDK Android déjà installés) → `ENOS.apk` signé (clé `android/signing/enos-release.jks`, ignorée par Git, à sauvegarder hors du dépôt) + `NASKO.apk.json`.
 Les assets web sont embarqués tels quels (`android/assets/mobile`). Test sans téléphone : ouvrir `index.html` dans Edge avec un faux `window.Enos`.
 
 ## Structure web

@@ -625,18 +625,18 @@ def ca_certificate():
 
 @app.get("/nasko.apk")
 def android_app():
-    """Application Android (NASKO.apk, fabriquee par construire_apk.py) : publique, elle ne contient aucun secret."""
-    path = find_asset("NASKO.apk")
+    """Application Android (ENOS.apk, fabriquee par construire_apk.py) : publique, elle ne contient aucun secret."""
+    path = find_asset("ENOS.apk") or find_asset("NASKO.apk")                  # NASKO.apk : ancien nom, encore accepté
     if not state["network"] or not path:
         raise HTTPException(404)
-    return FileResponse(path, media_type="application/vnd.android.package-archive", filename="NASKO.apk",
+    return FileResponse(path, media_type="application/vnd.android.package-archive", filename="ENOS.apk",
                         headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/api/app/version")
 def android_version():
-    """Version de NASKO.apk (versionCode, versionName, sha256) : l'application Android s'en sert pour se mettre à jour."""
-    path = find_asset("NASKO.apk.json")
+    """Version de ENOS.apk (versionCode, versionName, sha256) : l'application Android s'en sert pour se mettre à jour."""
+    path = find_asset("ENOS.apk.json") or find_asset("NASKO.apk.json")
     if not path:
         raise HTTPException(404)
     with open(path, encoding="utf-8") as f:

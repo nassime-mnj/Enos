@@ -1,8 +1,8 @@
-"""Publie l'application mobile (NASKO.apk) dans le cloud : téléverse l'APK dans Cloudflare R2, signe le manifeste (clé OTA du CEO) et l'enregistre sur le serveur.
+"""Publie l'application mobile (ENOS.apk) dans le cloud : téléverse l'APK dans Cloudflare R2, signe le manifeste (clé OTA du CEO) et l'enregistre sur le serveur.
 
     py publish_apk.py --apk ..\\NASKO.apk --server https://dualpulse.onrender.com --channel stable [--notes "…"]
 
-Lit NASKO.apk.json (écrit par construire_apk.py : versionCode, versionName, sha256, size). Variables d'environnement :
+Lit ENOS.apk.json (écrit par construire_apk.py : versionCode, versionName, sha256, size). Variables d'environnement :
     DP_ADMIN_TOKEN                                  jeton d'administration du serveur
     DP_R2_ENDPOINT DP_R2_BUCKET DP_R2_ACCESS_KEY DP_R2_SECRET_KEY    Cloudflare R2 (jeton d'API « Écriture »)
     ENOS_OTA_KEY                                    (facultatif) chemin de ota_private.pem ; défaut : %LOCALAPPDATA%\\ENOS-release\\keys\\ota_private.pem
@@ -45,7 +45,7 @@ def main():
     data = apk.read_bytes()
     sha = hashlib.sha256(data).hexdigest()
     if info.get("sha256") and info["sha256"] != sha:
-        sys.exit("L'APK ne correspond pas à NASKO.apk.json : reconstruisez-la.")
+        sys.exit("L'APK ne correspond pas à ENOS.apk.json : reconstruisez-la.")
     version, code = str(info["versionName"]), int(info["versionCode"])
     key = f"enos-mobile/{a.channel}/{version}/NASKO.apk"
     manifest = {"product": "enos-mobile", "channel": a.channel, "version": version, "version_code": code, "released": datetime.date.today().isoformat(), "notes": a.notes,

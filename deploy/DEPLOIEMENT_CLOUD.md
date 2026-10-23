@@ -25,9 +25,9 @@ Tout le code est prêt : `render.yaml` (racine), `dualpulse_site/` (serveur), `d
 
 ## 4. Publier l'application mobile (depuis ton PC)
 ```
-py construire_apk.py                                  # → NASKO.apk + NASKO.apk.json (nouvelle clé de signature : android/signing/enos-release.jks)
+py construire_apk.py                                  # → ENOS.apk + ENOS.apk.json (nouvelle clé de signature : android/signing/enos-release.jks)
 set DP_ADMIN_TOKEN=...   &  set DP_R2_ENDPOINT=...  &  set DP_R2_BUCKET=...  &  set DP_R2_ACCESS_KEY=...  &  set DP_R2_SECRET_KEY=...
-py dualpulse_site\tools\publish_apk.py --apk NASKO.apk --server https://<nom>.onrender.com --channel stable --notes "Parité PC, scanner, coffre…"
+py dualpulse_site\tools\publish_apk.py --apk ENOS.apk --server https://<nom>.onrender.com --channel stable --notes "Parité PC, scanner, coffre…"
 ```
 Le script téléverse l'APK dans R2, signe le manifeste avec ta clé OTA (jamais envoyée au serveur) et le publie.
 

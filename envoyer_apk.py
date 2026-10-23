@@ -1,7 +1,7 @@
 """Envoie l'APK sur le téléphone : double-clic, scanne le QR code, installe. Rien d'autre.
 
-    py envoyer_apk.py            APK de test la plus récente (mobile_build\\), sinon NASKO.apk
-    py envoyer_apk.py --live     NASKO.apk (la version publiée par le PC)
+    py envoyer_apk.py            APK de test la plus récente (mobile_build\\), sinon ENOS.apk
+    py envoyer_apk.py --live     ENOS.apk (la version publiée par le PC)
     py envoyer_apk.py --ip 192.168.1.28   forcer l'adresse (Tailscale : 100.x.y.z pour envoyer hors du Wi-Fi)
 
 Un mini-serveur éphémère (lien secret aléatoire, une seule personne, 10 minutes max) s'arrête tout seul dès que le téléphone a fini de télécharger.
@@ -28,8 +28,11 @@ def pick_apk(live):
         found = sorted(glob.glob(os.path.join(HERE, "mobile_build", "*.apk")), key=os.path.getmtime, reverse=True)
         if found:
             return found[0]
-    p = os.path.join(HERE, "NASKO.apk")
-    return p if os.path.isfile(p) else None
+    for name in ("ENOS.apk", "NASKO.apk"):                                     # NASKO.apk : ancien nom
+        p = os.path.join(HERE, name)
+        if os.path.isfile(p):
+            return p
+    return None
 
 
 def lan_ip():
@@ -51,7 +54,7 @@ def main():
 
     apk = pick_apk(a.live)
     if not apk:
-        sys.exit("Aucun APK trouvé (mobile_build\\*.apk ou NASKO.apk). Construis-le avec : py construire_apk.py")
+        sys.exit("Aucun APK trouvé (mobile_build\\*.apk ou ENOS.apk). Construis-le avec : py construire_apk.py")
     data = open(apk, "rb").read()
     sha = hashlib.sha256(data).hexdigest()
     token = secrets.token_urlsafe(12)

@@ -1,13 +1,13 @@
-"""Fabrique NASKO.apk : l'application Android de E.N.O.S. (coque WebView, sources dans android/).
+"""Fabrique ENOS.apk : l'application Android de E.N.O.S. (coque WebView, sources dans android/).
 
-    py construire_apk.py                       construit NASKO.apk (SDK Android requis)
+    py construire_apk.py                       construit ENOS.apk (SDK Android requis)
     py construire_apk.py --installer-sdk --accepter-licences
                                                telecharge le SDK Android minimal (outils en ligne de commande, plateforme 34,
                                                build-tools 34) dans %LOCALAPPDATA%\\Android\\Sdk puis construit.
                                                --accepter-licences = VOUS acceptez les licences du SDK Android de Google.
 
 L'APK est signee avec une cle locale (android/signing/, a conserver : la meme cle est necessaire pour les mises a jour).
-Une fois NASKO.apk cree, le serveur la propose sur la page de connexion (/nasko.apk) et dans le panneau ACCES TELEPHONE.
+Une fois ENOS.apk cree, le serveur la propose sur la page de connexion (/nasko.apk) et dans le panneau ACCES TELEPHONE.
 """
 import argparse
 import glob
@@ -25,7 +25,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.abspath(__file__))
 A = os.path.join(ROOT, "android")
 BUILD = os.path.join(A, "build")
-OUT = os.path.join(ROOT, "NASKO.apk")
+OUT = os.path.join(ROOT, "ENOS.apk")
 CMDLINE_URL = "https://dl.google.com/android/repository/commandlinetools-win-11076708_latest.zip"
 PLATFORM, BUILD_TOOLS = "34", "35.0.0"   # build-tools 35 : son d8 gere le MethodParameters des classes internes compilees par JDK 21+
 MIN_SDK = "29"
