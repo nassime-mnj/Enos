@@ -1,6 +1,6 @@
 """Publie l'application mobile (ENOS.apk) dans le cloud : téléverse l'APK dans Cloudflare R2, signe le manifeste (clé OTA du CEO) et l'enregistre sur le serveur.
 
-    py publish_apk.py --apk ..\\NASKO.apk --server https://dualpulse.onrender.com --channel stable [--notes "…"]
+    py publish_apk.py --apk ..\\ENOS.apk --server https://dualpulse.onrender.com --channel stable [--notes "…"]
 
 Lit ENOS.apk.json (écrit par construire_apk.py : versionCode, versionName, sha256, size). Variables d'environnement :
     DP_ADMIN_TOKEN                                  jeton d'administration du serveur
