@@ -7,6 +7,7 @@
 // Ici : tests du noyau pur (core.js). Les gestes tactiles réels sont envoyés par le pilote (Input.dispatchTouchEvent).
 import * as core from "../js/nle/core.js";
 import { TimelineCanvas } from "../js/nle/timeline_canvas.js";
+import * as pm from "../js/nle/preview_model.js";
 
 const out = [];
 const ok = (name, cond, detail) => out.push([name, !!cond, cond ? "" : String(detail === undefined ? "" : JSON.stringify(detail))]);
@@ -172,7 +173,65 @@ function coreTests2() {
   ok("EDL : images-clés et transition transmises", core.toEDL(e).clips[0].kf.x[0].v === 0.3);
 }
 
-window.runCoreTests = () => { out.length = 0; coreTests(); coreTests2(); return out.slice(); };
+// Étape 3 : modèle d'aperçu (calques visibles / audibles à l'instant t) et gouverneur de fluidité
+function coreTests3() {
+  const vid = { id: "v", kind: "video", name: "v.mp4", duration: 10 }, img = { id: "i", kind: "image", name: "i.png" }, aud = { id: "a", kind: "audio", name: "a.wav", duration: 9 };
+  const mk = (a, track, start, dur) => { const c = core.makeClip(a, track, start); if (dur) c.dur = dur; return c; };
+  const proj = (...clips) => { const p = core.createProject(); p.clips.push(...clips); return p; };
+  const ids = (L) => L.video.map((v) => v.clip.id).join();
+  const hasAudio = (c) => c.kind === "video";
+
+  let a = mk(vid, "V1", 2, 4), b; a.id = "A"; a.in = 1;
+  let L = pm.layersAt(proj(a), 1);
+  ok("aperçu : rien avant le clip", L.video.length === 0 && L.audio.length === 0);
+  L = pm.layersAt(proj(a), 3, { hasAudio });
+  ok("aperçu : temps source = point d'entrée + temps écoulé", near(L.video[0].srcTime, 2) && near(L.audio[0].srcTime, 2) && L.video[0].alpha === 1, L);
+  L = pm.layersAt(proj(a), 6);
+  ok("aperçu : fin exclue", L.video.length === 0);
+  ok("aperçu : vidéo sans son connu = pas d'audio", pm.layersAt(proj(a), 3).audio.length === 0);
+
+  const lo = mk(img, "V1", 0, 5), hi = mk(img, "V2", 0, 5); lo.id = "lo"; hi.id = "hi";
+  ok("aperçu : la piste du haut est dessinée en dernier", ids(pm.layersAt(proj(hi, lo), 1)) === "lo,hi");
+
+  a = mk(vid, "V1", 0, 4); a.fadeIn = 1; a.fadeOut = 1; a.opacity = 0.8; a.id = "F";
+  ok("fondu d'entrée / sortie sur l'image", near(pm.layersAt(proj(a), 0.5).video[0].alpha, 0.4) && near(pm.layersAt(proj(a), 2).video[0].alpha, 0.8) && near(pm.layersAt(proj(a), 3.75).video[0].alpha, 0.2));
+  ok("fondus sur le son", near(pm.layersAt(proj(a), 0.5, { hasAudio }).audio[0].vol, 0.5) && near(pm.layersAt(proj(a), 3.5, { hasAudio }).audio[0].vol, 0.5));
+  ok("mode allégé : sans fondu", near(pm.layersAt(proj(a), 0.5, { lite: true }).video[0].alpha, 0.8));
+
+  a = mk(img, "V1", 0, 4); b = mk(img, "V1", 4, 4); a.id = "XA"; b.id = "XB"; b.trIn = { type: "crossfade", dur: 1 };
+  const px = proj(b, a);
+  L = pm.layersAt(px, 4.5);
+  ok("fondu enchaîné : B opaque dessous, A (prolongé) dessus qui s'efface", ids(L) === "XB,XA" && L.video[0].alpha === 1 && near(L.video[1].alpha, 0.5) && L.video[1].tail, L.video.map((v) => [v.clip.id, v.alpha]));
+  ok("fondu enchaîné : avant la jonction A seul", ids(pm.layersAt(px, 3.5)) === "XA" && near(pm.layersAt(px, 3.5).video[0].alpha, 1));
+  ok("fondu enchaîné : fini après la durée", ids(pm.layersAt(px, 5.2)) === "XB");
+  ok("fondu enchaîné : mode allégé = coupe franche", ids(pm.layersAt(px, 4.5, { lite: true })) === "XB" && ids(pm.layersAt(px, 3.9, { lite: true })) === "XA");
+  const va = mk(vid, "V1", 0, 4), vb = mk(vid, "V1", 4, 4); va.id = "SA"; vb.id = "SB"; vb.trIn = { type: "crossfade", dur: 1 };
+  L = pm.layersAt(proj(va, vb), 4.5, { hasAudio });
+  ok("fondu enchaîné : sons croisés (A sort, B entre)", L.audio.length === 2 && near(L.audio.find((x) => x.clip.id === "SA").vol, 0.5) && near(L.audio.find((x) => x.clip.id === "SB").vol, 0.5), L.audio);
+  ok("fondu enchaîné : temps source de la queue de A continue au-delà de sa fin", near(L.audio.find((x) => x.clip.id === "SA").srcTime, 4.5));
+
+  a = mk(img, "V1", 0, 4); a.scale = 0.5; a.x = 0.2; core.setKeyframe(a, "opacity", 0, 0); core.setKeyframe(a, "opacity", 4, 1); core.setKeyframe(a, "y", 0, 0); core.setKeyframe(a, "y", 4, 0.4);
+  L = pm.layersAt(proj(a), 2).video[0];
+  ok("aperçu : réglages animés interpolés", near(L.alpha, 0.5) && near(L.y, 0.2) && L.scale === 0.5 && L.x === 0.2, L);
+  const au = mk(aud, "A1", 0, 3); au.volume = 0.5; core.setKeyframe(au, "volume", 0, 0); core.setKeyframe(au, "volume", 3, 1);
+  L = pm.layersAt(proj(au), 1.5);
+  ok("aperçu : un clip audio n'a pas d'image, son animé", L.video.length === 0 && near(L.audio[0].vol, 0.5), L);
+  au.volume = 2; au.kf = undefined; ok("aperçu : volume plafonné à 1 (>100 % réservé à l'export)", pm.layersAt(proj(au), 1).audio[0].vol === 1);
+
+  const g = new pm.FpsGovernor({ slowFrames: 10, fastFrames: 20 });
+  let ch = null; for (let i = 0; i < 9; i++) ch = g.push(16);
+  ok("gouverneur : fluide = pas de changement", ch === null && !g.lite);
+  for (let i = 0; i < 12; i++) { const r = g.push(45); if (r !== null) ch = r; }
+  ok("gouverneur : images lentes -> mode allégé", ch === true && g.lite);
+  ch = null; for (let i = 0; i < 15; i++) ch = g.push(16) ?? ch;
+  ok("gouverneur : hystérésis (pas de retour immédiat)", g.lite && ch === null);
+  for (let i = 0; i < 60; i++) { const r = g.push(16); if (r !== null) ch = r; }
+  ok("gouverneur : retour au complet après une longue période fluide", ch === false && !g.lite);
+  const g2 = new pm.FpsGovernor({ slowFrames: 5 }); for (let i = 0; i < 20; i++) g2.push(i % 2 ? 400 : 40);
+  ok("gouverneur : les pauses (> 250 ms) ne comptent pas comme lenteur", !g2.lite);
+}
+
+window.runCoreTests = () => { out.length = 0; coreTests(); coreTests2(); coreTests3(); return out.slice(); };
 window.T = { core, TimelineCanvas };
 window.__ready = true;
 </script></body></html>

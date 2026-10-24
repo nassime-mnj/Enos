@@ -19,7 +19,7 @@ export class TimelineCanvas {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {object} project  projet (core.createProject)
-   * @param {object} opts     { asset(id) -> asset|undefined, peaks(id) -> Promise<number[]|null>, onChange(), onSelect(clip|null), onSeek(t), onZoom(pps), onJunction(j, clientX, clientY) }
+   * @param {object} opts     { asset(id) -> asset|undefined, peaks(id) -> Promise<number[]|null>, onChange(), onSelect(clip|null), onSeek(t), onZoom(pps), onJunction(j, clientX, clientY), onModel() }
    */
   constructor(canvas, project, opts = {}) {
     this.canvas = canvas; this.ctx = canvas.getContext("2d", { alpha: false });
@@ -71,26 +71,28 @@ export class TimelineCanvas {
   setSnapping(on) { this.snapping = !!on; }
   select(clip) { this.selected = clip ? clip.id : null; if (this.opts.onSelect) this.opts.onSelect(clip || null); this.requestDraw(); }
   get selectedClip() { return this.project.clips.find((c) => c.id === this.selected) || null; }
-  setProject(p) { this.project = p; this.selected = null; this.clampView(); this.requestDraw(); }
+  setProject(p) { this.project = p; this.selected = null; this.clampView(); this.requestDraw(); this._model(); }
   zoomTo(pps, anchorX = (this.W - HEADER_W) / 2) { core.zoomAt(this.view, pps, anchorX); this.clampView(); if (this.opts.onZoom) this.opts.onZoom(this.view.pps); this.requestDraw(); }
   zoomFit() {
     const d = core.projectDuration(this.project) || 10;
     this.view.scrollX = 0; this.zoomTo((this.W - HEADER_W - 24) / d, 0);
   }
 
+  _model() { if (this.opts.onModel) this.opts.onModel(); }                       // le projet a changé : le moniteur d'aperçu recompose l'image
   _commit(before) {
     const after = JSON.stringify(this.project);
     if (before !== after) { this.history.pushRaw(before); if (this.opts.onChange) this.opts.onChange(); }
+    this._model();
   }
   _mutate(fn) { const before = JSON.stringify(this.project); fn(); this._commit(before); this.requestDraw(); }
 
   undo() { const p = this.history.back(this.project); if (p) { this.project = p; this._afterRestore(); } }
   redo() { const p = this.history.forward(this.project); if (p) { this.project = p; this._afterRestore(); } }
-  _afterRestore() { if (!this.selectedClip) this.select(null); this.clampView(); if (this.opts.onChange) this.opts.onChange(); this.requestDraw(); }
+  _afterRestore() { if (!this.selectedClip) this.select(null); this.clampView(); if (this.opts.onChange) this.opts.onChange(); this.requestDraw(); this._model(); }
 
   // -- édition « en direct » (curseurs de l'inspecteur) : modifie sans historique, puis endEdit() enregistre UNE entrée d'annulation pour tout le geste
   snapshot() { return JSON.stringify(this.project); }
-  editClip(id, fn) { const c = this.project.clips.find((x) => x.id === id); if (!c) return false; fn(c); this.requestDraw(); return true; }
+  editClip(id, fn) { const c = this.project.clips.find((x) => x.id === id); if (!c) return false; fn(c); this.requestDraw(); this._model(); return true; }
   endEdit(before) { this._commit(before); this.requestDraw(); }
   setTransition(aId, bId, type, dur) {
     const a = this.project.clips.find((x) => x.id === aId), b = this.project.clips.find((x) => x.id === bId);
@@ -301,7 +303,7 @@ export class TimelineCanvas {
     const pts = this.snapping ? core.snapPoints(this.project, new Set([c.id]), this.playhead) : null, thr = SNAP_PX / this.view.pps, t = this.tOf(p.x);
     const r = o.side === "right" ? core.resizeRight(this.project, c, this.opts.asset && this.opts.asset(c.asset), t, pts, thr) : core.resizeLeft(this.project, c, t, pts, thr);
     c.start = r.start; c.dur = r.dur; c.in = r.in; this.guide = r.point;
-    this.requestDraw();
+    this.requestDraw(); this._model();
   }
 
   // -- deux doigts : pincer + naviguer

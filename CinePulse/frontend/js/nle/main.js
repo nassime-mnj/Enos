@@ -5,6 +5,7 @@ import { TimelineCanvas } from "./timeline_canvas.js";
 import { Inspector } from "./inspector.js";
 import { TransitionWheel } from "./wheel.js";
 import { ExportPanel } from "./export.js";
+import { Monitor } from "./monitor.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = "cinepulse.nle.project.v1";
@@ -23,18 +24,23 @@ export function start(root = document) {
     onDragMove: (a, x, y) => tl.setDropPreview(a, x, y),
     onDrop: (a, x, y) => tl.dropAsset(a, x, y),
     onDragEnd: () => tl.clearDropPreview(),
-    onChange: () => tl.requestDraw(),
+    onChange: () => { tl.requestDraw(); monitor.refresh(); },
   });
   const tl = new TimelineCanvas($("tl"), loadProject(), {
     asset: (id) => lib.get(id),
     peaks: (id) => fetch(`/api/library/${id}/waveform?buckets=1500`).then((r) => (r.ok ? r.json() : null)).then((j) => (j ? j.peaks : null)),
-    onChange: save, onSelect: info, onSeek: () => info(tl.selectedClip), onZoom: () => {},
+    onChange: save, onSelect: info, onSeek: () => { info(tl.selectedClip); monitor.userSeek(); }, onZoom: () => {}, onModel: () => monitor.refresh(),
     onJunction: (j, x, y) => wheel.open(j, x, y),
   });
-  const insp = new Inspector($("insp"), tl, { hasAudio: (c) => { const a = lib.get(c.asset); return !!(a && a.has_audio); }, onToggle: (open) => { $("b-insp").setAttribute("aria-pressed", String(open)); } });
+  const insp = new Inspector($("insp"), tl, { hasAudio: (c) => { const a = lib.get(c.asset); return !!(a && a.has_audio); }, onToggle: (open) => { $("b-insp").setAttribute("aria-pressed", String(open)); document.body.classList.toggle("insp-open", open); } });
+  const monitor = new Monitor({ canvas: $("mon"), view: $("mon-view"), play: $("b-play"), home: $("b-home"), time: $("mon-time"), lite: $("mon-lite") }, tl, {
+    asset: (id) => lib.get(id), hasAudio: (c) => { const a = lib.get(c.asset); return !!(a && a.has_audio); },
+    onTransport: (playing) => { if (!playing) info(tl.selectedClip); },
+    onSeekDone: () => info(tl.selectedClip),
+  });
   const wheel = new TransitionWheel(tl);
   const exp = new ExportPanel($("exp"), () => tl.project);
-  window.nle = { tl, lib, core, insp, wheel, exp };                  // accès pour les tests et la console
+  window.nle = { tl, lib, core, insp, wheel, exp, monitor };                  // accès pour les tests et la console
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(tl.project)); } catch (e) { /* quota / mode privé */ } buttons(); }
   function buttons() {
@@ -69,6 +75,7 @@ export function start(root = document) {
     else if (mod && k === "z") { e.preventDefault(); e.shiftKey ? tl.redo() : tl.undo(); save(); info(tl.selectedClip); }
     else if (mod && k === "y") { e.preventDefault(); tl.redo(); save(); info(tl.selectedClip); }
     else if (k === "s" && !mod) { if (!$("b-split").disabled) { tl.splitAtPlayhead(); info(tl.selectedClip); } }
+    else if (k === " ") { e.preventDefault(); monitor.toggle(); }
     else if (k === "home") { tl.setPlayhead(0); tl.view.scrollX = 0; tl.requestDraw(); }
     else if (k === "+" || k === "=") tl.zoomTo(tl.view.pps * 1.25);
     else if (k === "-") tl.zoomTo(tl.view.pps / 1.25);

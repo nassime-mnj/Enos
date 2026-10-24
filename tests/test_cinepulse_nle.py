@@ -75,7 +75,7 @@ class Nle(unittest.TestCase):
         cls.files = media(cls.tmp)
         env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_EXPORTS=os.path.join(cls.tmp, "exports"))
         nw = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        cls.srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "CinePulse", "backend", "server.py"), "--port", str(SERVER_PORT)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=nw)
+        cls.srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "CinePulse", "backend", "server.py"), "--port", str(SERVER_PORT)], env=env, stdout=subprocess.DEVNULL, stderr=open(os.environ.get("NLE_SERVER_LOG") or os.devnull, "w"), creationflags=nw)
         base = f"http://127.0.0.1:{SERVER_PORT}"
         for _ in range(100):
             try:
@@ -691,6 +691,250 @@ class Nle(unittest.TestCase):
         self.tap(".exp-actions .pri")
         time.sleep(0.6)
         self.assertIn("introuvable", self.c.ev("document.querySelector('.exp-msg').textContent"))
+
+    # ================================================================== étape 3 : moniteur d'aperçu
+    def canvas_px(self, fx, fy):
+        return tuple(self.c.ev(f"(() => {{ const c = document.getElementById('mon'), d = c.getContext('2d').getImageData(Math.floor({fx} * c.width), Math.floor({fy} * c.height), 1, 1).data; return [d[0], d[1], d[2]]; }})()"))
+
+    def settle(self, timeout=8):
+        """Attend que le moniteur ait fini de chercher (seek) et d'afficher : plus aucun média en déplacement, une image composée."""
+        end = time.time() + timeout
+        while time.time() < end:
+            if self.c.ev("[...nle.monitor.pool.values()].every(m => !m.el.seeking && m.el.readyState >= 2) && !nle.monitor._raf"):
+                time.sleep(0.12)
+                return
+            time.sleep(0.05)
+        self.fail("moniteur : médias non prêts")
+
+    def make_rb(self):
+        """Vidéo 320x180 : 1,5 s de rouge puis 1,5 s de bleu (avec son), importée dans la bibliothèque. Retourne (id, chemin)."""
+        out = os.path.join(self.tmp, "rb.mp4")
+        subprocess.run([FF.ffmpeg, "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=red:size=320x180:rate=25:duration=1.5", "-f", "lavfi", "-i", "color=c=blue:size=320x180:rate=25:duration=1.5",
+                        "-f", "lavfi", "-i", "sine=frequency=330:duration=3", "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]", "-map", "[v]", "-map", "2:a", "-pix_fmt", "yuv420p", out],
+                       check=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        with open(out, "rb") as fh:
+            a = json.loads(urllib.request.urlopen(urllib.request.Request(f"{self.base}/api/library/import?name=RB.mp4", data=fh.read(), method="POST"), timeout=30).read())
+        for _ in range(150):
+            if all(x["state"] == "ready" for x in json.loads(urllib.request.urlopen(f"{self.base}/api/library", timeout=5).read())["assets"]):
+                break
+            time.sleep(0.2)
+        self.c.ev("nle.lib.refresh()", wait=True)
+        return a["id"], out
+
+    def drop_rb(self, aid):
+        urllib.request.urlopen(urllib.request.Request(f"{self.base}/api/library/{aid}", method="DELETE"), timeout=10).read()
+
+    def put(self, aid, start=0, track="V1"):
+        return self.c.ev(f"(() => {{ const c = nle.tl.addAsset(nle.lib.get('{aid}'), {start}, '{track}'); return c && c.id; }})()")
+
+    def near_rgb(self, got, want, tol=45):
+        self.assertTrue(all(abs(g - w) <= tol for g, w in zip(got, want)), f"{got} != {want}")
+
+    def test_23_monitor_shows_frame_under_playhead(self):
+        self.setup_app()
+        img = self.add("image", 0, "V1")                                                          # logo rouge 2:1 dans un écran 16:9
+        self.settle()
+        self.near_rgb(self.canvas_px(0.5, 0.5), (224, 36, 60))
+        self.near_rgb(self.canvas_px(0.5, 0.02), (0, 0, 0))                                        # bandes noires en haut / en bas
+        self.assertGreaterEqual(self.c.ev("document.getElementById('mon-view').getBoundingClientRect().height"), 100)
+        self.c.ev("nle.tl.setPlayhead(9); true")                                                   # après la fin du clip : noir
+        self.settle()
+        self.near_rgb(self.canvas_px(0.5, 0.5), (0, 0, 0))
+        self.assertEqual(self.c.ev("document.getElementById('mon-time').textContent"), "00:09:00 / 00:05:00")
+        self.assertIsNotNone(img)
+
+    def test_24_frame_exact_scrubbing_on_proxy(self):
+        self.setup_app()
+        aid, _ = self.make_rb()
+        try:
+            self.put(aid)
+            self.c.ev("nle.tl.setPlayhead(0.5); true")
+            self.settle()
+            self.assertIn("v=proxy", self.c.ev("[...nle.monitor.pool.values()][0].el.src"), "l'aperçu lit les proxys, pas les originaux")
+            self.near_rgb(self.canvas_px(0.5, 0.5), (255, 0, 0))
+            for t, want in ((1.3, (255, 0, 0)), (1.46, (255, 0, 0)), (1.56, (0, 0, 255)), (2.6, (0, 0, 255)), (0.1, (255, 0, 0))):
+                self.c.ev(f"nle.tl.setPlayhead({t}); true")                                        # glisser la tête = recomposer l'image exacte
+                self.settle()
+                self.near_rgb(self.canvas_px(0.5, 0.5), want)
+            self.assertLess(abs(self.c.ev("[...nle.monitor.pool.values()][0].el.currentTime") - 0.1), 0.05)
+            x, _ = self.px(0)                                                                       # vrai glissé du doigt sur la règle : l'image suit
+            ry = self.rect["y"] + 15
+            self.c.ev("nle.tl.zoomTo(60, 0); nle.tl.view.scrollX = 0; true")
+            self.c.touch("touchStart", [(x + 10, ry)])
+            for k in range(1, 5):
+                self.c.touch("touchMove", [(x + 10 + 60 * k * 0.5 * 1.0, ry)])
+            time.sleep(0.15)
+            self.c.touch("touchEnd", [])
+            self.settle()
+            t = self.c.ev("nle.tl.playhead")
+            self.assertGreater(t, 1.6)
+            self.near_rgb(self.canvas_px(0.5, 0.5), (0, 0, 255))
+        finally:
+            self.drop_rb(aid)
+
+    def test_25_inspector_feedback_is_immediate(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.settle()
+        self.near_rgb(self.canvas_px(0.5, 0.5), (224, 36, 60))
+        self.tap("#b-insp")
+        self.assertTrue(self.c.ev("document.body.classList.contains('insp-open')"))
+        self.near_rgb(self.canvas_px(0.1, 0.5), (224, 36, 60))
+        self.drag_slider(".insp-row[data-prop=scale] input", 100, 50)                              # échelle 50 % : le logo ne couvre plus le bord
+        self.settle()
+        self.near_rgb(self.canvas_px(0.1, 0.5), (0, 0, 0))
+        self.near_rgb(self.canvas_px(0.5, 0.5), (224, 36, 60))
+        self.drag_slider(".insp-row[data-prop=x] input", 0, 40)                                    # position X +40 % : le logo glisse vers la droite
+        self.settle()
+        self.near_rgb(self.canvas_px(0.5, 0.5), (0, 0, 0))
+        self.near_rgb(self.canvas_px(0.8, 0.5), (224, 36, 60))
+        self.drag_slider(".insp-row[data-prop=opacity] input", 100, 50)
+        self.settle()
+        r = self.canvas_px(0.8, 0.5)
+        self.assertTrue(80 < r[0] < 150 and r[1] < 40, r)                                          # ≈ moitié de la transparence
+        self.c.shot("phone_monitor_inspector.png")
+        self.c.ev("nle.tl.undo(); nle.tl.undo(); nle.tl.undo(); true")                              # l'annulation se voit aussi
+        self.settle()
+        self.near_rgb(self.canvas_px(0.1, 0.5), (224, 36, 60))
+
+    def test_26_playback_keeps_timeline_and_video_in_sync(self):
+        self.setup_app()
+        aid, _ = self.make_rb()
+        try:
+            self.put(aid)
+            self.c.ev("nle.tl.zoomTo(60, 0); nle.tl.view.scrollX = 0; nle.tl.setPlayhead(0, true); true")
+            self.settle()
+            self.assertEqual(self.c.ev("nle.monitor.playing"), False)
+            self.tap("#b-play")
+            self.assertTrue(self.c.ev("nle.monitor.playing"))
+            self.assertEqual(self.c.ev("document.getElementById('b-play').textContent"), "⏸")
+            samples, t0 = [], time.time()
+            f0 = self.c.ev("nle.monitor.stats.frames")
+            while time.time() - t0 < 1.8:
+                s = self.c.ev("({t: nle.tl.playhead, v: nle.monitor.pool.size ? [...nle.monitor.pool.values()][0].el.currentTime : -1, paused: [...nle.monitor.pool.values()][0].el.paused, pl: nle.monitor.playing})")
+                s["wall"] = time.time() - t0
+                samples.append(s)
+                time.sleep(0.06)
+            fps = (self.c.ev("nle.monitor.stats.frames") - f0) / (time.time() - t0)
+            st = self.c.ev("({draw: nle.monitor.stats.totalMs / Math.max(1, nle.monitor.stats.frames), tl: nle.tl.stats.totalMs / Math.max(1, nle.tl.stats.frames)})")
+            print(f"\n[lecture] {fps:.0f} images/s composées ; aperçu {st['draw']:.2f} ms/image, timeline {st['tl']:.2f} ms/image")
+            self.assertGreater(fps, 24, "l'aperçu tient au moins 24 images/s (Edge sans GPU)")
+            ts = [s["t"] for s in samples]
+            self.assertEqual(ts, sorted(ts), "la tête de lecture ne recule jamais")
+            self.assertAlmostEqual(samples[-1]["t"] - samples[0]["t"], samples[-1]["wall"] - samples[0]["wall"], delta=0.35)     # elle avance en temps réel
+            late = [s for s in samples if s["t"] > 0.4]
+            self.assertTrue(late and all(abs(s["v"] - s["t"]) < 0.4 for s in late), [(round(s["t"], 2), round(s["v"], 2)) for s in late][:8])   # la vidéo et la timeline restent synchronisées
+            self.assertTrue(all(not s["paused"] for s in late))
+            self.near_rgb(self.canvas_px(0.5, 0.5), (0, 0, 255) if self.c.ev("nle.tl.playhead") > 1.6 else (255, 0, 0))
+            self.assertGreater(self.c.ev("nle.tl.view.scrollX") + 1, 0)
+            self.c.shot("phone_playing.png")
+            self.tap("#b-play")                                                                      # pause
+            self.assertFalse(self.c.ev("nle.monitor.playing"))
+            p1 = self.c.ev("nle.tl.playhead")
+            time.sleep(0.4)
+            self.assertEqual(self.c.ev("nle.tl.playhead"), p1)
+            self.assertTrue(self.c.ev("[...nle.monitor.pool.values()].every(m => m.el.paused)"))
+            self.assertEqual(self.c.ev("document.getElementById('b-play').textContent"), "▶")
+        finally:
+            self.drop_rb(aid)
+
+    def test_27_playback_ends_at_project_end_and_restarts(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.c.ev("(() => { nle.tl.project.clips[0].dur = 1; nle.tl.requestDraw(); return true; })()")
+        self.c.ev("nle.tl.setPlayhead(0.2); true")
+        self.tap("#b-play")
+        time.sleep(1.6)
+        self.assertFalse(self.c.ev("nle.monitor.playing"), "arrêt automatique à la fin du projet")
+        self.assertAlmostEqual(self.c.ev("nle.tl.playhead"), 1.0, delta=1e-6)
+        self.tap("#b-play")                                                                          # relancer depuis la fin : repart du début
+        time.sleep(0.25)
+        self.assertTrue(self.c.ev("nle.monitor.playing") or self.c.ev("nle.tl.playhead") < 1.0)
+        self.assertLess(self.c.ev("nle.tl.playhead"), 0.9)
+        self.tap("#b-play")
+        self.tap("#b-home")
+        self.assertEqual(self.c.ev("nle.tl.playhead"), 0)
+        self.c.ev("nle.tl.setPlayhead(0.5, true); true")
+        self.c.touch("touchStart", [self.px(0.5, 1)]); self.c.touch("touchEnd", [])               # (tap dans la timeline, aucun effet de bord)
+        self.c.ev("nle.tl.setPlayhead(0.5); true")
+        self.c.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: ' '})); true")        # barre d'espace
+        time.sleep(0.2)
+        self.assertTrue(self.c.ev("nle.monitor.playing"))
+        self.c.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: ' '})); true")
+        self.assertFalse(self.c.ev("nle.monitor.playing"))
+
+    def test_28_user_seek_during_playback(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.c.ev("(() => { nle.tl.project.clips[0].dur = 30; nle.tl.zoomTo(20, 0); nle.tl.view.scrollX = 0; return true; })()")
+        self.tap("#b-play")
+        time.sleep(0.3)
+        x, _ = self.px(10)
+        ry = self.rect["y"] + 15
+        self.c.touch("touchStart", [(x, ry)]); self.c.touch("touchEnd", [])                          # toucher la règle pendant la lecture : la lecture continue d'ici
+        time.sleep(0.5)
+        self.assertTrue(self.c.ev("nle.monitor.playing"))
+        t = self.c.ev("nle.tl.playhead")
+        self.assertTrue(9.9 < t < 11.2, t)
+        self.tap("#b-play")
+
+    def test_29_governor_switches_to_lite_when_slow(self):
+        self.setup_app()
+        a = self.add("image", 0, "V1")
+        self.c.ev("""(() => { const c = nle.tl.project.clips[0]; c.dur = 60; c.fadeIn = 40; return true; })()""")
+        self.c.ev("nle.tl.setPlayhead(10, true); true")
+        self.settle()
+        r = self.canvas_px(0.5, 0.5)                                                                # fondu d'entrée de 40 s : à 10 s, 25 % de transparence
+        self.assertTrue(r[0] < 90, r)
+        self.assertFalse(self.c.ev("nle.monitor.lite"))
+        self.c.ev("""(() => { const m = nle.monitor, d = m._draw.bind(m); window.__d0 = d; m._draw = (L) => { const t = performance.now(); while (performance.now() - t < 38); d(L); }; return true; })()""")   # téléphone dépassé : 38 ms par image
+        self.tap("#b-play")
+        for _ in range(60):
+            if self.c.ev("nle.monitor.lite"):
+                break
+            time.sleep(0.1)
+        self.assertTrue(self.c.ev("nle.monitor.lite"), "images trop lentes -> mode allégé automatique")
+        self.assertFalse(self.c.ev("document.getElementById('mon-lite').hidden"))
+        self.c.shot("phone_monitor_lite.png")
+        self.tap("#b-play")
+        self.c.ev("nle.monitor._draw = window.__d0; true")
+        self.settle()
+        self.near_rgb(self.canvas_px(0.5, 0.5), (224, 36, 60))                                      # allégé : plus de fondu, l'image reste franche (position / échelle / opacité gardées)
+        self.c.ev("nle.monitor.setLite(false); true")
+        self.settle()
+        self.assertTrue(self.c.ev("nle.monitor.lite") is False)
+        self.assertTrue(self.canvas_px(0.5, 0.5)[0] < 90)
+
+    def test_30_preview_matches_export(self):
+        """Même géométrie que le moteur : le pixel de l'aperçu et celui de l'image exportée (540p) coïncident."""
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.c.ev("""(() => { const c = nle.tl.project.clips[0]; c.scale = 0.5; c.x = 0.25; c.y = -0.1; c.opacity = 0.5; nle.tl.editClip(c.id, () => {}); nle.tl.setPlayhead(1, true); return true; })()""")
+        self.settle()
+        pts = [(0.75, 0.4, True), (0.55, 0.3, True), (0.2, 0.5, False), (0.75, 0.04, False), (0.4, 0.4, False)]
+        edl = self.c.ev("nle.core.toEDL(nle.tl.project)")
+        edl["settings"] = {"preset": "540p", "fps": 30}
+        job = json.loads(urllib.request.urlopen(urllib.request.Request(f"{self.base}/api/render", data=json.dumps({"edl": edl}).encode(), headers={"Content-Type": "application/json"}, method="POST"), timeout=30).read())
+        for _ in range(200):
+            j = json.loads(urllib.request.urlopen(f"{self.base}/api/render/{job['id']}", timeout=10).read())
+            if j["status"] not in ("queued", "running"):
+                break
+            time.sleep(0.15)
+        self.assertEqual(j["status"], "done", j)
+        out = os.path.join(self.tmp, "parity.mp4")
+        with open(out, "wb") as fh:
+            fh.write(urllib.request.urlopen(self.base + j["file_url"], timeout=30).read())
+        raw = subprocess.run([FF.ffmpeg, "-v", "error", "-ss", "1", "-i", out, "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+        W, H = 960, 540
+        for fx, fy, inside in pts:
+            o = (int(fy * H) * W + int(fx * W)) * 3
+            exported, preview = tuple(raw[o:o + 3]), self.canvas_px(fx, fy)
+            self.near_rgb(preview, exported, 30)
+            if inside:
+                self.assertGreater(preview[0], 80)                                                   # le logo (rouge à 50 %) est bien là
+            else:
+                self.assertLess(max(preview), 30)
 
 
 if __name__ == "__main__":

@@ -90,7 +90,8 @@ class AssetStore:
     def _row(self, asset_id):
         if not re.fullmatch(r"[0-9a-f]{10}", asset_id or ""):
             return None
-        return self.db.execute("SELECT * FROM assets WHERE id=?", (asset_id,)).fetchone()
+        with self.lock:                                           # une connexion SQLite partagée entre fils (requêtes HTTP + traitement) : toute lecture est sérialisée
+            return self.db.execute("SELECT * FROM assets WHERE id=?", (asset_id,)).fetchone()
 
     def _dict(self, r):
         d = {"id": r["id"], "name": r["name"], "kind": r["kind"], "size": r["size"], "duration": r["duration"], "fps": r["fps"], "width": r["width"], "height": r["height"],
@@ -114,10 +115,13 @@ class AssetStore:
             like = "%" + word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
             args += [like, like]
         sql += " ORDER BY " + ("uses DESC, added DESC" if sort == "used" else "name COLLATE NOCASE" if sort == "name" else "added DESC")
-        return [self._dict(r) for r in self.db.execute(sql, args).fetchall()]
+        with self.lock:
+            rows = self.db.execute(sql, args).fetchall()
+        return [self._dict(r) for r in rows]
 
     def stats(self):
-        r = self.db.execute("SELECT COUNT(*) n, COALESCE(SUM(size),0) b, SUM(state='processing') p FROM assets").fetchone()
+        with self.lock:
+            r = self.db.execute("SELECT COUNT(*) n, COALESCE(SUM(size),0) b, SUM(state='processing') p FROM assets").fetchone()
         return {"count": r["n"], "bytes": r["b"], "processing": r["p"] or 0}
 
     # ------------------------------------------------------------------ import
@@ -222,7 +226,8 @@ class AssetStore:
                 self._process(asset_id)
             except Exception as e:                                                                       # noqa: BLE001 — un média défectueux ne doit jamais tuer le thread
                 try:
-                    self.db.execute("UPDATE assets SET state='failed', error=? WHERE id=?", (str(e)[:200], asset_id))
+                    with self.lock:
+                        self.db.execute("UPDATE assets SET state='failed', error=? WHERE id=?", (str(e)[:200], asset_id))
                 except sqlite3.Error:                                                                    # base fermée pendant l'arrêt : le média sera retraité au prochain démarrage
                     pass
             finally:

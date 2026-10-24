@@ -20,7 +20,15 @@
 <main class="nle-main">
   <aside id="lib" class="lib" aria-label="Bibliothèque de médias"></aside>
   <section class="nle-stage">
-    <div class="nle-monitor" aria-live="polite"><div id="sel" class="sel"></div><div class="soon">Aperçu vidéo : prochaine étape</div></div>
+    <div class="nle-monitor">
+      <div class="mon-view" id="mon-view"><canvas id="mon" aria-label="Aperçu vidéo : image sous la tête de lecture"></canvas><span class="mon-lite" id="mon-lite" hidden>APERÇU ALLÉGÉ</span></div>
+      <div class="mon-bar">
+        <button type="button" class="nle-btn" id="b-home" aria-label="Revenir au début">⏮</button>
+        <button type="button" class="nle-btn pri" id="b-play" aria-label="Lecture" aria-pressed="false">▶</button>
+        <span class="mon-time" id="mon-time" aria-live="off">00:00:00 / 00:00:00</span>
+        <div id="sel" class="sel" aria-live="polite"></div>
+      </div>
+    </div>
     <div class="nle-tools" role="toolbar" aria-label="Outils de la timeline">
       <button type="button" class="nle-btn" id="b-addv" aria-label="Ajouter une piste vidéo">+ V</button>
       <button type="button" class="nle-btn" id="b-adda" aria-label="Ajouter une piste audio">+ A</button>
