@@ -2,6 +2,9 @@
 import * as core from "./core.js";
 import { Library } from "./library.js";
 import { TimelineCanvas } from "./timeline_canvas.js";
+import { Inspector } from "./inspector.js";
+import { TransitionWheel } from "./wheel.js";
+import { ExportPanel } from "./export.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = "cinepulse.nle.project.v1";
@@ -26,18 +29,31 @@ export function start(root = document) {
     asset: (id) => lib.get(id),
     peaks: (id) => fetch(`/api/library/${id}/waveform?buckets=1500`).then((r) => (r.ok ? r.json() : null)).then((j) => (j ? j.peaks : null)),
     onChange: save, onSelect: info, onSeek: () => info(tl.selectedClip), onZoom: () => {},
+    onJunction: (j, x, y) => wheel.open(j, x, y),
   });
-  window.nle = { tl, lib, core };                                    // accès pour les tests et la console
+  const insp = new Inspector($("insp"), tl, { hasAudio: (c) => { const a = lib.get(c.asset); return !!(a && a.has_audio); }, onToggle: (open) => { $("b-insp").setAttribute("aria-pressed", String(open)); } });
+  const wheel = new TransitionWheel(tl);
+  const exp = new ExportPanel($("exp"), () => tl.project);
+  window.nle = { tl, lib, core, insp, wheel, exp };                  // accès pour les tests et la console
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(tl.project)); } catch (e) { /* quota / mode privé */ } buttons(); }
-  function buttons() { $("b-undo").disabled = !tl.history.canUndo; $("b-redo").disabled = !tl.history.canRedo; $("b-del").disabled = !tl.selectedClip; }
+  function buttons() {
+    const c = tl.selectedClip;
+    $("b-undo").disabled = !tl.history.canUndo; $("b-redo").disabled = !tl.history.canRedo; $("b-del").disabled = !c;
+    $("b-split").disabled = !c || tl.playhead < c.start + core.MIN_DUR || tl.playhead > core.clipEnd(c) - core.MIN_DUR;
+    insp.refresh();
+    if (exp.isOpen) exp._paint();
+  }
   function info(c) {
     buttons();
     $("sel").textContent = c ? `${c.name} · piste ${c.track} · début ${c.start.toFixed(2)} s · durée ${c.dur.toFixed(2)} s` : `Tête de lecture ${core.formatTime(tl.playhead, tl.project.fps)} · ${tl.project.clips.length} clip${tl.project.clips.length > 1 ? "s" : ""} · ${tl.project.tracks.length} pistes`;
   }
 
   $("b-lib").onclick = () => lib.toggle();
-  $("b-undo").onclick = () => { tl.undo(); save(); info(tl.selectedClip); };
+  $("b-insp").onclick = () => insp.toggle();
+  $("b-exp").onclick = () => exp.toggle();
+  $("b-split").onclick = () => { tl.splitAtPlayhead(); info(tl.selectedClip); };
+  $("b-undo").onclick =() => { tl.undo(); save(); info(tl.selectedClip); };
   $("b-redo").onclick = () => { tl.redo(); save(); info(tl.selectedClip); };
   $("b-del").onclick = () => { tl.deleteSelected(); info(null); };
   $("b-addv").onclick = () => { tl.addTrack("video"); info(tl.selectedClip); };
@@ -52,6 +68,7 @@ export function start(root = document) {
     if (k === "delete" || k === "backspace") { if (tl.deleteSelected()) { info(null); e.preventDefault(); } }
     else if (mod && k === "z") { e.preventDefault(); e.shiftKey ? tl.redo() : tl.undo(); save(); info(tl.selectedClip); }
     else if (mod && k === "y") { e.preventDefault(); tl.redo(); save(); info(tl.selectedClip); }
+    else if (k === "s" && !mod) { if (!$("b-split").disabled) { tl.splitAtPlayhead(); info(tl.selectedClip); } }
     else if (k === "home") { tl.setPlayhead(0); tl.view.scrollX = 0; tl.requestDraw(); }
     else if (k === "+" || k === "=") tl.zoomTo(tl.view.pps * 1.25);
     else if (k === "-") tl.zoomTo(tl.view.pps / 1.25);

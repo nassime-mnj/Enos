@@ -104,7 +104,75 @@ function coreTests() {
   ok("EDL : copie indépendante", e.clips[1].start === 0);
 }
 
-window.runCoreTests = () => { out.length = 0; coreTests(); return out.slice(); };
+// Étape 2 : images-clés, coupe, jonctions / transitions
+function coreTests2() {
+  const vid = { id: "v", kind: "video", name: "v.mp4", duration: 10 }, img = { id: "i", kind: "image", name: "i.png" };
+  const mk = (a, track, start, dur) => { const c = core.makeClip(a, track, start); if (dur) c.dur = dur; return c; };
+
+  let c = mk(vid, "V1", 0, 4);
+  ok("valueAt sans image-clé = valeur du clip", core.valueAt(c, "opacity", 1) === 1 && !core.isAnimated(c, "opacity"));
+  core.setKeyframe(c, "opacity", 2, 1); core.setKeyframe(c, "opacity", 0, 0);
+  ok("images-clés triées", c.kf.opacity.map((k) => k.t).join() === "0,2", c.kf);
+  ok("interpolation linéaire, constante avant / après", near(core.valueAt(c, "opacity", 1), 0.5) && core.valueAt(c, "opacity", 3) === 1 && core.valueAt(c, "opacity", -1) === 0);
+  core.setKeyframe(c, "opacity", 2.01, 0.5);
+  ok("une image-clé proche est remplacée", c.kf.opacity.length === 2 && near(c.kf.opacity[1].v, 0.5), c.kf);
+  ok("valeur bornée", core.setKeyframe(c, "scale", 1, 99) === 3 && core.setKeyframe(c, "scale", 1.5, -4) === 0.1);
+  ok("temps borné au clip", core.setKeyframe(c, "x", 99, 0.2) === 0.2 && c.kf.x[0].t === 4);
+  c = mk(vid, "V1", 0, 4);
+  ok("setValue sans animation : valeur fixe", core.setValue(c, "scale", 1, 2) === 2 && c.scale === 2 && !c.kf);
+  core.setKeyframe(c, "scale", 0, 2);
+  core.setValue(c, "scale", 3, 1);
+  ok("setValue avec animation : image-clé à l'instant", c.scale === 2 && c.kf.scale.length === 2 && c.kf.scale[1].t === 3 && c.kf.scale[1].v === 1, c.kf);
+  ok("keyframeNear", core.keyframeNear(c, "scale", 3.02) && !core.keyframeNear(c, "scale", 2));
+  ok("removeKeyframe", core.removeKeyframe(c, "scale", 3) && c.kf.scale.length === 1 && !core.removeKeyframe(c, "scale", 3));
+  core.removeKeyframe(c, "scale", 0);
+  ok("la dernière image-clé retirée fige la valeur", c.scale === 2 && c.kf === undefined, c);
+  core.setKeyframe(c, "volume", 0, 0.2); core.setKeyframe(c, "volume", 4, 1.2);
+  core.clearAnimation(c, "volume", 2);
+  ok("clearAnimation garde la valeur courante", near(c.volume, 0.7) && !core.isAnimated(c, "volume") && c.kf === undefined, c);
+  c.fadeIn = 1; c.trIn = { type: "crossfade", dur: 1 }; core.setKeyframe(c, "x", 1, 0.5);
+  core.resetClip(c);
+  ok("resetClip", c.scale === 1 && c.opacity === 1 && c.fadeIn === 0 && c.kf === undefined && c.trIn === undefined, c);
+
+  c = mk(vid, "V1", 0, 4); core.setKeyframe(c, "x", 0, 0); core.setKeyframe(c, "x", 4, 1);
+  let k = core.retimeKeyframes(c, 2, 2);
+  ok("retimeKeyframes : rognage à gauche", k.x.length === 2 && near(k.x[0].v, 0.5) && k.x[1].t === 2 && near(k.x[1].v, 1), k);
+  k = core.retimeKeyframes(c, 0, 2);
+  ok("retimeKeyframes : rognage à droite", near(k.x[0].v, 0) && near(k.x[1].v, 0.5) && k.x[1].t === 2, k);
+  ok("retimeKeyframes : sans animation", core.retimeKeyframes(mk(vid, "V1", 0, 4), 1, 2) === undefined);
+
+  c = mk(vid, "V1", 0, 4); c.in = 1; c.fadeIn = 1; c.fadeOut = 1; core.setKeyframe(c, "scale", 0, 1); core.setKeyframe(c, "scale", 4, 2);
+  const p = core.createProject(); p.clips.push(c);
+  const r = core.splitClip(p, c, 1.5);
+  ok("coupe : deux clips collés", p.clips.length === 2 && near(c.dur, 1.5) && r.start === 1.5 && near(r.dur, 2.5) && near(core.clipEnd(c), r.start), [c, r]);
+  ok("coupe : le point d'entrée avance (vidéo)", near(r.in, 2.5) && c.in === 1);
+  ok("coupe : fondu d'entrée à gauche, de sortie à droite", c.fadeOut === 0 && c.fadeIn === 1 && r.fadeIn === 0 && r.fadeOut === 1, [c, r]);
+  ok("coupe : l'animation continue des deux côtés", near(c.kf.scale.at(-1).v, 1.375) && near(r.kf.scale[0].v, 1.375) && near(r.kf.scale.at(-1).v, 2) && r.id !== c.id, [c.kf, r.kf]);
+  ok("coupe : refusée près des bords", core.splitClip(p, c, 0.05) === null && core.splitClip(p, c, 1.48) === null && core.splitClip(p, c, 99) === null && p.clips.length === 2);
+  const im = mk(img, "V1", 10, 5), q = core.createProject(); q.clips.push(im);
+  const ir = core.splitClip(q, im, 12);
+  ok("coupe d'une image : le point d'entrée reste 0", ir.in === 0 && near(ir.dur, 3) && near(im.dur, 2));
+
+  const a = mk(img, "V1", 0, 4), b = mk(img, "V1", 4, 4), far = mk(img, "V1", 20, 2), other = mk(img, "V2", 8, 2), pj = core.createProject();
+  pj.clips.push(b, far, a, other);
+  const js = core.junctions(pj);
+  ok("junctions : seulement les clips collés d'une même piste", js.length === 1 && js[0].a === a && js[0].b === b && js[0].time === 4, js);
+  ok("transitionOf : coupe par défaut", core.transitionOf(a, b).type === "cut");
+  core.setTransition(a, b, "crossfade", 1);
+  ok("fondu enchaîné", core.transitionOf(a, b).type === "crossfade" && b.trIn.dur === 1 && a.fadeOut === 0, b);
+  core.setTransition(a, b, "dip", 0.5);
+  ok("fondu au noir : fondus des deux bords, plus de trIn", core.transitionOf(a, b).type === "dip" && a.fadeOut === 0.5 && b.fadeIn === 0.5 && b.trIn === undefined);
+  core.setTransition(a, b, "crossfade", 99);
+  ok("durée bornée (≤ clips, ≤ 5 s)", b.trIn.dur === 4 && core.maxTransitionDur(a, b) === 4);
+  core.setTransition(a, b, "cut");
+  ok("coupe : remet tout à zéro", core.transitionOf(a, b).type === "cut" && b.trIn === undefined && a.fadeOut === 0 && b.fadeIn === 0);
+  const f = mk(vid, "V1", 0, 2); f.fadeIn = 1.5; f.fadeOut = 1.5; core.normalizeClip(f);
+  ok("normalizeClip : fondus ≤ durée", near(f.fadeIn + f.fadeOut, 2), f);
+  const e = core.createProject(), ec = mk(vid, "V1", 0, 4); core.setKeyframe(ec, "x", 1, 0.3); e.clips.push(ec);
+  ok("EDL : images-clés et transition transmises", core.toEDL(e).clips[0].kf.x[0].v === 0.3);
+}
+
+window.runCoreTests = () => { out.length = 0; coreTests(); coreTests2(); return out.slice(); };
 window.T = { core, TimelineCanvas };
 window.__ready = true;
 </script></body></html>

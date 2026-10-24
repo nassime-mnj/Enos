@@ -16,12 +16,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 from asset_store import AssetStore
+from cinepulse_engine import EdlError, RenderBusy, RenderManager
 from ffmpeg_wrapper import FFmpeg, FFmpegError, kind_from_extension
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
 CHUNK = 1 << 20
 PEAKS_MAX = 20000
+MAX_EDL_BYTES = 8 << 20
 
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml",
@@ -84,6 +86,16 @@ FF = FFmpeg()
 STORE = AssetStore(os.environ.get("CINEPULSE_ASSETS") or os.path.join(ROOT, "cinepulse_assets"), FF)      # bibliothèque persistante (voir asset_store.py)
 
 
+def _resolve_asset(asset_id):
+    """Média de la bibliothèque pour le moteur de rendu (l'EDL ne désigne jamais un chemin, seulement un identifiant)."""
+    a = STORE.get(asset_id) if isinstance(asset_id, str) else None
+    p = STORE.path(asset_id, "original") if a else None
+    return {"path": p, "kind": a["kind"], "duration": a["duration"], "has_audio": a["has_audio"]} if a and p else None
+
+
+RENDER = RenderManager(FF.ffmpeg, _resolve_asset, os.environ.get("CINEPULSE_EXPORTS") or os.path.join(ROOT, "cinepulse_exports"))      # exports MP4 (voir cinepulse_engine.py)
+
+
 def safe_name(name):
     name = os.path.basename(name.replace("\\", "/")) or "media"
     return re.sub(r'[<>:"|?*\x00-\x1f]', "_", name)[:180]
@@ -108,7 +120,7 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, status, msg):
         self._json({"error": msg}, status)
 
-    def _file(self, path, cache=False):
+    def _file(self, path, cache=False, download=None):
         size = os.path.getsize(path)
         start, end, status = 0, size - 1, 200
         rng = self.headers.get("Range")
@@ -131,6 +143,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(end - start + 1))
         self.send_header("Cache-Control", "max-age=3600" if cache else "no-cache")
+        if download:
+            self.send_header("Content-Disposition", f'attachment; filename="{download}"')
         if status == 206:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         self.end_headers()
@@ -169,6 +183,14 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             p = STORE.path(m.group(1), "thumb")
             return self._file(p, cache=True) if p else self._error(404, "Pas de vignette")
+        m = re.fullmatch(r"/api/render/(\w+)", path)
+        if m:
+            j = RENDER.get(m.group(1))
+            return self._json(j) if j else self._error(404, "Export inconnu")
+        m = re.fullmatch(r"/api/render/(\w+)/file", path)
+        if m:
+            p = RENDER.file(m.group(1))
+            return self._file(p, download="cinepulse-export.mp4") if p else self._error(404, "Export introuvable ou non terminé")
         if path == "/api/assets":
             return self._json([e["meta"] for e in PROJECT.assets.values()])
         m = re.fullmatch(r"/api/waveform/(\w+)", path)
@@ -212,10 +234,34 @@ class Handler(BaseHTTPRequestHandler):
             return self._library_import(parse_qs(url.query))
         if url.path == "/api/library/import_path":
             return self._library_import_path()
+        if url.path == "/api/render":
+            return self._render_start()
+        m = re.fullmatch(r"/api/render/(\w+)/cancel", url.path)
+        if m:
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            j = RENDER.cancel(m.group(1))
+            return self._json(j) if j else self._error(404, "Export inconnu")
         m = re.fullmatch(r"/api/library/(\w+)/use", url.path)
         if m:
             return self._json({"ok": True}) if STORE.use(m.group(1)) else self._error(404, "Média inconnu")
         self._error(404, "Route inconnue")
+
+    def _render_start(self):
+        """Corps JSON {edl: {...}} : lance l'export en arrière-plan (202) ; la progression se lit sur GET /api/render/<id>."""
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_EDL_BYTES:
+            return self._error(413, "EDL trop volumineuse")
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+            edl = body["edl"]
+        except (ValueError, KeyError, TypeError):
+            return self._error(400, "Corps JSON attendu : {\"edl\": ...}")
+        try:
+            self._json(RENDER.start(edl), 202)
+        except EdlError as e:
+            self._error(400, str(e))
+        except RenderBusy as e:
+            self._error(409, str(e))
 
     def _library_import(self, qs):
         """Corps brut = contenu du fichier ; nom d'origine dans ?name=. Répond tout de suite : vignette / proxy / onde sont calculés en arrière-plan (champ `state`)."""

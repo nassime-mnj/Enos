@@ -73,7 +73,7 @@ class Nle(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         cls.files = media(cls.tmp)
-        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"))
+        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_EXPORTS=os.path.join(cls.tmp, "exports"))
         nw = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         cls.srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "CinePulse", "backend", "server.py"), "--port", str(SERVER_PORT)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=nw)
         base = f"http://127.0.0.1:{SERVER_PORT}"
@@ -408,6 +408,289 @@ class Nle(unittest.TestCase):
         time.sleep(0.8)
         self.c.shot("desktop.png")
         self.c.call("Emulation.setDeviceMetricsOverride", width=390, height=800, deviceScaleFactor=2, mobile=True)
+
+    # ================================================================== étape 2 : inspecteur, coupe, transitions, export
+    def centre(self, sel):
+        return tuple(self.c.ev(f"(() => {{ const b = document.querySelector({json.dumps(sel)}).getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }})()"))
+
+    def tap(self, sel):
+        self.c.touch("touchStart", [self.centre(sel)]); self.c.touch("touchEnd", [])
+        time.sleep(0.15)
+
+    def drag_slider(self, sel, v_from, v_to):
+        """Glisse le curseur d'un <input type=range> avec un vrai doigt, de la valeur v_from à v_to."""
+        r = self.c.ev(f"(() => {{ const i = document.querySelector({json.dumps(sel)}), b = i.getBoundingClientRect(); return {{l: b.left, w: b.width, y: b.top + b.height / 2, min: +i.min, max: +i.max}}; }})()")
+        at = lambda v: r["l"] + 15 + (v - r["min"]) / (r["max"] - r["min"]) * (r["w"] - 30)       # noqa: E731  (la pastille de 30 px reste dans la piste)
+        self.c.touch("touchStart", [(at(v_from), r["y"])])
+        for k in range(1, 9):
+            self.c.touch("touchMove", [(at(v_from + (v_to - v_from) * k / 8), r["y"])])
+        time.sleep(0.12)                                                                          # le doigt s'arrête avant de se lever : pas d'élan (fling) qui avalerait le toucher suivant
+        self.c.touch("touchEnd", [])
+        time.sleep(0.35)
+
+    def undo_len(self):
+        return self.c.ev("nle.tl.history.undo.length")
+
+    def test_14_inspector_touch_sliders(self):
+        self.setup_app()
+        cid = self.add("video", 0, "V1")
+        self.tap("#b-insp")
+        self.assertTrue(self.c.ev("nle.insp.isOpen"))
+        rows = lambda: self.c.ev("[...document.querySelectorAll('.insp-row')].filter(r => !r.hidden).map(r => r.dataset.prop)")      # noqa: E731
+        self.assertEqual(rows(), ["opacity", "scale", "x", "y"])
+        box = self.c.ev("(() => { const i = document.getElementById('insp').getBoundingClientRect(), b = document.querySelector('.insp-body'); return {bottom: i.bottom, h: i.height, scroll: b.scrollHeight - b.clientHeight}; })()")
+        self.assertLessEqual(box["scroll"], 1, "chaque onglet tient sans défilement sur un téléphone")
+        self.assertLessEqual(box["bottom"], 800)
+        for r in self.c.ev("[...document.querySelectorAll('.insp-row input, .insp-kf, .insp-tab, .insp-top .nle-btn')].filter(e => e.offsetParent).map(e => { const b = e.getBoundingClientRect(); return [e.className || e.type, b.width, b.height]; })"):
+            self.assertGreaterEqual(r[2], 44, r)                                                  # zones tactiles ≥ 44 px
+        self.c.shot("phone_inspector.png")
+        n0 = self.undo_len()
+        self.drag_slider(".insp-row[data-prop=opacity] input", 100, 25)
+        self.assertAlmostEqual(self.clip(cid)["opacity"], 0.25, delta=0.12)
+        self.assertEqual(self.undo_len(), n0 + 1, "un geste complet = une seule entrée d'annulation")
+        self.assertIn("%", self.c.ev("document.querySelector('.insp-row[data-prop=opacity] output').textContent"))
+        self.tap(".insp-tab[data-tab=son]")
+        self.assertEqual(rows(), ["volume"])
+        self.drag_slider(".insp-row[data-prop=volume] input", 100, 150)
+        self.assertGreater(self.clip(cid)["volume"], 1.2)
+        self.tap(".insp-tab[data-tab=fondus]")
+        self.assertEqual(rows(), ["fadeIn", "fadeOut"])
+        self.drag_slider(".insp-row[data-prop=fadeIn] input", 0, 1.5)
+        self.assertGreater(self.clip(cid)["fadeIn"], 0.8)
+        self.c.ev("nle.tl.undo(); nle.tl.undo(); nle.tl.undo(); true")
+        c = self.clip(cid)
+        self.assertEqual((c["opacity"], c["volume"], c["fadeIn"]), (1, 1, 0))
+        self.tap(".insp-tab[data-tab=image]")
+        self.assertEqual(self.c.ev("document.querySelector('.insp-row[data-prop=opacity] input').value"), "100")      # l'inspecteur suit l'annulation
+        self.tap(".insp-top .nle-btn:last-child")                                                  # fermer
+        self.assertFalse(self.c.ev("nle.insp.isOpen"))
+
+    def test_15_inspector_depends_on_clip_kind(self):
+        self.setup_app()
+        self.tap("#b-insp")
+        self.assertTrue(self.c.ev("!document.querySelector('.insp-hint').hidden"), "aucun clip : message d'aide")
+        tabs = lambda: self.c.ev("[...document.querySelectorAll('.insp-tab')].filter(t => !t.hidden).map(t => t.dataset.tab)")      # noqa: E731
+        self.add("audio", 0, "A1")
+        self.assertEqual(tabs(), ["son", "fondus"])
+        self.assertEqual(self.c.ev("document.querySelector('.insp-tab.on').dataset.tab"), "son", "clip audio : l'onglet IMAGE disparaît, SON s'ouvre")
+        self.add("image", 0, "V1")
+        self.assertEqual(tabs(), ["image", "fondus"])
+        self.assertEqual(self.c.ev("document.querySelector('.insp-tab.on').dataset.tab"), "image")
+        self.add("video", 10, "V1")
+        self.assertEqual(tabs(), ["image", "son", "fondus"])
+
+    def test_16_keyframes_via_inspector(self):
+        self.setup_app()
+        cid = self.add("video", 0, "V1")
+        self.tap("#b-insp")
+        kf, clr, sl = ".insp-row[data-prop=scale] .insp-kf", ".insp-row[data-prop=scale] .insp-clr", ".insp-row[data-prop=scale] input"
+        self.c.ev("nle.tl.setPlayhead(0.5); true")
+        self.assertTrue(self.c.ev(f"document.querySelector('{clr}').hidden"))
+        self.tap(kf)
+        c = self.clip(cid)
+        self.assertEqual((len(c["kf"]["scale"]), c["kf"]["scale"][0]["v"]), (1, 1))
+        self.assertAlmostEqual(c["kf"]["scale"][0]["t"], 0.5, delta=0.01)
+        self.assertTrue(self.c.ev(f"document.querySelector('{kf}').classList.contains('on')"))
+        self.assertFalse(self.c.ev(f"document.querySelector('{clr}').hidden"))
+        self.c.ev("nle.tl.setPlayhead(2.0); true")
+        self.assertFalse(self.c.ev(f"document.querySelector('{kf}').classList.contains('on')"))
+        n0 = self.undo_len()
+        self.drag_slider(sl, 100, 200)
+        c = self.clip(cid)
+        self.assertEqual(len(c["kf"]["scale"]), 2, "animé : le curseur pose une image-clé à la tête de lecture")
+        self.assertAlmostEqual(c["kf"]["scale"][1]["t"], 2.0, delta=0.01)
+        self.assertGreater(c["kf"]["scale"][1]["v"], 1.6)
+        self.assertEqual(c["scale"], 1, "la valeur fixe n'est pas touchée")
+        self.assertEqual(self.undo_len(), n0 + 1)
+        mid = self.c.ev("(() => { const c = nle.tl.project.clips[0]; return nle.core.valueAt(c, 'scale', 1.25); })()")
+        self.assertTrue(1.2 < mid < 1.8, mid)                                                      # interpolation entre les deux images-clés
+        self.c.ev("nle.tl.zoomTo(60, 0); nle.tl.view.scrollX = 0; nle.tl.select(nle.tl.project.clips[0]); true")
+        time.sleep(0.2)
+        self.c.shot("phone_keyframes.png")
+        self.c.ev("nle.tl.setPlayhead(9); true")
+        self.assertTrue(self.c.ev(f"document.querySelector('{kf}').disabled && document.querySelector('{sl}').disabled"), "tête de lecture hors du clip : ◆ et curseur désactivés")
+        self.c.ev("nle.tl.setPlayhead(2.0); true")
+        self.tap(kf)                                                                                # ◆ plein : retire l'image-clé
+        self.assertEqual(len(self.clip(cid)["kf"]["scale"]), 1)
+        self.tap(clr)                                                                               # ⊘ : supprime l'animation
+        c = self.clip(cid)
+        self.assertNotIn("kf", c)
+        self.assertEqual(c["scale"], 1)
+        self.assertTrue(self.c.ev(f"document.querySelector('{clr}').hidden"))
+        for _ in range(4):
+            self.c.ev("nle.tl.undo(); true")
+        self.assertNotIn("kf", self.clip(cid))
+
+    def test_17_split_at_playhead(self):
+        self.setup_app()
+        cid = self.add("image", 0, "V1")
+        self.assertTrue(self.c.ev("document.getElementById('b-split').disabled"), "tête de lecture au bord du clip : coupe impossible")
+        self.c.ev("nle.tl.setPlayhead(2); true")
+        self.assertFalse(self.c.ev("document.getElementById('b-split').disabled"))
+        n0 = self.undo_len()
+        self.tap("#b-split")
+        clips = sorted(self.c.ev("nle.tl.project.clips"), key=lambda c: c["start"])
+        self.assertEqual(len(clips), 2)
+        self.assertAlmostEqual(clips[0]["dur"], 2, delta=1e-6)
+        self.assertAlmostEqual(clips[1]["start"], 2, delta=1e-6)
+        self.assertAlmostEqual(clips[1]["dur"], 3, delta=1e-6)
+        self.assertEqual(self.undo_len(), n0 + 1)
+        self.assertEqual(self.c.ev("nle.tl.selected"), cid)
+        self.assertEqual(self.c.ev("nle.core.junctions(nle.tl.project).length"), 1, "les deux morceaux forment une jonction")
+        self.c.ev("nle.tl.undo(); true")
+        self.assertEqual(len(self.c.ev("nle.tl.project.clips")), 1)
+        self.assertAlmostEqual(self.clip(cid)["dur"], 5, delta=1e-6)
+
+    def test_18_transition_wheel(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        b = self.add("image", 5, "V1")
+        self.c.ev("nle.tl.select(null); true")
+        x, yc = self.px(5, 1)
+        y = yc - 36 + 18                                                                            # badge de jonction : bande haute de la piste
+        self.c.touch("touchStart", [(x, y)]); self.c.touch("touchEnd", [])
+        time.sleep(0.2)
+        self.assertTrue(self.c.ev("!document.querySelector('.wheel-bg').hidden"), "toucher le badge ouvre la roue")
+        self.assertIsNone(self.c.ev("nle.tl.selected"), "le badge ne sélectionne aucun clip")
+        for r in self.c.ev("[...document.querySelectorAll('.wheel-b, .wheel-c')].map(e => { const b = e.getBoundingClientRect(); return [e.className, b.width, b.height, b.left, b.top, b.right, b.bottom]; })"):
+            self.assertGreaterEqual(min(r[1], r[2]), 44, r)
+            self.assertTrue(r[3] >= 0 and r[4] >= 0 and r[5] <= 390 and r[6] <= 800, ("dans l'écran", r))
+        self.c.shot("phone_wheel.png")
+        n0 = self.undo_len()
+        self.tap(".wheel-b[data-type=crossfade]")
+        self.assertEqual(self.clip(b)["trIn"], {"type": "crossfade", "dur": 0.5})
+        self.assertEqual(self.undo_len(), n0 + 1)
+        self.assertIn("0.5", self.c.ev("document.querySelector('.wheel-c').textContent"))
+        self.tap(".wheel-c")
+        self.assertEqual(self.clip(b)["trIn"]["dur"], 1)
+        self.tap(".wheel-b[data-type=dip]")
+        c = self.clip(b)
+        self.assertEqual((c["fadeIn"], "trIn" in c), (1, False))
+        self.assertEqual(self.c.ev("nle.tl.project.clips.find(c => c.start === 0).fadeOut"), 1)
+        self.assertTrue(self.c.ev("document.querySelector('.wheel-b[data-type=dip]').classList.contains('on')"))
+        self.tap(".wheel-b[data-type=cut]")
+        self.assertTrue(self.c.ev("document.querySelector('.wheel-bg').hidden"), "« coupe » referme la roue")
+        c = self.clip(b)
+        self.assertEqual((c["fadeIn"], "trIn" in c), (0, False))
+        # fermeture par le fond ; un glissé sur le badge n'ouvre rien
+        self.c.touch("touchStart", [(x, y)]); self.c.touch("touchEnd", [])
+        time.sleep(0.15)
+        self.c.touch("touchStart", [(5, 5)]); self.c.touch("touchEnd", [])
+        time.sleep(0.15)
+        self.assertTrue(self.c.ev("document.querySelector('.wheel-bg').hidden"))
+        self.c.touch("touchStart", [(x, y)])
+        for k in range(1, 6):
+            self.c.touch("touchMove", [(x + 12 * k, y)])
+        self.c.touch("touchEnd", [])
+        self.assertTrue(self.c.ev("document.querySelector('.wheel-bg').hidden"))
+
+    def test_19_resize_keeps_keyframes_on_content(self):
+        self.setup_app()
+        self.c.ev("nle.tl.zoomTo(40, 0); nle.tl.view.scrollX = 0; nle.tl.setSnapping(false); true")
+        cid = self.add("image", 0, "V1")                                                            # 0 -> 5
+        self.c.ev("""(() => { const c = nle.tl.project.clips[0]; nle.core.setKeyframe(c, 'x', 0, 0); nle.core.setKeyframe(c, 'x', 4, 1); c.fadeIn = 1; nle.tl.select(c); return true; })()""")
+        x, y = self.px(0, 1)
+        end, _ = self.px(2)
+        self.c.touch("touchStart", [(x + 8, y)])                                                    # poignée gauche : rogner 2 s
+        for k in range(1, 7):
+            self.c.touch("touchMove", [(x + 8 + (end - x - 8) * k / 6, y)])
+        self.c.touch("touchEnd", [])
+        c = self.clip(cid)
+        self.assertAlmostEqual(c["start"], 2, delta=0.1)
+        pts = c["kf"]["x"]
+        self.assertAlmostEqual(pts[0]["t"], 0, delta=1e-6)
+        self.assertAlmostEqual(pts[0]["v"], 0.5, delta=0.06)                                       # le contenu garde son animation : la valeur à l'entrée est celle de t=2 s
+        self.assertAlmostEqual(pts[-1]["t"], c["dur"], delta=0.01)
+        self.assertAlmostEqual(pts[-1]["v"], 1, delta=0.01)
+        self.assertLessEqual(c["fadeIn"], c["dur"])
+        n0 = self.undo_len()
+        self.c.touch("touchStart", [(x + 2 * 40 + 8, y)]); self.c.touch("touchEnd", [])            # simple toucher sur une poignée : aucune entrée d'annulation parasite
+        self.assertEqual(self.undo_len(), n0)
+
+    def test_20_performance_with_transitions(self):
+        self.setup_app()
+        self.c.ev("""(() => {
+          const p = nle.core.createProject(); p.tracks = [];
+          for (let i = 0; i < 5; i++) nle.core.addTrack(p, 'video'); for (let i = 0; i < 5; i++) nle.core.addTrack(p, 'audio');
+          const a = nle.lib.assets;
+          for (const t of p.tracks) for (let k = 0; k < 60; k++) { const kind = t.type === 'audio' ? 'audio' : (k % 2 ? 'image' : 'video'); const as = a.find(x => x.kind === kind);
+            const c = nle.core.makeClip(as, t.id, k * 5); c.dur = 5; if (k % 3 === 0) c.fadeIn = 1; if (k % 4 === 0) c.trIn = { type: 'crossfade', dur: 1 }; if (k % 5 === 0) nle.core.setKeyframe(c, 'scale', 1, 1.2); p.clips.push(c); }
+          nle.tl.setProject(p); nle.tl.view.pps = 40; nle.tl.view.scrollX = 0; nle.tl.view.scrollY = 0; nle.tl.select(p.clips[3]); return p.clips.length; })()""")
+        self.assertEqual(self.c.ev("nle.core.junctions(nle.tl.project).length"), 590)               # 600 clips tous collés : 590 badges de jonction
+        time.sleep(1.0)
+        res = self.c.ev("""(() => { const tl = nle.tl, ms = [];
+          for (let i = 0; i < 240; i++) { tl.view.scrollX = i * 9; tl.view.pps = 40 + (i % 60); tl.clampView(); const t0 = performance.now(); tl.draw(); ms.push(performance.now() - t0); }
+          ms.sort((a, b) => a - b); return { avg: ms.reduce((a, b) => a + b, 0) / ms.length, p95: ms[Math.floor(ms.length * .95)], max: ms[ms.length - 1] }; })()""")
+        print(f"\n[perf+transitions] 600 clips / 590 jonctions : moyenne {res['avg']:.2f} ms, p95 {res['p95']:.2f} ms, max {res['max']:.2f} ms par image")
+        self.assertLess(res["p95"], 16.0)
+
+    # -- export de bout en bout : EDL du navigateur -> moteur FFmpeg -> barre de progression -> MP4
+    def wait_export(self, expr, timeout=120):
+        end = time.time() + timeout
+        samples = []
+        while time.time() < end:
+            s = self.c.ev("({st: nle.exp.job && nle.exp.job.status, p: nle.exp.job && nle.exp.job.progress, w: parseFloat(document.querySelector('.exp-bar i').style.width) || 0})")
+            samples.append(s)
+            if s["st"] and eval(expr, {"s": s}):
+                return samples
+            time.sleep(0.04)
+        self.fail(f"export : état attendu non atteint ({samples[-1] if samples else None})")
+
+    def test_21_export_flow_with_progress_and_download(self):
+        self.setup_app()
+        self.add("video", 0, "V1")
+        self.add("audio", 0, "A1")
+        self.c.ev("""(() => { const tl = nle.tl, c = tl.project.clips.find(c => c.kind === 'video'); c.fadeIn = 0.5; nle.core.setKeyframe(c, 'opacity', 0, 0.3); nle.core.setKeyframe(c, 'opacity', 3, 1);
+          const img = nle.lib.assets.find(a => a.kind === 'image'); const k = nle.core.makeClip(img, 'V2', 0); k.dur = 3; k.scale = 0.3; k.x = 0.3; tl.project.clips.push(k); tl.requestDraw(); return true; })()""")
+        self.tap("#b-exp")
+        self.assertTrue(self.c.ev("nle.exp.isOpen"))
+        self.assertIn("3", self.c.ev("document.querySelector('.exp-info').textContent"))
+        self.tap(".exp .lib-chip[data-preset='540p']")
+        self.assertTrue(self.c.ev("document.querySelector('.exp .lib-chip[data-preset=\"540p\"]').classList.contains('on')"))
+        self.c.shot("phone_export_idle.png")
+        self.tap(".exp-actions .pri")
+        samples = self.wait_export("s['st'] in ('done', 'error')")
+        self.assertEqual(samples[-1]["st"], "done", self.c.ev("nle.exp.job"))
+        ps = [x["p"] for x in samples if x["p"] is not None]
+        self.assertEqual(ps, sorted(ps), "la barre ne recule jamais")
+        self.assertEqual(ps[-1], 1.0)
+        time.sleep(0.4)
+        st = self.c.ev("({txt: document.querySelector('.exp-stat').textContent, now: document.querySelector('.exp-bar').getAttribute('aria-valuenow'), href: document.querySelector('.exp-actions a').getAttribute('href'), hidden: document.querySelector('.exp-actions a').hidden, w: document.querySelector('.exp-bar i').style.width})")
+        self.assertEqual((st["now"], st["hidden"], st["w"]), ("100", False, "100%"))
+        self.assertIn("Terminé", st["txt"])
+        self.c.shot("phone_export_done.png")
+        data = urllib.request.urlopen(self.base + st["href"], timeout=30).read()
+        self.assertEqual(data[4:8], b"ftyp")
+        out = os.path.join(self.tmp, "dl.mp4")
+        with open(out, "wb") as fh:
+            fh.write(data)
+        info = FF.probe(out)
+        self.assertAlmostEqual(info["duration"], 6.0, delta=0.25)                                    # la musique (6 s) fixe la durée du projet
+        self.assertEqual((info["width"], info["height"]), (960, 540))
+        self.assertTrue(info["has_audio"])
+
+    def test_22_export_cancel_and_errors(self):
+        self.setup_app()
+        self.tap("#b-exp")
+        self.assertTrue(self.c.ev("document.querySelector('.exp-actions .pri').disabled"), "timeline vide : export désactivé")
+        self.add("image", 0, "V1")
+        self.c.ev("""(() => { const c = nle.tl.project.clips[0]; c.dur = 500; nle.core.setKeyframe(c, 'opacity', 0, 0); nle.core.setKeyframe(c, 'opacity', 500, 1); nle.exp._paint(); return true; })()""")
+        self.tap(".exp .lib-chip[data-preset='1080p']")
+        self.tap(".exp-actions .pri")
+        self.wait_export("s['st'] == 'running'", 30)
+        self.assertFalse(self.c.ev("document.querySelector('.exp-actions .danger').hidden"))
+        self.c.shot("phone_export_running.png")
+        self.tap(".exp-actions .danger")
+        self.wait_export("s['st'] == 'cancelled'", 30)
+        time.sleep(0.4)
+        self.assertIn("annulé", self.c.ev("document.querySelector('.exp-stat').textContent"))
+        self.assertTrue(self.c.ev("document.querySelector('.exp-actions a').hidden"))
+        self.assertIn("RELANCER", self.c.ev("document.querySelector('.exp-actions .pri').textContent"))
+        # média supprimé de la bibliothèque entre-temps : message clair, pas de plantage
+        self.c.ev("""(() => { const c = nle.tl.project.clips[0]; c.dur = 2; delete c.kf; c.asset = 'zz00000000'; nle.exp._paint(); return true; })()""")
+        self.tap(".exp-actions .pri")
+        time.sleep(0.6)
+        self.assertIn("introuvable", self.c.ev("document.querySelector('.exp-msg').textContent"))
 
 
 if __name__ == "__main__":

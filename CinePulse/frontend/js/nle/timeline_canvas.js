@@ -3,6 +3,7 @@
 // Gestes (Pointer Events, souris + tactile + stylet) :
 //   1 doigt sur la règle ou une zone vide : déplace la tête de lecture      2 doigts : pincer = zoom (centré), glisser = naviguer horizontalement et verticalement
 //   appui sur un clip : le sélectionne       APPUI LONG (tactile, anneau de progression + vibration) : soulève le clip, puis glisser = déplacer (change de piste)
+//   appui sur le badge d'une jonction (deux clips collés) : opts.onJunction -> roue des transitions
 //   poignées gauche / droite du clip sélectionné : rogner / étirer (une image s'étire sans limite -> -loop 1 au rendu)      souris : glisser un clip, molette = naviguer, Ctrl+molette = zoom
 // Magnétisme : début / fin du clip sur la tête de lecture, le zéro et les bords des autres clips (trait guide dessiné).
 import { HEADER_W_DEFAULT } from "./constants.js";
@@ -18,7 +19,7 @@ export class TimelineCanvas {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {object} project  projet (core.createProject)
-   * @param {object} opts     { asset(id) -> asset|undefined, peaks(id) -> Promise<number[]|null>, onChange(), onSelect(clip|null), onSeek(t), onZoom(pps) }
+   * @param {object} opts     { asset(id) -> asset|undefined, peaks(id) -> Promise<number[]|null>, onChange(), onSelect(clip|null), onSeek(t), onZoom(pps), onJunction(j, clientX, clientY) }
    */
   constructor(canvas, project, opts = {}) {
     this.canvas = canvas; this.ctx = canvas.getContext("2d", { alpha: false });
@@ -86,6 +87,24 @@ export class TimelineCanvas {
   undo() { const p = this.history.back(this.project); if (p) { this.project = p; this._afterRestore(); } }
   redo() { const p = this.history.forward(this.project); if (p) { this.project = p; this._afterRestore(); } }
   _afterRestore() { if (!this.selectedClip) this.select(null); this.clampView(); if (this.opts.onChange) this.opts.onChange(); this.requestDraw(); }
+
+  // -- édition « en direct » (curseurs de l'inspecteur) : modifie sans historique, puis endEdit() enregistre UNE entrée d'annulation pour tout le geste
+  snapshot() { return JSON.stringify(this.project); }
+  editClip(id, fn) { const c = this.project.clips.find((x) => x.id === id); if (!c) return false; fn(c); this.requestDraw(); return true; }
+  endEdit(before) { this._commit(before); this.requestDraw(); }
+  setTransition(aId, bId, type, dur) {
+    const a = this.project.clips.find((x) => x.id === aId), b = this.project.clips.find((x) => x.id === bId);
+    if (a && b) this._mutate(() => core.setTransition(a, b, type, dur));
+  }
+  /** Coupe le clip sélectionné à la tête de lecture. Retourne le clip de droite, ou null (tête hors du clip). */
+  splitAtPlayhead() {
+    const c = this.selectedClip;
+    if (!c) return null;
+    let right = null;
+    this._mutate(() => { right = core.splitClip(this.project, c, this.playhead); });
+    if (right) this.select(c);
+    return right;
+  }
 
   deleteSelected() { const c = this.selectedClip; if (!c) return false; this._mutate(() => { this.project.clips = this.project.clips.filter((x) => x.id !== c.id); }); this.select(null); return true; }
   addTrack(type) { let id; this._mutate(() => { id = core.addTrack(this.project, type); }); this.requestDraw(); return id; }
@@ -156,6 +175,16 @@ export class TimelineCanvas {
   destroy() { (this._unbind || []).forEach((f) => f()); if (this._ro) this._ro.disconnect(); cancelAnimationFrame(this._raf); clearTimeout(this._lp); }
 
   _pt(e) { const r = this.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  /** Jonction (deux clips collés) dont le badge est sous le doigt : le badge est dans la bande haute de la piste, les poignées de rognage restent libres en dessous. */
+  _junctionAt(x, y, touch) {
+    if (x < HEADER_W || y < RULER_H) return null;
+    const R = touch ? 22 : 13;
+    for (const j of core.junctions(this.project)) {
+      const cx = this.xOf(j.time), cy = this.trackTop(this.trackIndex(j.track)) + CLIP_PAD + 14;
+      if (Math.hypot(x - cx, y - cy) <= R) return j;
+    }
+    return null;
+  }
   _hit(x, y, touch) {
     if (x < HEADER_W || y < RULER_H) return null;
     const z = touch ? 24 : 9;
@@ -177,6 +206,8 @@ export class TimelineCanvas {
     if (this.pointers.size > 2) return;
     this._cancelOp(true);
     if (p.y < RULER_H || p.x < HEADER_W) { if (p.x >= HEADER_W) { this.op = { type: "scrub" }; this._scrub(p.x); } return; }
+    const jn = this._junctionAt(p.x, p.y, touch);
+    if (jn) { this.op = { type: "junction", j: jn, x: p.x, y: p.y, cx: e.clientX, cy: e.clientY }; return; }
     const h = this._hit(p.x, p.y, touch);
     if (!h) { this.op = { type: "scrub", tap: true }; this.select(null); this._scrub(p.x); return; }
     const before = JSON.stringify(this.project);
@@ -202,6 +233,7 @@ export class TimelineCanvas {
     const o = this.op;
     if (!o) return;
     if (o.type === "scrub") return this._scrub(p.x);
+    if (o.type === "junction") { if (Math.hypot(p.x - o.x, p.y - o.y) > MOVE_SLOP) this.op = null; return; }       // le doigt a glissé : ce n'était pas un appui
     if (o.type === "press") {
       const d = Math.hypot(p.x - o.x, p.y - o.y);
       if (!o.touch && d > MOUSE_SLOP) { this._lift(); return this._move(e); }                 // souris : le glisser suffit (pas d'appui long)
@@ -219,12 +251,23 @@ export class TimelineCanvas {
     if (this.pointers.size) return;
     const o = this.op;
     clearTimeout(this._lp); this._animate(false);
+    if (o && o.type === "junction" && !cancelled && this.opts.onJunction) this.opts.onJunction({ a: o.j.a, b: o.j.b, track: o.j.track, time: o.j.time }, o.cx, o.cy);
     if (o && (o.type === "drag" || o.type === "resize")) {
       if (cancelled) this.project = JSON.parse(o.before);
       else if (o.type === "drag") this._dropDrag(o);
-      else this._commit(o.before);
+      else this._finishResize(o);
     }
     this.op = null; this.guide = null; this.requestDraw();
+  }
+
+  /** Fin d'un rognage : les images-clés suivent le contenu (elles ne glissent pas), les fondus restent plus courts que le clip. */
+  _finishResize(o) {
+    const c = this.project.clips.find((x) => x.id === o.id), orig = JSON.parse(o.before).clips.find((x) => x.id === o.id);
+    if (c && orig && (Math.abs(c.dur - orig.dur) > 1e-9 || Math.abs(c.start - orig.start) > 1e-9)) {
+      if (orig.kf) { const kf = core.retimeKeyframes(orig, c.start - orig.start, c.dur); if (kf) c.kf = kf; else delete c.kf; }
+      core.normalizeClip(c);
+    }
+    this._commit(o.before);
   }
 
   _cancelOp(silent) { clearTimeout(this._lp); const o = this.op; if (o && (o.type === "drag" || o.type === "resize") && o.before) this.project = JSON.parse(o.before); this.op = null; this.guide = null; if (!silent) this.requestDraw(); }
@@ -341,6 +384,9 @@ export class TimelineCanvas {
     const drag = this.op && this.op.type === "drag" ? this.op : null;
     for (const c of this.project.clips) { if (!drag || drag.id !== c.id) this._drawClip(ctx, c, null, false); }
     if (drag) { const c = this.project.clips.find((x) => x.id === drag.id); if (c) this._drawClip(ctx, c, drag.cur, true); }
+    const js = core.junctions(this.project);
+    this._jb = new Map(js.map((j) => [j.b.id, j]));
+    for (const j of js) this._drawJunction(ctx, j);
     if (this.preview) this._drawGhost(ctx, this.preview);
     if (this.guide != null) { const x = Math.round(this.xOf(this.guide)) + 0.5; ctx.strokeStyle = "#ffd93d"; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, H); ctx.stroke(); ctx.setLineDash([]); }
     ctx.restore();
@@ -404,6 +450,7 @@ export class TimelineCanvas {
     }
     if (c.kind === "audio" || (asset && asset.has_audio && c.kind === "video" && r.h > 40)) this._drawWave(ctx, c, asset, r, y);
     const g = ctx.createLinearGradient(0, y, 0, y + r.h); g.addColorStop(0, "#0000"); g.addColorStop(1, "#000a"); ctx.fillStyle = g; ctx.fillRect(r.x, y, r.w, r.h);
+    this._drawFades(ctx, c, r, y);
     if (r.w > 36) { ctx.beginPath(); ctx.rect(r.x + 8, y, r.w - 14, r.h); ctx.clip(); ctx.fillStyle = "#fff"; ctx.font = "700 12px Rajdhani, system-ui, sans-serif"; ctx.textBaseline = "alphabetic"; ctx.fillText(c.name || (asset && asset.name) || c.kind, r.x + 9, y + r.h - 22); ctx.fillStyle = "#ffffffb0"; ctx.font = "600 10px Rajdhani, system-ui, sans-serif"; ctx.fillText(c.dur.toFixed(c.dur < 10 ? 2 : 1) + " s" + (c.kind === "image" ? " · image" : ""), r.x + 9, y + r.h - 9); }
     ctx.restore();
     rr(ctx, r.x + 0.5, y + 0.5, r.w - 1, r.h - 1, 8); ctx.lineWidth = sel || lifted ? 2.5 : 1; ctx.strokeStyle = sel || lifted ? "#fff" : fg + "aa"; ctx.stroke();
@@ -412,6 +459,41 @@ export class TimelineCanvas {
       ctx.fillStyle = "#fff"; rr(ctx, r.x, y, hw, r.h, 8); ctx.fill(); rr(ctx, r.x + r.w - hw, y, hw, r.h, 8); ctx.fill();
       ctx.fillStyle = "#000a"; const gw = 2, gh = Math.min(22, r.h / 2); if (hw > 5) { ctx.fillRect(r.x + hw / 2 - 1, y + (r.h - gh) / 2, gw, gh); ctx.fillRect(r.x + r.w - hw / 2 - 1, y + (r.h - gh) / 2, gw, gh); }
     }
+    if (sel && !lifted && c.kf) this._drawKeyframes(ctx, c, r, y);
+    ctx.restore();
+  }
+
+  /** Fondus : triangle sombre + diagonale (à la manière des éditeurs vidéo) ; fondu enchaîné : « X » accent sur la durée de la transition, au début du clip B. */
+  _drawFades(ctx, c, r, y) {
+    const k = this.view.pps;
+    if (c.fadeIn > 0.01) { const w = Math.min(c.fadeIn * k, r.w); ctx.fillStyle = "#000b"; ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(r.x + w, y); ctx.lineTo(r.x, y + r.h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#fffc"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(r.x, y + r.h); ctx.lineTo(r.x + w, y); ctx.stroke(); }
+    if (c.fadeOut > 0.01) { const w = Math.min(c.fadeOut * k, r.w), e = r.x + r.w; ctx.fillStyle = "#000b"; ctx.beginPath(); ctx.moveTo(e, y); ctx.lineTo(e - w, y); ctx.lineTo(e, y + r.h); ctx.closePath(); ctx.fill(); ctx.strokeStyle = "#fffc"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(e, y + r.h); ctx.lineTo(e - w, y); ctx.stroke(); }
+    const j = this._jb && this._jb.get(c.id);
+    if (j && core.transitionOf(j.a, c).type === "crossfade") {
+      const w = Math.min(c.trIn.dur * k, r.w);
+      ctx.fillStyle = this.accent + "55"; ctx.fillRect(r.x, y, w, r.h);
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(r.x + w, y + r.h); ctx.moveTo(r.x, y + r.h); ctx.lineTo(r.x + w, y); ctx.stroke();
+    }
+  }
+
+  _drawKeyframes(ctx, c, r, y) {
+    const times = new Set();
+    for (const pts of Object.values(c.kf)) for (const q of pts) times.add(q.t);
+    ctx.fillStyle = "#ffd93d"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1;
+    for (const t of times) { const x = r.x + t * this.view.pps, cy = y + r.h - 8; if (x < HEADER_W - 6 || x > this.W + 6) continue; ctx.beginPath(); ctx.moveTo(x, cy - 6); ctx.lineTo(x + 6, cy); ctx.lineTo(x, cy + 6); ctx.lineTo(x - 6, cy); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  }
+
+  /** Badge de jonction : coupe | , fondu enchaîné X, fondu au noir ● (anneau accent quand une transition est posée). */
+  _drawJunction(ctx, j) {
+    const cx = this.xOf(j.time), cy = this.trackTop(this.trackIndex(j.track)) + CLIP_PAD + 14;
+    if (cx < HEADER_W - 14 || cx > this.W + 14 || cy < RULER_H - 14 || cy > this.H + 14) return;
+    const t = core.transitionOf(j.a, j.b).type;
+    ctx.save(); ctx.beginPath(); ctx.rect(HEADER_W, RULER_H, this.W - HEADER_W, this.H - RULER_H); ctx.clip();
+    ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.fillStyle = "#050506e6"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = t === "cut" ? "#ffffffaa" : this.accent; ctx.stroke();
+    ctx.strokeStyle = ctx.fillStyle = "#fff"; ctx.lineWidth = 1.8; ctx.beginPath();
+    if (t === "cut") { ctx.moveTo(cx, cy - 5); ctx.lineTo(cx, cy + 5); ctx.stroke(); }
+    else if (t === "crossfade") { ctx.moveTo(cx - 5, cy - 5); ctx.lineTo(cx + 5, cy + 5); ctx.moveTo(cx - 5, cy + 5); ctx.lineTo(cx + 5, cy - 5); ctx.stroke(); }
+    else { ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
   }
 

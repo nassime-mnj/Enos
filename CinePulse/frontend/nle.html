@@ -15,15 +15,18 @@
   <button type="button" class="nle-btn" id="b-undo" aria-label="Annuler" disabled>↶</button>
   <button type="button" class="nle-btn" id="b-redo" aria-label="Rétablir" disabled>↷</button>
   <button type="button" class="nle-btn" id="b-lib" aria-label="Bibliothèque">▤ <span class="lbl">BIBLIOTHÈQUE</span></button>
+  <button type="button" class="nle-btn pri" id="b-exp" aria-label="Exporter la vidéo">⬇ <span class="lbl">EXPORTER</span></button>
 </header>
 <main class="nle-main">
   <aside id="lib" class="lib" aria-label="Bibliothèque de médias"></aside>
   <section class="nle-stage">
-    <div class="nle-monitor" aria-live="polite"><div id="sel" class="sel"></div><div class="soon">Aperçu vidéo et inspecteur : prochaines étapes</div></div>
+    <div class="nle-monitor" aria-live="polite"><div id="sel" class="sel"></div><div class="soon">Aperçu vidéo : prochaine étape</div></div>
     <div class="nle-tools" role="toolbar" aria-label="Outils de la timeline">
       <button type="button" class="nle-btn" id="b-addv" aria-label="Ajouter une piste vidéo">+ V</button>
       <button type="button" class="nle-btn" id="b-adda" aria-label="Ajouter une piste audio">+ A</button>
       <button type="button" class="nle-btn" id="b-snap" aria-pressed="true" aria-label="Magnétisme">⌁ <span class="lbl">MAGNÉTISME</span></button>
+      <button type="button" class="nle-btn" id="b-split" aria-label="Couper le clip à la tête de lecture" disabled>✂ <span class="lbl">COUPER</span></button>
+      <button type="button" class="nle-btn" id="b-insp" aria-label="Réglages du clip : opacité, volume, échelle, position" aria-pressed="false">⚙ <span class="lbl">RÉGLAGES</span></button>
       <span class="spacer"></span>
       <button type="button" class="nle-btn" id="b-zout" aria-label="Dézoomer">−</button>
       <button type="button" class="nle-btn" id="b-fit" aria-label="Tout afficher">⤢</button>
@@ -31,7 +34,9 @@
       <button type="button" class="nle-btn danger" id="b-del" aria-label="Supprimer le clip sélectionné" disabled>🗑</button>
     </div>
     <div class="nle-tl"><canvas id="tl"></canvas></div>
+    <section id="insp" aria-label="Réglages du clip"></section>
   </section>
+  <section id="exp" aria-label="Export"></section>
 </main>
 <script type="module" src="js/nle/main.js"></script>
 </body>
