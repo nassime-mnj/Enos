@@ -95,3 +95,14 @@ body.insp-open .mon-view{height:clamp(84px,14vh,140px)}      /* inspecteur ouver
 @media(prefers-reduced-motion:reduce){.exp-bar i{transition:none}}
 
 @media(max-width:899px){.pill:not(.bad){display:none}}      /* téléphone : la pastille « FFmpeg ✓ » cède la place aux boutons (elle reste visible si FFmpeg manque) */
+
+/* ---- projets ---- */
+#b-prj{position:relative}#b-prj::after{content:"";position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px #131316}
+#b-prj[data-state=dirty]::after,#b-prj[data-state=saving]::after{background:#ffd93d}#b-prj[data-state=error]::after,#b-prj[data-state=conflict]::after{background:var(--bad)}
+.prj{max-height:78%;overflow-y:auto}.prj-name{min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:#09090b;color:var(--text);font:16px Rajdhani,system-ui,sans-serif}.prj-name:focus{outline:none;border-color:var(--ac)}
+.prj-banner{padding:10px;border:1px solid var(--bad);border-radius:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}.prj-banner[hidden]{display:none}
+.prj-list{display:flex;flex-direction:column;gap:6px}
+.prj-item{display:flex;gap:6px;align-items:stretch}.prj-open{flex:1;min-width:0;min-height:52px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:#101013;color:var(--text);text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:center;touch-action:manipulation}
+.prj-item.cur .prj-open{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,#101013)}.prj-open b{font:700 15px Rajdhani,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prj-open small{color:var(--muted);font-size:12px}
+.prj-del{flex:0 0 auto;min-width:52px}
+@media(max-width:480px){.brand{font-size:14px;letter-spacing:1.5px}}

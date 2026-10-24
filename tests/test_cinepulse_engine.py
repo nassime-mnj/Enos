@@ -311,7 +311,7 @@ class Http(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         cls.v = make(["-f", "lavfi", "-i", "color=c=red:size=320x180:rate=25:duration=3", "-f", "lavfi", "-i", "sine=duration=3", "-shortest", "-pix_fmt", "yuv420p"], os.path.join(cls.tmp, "v.mp4"))
-        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_EXPORTS=os.path.join(cls.tmp, "exports"))
+        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_EXPORTS=os.path.join(cls.tmp, "exports"), CINEPULSE_PROJECTS=os.path.join(cls.tmp, "projects"))
         cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "CinePulse", "backend", "server.py"), "--port", str(cls.PORT)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NOWIN)
         for _ in range(100):

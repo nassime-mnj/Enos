@@ -73,7 +73,7 @@ class Nle(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         cls.files = media(cls.tmp)
-        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_EXPORTS=os.path.join(cls.tmp, "exports"))
+        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_EXPORTS=os.path.join(cls.tmp, "exports"), CINEPULSE_PROJECTS=os.path.join(cls.tmp, "projects"))
         nw = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         cls.srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "CinePulse", "backend", "server.py"), "--port", str(SERVER_PORT)], env=env, stdout=subprocess.DEVNULL, stderr=open(os.environ.get("NLE_SERVER_LOG") or os.devnull, "w"), creationflags=nw)
         base = f"http://127.0.0.1:{SERVER_PORT}"
@@ -153,11 +153,19 @@ class Nle(unittest.TestCase):
         self.assertEqual(bad, [], "tests du noyau en échec")
 
     # ------------------------------------------------------------------ application
-    def setup_app(self):
-        self.c.call("Page.navigate", url=self.base + "/nle.html")
+    def server_projects(self):
+        return json.loads(urllib.request.urlopen(self.base + "/api/projects", timeout=5).read())["projects"]
+
+    def wipe_projects(self):
+        for p in self.server_projects():
+            urllib.request.urlopen(urllib.request.Request(f"{self.base}/api/projects/{p['id']}", method="DELETE"), timeout=5).read()
+
+    def setup_app(self, url="/nle.html"):
+        self.wipe_projects()                                                                      # chaque test part d'un serveur sans projet (les projets sont maintenant côté serveur)
+        self.c.call("Page.navigate", url=self.base + url)
         for _ in range(100):
             try:
-                if self.c.ev("!!(window.nle && nle.lib && nle.lib.assets.length >= 3)"):
+                if self.c.ev("!!(window.nle && nle.ready && nle.lib && nle.lib.assets.length >= 3)"):
                     break
             except RuntimeError:
                 pass
@@ -935,6 +943,197 @@ class Nle(unittest.TestCase):
                 self.assertGreater(preview[0], 80)                                                   # le logo (rouge à 50 %) est bien là
             else:
                 self.assertLess(max(preview), 30)
+
+
+    # ================================================================== étape 4 : projets côté serveur
+    def wait_saved(self, timeout=6):
+        end = time.time() + timeout
+        while time.time() < end:
+            if self.c.ev("nle.prj.state") == "saved" and self.c.ev("!!nle.prj.id"):
+                return
+            time.sleep(0.1)
+        self.fail("projet non enregistré : " + str(self.c.ev("[nle.prj.state, nle.prj.id]")))
+
+    def put_server(self, pid, body):
+        req = urllib.request.Request(f"{self.base}/api/projects/{pid}", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"}, method="PUT")
+        return json.loads(urllib.request.urlopen(req, timeout=10).read())
+
+    def server_project(self, pid):
+        return json.loads(urllib.request.urlopen(f"{self.base}/api/projects/{pid}", timeout=5).read())
+
+    def edit_dur(self, dur):
+        """Modifie la durée du premier clip comme le ferait un geste (avec entrée d'annulation) : déclenche l'enregistrement automatique."""
+        self.c.ev(f"(() => {{ const b = nle.tl.snapshot(); nle.tl.editClip(nle.tl.project.clips[0].id, c => {{ c.dur = {dur}; }}); nle.tl.endEdit(b); return true; }})()")
+
+    def wait_state(self, state, timeout=8):
+        for _ in range(int(timeout * 10)):
+            if self.c.ev("nle.prj.state") == state:
+                return
+            time.sleep(0.1)
+        self.fail(f"état « {state} » non atteint : {self.c.ev('nle.prj.state')}")
+
+    def test_31_autosave_then_reload_restores_project(self):
+        self.setup_app()
+        self.assertEqual(self.server_projects(), [], "projet vierge : rien n'est créé sur le serveur")
+        cid = self.add("image", 2, "V1")
+        self.assertEqual(self.c.ev("document.getElementById('b-prj').dataset.state"), "dirty")
+        self.wait_saved()
+        lst = self.server_projects()
+        self.assertEqual((len(lst), lst[0]["clips"], lst[0]["name"]), (1, 1, "Projet sans titre"))
+        self.assertEqual(self.c.ev("document.getElementById('b-prj').dataset.state"), "saved")
+        self.c.ev("(() => { const b = nle.tl.snapshot(); nle.tl.editClip(nle.tl.project.clips[0].id, c => { c.scale = 0.5; }); nle.tl.endEdit(b); return true; })()")
+        self.wait_state("dirty", 2)
+        self.wait_saved()
+        self.assertEqual(self.c.ev("localStorage.getItem('cinepulse.nle.project.v1')"), None, "le contenu n'est plus dans le navigateur")
+        self.c.call("Page.navigate", url=self.base + "/nle.html")                                  # rechargement complet : le projet revient du serveur
+        for _ in range(100):
+            try:
+                if self.c.ev("!!(window.nle && nle.ready)"):
+                    break
+            except RuntimeError:
+                pass
+            time.sleep(0.1)
+        c = self.clip(cid)
+        self.assertIsNotNone(c, "même clip, même identifiant après rechargement")
+        self.assertEqual((c["start"], c["scale"]), (2, 0.5))
+        self.assertEqual(self.c.ev("nle.tl.history.undo.length"), 0)
+        self.assertEqual(self.c.ev("nle.prj.state"), "saved")
+        self.settle()
+        self.near_rgb(self.canvas_px(0.5, 0.5), (0, 0, 0))                                         # tête à 0 : le clip commence à 2 s
+
+    def test_32_projects_panel_name_save_list_open_delete(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.wait_saved()
+        self.tap("#b-prj")
+        self.assertTrue(self.c.ev("nle.panel.isOpen"))
+        self.assertGreaterEqual(self.c.ev("document.querySelector('.prj-name').getBoundingClientRect().height"), 44)
+        self.tap(".prj-name")                                                                       # vrai clavier : on remplace le nom
+        self.c.ev("document.querySelector('.prj-name').select(); true")
+        self.c.call("Input.insertText", text="Mon film d'été")
+        self.tap(".prj .exp-actions .pri")                                                          # ENREGISTRER
+        time.sleep(0.5)
+        lst = self.server_projects()
+        self.assertEqual((len(lst), lst[0]["name"]), (1, "Mon film d'été"))
+        first = lst[0]["id"]
+        self.c.shot("phone_projects.png")
+        self.c.ev("document.querySelectorAll('.prj .exp-actions .nle-btn')[1].click(); true")        # ENREGISTRER SOUS : copie
+        time.sleep(0.6)
+        names = sorted(p["name"] for p in self.server_projects())
+        self.assertEqual(names, ["Mon film d'été", "Mon film d'été (copie)"])
+        self.assertNotEqual(self.c.ev("nle.prj.id"), first, "la copie devient le projet courant")
+        self.c.ev("(() => { const b = nle.tl.snapshot(); nle.tl.select(null); nle.tl.project.clips.length = 0; nle.tl.endEdit(b); return true; })()")   # la copie est vidée puis enregistrée
+        self.wait_saved()
+        self.assertEqual(self.c.ev("nle.tl.project.clips.length"), 0)
+        self.tap(f".prj-open[data-id='{first}']")                                                   # ouvrir l'original : son clip revient
+        time.sleep(0.6)
+        self.assertEqual(self.c.ev("nle.prj.id"), first)
+        self.assertEqual(self.c.ev("nle.tl.project.clips.length"), 1)
+        self.assertFalse(self.c.ev("nle.panel.isOpen"), "la feuille se referme après l'ouverture")
+        self.assertEqual(self.c.ev("nle.tl.history.undo.length"), 0, "un projet ouvert repart avec un historique vierge")
+        self.assertEqual(self.c.ev("localStorage.getItem('cinepulse.nle.current')"), first)
+        self.tap("#b-prj")
+        other = next(p["id"] for p in self.server_projects() if p["id"] != first)
+        self.tap(f".prj-del[data-id='{other}']")                                                   # suppression en deux touchers
+        self.assertEqual(len(self.server_projects()), 2, "un seul toucher ne supprime pas")
+        self.assertIn("SUPPRIMER", self.c.ev(f"document.querySelector(\".prj-del[data-id='{other}']\").textContent"))
+        time.sleep(0.2)
+        self.tap(f".prj-del[data-id='{other}']")
+        time.sleep(0.5)
+        self.assertEqual([p["id"] for p in self.server_projects()], [first])
+        self.tap(f".prj-del[data-id='{first}']")                                                   # supprimer le projet ouvert : retour à un projet vierge
+        time.sleep(0.2)
+        self.tap(f".prj-del[data-id='{first}']")
+        time.sleep(0.6)
+        self.assertEqual((self.server_projects(), self.c.ev("nle.tl.project.clips.length"), self.c.ev("nle.prj.id")), ([], 0, None))
+
+    def test_33_two_devices_conflict_is_never_silent(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.wait_saved()
+        pid = self.c.ev("nle.prj.id")
+        theirs = self.server_project(pid)["project"]
+        theirs["clips"][0]["dur"] = 9                                                                # l'autre appareil allonge le clip et enregistre
+        self.put_server(pid, {"project": theirs, "rev": self.c.ev("nle.prj.rev")})
+        self.edit_dur(3)
+        self.wait_state("conflict")
+        self.assertEqual(self.c.ev("document.getElementById('b-prj').dataset.state"), "conflict")
+        self.assertEqual(self.server_project(pid)["project"]["clips"][0]["dur"], 9, "la version de l'autre appareil n'a pas été écrasée")
+        self.tap("#b-prj")
+        self.assertFalse(self.c.ev("document.querySelector('.prj-banner').hidden"))
+        self.c.shot("phone_conflict.png")
+        self.c.ev("[...document.querySelectorAll('.prj-banner .nle-btn')][0].click(); true")        # recharger la version du serveur
+        time.sleep(0.7)
+        self.assertEqual(self.c.ev("nle.tl.project.clips[0].dur"), 9)
+        self.assertEqual(self.c.ev("nle.prj.state"), "saved")
+        theirs["clips"][0]["dur"] = 7
+        self.put_server(pid, {"project": theirs, "rev": self.c.ev("nle.prj.rev")})
+        self.edit_dur(4)
+        self.wait_state("conflict")
+        self.c.ev("[...document.querySelectorAll('.prj-banner .nle-btn')][1].click(); true")        # garder la mienne : écrase, volontairement
+        self.wait_saved()
+        self.assertEqual(self.server_project(pid)["project"]["clips"][0]["dur"], 4)
+
+    def test_34_deleted_elsewhere_is_visible_and_recovers(self):
+        self.setup_app()
+        self.add("image", 0, "V1")
+        self.wait_saved()
+        pid = self.c.ev("nle.prj.id")
+        urllib.request.urlopen(urllib.request.Request(f"{self.base}/api/projects/{pid}", method="DELETE"), timeout=5).read()      # supprimé depuis un autre appareil
+        self.edit_dur(3)
+        self.wait_state("error")
+        self.assertEqual(self.c.ev("document.getElementById('b-prj').dataset.state"), "error")
+        self.edit_dur(4)                                                                              # la modification suivante recrée le projet
+        self.wait_saved()
+        self.assertEqual(len(self.server_projects()), 1)
+        self.assertNotEqual(self.c.ev("nle.prj.id"), pid)
+
+    def test_35_navigation_everything_reachable(self):
+        self.setup_app("/")                                                                        # la racine du serveur est directement le NLE
+        self.assertTrue(self.c.ev("document.title === 'CinePulse NLE' && !!document.getElementById('tl')"))
+        ids = ["b-prj", "b-undo", "b-redo", "b-lib", "b-exp", "b-play", "b-home", "b-split", "b-insp", "b-snap", "b-addv", "b-adda"]
+        self.assertEqual(self.c.ev(f"{ids}.filter(i => !document.getElementById(i))"), [])
+        for sel, opened in (("#b-prj", "nle.panel.isOpen"), ("#b-lib", "document.getElementById('lib').classList.contains('open')"), ("#b-exp", "nle.exp.isOpen")):
+            self.tap(sel)                                                                          # chaque feuille s'ouvre puis se referme au toucher
+            self.assertTrue(self.c.ev(opened), sel)
+            self.tap(sel)
+            self.assertFalse(self.c.ev(opened), sel)
+        for r in self.c.ev("['b-prj', 'b-undo', 'b-redo', 'b-lib', 'b-exp'].map(i => { const b = document.getElementById(i).getBoundingClientRect(); return [i, b.left, b.right, b.width]; })"):
+            self.assertTrue(0 <= r[1] and r[2] <= 390, ("bouton hors écran sur téléphone", r))
+        self.c.shot("phone_topbar.png")
+
+
+    def test_36_network_hiccups_do_not_lose_or_duplicate_projects(self):
+        """Coupures réseau simulées (Wi-Fi du téléphone, filtrage d'un antivirus) : l'enregistrement réessaie, sans doublon ni faux conflit."""
+        self.setup_app()
+        self.c.ev("""(() => { window.__real = window.fetch.bind(window); window.__fail = 0; window.__lose = 0;
+          window.fetch = (u, o) => { const url = String(u); if (!url.startsWith('/api/projects')) return __real(u, o);
+            if (__fail > 0) { __fail--; return Promise.reject(new TypeError('Failed to fetch')); }
+            if (__lose > 0 && o && o.method === 'PUT') { __lose--; return __real(u, o).then(() => { throw new TypeError('Failed to fetch'); }); }
+            return __real(u, o); }; return true; })()""")
+        self.c.ev("window.__fail = 2; true")                                                        # deux échecs de suite sur la création
+        self.add("image", 0, "V1")
+        self.wait_saved(10)
+        self.assertEqual(len(self.server_projects()), 1, "la création rejouée n'a pas fait de doublon")
+        pid = self.c.ev("nle.prj.id")
+        self.c.ev("window.__lose = 1; true")                                                        # la modification arrive au serveur mais la réponse se perd
+        self.edit_dur(8)
+        for _ in range(100):
+            if self.c.ev("nle.prj.state") in ("saved", "conflict", "error") and self.c.ev("window.__lose") == 0:
+                break
+            time.sleep(0.1)
+        self.wait_saved(10)
+        self.assertEqual(self.c.ev("nle.prj.state"), "saved", "pas de faux conflit : le serveur contient déjà notre version")
+        self.assertEqual(self.server_project(pid)["project"]["clips"][0]["dur"], 8)
+        self.assertEqual(self.c.ev("nle.prj.rev"), self.server_project(pid)["rev"])
+        self.c.ev("window.__fail = 99; true")                                                       # serveur injoignable pour de bon : erreur visible, rien de perdu localement
+        self.edit_dur(6)
+        self.wait_state("error", 15)
+        self.assertEqual(self.c.ev("document.getElementById('b-prj').dataset.state"), "error")
+        self.c.ev("window.__fail = 0; true")
+        self.edit_dur(5)
+        self.wait_saved(10)
+        self.assertEqual(self.server_project(pid)["project"]["clips"][0]["dur"], 5)
 
 
 if __name__ == "__main__":

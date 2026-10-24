@@ -168,7 +168,7 @@ class Http(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         cls.video = make(["-f", "lavfi", "-i", "testsrc=duration=1:size=640x360:rate=25", "-f", "lavfi", "-i", "sine=duration=1", "-shortest", "-pix_fmt", "yuv420p"], os.path.join(cls.tmp, "v.mp4"))
-        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"))
+        env = dict(os.environ, CINEPULSE_ASSETS=os.path.join(cls.tmp, "lib"), CINEPULSE_PROJECTS=os.path.join(cls.tmp, "projects"))
         cls.proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "CinePulse", "backend", "server.py"), "--port", str(cls.PORT)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         for _ in range(100):

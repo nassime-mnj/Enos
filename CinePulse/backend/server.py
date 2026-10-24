@@ -7,17 +7,15 @@ import json
 import mimetypes
 import os
 import re
-import shutil
 import tempfile
-import threading
-import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 from asset_store import AssetStore
 from cinepulse_engine import EdlError, RenderBusy, RenderManager
-from ffmpeg_wrapper import FFmpeg, FFmpegError, kind_from_extension
+from project_store import Conflict, ProjectError, ProjectStore
+from ffmpeg_wrapper import FFmpeg
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -37,51 +35,6 @@ def mime_of(path):
     return MIME.get(ext) or mimetypes.guess_type(path)[0] or "application/octet-stream"
 
 
-class Project:
-    """Projet temporaire : un dossier de médias importés + leur métadonnées en mémoire."""
-
-    def __init__(self):
-        self.dir = tempfile.mkdtemp(prefix="cinepulse_")
-        self.assets = {}
-        self.peaks = {}
-        self.lock = threading.Lock()
-
-    def add(self, src, name, ffmpeg, move=False):
-        asset_id = uuid.uuid4().hex[:10]
-        ext = os.path.splitext(name)[1].lower()
-        dst = os.path.join(self.dir, asset_id + ext)
-        (shutil.move if move else shutil.copyfile)(src, dst)
-        try:
-            info = ffmpeg.probe(dst)
-        except (FFmpegError, ValueError) as e:
-            os.remove(dst)
-            raise ValueError(f"Fichier illisible : {e}")
-        if info["kind"] not in ("audio", "video"):
-            os.remove(dst)
-            raise ValueError("Format non pris en charge (audio ou vidéo attendu)")
-        asset = {"id": asset_id, "name": name, "kind": info["kind"], "url": f"/media/{asset_id}",
-                 "size": os.path.getsize(dst), **{k: info[k] for k in
-                 ("duration", "fps", "width", "height", "has_audio", "sample_rate", "channels", "codec")}}
-        with self.lock:
-            self.assets[asset_id] = {"meta": asset, "path": dst}
-        return asset
-
-    def remove(self, asset_id):
-        with self.lock:
-            entry = self.assets.pop(asset_id, None)
-            self.peaks = {k: v for k, v in self.peaks.items() if k[0] != asset_id}
-        if entry:
-            try:
-                os.remove(entry["path"])
-            except OSError:
-                pass
-        return entry is not None
-
-    def cleanup(self):
-        shutil.rmtree(self.dir, ignore_errors=True)
-
-
-PROJECT = Project()
 FF = FFmpeg()
 STORE = AssetStore(os.environ.get("CINEPULSE_ASSETS") or os.path.join(ROOT, "cinepulse_assets"), FF)      # bibliothèque persistante (voir asset_store.py)
 
@@ -93,6 +46,7 @@ def _resolve_asset(asset_id):
     return {"path": p, "kind": a["kind"], "duration": a["duration"], "has_audio": a["has_audio"]} if a and p else None
 
 
+PROJECTS = ProjectStore(os.environ.get("CINEPULSE_PROJECTS") or os.path.join(ROOT, "cinepulse_projects"))      # projets de montage enregistrés côté serveur (voir project_store.py)
 RENDER = RenderManager(FF.ffmpeg, _resolve_asset, os.environ.get("CINEPULSE_EXPORTS") or os.path.join(ROOT, "cinepulse_exports"))      # exports MP4 (voir cinepulse_engine.py)
 
 
@@ -167,7 +121,7 @@ class Handler(BaseHTTPRequestHandler):
         path, qs = unquote(url.path), parse_qs(url.query)
         if path == "/api/status":
             return self._json({"ffmpeg": FF.available, "ffmpeg_version": FF.version(),
-                               "project_dir": PROJECT.dir, "library": STORE.stats()})
+                               "library": STORE.stats()})
         if path == "/api/library":
             q = lambda k, d="": qs.get(k, [d])[0]                                                # noqa: E731
             return self._json({"assets": STORE.list(q("kind") or None, q("q"), q("sort", "recent")), "stats": STORE.stats()})
@@ -191,45 +145,25 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             p = RENDER.file(m.group(1))
             return self._file(p, download="cinepulse-export.mp4") if p else self._error(404, "Export introuvable ou non terminé")
-        if path == "/api/assets":
-            return self._json([e["meta"] for e in PROJECT.assets.values()])
-        m = re.fullmatch(r"/api/waveform/(\w+)", path)
+        m = re.fullmatch(r"/api/projects/(\w+)", path)
+        if path == "/api/projects":
+            return self._json({"projects": PROJECTS.list()})
         if m:
-            return self._waveform(m.group(1), int(qs.get("buckets", ["2000"])[0]))
-        m = re.fullmatch(r"/media/(\w+)", path)
-        if m:
-            entry = PROJECT.assets.get(m.group(1))
-            return self._file(entry["path"], cache=True) if entry else self._error(404, "Média inconnu")
+            pr = PROJECTS.get(m.group(1))
+            return self._json(pr) if pr else self._error(404, "Projet inconnu")
         self._static(path)
 
     def _static(self, path):
-        rel = "index.html" if path in ("", "/") else path.lstrip("/")
+        rel = "nle.html" if path in ("", "/") else path.lstrip("/")
         full = os.path.realpath(os.path.join(FRONTEND, rel))
         if not full.startswith(os.path.realpath(FRONTEND) + os.sep) or not os.path.isfile(full):
             return self._error(404, "Introuvable")
         self._file(full)
 
-    def _waveform(self, asset_id, buckets):
-        entry = PROJECT.assets.get(asset_id)
-        if not entry:
-            return self._error(404, "Média inconnu")
-        if not FF.ffmpeg:
-            return self._error(501, "ffmpeg_missing")
-        buckets = max(100, min(buckets, 60000))
-        key = (asset_id, buckets)
-        if key not in PROJECT.peaks:
-            try:
-                PROJECT.peaks[key] = FF.waveform_peaks(entry["path"], buckets)
-            except FFmpegError:
-                PROJECT.peaks[key] = []
-        self._json({"peaks": PROJECT.peaks[key]})
-
     def do_POST(self):
         url = urlparse(self.path)
-        if url.path == "/api/import":
-            return self._import_upload(parse_qs(url.query))
-        if url.path == "/api/import_path":
-            return self._import_path()
+        if url.path == "/api/projects":
+            return self._project_write(None)
         if url.path == "/api/library/import":
             return self._library_import(parse_qs(url.query))
         if url.path == "/api/library/import_path":
@@ -314,50 +248,42 @@ class Handler(BaseHTTPRequestHandler):
             return self._error(404, "Média inconnu")
         self._json(STORE.get(m.group(1)))
 
-    def _import_upload(self, qs):
-        """Corps brut = contenu du fichier ; nom d'origine dans ?name=."""
-        name = safe_name(qs.get("name", ["media"])[0])
-        if not kind_from_extension(name) and not FF.available:
-            return self._error(415, "Format non pris en charge")
+    def _project_write(self, pid):
+        """POST /api/projects (création) ou PUT /api/projects/<id> (enregistrement). Corps JSON {name?, project, rev?}."""
         length = int(self.headers.get("Content-Length") or 0)
-        fd, tmp = tempfile.mkstemp(dir=PROJECT.dir, suffix=".part")
+        if length > MAX_EDL_BYTES:
+            return self._error(413, "Projet trop volumineux")
         try:
-            with os.fdopen(fd, "wb") as f:
-                left = length
-                while left > 0:
-                    chunk = self.rfile.read(min(CHUNK, left))
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    left -= len(chunk)
-            self._json(PROJECT.add(tmp, name, FF, move=True), 201)
-        except ValueError as e:
-            self._error(415, str(e))
-        finally:
-            if os.path.exists(tmp):
-                os.remove(tmp)
+            body = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(body, dict) or (body.get("rev") is not None and (isinstance(body["rev"], bool) or not isinstance(body["rev"], int))):
+                raise ValueError
+        except ValueError:
+            return self._error(400, "Corps JSON attendu : {\"name\": texte, \"project\": ..., \"rev\": entier}")
+        try:
+            if pid is None:
+                if "project" not in body:
+                    return self._error(400, "Champ « project » manquant")
+                return self._json(PROJECTS.create(body.get("name"), body["project"], body.get("id")), 201)
+            meta = PROJECTS.save(pid, body.get("name"), body.get("project"), body.get("rev"))
+            return self._json(meta) if meta else self._error(404, "Projet inconnu")
+        except ProjectError as e:
+            self._error(400, str(e))
+        except Conflict as e:
+            self._json({"error": str(e), "current": e.current}, 409)
 
-    def _import_path(self):
-        """Import d'un fichier local par son chemin (le serveur n'écoute que sur 127.0.0.1)."""
-        try:
-            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
-            src = os.path.abspath(body["path"])
-        except (ValueError, KeyError):
-            return self._error(400, "Corps JSON attendu : {\"path\": ...}")
-        if not os.path.isfile(src):
-            return self._error(404, "Fichier introuvable")
-        try:
-            self._json(PROJECT.add(src, os.path.basename(src), FF), 201)
-        except ValueError as e:
-            self._error(415, str(e))
+    def do_PUT(self):
+        m = re.fullmatch(r"/api/projects/(\w+)", urlparse(self.path).path)
+        if not m:
+            return self._error(404, "Route inconnue")
+        self._project_write(m.group(1))
 
     def do_DELETE(self):
         m = re.fullmatch(r"/api/library/(\w+)", urlparse(self.path).path)
         if m:
             return self._json({"ok": True}) if STORE.delete(m.group(1)) else self._error(404, "Média inconnu")
-        m = re.fullmatch(r"/api/assets/(\w+)", urlparse(self.path).path)
-        if m and PROJECT.remove(m.group(1)):
-            return self._json({"ok": True})
+        m = re.fullmatch(r"/api/projects/(\w+)", urlparse(self.path).path)
+        if m:
+            return self._json({"ok": True}) if PROJECTS.delete(m.group(1)) else self._error(404, "Projet inconnu")
         self._error(404, "Média inconnu")
 
 
@@ -369,7 +295,6 @@ def main():
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{args.port}/"
     print(f"CinePulse : {url}  (FFmpeg : {'ok' if FF.available else 'absent, mode dégradé'})")
-    print(f"Dossier projet temporaire : {PROJECT.dir}")
     if args.open:
         webbrowser.open(url)
     try:
@@ -377,7 +302,8 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        PROJECT.cleanup()
+        STORE.close()
+        PROJECTS.close()
 
 
 if __name__ == "__main__":

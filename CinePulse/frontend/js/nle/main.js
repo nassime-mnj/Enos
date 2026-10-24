@@ -1,4 +1,4 @@
-// CINEPULSE NLE : assemble la timeline Canvas, la bibliothèque persistante et la barre d'outils. Le projet (EDL) est sauvegardé localement à chaque modification.
+// CINEPULSE NLE : assemble la timeline Canvas, la bibliothèque persistante et la barre d'outils. Le projet (EDL) est enregistré automatiquement côté serveur (projects.js).
 import * as core from "./core.js";
 import { Library } from "./library.js";
 import { TimelineCanvas } from "./timeline_canvas.js";
@@ -6,17 +6,9 @@ import { Inspector } from "./inspector.js";
 import { TransitionWheel } from "./wheel.js";
 import { ExportPanel } from "./export.js";
 import { Monitor } from "./monitor.js";
+import { Projects, ProjectsPanel } from "./projects.js";
 
 const $ = (id) => document.getElementById(id);
-const KEY = "cinepulse.nle.project.v1";
-
-function loadProject() {
-  try {
-    const p = JSON.parse(localStorage.getItem(KEY) || "null");
-    if (p && p.version === 1 && Array.isArray(p.tracks) && Array.isArray(p.clips) && p.tracks.length) return p;
-  } catch (e) { /* stockage indisponible ou corrompu : projet vierge */ }
-  return core.createProject();
-}
 
 export function start(root = document) {
   const lib = new Library($("lib"), {
@@ -26,7 +18,7 @@ export function start(root = document) {
     onDragEnd: () => tl.clearDropPreview(),
     onChange: () => { tl.requestDraw(); monitor.refresh(); },
   });
-  const tl = new TimelineCanvas($("tl"), loadProject(), {
+  const tl = new TimelineCanvas($("tl"), core.createProject(), {
     asset: (id) => lib.get(id),
     peaks: (id) => fetch(`/api/library/${id}/waveform?buckets=1500`).then((r) => (r.ok ? r.json() : null)).then((j) => (j ? j.peaks : null)),
     onChange: save, onSelect: info, onSeek: () => { info(tl.selectedClip); monitor.userSeek(); }, onZoom: () => {}, onModel: () => monitor.refresh(),
@@ -40,9 +32,14 @@ export function start(root = document) {
   });
   const wheel = new TransitionWheel(tl);
   const exp = new ExportPanel($("exp"), () => tl.project);
-  window.nle = { tl, lib, core, insp, wheel, exp, monitor };                  // accès pour les tests et la console
+  const prj = new Projects(tl, {
+    onState: (state, i) => { const b = $("b-prj"); b.dataset.state = state; b.title = state === "saved" ? `Enregistré : ${prj.name || "projet vierge"}` : state === "error" ? "Non enregistré" : state === "conflict" ? "Conflit avec un autre appareil" : "Enregistrement…"; panel.paintState(state, i); },
+    onLoaded: () => { buttons(); info(null); monitor.seek(0); },
+  });
+  const panel = new ProjectsPanel($("prj"), prj);
+  window.nle = { tl, lib, core, insp, wheel, exp, monitor, prj, panel, ready: false };                  // accès pour les tests et la console
 
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(tl.project)); } catch (e) { /* quota / mode privé */ } buttons(); }
+  function save() { prj.markDirty(); buttons(); }
   function buttons() {
     const c = tl.selectedClip;
     $("b-undo").disabled = !tl.history.canUndo; $("b-redo").disabled = !tl.history.canRedo; $("b-del").disabled = !c;
@@ -58,6 +55,7 @@ export function start(root = document) {
   $("b-lib").onclick = () => lib.toggle();
   $("b-insp").onclick = () => insp.toggle();
   $("b-exp").onclick = () => exp.toggle();
+  $("b-prj").onclick = () => panel.toggle();
   $("b-split").onclick = () => { tl.splitAtPlayhead(); info(tl.selectedClip); };
   $("b-undo").onclick =() => { tl.undo(); save(); info(tl.selectedClip); };
   $("b-redo").onclick = () => { tl.redo(); save(); info(tl.selectedClip); };
@@ -81,7 +79,7 @@ export function start(root = document) {
     else if (k === "-") tl.zoomTo(tl.view.pps / 1.25);
   });
   fetch("/api/status").then((r) => r.json()).then((s) => { $("ff").textContent = s.ffmpeg ? "FFmpeg ✓" : "FFmpeg ✗"; $("ff").title = s.ffmpeg ? "FFmpeg " + (s.ffmpeg_version || "") : "FFmpeg introuvable : pas de proxies ni de rendu"; $("ff").classList.toggle("bad", !s.ffmpeg); }).catch(() => { $("ff").textContent = "serveur ?"; });
-  lib.refresh().then(() => { info(null); tl.requestDraw(); });
+  lib.refresh().catch(() => {}).then(() => prj.init()).then(() => { info(null); tl.requestDraw(); window.nle.ready = true; });
   info(null);
   return window.nle;
 }
