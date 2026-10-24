@@ -15,11 +15,13 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
+from asset_store import AssetStore
 from ffmpeg_wrapper import FFmpeg, FFmpegError, kind_from_extension
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
 CHUNK = 1 << 20
+PEAKS_MAX = 20000
 
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
         ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml",
@@ -79,6 +81,7 @@ class Project:
 
 PROJECT = Project()
 FF = FFmpeg()
+STORE = AssetStore(os.environ.get("CINEPULSE_ASSETS") or os.path.join(ROOT, "cinepulse_assets"), FF)      # bibliothèque persistante (voir asset_store.py)
 
 
 def safe_name(name):
@@ -150,7 +153,22 @@ class Handler(BaseHTTPRequestHandler):
         path, qs = unquote(url.path), parse_qs(url.query)
         if path == "/api/status":
             return self._json({"ffmpeg": FF.available, "ffmpeg_version": FF.version(),
-                               "project_dir": PROJECT.dir})
+                               "project_dir": PROJECT.dir, "library": STORE.stats()})
+        if path == "/api/library":
+            q = lambda k, d="": qs.get(k, [d])[0]                                                # noqa: E731
+            return self._json({"assets": STORE.list(q("kind") or None, q("q"), q("sort", "recent")), "stats": STORE.stats()})
+        m = re.fullmatch(r"/api/library/(\w+)/waveform", path)
+        if m:
+            peaks = STORE.peaks(m.group(1), max(50, min(int(qs.get("buckets", ["1000"])[0]), PEAKS_MAX)))
+            return self._json({"peaks": peaks}) if peaks is not None else self._error(404, "Onde indisponible (média inconnu, sans audio ou en cours de traitement)")
+        m = re.fullmatch(r"/media/lib/(\w+)", path)
+        if m:
+            p = STORE.path(m.group(1), "original" if qs.get("v", ["proxy"])[0] == "original" else "proxy")
+            return self._file(p, cache=True) if p else self._error(404, "Média inconnu")
+        m = re.fullmatch(r"/thumb/(\w+)", path)
+        if m:
+            p = STORE.path(m.group(1), "thumb")
+            return self._file(p, cache=True) if p else self._error(404, "Pas de vignette")
         if path == "/api/assets":
             return self._json([e["meta"] for e in PROJECT.assets.values()])
         m = re.fullmatch(r"/api/waveform/(\w+)", path)
@@ -190,7 +208,65 @@ class Handler(BaseHTTPRequestHandler):
             return self._import_upload(parse_qs(url.query))
         if url.path == "/api/import_path":
             return self._import_path()
+        if url.path == "/api/library/import":
+            return self._library_import(parse_qs(url.query))
+        if url.path == "/api/library/import_path":
+            return self._library_import_path()
+        m = re.fullmatch(r"/api/library/(\w+)/use", url.path)
+        if m:
+            return self._json({"ok": True}) if STORE.use(m.group(1)) else self._error(404, "Média inconnu")
         self._error(404, "Route inconnue")
+
+    def _library_import(self, qs):
+        """Corps brut = contenu du fichier ; nom d'origine dans ?name=. Répond tout de suite : vignette / proxy / onde sont calculés en arrière-plan (champ `state`)."""
+        name = safe_name(qs.get("name", ["media"])[0])
+        length = int(self.headers.get("Content-Length") or 0)
+        fd, tmp = tempfile.mkstemp(dir=STORE.root, suffix=".part")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                left = length
+                while left > 0:
+                    chunk = self.rfile.read(min(CHUNK, left))
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    left -= len(chunk)
+            asset, dup = STORE.import_file(tmp, name, move=True)
+            self._json({**asset, "duplicate": dup}, 200 if dup else 201)
+        except ValueError as e:
+            self._error(415, str(e))
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+
+    def _library_import_path(self):
+        try:
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            src = os.path.abspath(body["path"])
+        except (ValueError, KeyError):
+            return self._error(400, "Corps JSON attendu : {\"path\": ...}")
+        if not os.path.isfile(src):
+            return self._error(404, "Fichier introuvable")
+        try:
+            asset, dup = STORE.import_file(src, os.path.basename(src))
+            self._json({**asset, "duplicate": dup}, 200 if dup else 201)
+        except ValueError as e:
+            self._error(415, str(e))
+
+    def do_PATCH(self):
+        m = re.fullmatch(r"/api/library/(\w+)", urlparse(self.path).path)
+        if not m:
+            return self._error(404, "Route inconnue")
+        try:
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            name, tags = body.get("name"), body.get("tags")
+            if (name is not None and not isinstance(name, str)) or (tags is not None and not isinstance(tags, list)):
+                raise ValueError
+        except (ValueError, AttributeError):
+            return self._error(400, "Corps JSON attendu : {\"name\": texte, \"tags\": liste}")
+        if not STORE.rename(m.group(1), name, tags):
+            return self._error(404, "Média inconnu")
+        self._json(STORE.get(m.group(1)))
 
     def _import_upload(self, qs):
         """Corps brut = contenu du fichier ; nom d'origine dans ?name=."""
@@ -230,6 +306,9 @@ class Handler(BaseHTTPRequestHandler):
             self._error(415, str(e))
 
     def do_DELETE(self):
+        m = re.fullmatch(r"/api/library/(\w+)", urlparse(self.path).path)
+        if m:
+            return self._json({"ok": True}) if STORE.delete(m.group(1)) else self._error(404, "Média inconnu")
         m = re.fullmatch(r"/api/assets/(\w+)", urlparse(self.path).path)
         if m and PROJECT.remove(m.group(1)):
             return self._json({"ok": True})

@@ -6,6 +6,7 @@ du fichier (durée inconnue) : l'interface mesure alors la durée côté navigat
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,6 +14,7 @@ from array import array
 from fractions import Fraction
 
 AUDIO_EXT = {".wav", ".mp3", ".flac", ".ogg", ".oga", ".opus", ".m4a", ".aac", ".aif", ".aiff", ".wma"}
+IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 VIDEO_EXT = {".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v", ".mpg", ".mpeg", ".wmv", ".mxf"}
 
 _NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -29,6 +31,8 @@ def kind_from_extension(path):
         return "audio"
     if ext in VIDEO_EXT:
         return "video"
+    if ext in IMAGE_EXT:
+        return "image"
     return None
 
 
@@ -45,7 +49,14 @@ def _find(name, hint_dir=None):
         p = os.path.join(d, name + _EXE)
         if os.path.isfile(p):
             return os.path.abspath(p)
-    return shutil.which(name)
+    found = shutil.which(name)
+    if found or name != "ffmpeg":
+        return found
+    try:                                                    # E.N.O.S. embarque ffmpeg via imageio-ffmpeg (sans ffprobe)
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:                                       # noqa: BLE001
+        return None
 
 
 class FFmpeg:
@@ -55,7 +66,7 @@ class FFmpeg:
 
     @property
     def available(self):
-        return bool(self.ffmpeg and self.ffprobe)
+        return bool(self.ffmpeg)                            # ffprobe facultatif : probe() sait lire la sortie de « ffmpeg -i »
 
     def _run(self, cmd, timeout=600, binary=False):
         try:
@@ -86,7 +97,7 @@ class FFmpeg:
                 "height": None, "has_audio": info_audio_guess(path), "sample_rate": None,
                 "channels": None, "codec": None}
         if not self.ffprobe:
-            return info
+            return self._probe_stderr(path, info) if self.ffmpeg else info
         out = self._run([self.ffprobe, "-v", "error", "-print_format", "json",
                          "-show_format", "-show_streams", path], timeout=60)
         data = json.loads(out)
@@ -108,6 +119,41 @@ class FFmpeg:
             info["sample_rate"] = int(audio.get("sample_rate") or 0) or None
             info["channels"] = audio.get("channels")
             info["codec"] = info["codec"] or audio.get("codec_name")
+        return info
+
+    def _probe_stderr(self, path, info):
+        """Sans ffprobe : analyse la sortie texte de « ffmpeg -i » (durée, flux vidéo / audio)."""
+        try:
+            res = subprocess.run([self.ffmpeg, "-hide_banner", "-i", path], capture_output=True, timeout=60, creationflags=_NO_WINDOW)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            raise FFmpegError(str(e))
+        text = res.stderr.decode("utf-8", "replace")
+        m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", text)
+        if m:
+            info["duration"] = int(m[1]) * 3600 + int(m[2]) * 60 + float(m[3])
+        video = audio = False
+        for line in text.splitlines():
+            if "Stream #" not in line:
+                continue
+            if " Video:" in line and "attached pic" not in line and not video:
+                video = True
+                wh = re.search(r"[\s,\[](\d{2,5})x(\d{2,5})[\s,\[]", line + " ")
+                if wh:
+                    info["width"], info["height"] = int(wh[1]), int(wh[2])
+                fps = re.search(r"([\d.]+) fps", line)
+                info["fps"] = _parse_fps(fps[1]) if fps else None
+                info["codec"] = line.split("Video:")[1].split()[0].strip(",")
+            elif " Audio:" in line and not audio:
+                audio = True
+                hz = re.search(r"(\d+) Hz", line)
+                info["sample_rate"] = int(hz[1]) if hz else None
+                info["channels"] = 1 if "mono" in line else 6 if "5.1" in line else 2
+                info["codec"] = info["codec"] or line.split("Audio:")[1].split()[0].strip(",")
+        if not video and not audio:
+            raise FFmpegError("fichier illisible (aucun flux audio ou vidéo)")
+        if info["kind"] != "image":
+            info["kind"] = "video" if video else "audio"
+        info["has_audio"] = audio
         return info
 
     # ------------------------------------------------------------ flux audio
@@ -140,6 +186,15 @@ class FFmpeg:
         self._run([self.ffmpeg, "-y", "-v", "error", "-i", src, "-vf", f"scale=-2:{height}",
                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-c:a", "aac", "-b:a", "128k", dst],
                   timeout=3600)
+        return dst
+
+    def make_video_proxy(self, src, dst, has_audio=True, height=540):
+        """Proxy de montage mobile : H.264 ≤ 540 p, image-clé toutes les 12 images (scrub instantané), faststart, jamais agrandi."""
+        self._need()
+        cmd = [self.ffmpeg, "-y", "-v", "error", "-i", src, "-vf", f"scale=-2:'min({height},ih)',format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
+               "-g", "12", "-movflags", "+faststart"]
+        cmd += ["-c:a", "aac", "-b:a", "96k"] if has_audio else ["-an"]
+        self._run(cmd + [dst], timeout=3600)
         return dst
 
     def _need(self):

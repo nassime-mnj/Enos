@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>NLE tests</title>
+<style>:root{--ac:#e0243c}html,body{margin:0;height:100%;background:#050506}#tl{display:block;width:100vw;height:100vh}</style></head>
+<body><canvas id="tl"></canvas>
+<script type="module">
+// Page de test (non utilisée par l'application) : le pilote Python (tests/test_cinepulse_nle.py) l'ouvre dans Edge via DevTools.
+// Ici : tests du noyau pur (core.js). Les gestes tactiles réels sont envoyés par le pilote (Input.dispatchTouchEvent).
+import * as core from "../js/nle/core.js";
+import { TimelineCanvas } from "../js/nle/timeline_canvas.js";
+
+const out = [];
+const ok = (name, cond, detail) => out.push([name, !!cond, cond ? "" : String(detail === undefined ? "" : JSON.stringify(detail))]);
+const near = (a, b, e = 1e-6) => Math.abs(a - b) < e;
+
+function coreTests() {
+  // pistes
+  const p = core.createProject();
+  ok("pistes initiales V2,V1,A1,A2", p.tracks.map((t) => t.id).join() === "V2,V1,A1,A2", p.tracks);
+  ok("addTrack vidéo au sommet", core.addTrack(p, "video") === "V3" && p.tracks[0].id === "V3");
+  ok("addTrack audio en bas", core.addTrack(p, "audio") === "A3" && p.tracks.at(-1).id === "A3");
+  const vid = { id: "v", kind: "video", name: "v.mp4", duration: 10 }, img = { id: "i", kind: "image", name: "i.png" }, aud = { id: "a", kind: "audio", name: "a.wav", duration: 4 };
+  const cv = core.makeClip(vid, "V1", 2), ci = core.makeClip(img, "V1", 0), ca = core.makeClip(aud, "A1", 0);
+  ok("makeClip vidéo", cv.dur === 10 && cv.start === 2 && cv.in === 0 && cv.opacity === 1 && cv.volume === 1 && cv.scale === 1, cv);
+  ok("makeClip image = 5 s", ci.dur === core.IMAGE_DUR);
+  ok("canHost", core.canHost(p.tracks.find((t) => t.id === "V1"), "image") && !core.canHost(p.tracks.find((t) => t.id === "A1"), "video") && core.canHost(p.tracks.find((t) => t.id === "A1"), "audio") && !core.canHost(p.tracks.find((t) => t.id === "V1"), "audio"));
+  p.clips.push(cv);
+  ok("removeTrack refuse piste occupée", core.removeTrack(p, "V1") === false);
+  ok("removeTrack piste vide", core.removeTrack(p, "V3") === true && !p.tracks.some((t) => t.id === "V3"));
+  const q = core.createProject(); q.tracks = [{ id: "V1", type: "video" }, { id: "A1", type: "audio" }];
+  ok("removeTrack garde la dernière de son type", core.removeTrack(q, "V1") === false && core.removeTrack(q, "A1") === false);
+
+  // magnétisme
+  const pts = [0, 5, 10];
+  ok("snap proche", core.snap(5.08, pts, 0.1).value === 5);
+  ok("snap hors seuil", core.snap(5.3, pts, 0.1).point === null);
+  ok("snap choisit le plus proche", core.snap(7.4, [7, 7.5], 0.5).value === 7.5);
+  let m = core.snapMove(pts, 5.05, 3, 0.1);
+  ok("snapMove début", near(m.start, 5) && m.point === 5, m);
+  m = core.snapMove(pts, 6.95, 3, 0.1);
+  ok("snapMove fin sur 10", near(m.start, 7) && m.point === 10, m);
+  m = core.snapMove(pts, 2, 1, 0.1);
+  ok("snapMove sans accroche", m.start === 2 && m.point === null);
+  const sp = core.snapPoints({ clips: [{ id: "x", start: 1, dur: 2 }, { id: "y", start: 6, dur: 1 }] }, new Set(["y"]), 4);
+  ok("snapPoints exclut le clip déplacé", sp.join() === "0,4,1,3", sp);
+
+  // placement
+  const r = core.createProject();
+  r.clips = [{ id: "a", track: "V1", start: 0, dur: 4 }, { id: "b", track: "V1", start: 6, dur: 4 }];
+  ok("libre tel quel", core.nearestFreeStart(r, "V1", 2, 4) === 4);
+  ok("chevauchement : seule place libre pour 3 s = après b", core.nearestFreeStart(r, "V1", 3, 1) === 10, core.nearestFreeStart(r, "V1", 3, 1));
+  ok("trou trop petit -> après b", core.nearestFreeStart(r, "V1", 3, 5.5) === 10, core.nearestFreeStart(r, "V1", 3, 5.5));
+  ok("jamais négatif", core.nearestFreeStart(r, "V1", 2, -5) >= 0 && core.nearestFreeStart(r, "V1", 2, -5) === 4);
+  ok("piste vide : tel quel", core.nearestFreeStart(r, "V2", 9, 3) === 3);
+  ok("exclut le clip lui-même", core.nearestFreeStart(r, "V1", 4, 0, "a") === 0);
+
+  // redimensionnement
+  const rs = core.createProject();
+  const vclip = { id: "v1", asset: "v", kind: "video", track: "V1", start: 10, dur: 4, in: 2 }, iclip = { id: "i1", asset: "i", kind: "image", track: "V2", start: 0, dur: 5, in: 0 };
+  const nb = { id: "n", kind: "video", track: "V1", start: 20, dur: 3, in: 0 }, pr = { id: "p", kind: "video", track: "V1", start: 6, dur: 2, in: 0 };
+  rs.clips = [vclip, iclip, nb, pr];
+  let z = core.resizeRight(rs, vclip, { duration: 10 }, 25, null, 0);
+  ok("étirer vidéo : borné par la durée du média (in 2 + dur ≤ 10)", near(z.dur, 8), z);
+  z = core.resizeRight(rs, vclip, { duration: 100 }, 25, null, 0);
+  ok("étirer : borné par le voisin (20)", near(z.dur, 10), z);
+  z = core.resizeRight(rs, iclip, undefined, 600, null, 0);
+  ok("image : étirement sans limite (-loop 1)", near(z.dur, 600), z);
+  z = core.resizeRight(rs, iclip, undefined, -3, null, 0);
+  ok("durée minimale", near(z.dur, core.MIN_DUR), z);
+  z = core.resizeRight(rs, vclip, { duration: 100 }, 17.04, [17], 0.1);
+  ok("étirer avec magnétisme", near(z.dur, 7) && z.point === 17, z);
+  z = core.resizeLeft(rs, vclip, 12, null, 0);
+  ok("rogner à gauche : in avance, la fin ne bouge pas", near(z.start, 12) && near(z.in, 4) && near(z.dur, 2), z);
+  z = core.resizeLeft(rs, vclip, 4, null, 0);
+  ok("rogner à gauche : borné par le voisin (8) et le début du média", near(z.start, 8) && near(z.in, 0) && near(z.dur, 6), z);
+  z = core.resizeLeft(rs, vclip, 8.5, null, 0);
+  ok("recul impossible avant le début du média (in 2 -> start ≥ 8)", near(z.start, 8.5) && near(z.in, 0.5), z);
+  z = core.resizeLeft(rs, iclip, -4, null, 0);
+  ok("image : gauche bornée à 0, in reste 0", z.start === 0 && z.in === 0, z);
+
+  // vue
+  const v = { pps: 80, scrollX: 400, scrollY: 0 }, tBefore = (v.scrollX + 200) / v.pps;
+  core.zoomAt(v, 160, 200);
+  ok("zoomAt garde le temps sous l'ancre", near((v.scrollX + 200) / v.pps, tBefore), v);
+  ok("clampPps", core.clampPps(1e6) === core.MAX_PPS && core.clampPps(0) === core.MIN_PPS);
+  ok("rulerStep ≥ 80 px", core.rulerStep(10) * 10 >= 80 && core.rulerStep(300) * 300 >= 80 && core.rulerStep(300) <= 0.5, [core.rulerStep(10), core.rulerStep(300)]);
+  ok("formatTime", core.formatTime(65.5, 30) === "01:05:15", core.formatTime(65.5, 30));
+
+  // historique
+  const h = new core.History(3), s = { n: 0 };
+  h.push(s); s.n = 1; h.push(s); s.n = 2;
+  ok("undo", h.back(s).n === 1 && h.canRedo);
+  ok("redo", h.forward({ n: 1 }).n === 2);
+  h.push({ n: 9 });
+  ok("nouvelle action vide le redo", !h.canRedo);
+  for (let i = 0; i < 10; i++) h.push({ n: i });
+  ok("limite de l'historique", h.undo.length === 3);
+
+  // EDL
+  const e = core.createProject();
+  e.clips = [{ id: "z", track: "A1", start: 3, dur: 2 }, { id: "y", track: "V1", start: 0, dur: 4 }];
+  const edl = core.toEDL(e);
+  ok("EDL : pistes utilisées, clips triés, durée", edl.tracks.map((t) => t.id).join() === "V1,A1" && edl.clips[0].id === "y" && edl.duration === 5 && edl.version === 1, edl);
+  edl.clips[0].start = 99;
+  ok("EDL : copie indépendante", e.clips[1].start === 0);
+}
+
+window.runCoreTests = () => { out.length = 0; coreTests(); return out.slice(); };
+window.T = { core, TimelineCanvas };
+window.__ready = true;
+</script></body></html>

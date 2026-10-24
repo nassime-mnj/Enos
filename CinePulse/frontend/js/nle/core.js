@@ -1,0 +1,153 @@
+// NOYAU DE LA TIMELINE NLE : modèle du projet (EDL), pistes, magnétisme, placement sans chevauchement, historique, export EDL.
+// Aucune dépendance au DOM : testable seul (frontend/dev/nle_test.html) et réutilisé tel quel par le rendu Canvas.
+export const MIN_DUR = 0.1;                 // durée minimale d'un clip (secondes)
+export const IMAGE_DUR = 5;                 // durée par défaut d'une image déposée
+export const MIN_PPS = 2, MAX_PPS = 800;    // zoom : pixels par seconde
+
+let seq = 0;
+export const newId = (p = "c") => p + Date.now().toString(36) + (seq++).toString(36);
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+// ------------------------------------------------------------------------------------------ projet / pistes
+export function createProject() {
+  return { version: 1, fps: 30, tracks: [{ id: "V2", type: "video" }, { id: "V1", type: "video" }, { id: "A1", type: "audio" }, { id: "A2", type: "audio" }], clips: [] };
+}
+
+/** Ajoute une piste : les vidéos s'empilent AU-DESSUS (V3 au sommet), les audios EN DESSOUS. Retourne l'id. */
+export function addTrack(p, type) {
+  const pre = type === "audio" ? "A" : "V";
+  const n = Math.max(0, ...p.tracks.filter((t) => t.type === type).map((t) => +t.id.slice(1))) + 1;
+  const t = { id: pre + n, type };
+  if (type === "audio") p.tracks.push(t); else p.tracks.splice(0, 0, t);
+  return t.id;
+}
+
+/** Supprime une piste vide (jamais la dernière de son type). Retourne true si supprimée. */
+export function removeTrack(p, id) {
+  const t = p.tracks.find((x) => x.id === id);
+  if (!t || p.clips.some((c) => c.track === id) || p.tracks.filter((x) => x.type === t.type).length < 2) return false;
+  p.tracks.splice(p.tracks.indexOf(t), 1);
+  return true;
+}
+
+/** Une piste vidéo accueille vidéos et images ; une piste audio n'accueille que de l'audio. */
+export const canHost = (track, kind) => !!track && (track.type === "audio" ? kind === "audio" : kind === "video" || kind === "image");
+export const clipEnd = (c) => c.start + c.dur;
+export const projectDuration = (p) => p.clips.reduce((m, c) => Math.max(m, clipEnd(c)), 0);
+
+/** Clip avec toutes les propriétés de l'EDL (valeurs neutres) : l'inspecteur et le moteur FFmpeg les lisent telles quelles. */
+export function makeClip(asset, trackId, start) {
+  const known = asset.kind === "image" ? IMAGE_DUR : asset.duration || IMAGE_DUR;
+  return { id: newId(), asset: asset.id, kind: asset.kind, name: asset.name, track: trackId, start: Math.max(0, start), dur: Math.max(MIN_DUR, known), in: 0,
+           opacity: 1, volume: 1, scale: 1, x: 0, y: 0, fadeIn: 0, fadeOut: 0 };
+}
+
+// ------------------------------------------------------------------------------------------ magnétisme
+/** Points d'accroche : début de projet, tête de lecture, bords de tous les autres clips. */
+export function snapPoints(p, excludeIds, playhead) {
+  const pts = [0, playhead];
+  for (const c of p.clips) if (!excludeIds.has(c.id)) pts.push(c.start, clipEnd(c));
+  return pts;
+}
+
+/** Valeur ramenée au point le plus proche si elle est à moins de `thr` secondes. -> {value, point|null} */
+export function snap(value, pts, thr) {
+  let best = null, d = thr;
+  for (const q of pts) { const x = Math.abs(q - value); if (x <= d) { d = x; best = q; } }
+  return best == null ? { value, point: null } : { value: best, point: best };
+}
+
+/** Déplacement : colle le DÉBUT ou la FIN du clip sur un point d'accroche (le plus proche des deux). -> {start, point|null} */
+export function snapMove(pts, start, dur, thr) {
+  const a = snap(start, pts, thr), b = snap(start + dur, pts, thr);
+  if (a.point == null && b.point == null) return { start, point: null };
+  const da = a.point == null ? Infinity : Math.abs(a.point - start), db = b.point == null ? Infinity : Math.abs(b.point - (start + dur));
+  return da <= db ? { start: a.value, point: a.point } : { start: b.value - dur, point: b.point };
+}
+
+// ------------------------------------------------------------------------------------------ placement sans chevauchement
+const lane = (p, trackId, excludeId) => p.clips.filter((c) => c.track === trackId && c.id !== excludeId).sort((a, b) => a.start - b.start);
+const overlaps = (list, s, d) => list.some((c) => s < clipEnd(c) - 1e-6 && s + d > c.start + 1e-6);
+
+/** Position libre la plus proche de `desired` sur la piste (jamais avant 0). Les clips d'une même piste ne se chevauchent pas. */
+export function nearestFreeStart(p, trackId, dur, desired, excludeId) {
+  const list = lane(p, trackId, excludeId), want = Math.max(0, desired);
+  if (!overlaps(list, want, dur)) return want;
+  const cands = [0];
+  for (const c of list) cands.push(clipEnd(c), c.start - dur);
+  return cands.filter((s) => s >= 0 && !overlaps(list, s, dur)).sort((a, b) => Math.abs(a - want) - Math.abs(b - want))[0];
+}
+
+/** Bornes de redimensionnement : un clip ne peut ni traverser son voisin ni sortir de la timeline. -> {minStart, maxEnd} */
+export function neighbours(p, clip) {
+  let minStart = 0, maxEnd = Infinity;
+  for (const c of lane(p, clip.track, clip.id)) {
+    if (clipEnd(c) <= clip.start + 1e-6) minStart = Math.max(minStart, clipEnd(c));
+    else if (c.start >= clipEnd(clip) - 1e-6) maxEnd = Math.min(maxEnd, c.start);
+  }
+  return { minStart, maxEnd };
+}
+
+/** Durée maximale d'un clip : médias vidéo / audio limités à ce qui reste après le point d'entrée ; les images s'étirent à l'infini (-loop 1 au rendu). */
+export const maxDur = (clip, asset) => (clip.kind === "image" || !asset || !asset.duration ? Infinity : Math.max(MIN_DUR, asset.duration - clip.in));
+
+/** Redimensionne le bord droit (étirement / rognage) : applique le magnétisme puis les bornes. Retourne les nouvelles valeurs sans modifier le clip. */
+export function resizeRight(p, clip, asset, wantEnd, pts, thr) {
+  const { maxEnd } = neighbours(p, clip);
+  const s = pts ? snap(wantEnd, pts, thr) : { value: wantEnd, point: null };
+  const end = Math.min(Math.max(s.value, clip.start + MIN_DUR), clip.start + maxDur(clip, asset), maxEnd);
+  return { dur: end - clip.start, in: clip.in, start: clip.start, point: s.point != null && Math.abs(end - s.point) < 1e-6 ? s.point : null };
+}
+
+/** Redimensionne le bord gauche : le point d'entrée avance avec le début (le contenu ne glisse pas) ; impossible de reculer avant le début du média. */
+export function resizeLeft(p, clip, wantStart, pts, thr) {
+  const { minStart } = neighbours(p, clip);
+  const s = pts ? snap(wantStart, pts, thr) : { value: wantStart, point: null };
+  const lo = Math.max(minStart, clip.kind === "image" ? 0 : clip.start - clip.in);
+  const start = Math.min(Math.max(s.value, lo), clipEnd(clip) - MIN_DUR);
+  const delta = start - clip.start;
+  return { start, dur: clip.dur - delta, in: clip.kind === "image" ? 0 : clip.in + delta, point: s.point != null && Math.abs(start - s.point) < 1e-6 ? s.point : null };
+}
+
+// ------------------------------------------------------------------------------------------ vue (temps <-> pixels)
+export const clampPps = (v) => Math.min(MAX_PPS, Math.max(MIN_PPS, v));
+
+/** Zoom centré sur un point de l'écran : le temps sous `anchorX` ne bouge pas. `anchorX` est relatif au début de la zone des clips. */
+export function zoomAt(view, newPps, anchorX) {
+  const pps = clampPps(newPps), t = (view.scrollX + anchorX) / view.pps;
+  view.pps = pps;
+  view.scrollX = Math.max(0, t * pps - anchorX);
+  return view;
+}
+
+/** Pas de la règle (secondes) et sous-divisions selon le zoom : ~80 px entre deux graduations principales. */
+export function rulerStep(pps) {
+  const steps = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
+  return steps.find((s) => s * pps >= 80) || 3600;
+}
+
+export function formatTime(t, fps = 30) {
+  const m = Math.floor(t / 60), s = Math.floor(t % 60), f = Math.floor((t % 1) * fps);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}:${String(f).padStart(2, "0")}`;
+}
+
+// ------------------------------------------------------------------------------------------ historique (annuler / rétablir)
+export class History {
+  constructor(limit = 100) { this.limit = limit; this.undo = []; this.redo = []; }
+  /** À appeler AVANT une modification : mémorise l'état courant. */
+  push(p) { this.pushRaw(JSON.stringify(p)); }
+  /** Variante avec un état déjà sérialisé (pris au début d'un geste, enregistré seulement si le geste a changé quelque chose). */
+  pushRaw(s) { this.undo.push(s); if (this.undo.length > this.limit) this.undo.shift(); this.redo.length = 0; }
+  back(p) { if (!this.undo.length) return null; this.redo.push(JSON.stringify(p)); return JSON.parse(this.undo.pop()); }
+  forward(p) { if (!this.redo.length) return null; this.undo.push(JSON.stringify(p)); return JSON.parse(this.redo.pop()); }
+  get canUndo() { return this.undo.length > 0; }
+  get canRedo() { return this.redo.length > 0; }
+}
+
+// ------------------------------------------------------------------------------------------ EDL (envoyée au moteur de rendu)
+/** Décrit la timeline pour le backend (cinepulse_engine) : pistes dans l'ordre d'empilement, clips triés, durée totale. Les pistes vides sont omises. */
+export function toEDL(p) {
+  const used = new Set(p.clips.map((c) => c.track));
+  return clone({ version: 1, fps: p.fps, duration: projectDuration(p), tracks: p.tracks.filter((t) => used.has(t.id)),
+                 clips: [...p.clips].sort((a, b) => a.start - b.start || a.track.localeCompare(b.track)) });
+}
