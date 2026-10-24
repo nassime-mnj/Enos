@@ -391,6 +391,12 @@ $("b-update").onclick = async () => {                      // confirmation en de
   if (up && up.ota) { document.body.innerHTML = '<p style="padding:20px">Mise à jour ' + up.latest + ' : téléchargement, puis autorisez la fenêtre administrateur de Windows. E.N.O.S. se relance tout seul.</p>'; return; }
   document.body.innerHTML = '<p style="padding:20px">Mise à jour en cours : E.N.O.S. se ferme, se reconstruit puis se relance tout seul (1 à 3 minutes).</p>';
 };
+$("b-cine").onclick = async () => {
+  const sub = $("cine-sub"), old = sub.textContent;
+  sub.textContent = "Démarrage…";
+  try { await api("/api/cinepulse/open", { method: "POST", body: "{}" }); sub.textContent = "✔ Ouvert dans le navigateur"; } catch (e) { sub.textContent = "✕ " + e.message; }
+  setTimeout(() => (sub.textContent = old), 5000);
+};
 $("b-quit").onclick = async () => { try { await api("/api/shutdown", { method: "POST" }); } catch (e) {} document.body.innerHTML = '<p style="padding:20px">E.N.O.S. arrêté. Vous pouvez fermer cet onglet.</p>'; };
 
 // ---------------------------------------------------------------- démarrage

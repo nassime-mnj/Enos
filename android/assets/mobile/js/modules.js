@@ -36,6 +36,7 @@
       { id: "b-ch", n: "Mode Chill", s: "Ambiance audio du PC", i: "music", k: "pc" },
       { id: "b-dm", n: "Discussion", s: "L'Œil du PC · plein écran", i: "eye", k: "pc" },
       { id: "colis", n: "Colis", s: "Gérer les colis en attente", i: "box", k: "pc" },
+      { id: "b-subs", n: "Abonnements", s: "Coût mensuel · résilier en un geste", i: "gauge", k: "pc" },
       { id: "b-sy", n: "Sync", s: "PC ⇄ mobile · fichiers", i: "sync", k: "pc" },
       { id: "b-cp", n: "Compression", s: "Image & vidéo sur le PC", i: "box", k: "pc" },
       { id: "b-au", n: "Labo audio", s: "Vidéo → WAV · SFX", i: "music", k: "pc" },

@@ -45,7 +45,7 @@
     "b-dm": ["eye", "ia"], "b-sy": ["sync", "sys"], "b-ch": ["music", "ia"], "b-tb": ["globe", "sys"], "b-hb": ["users", "dev"], "b-gitsync": ["git", "dev"],
     "b-assist": ["term", "dev"], "b-site": ["globe", "dev"], "b-pk": ["box", "dev"], "b-mob": ["phone", "sys"], "b-pet": ["eye", "ia"], "b-vac": ["eye", "ia"],
     "b-dev": ["wrench", "dev"], "b-dep": ["git", "dev"], "b-st": ["chess", "ia"], "b-df": ["chess", "ia"], "b-gs": ["git", "dev"], "b-rg": ["gear", "sys"], "b-se": ["shield", "sys"],
-    "b-au": ["music", "crea"], "b-yt": ["yt", "crea"], "b-api": ["gauge", "sys"], "b-sys": ["cpu", "sys"], "b-dc": ["trash", "sys"], "b-og": ["folder", "sys"], "b-cp": ["box", "crea"], "b-pdf": ["file", "crea"], "b-sm": ["film", "crea"], "b-syl": ["cal", "school"], "b-qt": ["wrench", "sys"],
+    "b-au": ["music", "crea"], "b-yt": ["yt", "crea"], "b-api": ["gauge", "sys"], "b-sys": ["cpu", "sys"], "b-dc": ["trash", "sys"], "b-og": ["folder", "sys"], "b-cp": ["box", "crea"], "b-cine": ["film", "crea"], "b-subs": ["gauge", "sys"], "b-pdf": ["file", "crea"], "b-sm": ["film", "crea"], "b-syl": ["cal", "school"], "b-qt": ["wrench", "sys"],
     "b-colis": ["box", "crea"],
   };
   const CATS = [["all", "TOUT"], ["fav", "FAVORIS"], ["school", "ÉCOLE"], ["dev", "DÉVELOPPEMENT"], ["crea", "CRÉATION"], ["sys", "SYSTÈME"], ["ia", "IA & LOISIRS"]];

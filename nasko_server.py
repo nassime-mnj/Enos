@@ -33,6 +33,7 @@ import nasko_pdf
 import nasko_receipts
 import nasko_studio
 import nasko_syllabus
+import subs_analyzer
 import nasko_roles
 import nasko_cloud
 import nasko_mirror
@@ -1231,7 +1232,7 @@ def ping():
 
 
 _VENDOR = {"codemirror.bundle.js": "codemirror.bundle.js", "wavesurfer.min.js": "wavesurfer.min.js", "wavesurfer.regions.min.js": "wavesurfer.regions.min.js"}
-_STATIC_FILES = {"roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
+_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
                  "imgproc.js": "text/javascript", "imgproc.css": "text/css", "anim.js": "text/javascript", "anim.css": "text/css",
                  "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css",
                  "tabs.js": "text/javascript", "tabs.css": "text/css", "env.js": "text/javascript", "env.css": "text/css", "audio.js": "text/javascript", "audio.css": "text/css", "compress.js": "text/javascript", "compress.css": "text/css", "pdfed.js": "text/javascript", "pdfed.css": "text/css", "studio.js": "text/javascript", "studio.css": "text/css", "syllabus.js": "text/javascript", "syllabus.css": "text/css", "quick.js": "text/javascript", "background.js": "text/javascript", "background.css": "text/css", "quick.css": "text/css", "quicklib.js": "text/javascript", "talk.js": "text/javascript", "talk.css": "text/css", "colis.js": "text/javascript", "colis.css": "text/css", "search.js": "text/javascript", "search.css": "text/css",
@@ -5493,6 +5494,113 @@ def site_open():
         raise HTTPException(409, "Le serveur du site est hors ligne : démarrez-le d'abord.")
     import webbrowser
     webbrowser.open(SITE_URL)
+    return {"ok": True}
+
+
+# --- CinePulse (montage vidéo local, stdlib + ffmpeg) : démarre backend/server.py au besoin puis l'ouvre dans le navigateur
+CINEPULSE_PORT = 8790
+
+
+def _cinepulse_online():
+    try:
+        with socket.create_connection(("127.0.0.1", CINEPULSE_PORT), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+@app.post("/api/cinepulse/open", dependencies=_LOCAL)
+def cinepulse_open():
+    d = os.path.join(nasko_core.app_dir(), "CinePulse")
+    script = os.path.join(d, "backend", "server.py")
+    if not os.path.isfile(script):
+        raise HTTPException(404, "Dossier CinePulse introuvable à côté de ENOS.exe.")
+    if not _cinepulse_online():
+        py = shutil.which("pyw") or shutil.which("pythonw") or shutil.which("py") or shutil.which("python")
+        if not py:
+            raise HTTPException(500, "Python est introuvable : CinePulse ne peut pas démarrer.")
+        try:
+            subprocess.Popen([py, script, "--port", str(CINEPULSE_PORT)], cwd=d, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP)
+        except OSError as e:
+            raise HTTPException(500, f"Impossible de démarrer CinePulse ({e.strerror or e}).")
+        for _ in range(30):                                          # jusqu'à ~6 s pour que le serveur écoute
+            if _cinepulse_online():
+                break
+            time.sleep(0.2)
+        else:
+            raise HTTPException(504, "CinePulse n'a pas démarré à temps.")
+    import webbrowser
+    webbrowser.open(f"http://127.0.0.1:{CINEPULSE_PORT}/")
+    return {"ok": True}
+
+
+# --- GESTIONNAIRE D'ABONNEMENTS (subs_analyzer) : boîtes mail et scan réservés à ce PC ; liste, résiliation et statuts lisibles par le PC et les appareils « Eto Dev »
+class SubsAccount(BaseModel):
+    email: str
+    password: str
+    server: str = ""
+    port: int = 993
+    username: str = ""
+
+
+class SubsScan(BaseModel):
+    accounts: list[str] | None = None
+
+
+class SubsState(BaseModel):
+    hidden: bool | None = None
+    cancelled: bool | None = None
+
+
+def _sub(fn, *a, **kw):
+    try:
+        return fn(*a, **kw)
+    except subs_analyzer.SubsError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/subs/accounts", dependencies=_LOCAL)
+def subs_accounts():
+    return {"accounts": subs_analyzer.list_accounts()}
+
+
+@app.post("/api/subs/accounts", dependencies=_LOCAL)
+def subs_account_add(b: SubsAccount):
+    return {"accounts": _sub(subs_analyzer.add_account, b.email, b.password, b.server, b.port, b.username)}
+
+
+@app.delete("/api/subs/accounts/{acc_id}", dependencies=_LOCAL)
+def subs_account_del(acc_id: str):
+    return {"accounts": subs_analyzer.remove_account(acc_id)}
+
+
+@app.post("/api/subs/scan", dependencies=_LOCAL)
+def subs_scan(b: SubsScan | None = None):
+    _sub(subs_analyzer.start_scan, b.accounts if b else None)
+    return subs_analyzer.job()
+
+
+@app.get("/api/subs/job", dependencies=[Depends(need_token), Depends(dev_only)])
+def subs_job():
+    return subs_analyzer.job()
+
+
+@app.get("/api/subs/list", dependencies=[Depends(need_token), Depends(dev_only)])
+def subs_list():
+    return subs_analyzer.build_list()
+
+
+@app.get("/api/subs/cancel/{key}", dependencies=[Depends(need_token), Depends(dev_only)])
+def subs_cancel(key: str):
+    return _sub(subs_analyzer.cancel_info, key)
+
+
+@app.post("/api/subs/state/{key}", dependencies=[Depends(need_token), Depends(dev_only)])
+def subs_state(key: str, b: SubsState):
+    if not re.fullmatch(r"[a-z0-9]{1,60}", key):
+        raise HTTPException(400, "Clé invalide.")
+    subs_analyzer.set_state(key, b.hidden, b.cancelled)
     return {"ok": True}
 
 

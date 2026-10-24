@@ -177,6 +177,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <link rel="stylesheet" href="/static/pdfed.css">
 <link rel="stylesheet" href="/static/studio.css">
 <link rel="stylesheet" href="/static/syllabus.css">
+<link rel="stylesheet" href="/static/subs.css">
 <link rel="stylesheet" href="/static/quick.css">
 <link rel="stylesheet" href="/static/background.css">
 <link rel="stylesheet" href="/static/roles.css">
@@ -222,6 +223,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
   <aside id="side" class="box">
     <div class="drawer-head"><span>[ MENU ]</span><button id="b-menu-close" aria-label="Fermer le menu">✕</button></div>
     <label class="side-search" for="side-q"><span aria-hidden="true">⌕</span><input id="side-q" type="search" placeholder="Rechercher un outil…" autocomplete="off" spellcheck="false" aria-label="Rechercher un outil"><button type="button" id="side-q-x" aria-label="Effacer la recherche" hidden>✕</button></label>
+    <button class="btn local-only friends-ok" id="b-update" style="width:100%;margin:0 0 8px" title="Vérifie les mises à jour, puis ferme E.N.O.S. et le relance à jour">MISE À JOUR</button>
     <h3>[ MODULES ]</h3>
     <div id="side-none" class="dim" hidden>Aucun outil ne correspond.</div>
     <div class="sec">
@@ -258,9 +260,11 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       <button class="btn local-only dev-ok" id="b-dc">17. DEEP SYSTEM CLEANER<small>Scan du disque · gros fichiers · niveau de risque · suppression</small></button>
       <button class="btn local-only dev-ok" id="b-og">19. ORGANISATEUR<small>Dossiers &amp; fichiers · glisser-déposer · renommer · ranger · annuler</small></button>
       <button class="btn local-only friends-ok" id="b-qt">24. OUTILS RAPIDES<small>JSON / XML · dépenses partagées · notes de frais (tickets → Excel)</small></button>
+      <button class="btn dev-ok" id="b-subs">25. ABONNEMENTS<small>Détecte tes abonnements dans tes e-mails · coût mensuel · résiliation guidée</small></button>
       <button class="btn local-only friends-ok" id="b-syl">23. SYLLABUS SCANNER<small>Plan de cours (PDF) → examens, rendus et cours dans l'agenda</small></button>
       <button class="btn local-only friends-ok" id="b-sm">22. STUDIO MÉDIA<small>HEIC/WEBP · MP3/GIF · netteté · débruitage · flou · EXIF · transcription · sous-titres</small></button>
       <button class="btn local-only friends-ok" id="b-pdf">21. ÉDITEUR PDF<small>Fusion · pages · annotation · caviardage · signature · OCR · IA</small></button>
+      <button class="btn local-only friends-ok" id="b-cine">CINEPULSE<small id="cine-sub">Montage vidéo · import · analyse · s'ouvre dans le navigateur</small></button>
       <button class="btn dev-ok" id="b-cp">8. COMPRESSION MÉDIA<small>Image &amp; vidéo · qualité maximale · cible en Mo</small></button>
       <button class="btn prem dev-ok" data-open-colis>7. GÉRER LES COLIS<small>Colis en attente · poids · contenu · renommer</small></button>
     </div>
@@ -287,7 +291,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
     <h3>[ SIGNAL VOCAL ]</h3>
     <div class="sec">
       <div id="bars"></div><br>
-      <button class="btn sm friends-ok" id="b-audio">AUDIO : ON</button><button class="btn sm friends-ok" id="b-clear">EFFACER</button><button class="btn sm local-only friends-ok" id="b-update" title="Ferme E.N.O.S., reconstruit ENOS.exe avec les dernières modifications puis le relance">MISE À JOUR</button><button class="btn sm local-only friends-ok" id="b-quit">QUITTER</button>
+      <button class="btn sm friends-ok" id="b-audio">AUDIO : ON</button><button class="btn sm friends-ok" id="b-clear">EFFACER</button><button class="btn sm local-only friends-ok" id="b-quit">QUITTER</button>
     </div>
     <h3 class="dev-ok">[ ALIMENTATION ]</h3>
     <div class="sec dev-ok"><button class="btn sm dev-ok" id="b-sleep" title="Met le PC en veille (rallumable à distance)">⏾ VEILLE</button><button class="btn sm warn dev-ok" id="b-off" title="Éteint le PC (confirmation + compte à rebours annulable)">⏻ ÉTEINDRE</button></div>
@@ -846,6 +850,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <script src="/static/pdfed.js"></script>
 <script src="/static/studio.js"></script>
 <script src="/static/syllabus.js"></script>
+<script src="/static/subs.js"></script>
 <script src="/static/quicklib.js"></script>
 <script src="/static/quick.js"></script>
 <script src="/static/background.js"></script>
