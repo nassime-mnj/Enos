@@ -1,0 +1,30 @@
+/* Version PC de « Apprendre » : variables et composants repris de l'application mobile (css/mobile.css) pour que m_learn.js s'affiche à l'identique. */
+:root{--red-deep:#1f0a0f;--btn1:#8c1328;--btn2:#d71f3a;--bg:#050506;--surf:#111113;--surf2:#18181b;--line:#27272c;--text:#ececef;--muted:#8d8d97;--red:#e0243c;--red2:#ff4d63;--r:16px;--ui:"Rajdhani","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:16px/1.4 var(--ui)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:#0a0a0c}
+header b{color:var(--red);letter-spacing:4px}header span{color:var(--muted);letter-spacing:3px;font-size:13px;font-weight:700}header button{margin-left:auto;padding:6px 14px;border:1px solid var(--line);border-radius:10px;font-weight:700;letter-spacing:1px}
+main{max-width:640px;margin:0 auto;padding:16px}
+.suite-body{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}.suite-body>*{min-width:0}
+.card{background:linear-gradient(165deg,#151518,#0e0e10);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:0 10px 28px #0007}
+.card h3{display:flex;align-items:center;gap:9px;margin:0 0 12px;font:700 12px var(--ui);letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.card h3 .sp{margin-left:auto;font-weight:600;letter-spacing:.6px;text-transform:none;color:#6d6d77}
+.muted{color:var(--muted)}p{margin:0}
+.chip{display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:20px;border:1px solid var(--line);background:var(--surf);font:700 11.5px var(--ui);letter-spacing:.8px;white-space:nowrap}
+.btn{height:46px;padding:0 18px;border-radius:13px;border:1px solid var(--line);background:var(--surf2);font:700 13px var(--ui);letter-spacing:1.6px}
+.btn:hover{border-color:var(--red)}.btn.pri{background:linear-gradient(120deg,var(--btn1),var(--btn2));border-color:var(--red2);color:#fff}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.row .btn{flex:1}
+.list{display:flex;flex-direction:column;gap:2px}
+.it{display:flex;align-items:center;gap:11px;min-height:48px;padding:6px 8px;border-radius:12px;cursor:pointer}.it:hover{background:#1b1b1f}
+.it .n{flex:1;min-width:0;font-size:15px}.it .n small{display:block;color:#6d6d77;font-size:12.5px;white-space:normal}
+.it .tag{flex:none;font:700 11px var(--ui);letter-spacing:.8px;padding:2px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.ch-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.rv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.rv-stats div{padding:10px;border-radius:12px;border:1px solid var(--line);background:#0c0c0f;text-align:center}.rv-stats small{display:block;color:var(--muted);font:700 9.5px var(--ui);letter-spacing:1.4px}.rv-stats b{font-size:20px}
+.seg{position:relative;display:flex;padding:4px;border-radius:14px;border:1px solid var(--line);background:#0c0c0f}.seg button{position:relative;z-index:1;flex:1;height:38px;font:700 13px var(--ui);letter-spacing:2px;color:var(--muted)}.seg button.on{color:#fff}
+.seg-ind{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:10px;background:linear-gradient(120deg,var(--btn1),var(--btn2));transition:transform .3s}.seg[data-p=eto] .seg-ind{transform:translateX(100%)}
+input[type=text]{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:#0b0b0d;color:var(--text);font:15px var(--ui)}
+#scrim{position:fixed;inset:0;background:#000a;z-index:20}
+.sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,420px);padding:20px;border-radius:18px;border:1px solid var(--line);background:#101012;z-index:21}
+.sheet h2{margin:0 0 12px;font:700 16px var(--ui);letter-spacing:2px}.sheet .opt{display:block;width:100%;height:46px;margin-top:8px;border-radius:12px;border:1px solid var(--line);background:var(--surf2);font:700 13px var(--ui);letter-spacing:1.4px}
+.sheet .row{margin-top:12px}.sheet .muted{margin-bottom:10px}
+[hidden]{display:none!important}

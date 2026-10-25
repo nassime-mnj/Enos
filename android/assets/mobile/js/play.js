@@ -103,7 +103,7 @@
       G.last = r.reply ? [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)] : [from, to];
       if (r.reply) { anim = r.reply.uci; E.chessSound.forSan(r.reply.san); }
       status(r.over || (r.check ? "Échec !" : "À toi de jouer"));
-      if (r.over) E.vibrate(40);
+      if (r.over) { E.vibrate(40); if (E.chessLearn) E.chessLearn.addGame(G.me, r.over, G.power); }
       comment(r);
     } catch (e) { G.fen = fenBefore; G.last = null; anim = ""; status("✕ " + e.message); }
     G.busy = false;
@@ -173,7 +173,7 @@
       try { const r = await L.api("/api/mobile/chess/review/" + job); s = r.json(); } catch (e) { continue; }
       if (!s) continue;
       $("#rv-prog i").style.width = Math.max(4, Math.round((s.progress || 0) * 100)) + "%";
-      if (s.state === "done") { $("#rv-go").disabled = false; $("#rv-prog").hidden = true; revRes = s.result; step = 0; showReview(); E.vibrate(25); return; }
+      if (s.state === "done") { $("#rv-go").disabled = false; $("#rv-prog").hidden = true; revRes = s.result; step = 0; showReview(); if (E.chessLearn) E.chessLearn.addReview(s.result); E.vibrate(25); return; }
       if (s.state === "error") { U.toast("Analyse impossible : " + s.error, "warn", 7000); break; }
     }
     $("#rv-go").disabled = false; $("#rv-prog").hidden = true;

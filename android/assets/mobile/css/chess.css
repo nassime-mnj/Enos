@@ -21,3 +21,23 @@
 #ch-board{margin-bottom:6px}
 .ch-credit{margin:8px 2px 0;font-size:11px;color:var(--muted,#888);text-align:right}
 @media (prefers-reduced-motion:reduce){.pce{transition-duration:.01s}}
+
+/* ---- Apprendre (m_learn.js) */
+.lrn-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;border:1px solid var(--line);background:#0c0c0f}
+.lrn-tabs button{height:38px;border-radius:10px;font:700 10.5px var(--ui);letter-spacing:1px;color:var(--muted);transition:.2s}
+.lrn-tabs button.on{color:#fff;background:linear-gradient(120deg,var(--btn1),var(--btn2))}
+.lrn-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}.lrn-chips::-webkit-scrollbar{display:none}
+.lrn-chips button{flex:none;height:30px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:#101012;font:700 12px var(--ui);color:var(--muted)}
+.lrn-chips button.on{border-color:var(--red);color:#fff;background:var(--red-deep)}
+.lrn-info{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:36px;margin:8px 0 2px}
+.lrn-brill{flex-basis:100%;padding:8px 12px;border-radius:10px;border:1px solid #1acfd6;color:#1acfd6;background:#0a2a2c;font:700 14px var(--ui)}
+.lrn-bad{flex-basis:100%;padding:8px 12px;border-radius:10px;border:1px solid #7a2430;color:#ffb3bd;background:#240c10;font-size:14px}
+.lrn-say{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#0b0b0d;font-size:14.5px;line-height:1.5;white-space:pre-wrap}
+.lrn-text{font-size:15px;line-height:1.55;color:#cfcfd6}
+.lrn-moves{display:flex;gap:8px;overflow-x:auto;white-space:nowrap;min-height:26px;font:600 13.5px var(--ui);color:#b9b9c2;scrollbar-width:none}
+.lrn-next{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.lrn-mv{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:52px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:#101012;text-align:left}
+.lrn-mv b{font:800 16px var(--ui);color:#fff}.lrn-mv small{font-size:11.5px;color:#6d6d77;line-height:1.2}
+.lrn-mv:active{border-color:var(--red)}
+#tool-learn .suite-body>*{min-width:0}#tool-learn .suite-body{grid-template-columns:minmax(0,1fr)}
+#tool-learn .card{min-width:0}
