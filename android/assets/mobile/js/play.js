@@ -4,7 +4,7 @@
 (() => {
   const E = window.ENOS, $ = E.$, esc = E.esc, U = E.ui, B = E.board, L = E.link;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-  const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null, seen: E.chessLocal.startSeen(START) };    // seen : passages de chaque position (pas de nulle par répétition)
+  const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null, badge: null, seen: E.chessLocal.startSeen(START) };    // seen : passages de chaque position (pas de nulle par répétition)
   const KEYLAB = { brilliant: ["Brillant", "#1acfd6"], book: ["Théorie", "#a8896c"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
 
   // Parties ET analyse de partie : moteur local (chess_local.js / chess_review.js), sans PC.
@@ -53,7 +53,7 @@
   function paint(anim) {
     const pos = B.parse(G.fen);
     const targets = G.sel ? G.legal.filter((u) => u.startsWith(G.sel)).map((u) => u.slice(2, 4)) : [];
-    B.render($("#ch-board"), pos.m, { flip: G.flip, last: G.last, hint: G.hint, sel: G.sel, targets, check: G.check ? B.kingSquare(pos.m, pos.turn) : "", onTap, anim });
+    B.render($("#ch-board"), pos.m, { flip: G.flip, last: G.last, hint: G.hint, sel: G.sel, targets, check: G.check ? B.kingSquare(pos.m, pos.turn) : "", badge: G.badge, end: G.over && G.check ? { sq: B.kingSquare(pos.m, pos.turn), id: G.hist.length } : null, onTap, anim });
     $("#ch-lvl").textContent = `Niveau ${B.powerToElo(G.power)} Elo`;
     const e = G.ev;
     if (e) {
@@ -81,7 +81,7 @@
     }
     G.busy = true; G.sel = ""; G.hint = null;
     const fenBefore = G.fen;
-    G.last = [from, to];
+    G.last = [from, to]; G.badge = null;
     let san0 = "", anim = "";
     try { const m0 = new Chess(fenBefore).move({ from, to, promotion: uci[4] }); san0 = m0 ? m0.san : ""; } catch (e) { /* le moteur dira si le coup est illégal */ }
     B.render($("#ch-board"), B.applyUci(pos, uci), { flip: G.flip, last: G.last, onTap, anim: uci });      // la pièce glisse aussitôt (la FEN officielle arrive avec la réponse)
@@ -95,7 +95,7 @@
       if (r.reply) G.hist.push({ fen: null, san: r.reply.san });
       G.fen = r.fen; G.legal = r.legal; G.check = r.check; G.over = r.over; G.ev = r.eval;
       G.last = r.reply ? [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)] : [from, to];
-      if (r.reply) { anim = r.reply.uci; E.chessSound.forSan(r.reply.san); }
+      if (r.reply) { anim = r.reply.uci; E.chessSound.forSan(r.reply.san); G.badge = r.reply.brilliant ? { sq: r.reply.uci.slice(2, 4), key: "brilliant", id: G.hist.length } : null; }
       status(r.over || (r.reply && r.reply.brilliant ? "✨ Coup brillant !! " + (r.check ? "Échec !" : "À toi de jouer") : r.check ? "Échec !" : "À toi de jouer"));
       if (r.reply && r.reply.brilliant) E.vibrate([30, 40, 30]);
       if (r.over) { E.vibrate(40); if (E.chessLearn) E.chessLearn.addGame(G.me, r.over, G.power); }
@@ -121,7 +121,7 @@
   }
 
   async function newGame(color, power) {
-    G.me = color; G.power = power; G.fen = START; G.hist = []; G.seen = E.chessLocal.startSeen(START); G.last = null; G.sel = ""; G.hint = null; G.over = ""; G.check = false; G.ev = null; G.flip = color === "b";
+    G.me = color; G.power = power; G.fen = START; G.hist = []; G.seen = E.chessLocal.startSeen(START); G.last = null; G.badge = null; G.sel = ""; G.hint = null; G.over = ""; G.check = false; G.ev = null; G.flip = color === "b";
     E.settings.set("chess.power", power);
     G.busy = true; paint(); status("Préparation…");
     let anim = "";
@@ -196,7 +196,8 @@
     const r = revRes, fen = r.fens[step], pos = B.parse(fen);
     const u = step > 0 ? r.uci[step - 1] : "";
     const hint = c && c.best_uci && c.n - 1 === step ? [c.best_uci.slice(0, 2), c.best_uci.slice(2, 4)] : null;
-    B.render($("#rv-board"), pos.m, { flip: r.me === "b", last: u ? [u.slice(0, 2), u.slice(2, 4)] : null, hint });
+    const rk = step > 0 ? r.keys[step - 1] : "";
+    B.render($("#rv-board"), pos.m, { flip: r.me === "b", last: u ? [u.slice(0, 2), u.slice(2, 4)] : null, hint, badge: u && B.BADGES[rk] ? { sq: u.slice(2, 4), key: rk, id: step } : null });
     const k = step > 0 ? r.keys[step - 1] : "";
     $("#rv-step").innerHTML = step === 0 ? "position de départ" : `coup ${Math.ceil(step / 2)}${step % 2 ? "" : "…"} <span class="kchip" style="--c:${KEYLAB[k][1]}">${KEYLAB[k][0]}</span>`;
   }

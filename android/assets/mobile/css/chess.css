@@ -22,6 +22,27 @@
 .ch-credit{margin:8px 2px 0;font-size:11px;color:var(--muted,#888);text-align:right}
 @media (prefers-reduced-motion:reduce){.pce{transition-duration:.01s}}
 
+/* ---- Symboles de coup + animations (board.js : badges, B.burst) */
+.cb-fx{position:absolute;inset:0;pointer-events:none;z-index:6}
+.fxs{position:absolute;left:0;top:0;width:12.5%;height:12.5%}
+.fx-badge{position:absolute;right:-4%;top:-4%;min-width:38%;height:38%;padding:0 6%;box-sizing:border-box;border-radius:999px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;font:900 clamp(9px,3.4vw,17px)/1 var(--ui,system-ui);letter-spacing:-.5px;text-shadow:0 1px 1px rgba(0,0,0,.35);box-shadow:0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(255,255,255,.9);z-index:3}
+.fx-badge.k-brilliant{box-shadow:0 0 12px 3px rgba(26,207,214,.8),0 0 0 2px #fff}
+.fx-badge.pop{animation:fxPop .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes fxPop{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
+.fx-ring{position:absolute;left:50%;top:50%;width:100%;height:100%;margin:-50% 0 0 -50%;border-radius:50%;border:3px solid var(--rc,#fff);opacity:0;animation:fxRing .75s ease-out both}
+@keyframes fxRing{0%{transform:scale(.3);opacity:.95}100%{transform:scale(3.2);opacity:0}}
+.fx-brilliant{--rc:#1acfd6}.fx-great{--rc:#5c8bb0}.fx-blunder{--rc:#ff4d63}.fx-mate{--rc:#ff3b3b}
+.fx-capture .fx-ring{--rc:rgba(255,255,255,.85);border-width:2px;animation-duration:.45s}
+.fx-sp{position:absolute;left:50%;top:50%;width:14%;height:14%;margin:-7% 0 0 -7%;background:#fff;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);filter:drop-shadow(0 0 4px #1acfd6);opacity:0;animation:fxSp .9s ease-out both}
+@keyframes fxSp{0%{transform:translate(0,0) scale(.2) rotate(0);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1.5) rotate(180deg);opacity:0}}
+.cboard.fx-flash::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(26,207,214,.35),transparent 70%);animation:fxFlash .9s ease-out both}
+@keyframes fxFlash{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+.cboard.fx-mate::after{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;box-shadow:inset 0 0 40px 8px rgba(255,40,40,.75);animation:fxFlash 1.4s ease-out both}
+.cboard.fx-shake{animation:fxShake .45s}
+@keyframes fxShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.fx-ring,.fx-sp,.fx-badge.pop,.cboard.fx-shake{animation-duration:.01s}.cboard.fx-flash::after,.cboard.fx-mate::after{animation:none;opacity:0}}
+
+
 /* ---- Apprendre (m_learn.js) */
 .lrn-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;border:1px solid var(--line);background:#0c0c0f}
 .lrn-tabs button{height:38px;border-radius:10px;font:700 10.5px var(--ui);letter-spacing:1px;color:var(--muted);transition:.2s}

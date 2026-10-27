@@ -36,14 +36,34 @@
   const pos = (sq, flip) => { const f = sq.charCodeAt(0) - 97, r = +sq[1] - 1; return [flip ? 7 - f : f, flip ? r : 7 - r]; };
   const place = (node, sq, flip) => { const [x, y] = pos(sq, flip); node.style.transform = `translate(${x * 100}%,${y * 100}%)`; };
 
+  // Symboles de qualité de coup (style Chess.com) posés en coin de la case d'arrivée : [glyphe, couleur]. Clés = celles de chess_brain / chess_review.
+  B.BADGES = { brilliant: ["!!", "#1acfd6"], great: ["!", "#5c8bb0"], best: ["★", "#7bd64d"], excellent: ["👍", "#9ecc38"], good: ["✓", "#739e66"], book: ["📖", "#a8896c"], inaccuracy: ["?!", "#f5c542"], mistake: ["?", "#f5a524"], blunder: ["??", "#ff4d63"] };
+  const fxCell = (st, sq) => { const c = document.createElement("div"); c.className = "fxs"; place(c, sq, st.flip); st.fx.append(c); return c; };
+  /** Éclat d'animation sur une case. kind : brilliant (anneaux cyan + étincelles) | great | capture (onde blanche) | blunder (anneau rouge + secousse) | mate (pulsation rouge). Éphémère : s'efface seul. */
+  B.burst = (el, sq, kind) => {
+    const st = el && el._cb; if (!st || !sq) return;
+    const c = fxCell(st, sq); c.classList.add("fx-" + kind);
+    const ring = (d) => { const r = document.createElement("i"); r.className = "fx-ring"; r.style.animationDelay = d + "ms"; c.append(r); };
+    const pulse = (cls, ms) => { el.classList.add(cls); setTimeout(() => el.classList.remove(cls), ms); };
+    if (kind === "brilliant") {
+      ring(0); ring(140); ring(280);
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, d = 90 + (i % 3) * 22, sp = document.createElement("i"); sp.className = "fx-sp"; sp.style.setProperty("--dx", Math.cos(a) * d + "%"); sp.style.setProperty("--dy", Math.sin(a) * d + "%"); sp.style.animationDelay = (i % 4) * 40 + "ms"; c.append(sp); }
+      pulse("fx-flash", 900);
+    } else if (kind === "great") { ring(0); ring(160); }
+    else if (kind === "capture") ring(0);
+    else if (kind === "blunder") { ring(0); pulse("fx-shake", 450); }
+    else if (kind === "mate") { ring(0); ring(220); ring(440); pulse("fx-mate", 1400); }
+    setTimeout(() => c.remove(), 1500);
+  };
+
   B.render = (el, map, opts) => {
     opts = opts || {};
     const flip = !!opts.flip;
     let st = el._cb;
     if (!st) {
       el.classList.add("cboard");
-      el.innerHTML = '<div class="cb-sq"></div><div class="cb-pc"></div>';
-      st = el._cb = { sq: el.firstChild, pc: el.lastChild, nodes: new Map(), flip };
+      el.innerHTML = '<div class="cb-sq"></div><div class="cb-pc"></div><div class="cb-fx"></div>';
+      st = el._cb = { sq: el.firstChild, pc: el.children[1], fx: el.children[2], nodes: new Map(), flip, badgeId: null, endId: null };
       el.addEventListener("click", (e) => {
         if (!el._cb.onTap) return;
         const r = el.getBoundingClientRect(), x = Math.min(7, Math.max(0, Math.floor((e.clientX - r.left) / r.width * 8))), y = Math.min(7, Math.max(0, Math.floor((e.clientY - r.top) / r.height * 8)));
@@ -69,7 +89,7 @@
     st.sq.innerHTML = h;
 
     // ---- pièces
-    if (st.flip !== flip) { st.pc.replaceChildren(); st.nodes.clear(); st.flip = flip; }
+    if (st.flip !== flip) { st.pc.replaceChildren(); st.nodes.clear(); st.fx.replaceChildren(); st.flip = flip; st.badgeId = null; }
     const nodes = st.nodes, mk = (sq, p, instant) => {
       const n = document.createElement("img");
       n.className = "pce" + (instant ? " nt" : ""); n.src = PIECE_URL(p); n.alt = ""; n.draggable = false; n.dataset.p = p;
@@ -80,7 +100,7 @@
       const from = mv.slice(0, 2), to = mv.slice(2, 4), n = nodes.get(from);
       if (n) {
         const gone = nodes.get(to) || (n.dataset.p.toLowerCase() === "p" && from[0] !== to[0] ? nodes.get(to[0] + from[1]) : null);
-        if (gone) { const gs = [...nodes].find(([, v]) => v === gone)[0]; nodes.delete(gs); gone.classList.add("cap-out"); setTimeout(() => gone.remove(), 260); }
+        if (gone) { const gs = [...nodes].find(([, v]) => v === gone)[0]; nodes.delete(gs); gone.classList.add("cap-out"); setTimeout(() => gone.remove(), 260); B.burst(el, to, "capture"); }
         nodes.delete(from); nodes.set(to, n); n.classList.remove("nt"); n.style.zIndex = 5; place(n, to, flip);
         setTimeout(() => { n.style.zIndex = ""; }, 260);
         if (n.dataset.p.toLowerCase() === "k" && Math.abs(from.charCodeAt(0) - to.charCodeAt(0)) === 2) {     // roque : la tour glisse aussi
@@ -95,6 +115,20 @@
       else if (want !== n.dataset.p) { n.dataset.p = want; n.src = PIECE_URL(want); }       // promotion
     }
     for (const sq of Object.keys(map)) if (!nodes.has(sq)) mk(sq, map[sq], true);
+
+    // ---- symbole de qualité du dernier coup : {sq, key, id}. Même id = même coup : le symbole reste sans rejouer l'animation.
+    const bd = opts.badge && B.BADGES[opts.badge.key] ? opts.badge : null, old = st.fx.querySelector(".fx-badge");
+    if (old) old.parentNode.remove();
+    if (!bd) st.badgeId = null;
+    else {
+      const fresh = st.badgeId !== bd.id, [g, col] = B.BADGES[bd.key], c = fxCell(st, bd.sq), b = document.createElement("b");
+      b.className = "fx-badge" + (fresh ? " pop" : "") + " k-" + bd.key; b.textContent = g; b.style.setProperty("--c", col); c.append(b);
+      st.badgeId = bd.id;
+      if (fresh && ["brilliant", "great", "blunder"].includes(bd.key)) setTimeout(() => B.burst(el, bd.sq, bd.key), 120);
+    }
+    // ---- mat : pulsation sur le roi, une seule fois par fin de partie
+    if (opts.end && st.endId !== opts.end.id) { st.endId = opts.end.id; B.burst(el, opts.end.sq, "mate"); }
+    else if (!opts.end) st.endId = null;
   };
 
   B.kingSquare = (map, turn) => { const k = turn === "w" ? "K" : "k"; return Object.keys(map).find((s) => map[s] === k) || ""; };
