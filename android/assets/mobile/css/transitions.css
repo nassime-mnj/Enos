@@ -1,0 +1,36 @@
+/* TRANSITIONS DE PAGES (mobile) : glissement entre onglets avec profondeur, entrée en cascade des cartes, avance/retour dans les modules.
+   100 % CSS : une animation démarre toute seule quand un élément passe de hidden à affiché ou reçoit la classe .on (posée par ui.js).
+   Désactivées par « prefers-reduced-motion » ou par le réglage « Animations de transition » (classe .no-anim sur <html>). */
+:root{--pg-ease:cubic-bezier(.2,.9,.25,1)}
+
+/* ---- onglets : la page qui s'efface recule et s'assombrit, la page qui arrive monte ses cartes l'une après l'autre */
+.view{transition:opacity .34s var(--pg-ease),transform .34s var(--pg-ease);transform-origin:50% 40%}
+.view:not(.on){opacity:.35;transform:scale(.94)}
+#track.drag .view{transition:none}
+@keyframes pgUp{from{opacity:0;transform:translate3d(0,18px,0) scale(.985)}to{opacity:1;transform:none}}
+.view.on .scroll>*:not(.subview):not(#tools-home):not(.foot-pad),.view.on .chat>*{animation:pgUp .46s var(--pg-ease) backwards}
+.view.on .scroll>*:nth-child(2),.view.on .chat>*:nth-child(2){animation-delay:45ms}
+.view.on .scroll>*:nth-child(3),.view.on .chat>*:nth-child(3){animation-delay:90ms}
+.view.on .scroll>*:nth-child(4){animation-delay:135ms}
+.view.on .scroll>*:nth-child(5){animation-delay:180ms}
+.view.on .scroll>*:nth-child(6){animation-delay:225ms}
+.view.on .scroll>*:nth-child(n+7){animation-delay:270ms}
+
+/* ---- modules : entrer dans un module glisse depuis la droite, ◂ MODULES revient par la gauche */
+@keyframes pgFwd{from{opacity:0;transform:translate3d(42px,0,0) scale(.985)}to{opacity:1;transform:none}}
+@keyframes pgBack{from{opacity:0;transform:translate3d(-42px,0,0) scale(.985)}to{opacity:1;transform:none}}
+.subview:not([hidden]){animation:pgFwd .34s var(--pg-ease) backwards}
+#tools-home:not([hidden]){animation:pgBack .32s var(--pg-ease) backwards}
+.mod-grid .mtile{animation:pgUp .4s var(--pg-ease) backwards}
+.mod-grid .mtile:nth-child(2){animation-delay:30ms}.mod-grid .mtile:nth-child(3){animation-delay:60ms}.mod-grid .mtile:nth-child(4){animation-delay:90ms}
+.mod-grid .mtile:nth-child(5){animation-delay:120ms}.mod-grid .mtile:nth-child(6){animation-delay:150ms}.mod-grid .mtile:nth-child(n+7){animation-delay:180ms}
+
+/* ---- bascule des onglets internes (JOUER / ANALYSER…), cartes qui apparaissent */
+#ch-play:not([hidden]),#ch-review:not([hidden]){animation:pgUp .3s var(--pg-ease) backwards}
+
+@media (prefers-reduced-motion:reduce){
+  .view,.view *,.subview,#tools-home,.mod-grid .mtile,#ch-play,#ch-review{animation:none!important;transition-duration:.01s!important}
+  .view:not(.on){opacity:1;transform:none}
+}
+.no-anim .view,.no-anim .view *,.no-anim .subview,.no-anim #tools-home,.no-anim .mod-grid .mtile,.no-anim #ch-play,.no-anim #ch-review{animation:none!important;transition-duration:.01s!important}
+.no-anim .view:not(.on){opacity:1;transform:none}

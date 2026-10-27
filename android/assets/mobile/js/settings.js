@@ -13,6 +13,8 @@
       <div class="sec-t">Profil</div>
       <div class="f"><label for="st-name">Ton prénom</label><div class="r"><input id="st-name" type="text" value="${esc(E.settings.get("name", "Nassime"))}" maxlength="30"></div></div>
 
+      <div class="f"><label for="st-anim">Animations de transition entre les pages</label><div class="r"><input id="st-anim" type="checkbox" ${E.settings.get("anim", true) ? "checked" : ""}></div></div>
+
       <div class="sec-t">Clés d'API · mode autonome</div>
       ${secretField("st-groq", "Groq (cerveau)", "groq", "gsk_…", "Les appels partent du téléphone vers Groq, sans passer par le PC.")}
       <div class="f"><label for="st-model">Modèle Groq</label><div class="r"><input id="st-model" type="text" value="${esc(E.settings.get("model", "openai/gpt-oss-120b"))}" spellcheck="false" autocapitalize="off"></div></div>
@@ -45,6 +47,7 @@
   async function save() {
     const g = (id) => ($("#" + id) ? $("#" + id).value.trim() : "");
     E.settings.set("name", g("st-name") || "Nassime");
+    if ($("#st-anim")) { E.settings.set("anim", $("#st-anim").checked); U.applyAnim(); }
     if (g("st-model")) E.settings.set("model", g("st-model"));
     const pairs = [["st-groq", "groq"], ["st-el1", "eleven_enos"], ["st-el2", "eleven_eto"], ["st-zeus", "ics_zeus"], ["st-moodle", "ics_moodle"]];
     for (const [id, k] of pairs) {

@@ -27,6 +27,7 @@ import nasko_boss
 import nasko_cache
 import nasko_coach
 import nasko_core
+import nasko_nodraw
 import nasko_persona
 import nasko_titans
 import nasko_tools as tools
@@ -176,8 +177,36 @@ def _player():
 
 def _choose(board):
     if G["blunder_p"] and random.random() < G["blunder_p"]:
-        return random.choice(list(board.legal_moves))
-    return _player().play(board, chess.engine.Limit(time=0.25 if G["power"] < 100 else LIMIT_TIME)).move
+        mv = random.choice(list(board.legal_moves))
+    else:
+        mv = _player().play(board, chess.engine.Limit(time=0.25 if G["power"] < 100 else LIMIT_TIME)).move
+    return _dodge(board, mv)
+
+
+# ----------------------------------------------------------------------------- PAS DE NULLE PAR RÉPÉTITION, PAS DE DÉFAITE (règles : nasko_nodraw)
+def _pov_lines(board, n, depth=14, secs=1.0, eng=None):
+    """Les `n` meilleures lignes (MultiPV) du point de vue du camp au trait, via le moteur d'ANALYSE (pleine puissance) ou `eng` (entraînement : moteur dédié)."""
+    n = max(1, min(n, board.legal_moves.count()))
+    infos = (eng or _engine()).analyse(board, chess.engine.Limit(depth=depth, time=secs), multipv=n)
+    return _pov_infos(infos, board.turn)
+
+
+def _pov_infos(infos, color):
+    return nasko_nodraw.lines_from_infos(infos, color, MAT)
+
+
+def _dodge(board, mv, eng=None):
+    """Si `mv` mène à une nulle (position déjà vue, pat, matériel insuffisant, 50 coups), le remplace par la meilleure alternative qui ne coûte pas la partie."""
+    if not nasko_nodraw.draw_after(board, mv):
+        return mv
+    try:
+        lines = _pov_lines(board, 6, eng=eng)
+        alt, why = nasko_nodraw.pick(board, lines, mv, more=lambda: _pov_lines(board, 12, secs=1.5, eng=eng))
+    except Exception:                                                # noqa: BLE001 — jamais bloquer la partie
+        return mv
+    if why:
+        G["dodged"] = G.get("dodged", 0) + 1
+    return alt
 
 
 def close():
@@ -389,6 +418,9 @@ def _engine_turn():
     # Ancien comportement conservé quand aucun adversaire n'est choisi : ETO actif à pleine force = chasse au sacrifice.
     if (G["power"] >= 100 and nasko_persona.current() == "eto" and G.get("opponent") != "eto") or G.get("bot_brilliant"):
         mv, brill = _eto_choose(b)
+    elif G["power"] >= 100 and G["mode"] == "enos":
+        # E.N.O.S. (ou ETO choisi comme adversaire) à pleine puissance : les coups brillants trouvés par Stockfish passent avant tout, sans nulle par répétition
+        mv, brill = _eto_choose(b, taste=G.get("opponent") == "eto", secs=1.2)
     else:
         mv = _choose(b)
     snap = b.copy(stack=False)
@@ -441,7 +473,7 @@ def _sacrifice_of(board, pv):
     return None
 
 
-def _offered_sacrifice(board, move):
+def _offered_sacrifice(board, move, eng=None):
     """SACRIFICE OFFERT (piège) : après notre coup, l'adversaire PEUT prendre une pièce lourde, mais ce n'est pas sa meilleure réponse (il se ferait mater / écraser).
     On force chaque prise (root_moves) et on regarde ce que Stockfish trouve ensuite : si, prise acceptée, l'évaluation reste ≥ +2,0 (ou mat) avec un matériel toujours
     déficitaire au demi-coup 3, c'est un vrai sacrifice brillant, qu'il soit accepté ou refusé. Retourne {piece, deficit, cp, mate, depth, line_pv} ou None."""
@@ -453,7 +485,7 @@ def _offered_sacrifice(board, move):
     caps.sort(key=lambda c: -VAL[b.piece_type_at(c.to_square)])
     for cap in caps[:2]:
         try:
-            inf = _engine().analyse(b, chess.engine.Limit(depth=13, time=1.0), root_moves=[cap])
+            inf = (eng or _engine()).analyse(b, chess.engine.Limit(depth=13, time=1.0), root_moves=[cap])
         except Exception:                                            # noqa: BLE001
             continue
         pv = [cap] + list((inf.get("pv") or [])[1:5])
@@ -479,11 +511,18 @@ def _tension(board, move):
     return t
 
 
-def _eto_choose(board):
-    """Coup d'ETO : (coup, info_brillant | None). MultiPV puis filtre de sacrifice ; sinon la meilleure ligne (avec un penchant pour les lignes tactiques)."""
+def _eto_choose(board, taste=True, eng=None, secs=2.5):
+    """Coup d'ETO ou d'E.N.O.S. à pleine puissance : (coup, info_brillant | None). MultiPV puis filtre de sacrifice ; sinon la meilleure ligne
+    (taste=True : avec le penchant d'ETO pour les lignes tactiques). Dans tous les cas : jamais de nulle par répétition tant qu'une alternative tient la partie."""
+    mv, info = _eto_pick(board, taste, eng, secs)
+    alt = _dodge(board, mv, eng)
+    return alt, (info if alt == mv else None)                        # un coup remplacé n'est plus le sacrifice annoncé
+
+
+def _eto_pick(board, taste, eng=None, secs=2.5):
     color = board.turn
     try:
-        infos = _engine().analyse(board, chess.engine.Limit(depth=BRILL_DEPTH, time=2.5), multipv=BRILL_MULTIPV)
+        infos = (eng or _engine()).analyse(board, chess.engine.Limit(depth=BRILL_DEPTH, time=secs), multipv=BRILL_MULTIPV)
     except Exception:                                                # noqa: BLE001 — jamais bloquer la partie : on retombe sur le meilleur coup habituel
         infos = []
     lines = []
@@ -495,7 +534,7 @@ def _eto_choose(board):
         mate = sc.mate()
         lines.append({"move": pv[0], "pv": pv, "cp": sc.score(mate_score=MAT), "mate": mate if mate and mate > 0 else None, "depth": inf.get("depth", 0)})
     if not lines:
-        best = G["base"][1] if G["base"] and G["base"][1] in board.legal_moves else _engine().play(board, chess.engine.Limit(time=0.4)).move
+        best = G["base"][1] if G["base"] and not eng and G["base"][1] in board.legal_moves else (eng or _engine()).play(board, chess.engine.Limit(time=0.4)).move
         return best, None
     top = lines[0]
     # 1) coup brillant ?  (priorité absolue sur la ligne 1)
@@ -503,10 +542,10 @@ def _eto_choose(board):
     for ln in lines:
         sac = _sacrifice_of(board, ln["pv"])                          # sacrifice FORCÉ : la meilleure défense prend la pièce
         if not sac:
-            sac = _offered_sacrifice(board, ln["move"])               # sacrifice OFFERT : prise possible mais fatale pour l'adversaire
+            sac = _offered_sacrifice(board, ln["move"], eng)          # sacrifice OFFERT : prise possible mais fatale pour l'adversaire
             if sac and not (ln["cp"] >= BRILL_MIN_CP or ln["mate"]):  # ... et la défense (refus) ne doit pas gâcher l'avantage
                 sac = None
-        if not sac:
+        if not sac or nasko_nodraw.draw_after(board, ln["move"]):
             continue
         decisive = ln["mate"] is not None or ln["cp"] >= BRILL_MIN_CP
         keeps = (top["mate"] is None and top["cp"] - ln["cp"] <= BRILL_MAX_LOSS) or (top["mate"] is not None and ln["mate"] is not None)
@@ -521,7 +560,7 @@ def _eto_choose(board):
         info.pop("line_pv", None)
         return ln["move"], info
     # 2) pas de sacrifice : parmi les lignes quasi équivalentes (≤ 25 cp de la meilleure), on préfère la plus tactique (sauf si la partie est déjà gagnée à coup sûr)
-    if top["mate"] is None and -150 < top["cp"] < 600:
+    if taste and top["mate"] is None and -150 < top["cp"] < 600:
         near = [ln for ln in lines if top["cp"] - ln["cp"] <= 25 and ln["mate"] is None]
         near.sort(key=lambda ln: (_tension(board, ln["move"]), ln["cp"]), reverse=True)
         return near[0]["move"], None
@@ -1286,7 +1325,7 @@ def titans_step(tts=None):
         if eto_turn:
             mv, brill = _eto_choose(b)
         else:
-            mv = _choose(b)                                                    # G["power"] = 100 : Stockfish à pleine puissance
+            mv, brill = _eto_choose(b, taste=False, secs=1.5)                  # E.N.O.S. : Stockfish pleine puissance, coup brillant prioritaire, jamais de nulle par répétition
         snap = b.copy(stack=False)
         rec = _play(mv)
         rec["hints"] = _hints(snap, mv, b)

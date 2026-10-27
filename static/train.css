@@ -1,0 +1,20 @@
+/* SUPER ENOS : panneau d'entraînement (CHESS) */
+#cs-train{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;background:color-mix(in srgb,var(--bg) 96%,var(--panel))}
+#cs-train[hidden]{display:none!important}
+.tr-wrap{flex:1;min-height:0;overflow:auto;display:flex;gap:16px;padding:16px 18px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.tr-col{width:min(520px,100%);display:flex;flex-direction:column;gap:14px}
+.tr-card{border:1px solid var(--dim);background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.tr-card h3{margin:0;font:800 12px Consolas,monospace;letter-spacing:3px;color:var(--mid);display:flex;justify-content:space-between}
+.tr-card h3 span{color:var(--neon);letter-spacing:1px}
+.tr-opps{gap:16px}
+.tr-note{margin:0;font-size:12px;color:var(--mid);line-height:1.5}.tr-note.bad{color:var(--mg)}
+#tr-board{--sq:min(10vw,48px);display:grid;grid-template-columns:repeat(8,var(--sq));grid-template-rows:repeat(8,var(--sq));border:2px solid var(--mid);margin:0 auto;width:calc(var(--sq) * 8 + 4px)}
+.tr-say{min-height:18px;font-size:13px;color:var(--u);font-style:italic}
+#tr-moves{max-height:90px;overflow:auto;font:12px Consolas,monospace;color:var(--u);line-height:1.7}
+.tr-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tr-tbl th{font:700 10px Consolas,monospace;letter-spacing:1px;color:var(--mid);text-align:right;padding:3px 6px}.tr-tbl th:first-child,.tr-tbl td:first-child{text-align:left}
+.tr-tbl td{padding:5px 6px;border-top:1px solid var(--dim);text-align:right}
+.tr-les{margin:0;padding:6px 0;border-top:1px solid var(--dim);font-size:13px;line-height:1.45}.tr-les:first-child{border-top:0}
+.tr-les small{display:block;color:var(--mid);font-size:11px}
+#cs-trbtn.on{border-color:var(--neon);color:var(--neon);animation:trpulse 2s infinite}
+@keyframes trpulse{50%{opacity:.55}}

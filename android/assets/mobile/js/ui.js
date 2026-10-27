@@ -17,6 +17,7 @@
     E.state.tab = TABS[i];
     place(-index * W, true);
     E.$$("#tabbar button").forEach((b) => b.classList.toggle("on", b.dataset.tab === TABS[i]));
+    E.$$(".view").forEach((v, k) => v.classList.toggle("on", k === i));              // la page active avance, les autres reculent (css/transitions.css)
     $("#tab-ind").style.transform = `translateX(${index * 100}%)`;
     if (changed && !(opts && opts.silent)) E.vibrate(8);
     E.emit("tab", TABS[i]);
@@ -91,7 +92,12 @@
     s.innerHTML = `<div class="grab"></div>${o.title ? `<h2>${E.esc(o.title)}</h2>` : ""}${o.html || ""}${(o.options || []).map((x, i) => `<button class="opt ${x.cls || ""}" data-i="${i}">${E.esc(x.label)}</button>`).join("")}`;
     s.hidden = false; $("#scrim").hidden = false;
     onClose = o.onClose || null;
-    s.querySelectorAll(".opt").forEach((b) => (b.onclick = () => { const x = o.options[+b.dataset.i]; U.closeSheet(); if (x.fn) x.fn(); }));
+    s.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
+      const x = o.options[+b.dataset.i], f = onClose;
+      onClose = null; U.closeSheet();                                           // l'action du bouton passe AVANT onClose : sinon confirm()/prompt()/promotion répondaient « annulé » avant que le choix ne soit lu
+      if (x.fn) x.fn();
+      if (f) f();
+    }));
     $("#scrim").onclick = () => U.closeSheet();
     let y0 = 0, dy = 0, drag = false;                                           // glisser la poignée vers le bas pour fermer
     s.ontouchstart = (e) => { drag = s.scrollTop <= 0 && e.touches[0].clientY < s.getBoundingClientRect().top + 60; y0 = e.touches[0].clientY; dy = 0; };
@@ -143,7 +149,9 @@
     return false;
   };
 
+  U.applyAnim = () => document.documentElement.classList.toggle("no-anim", !E.settings.get("anim", true));
   U.init = () => {
+    U.applyAnim();
     measure();
     swipe(); keyboard();
     E.$$("#tabbar button").forEach((b) => (b.onclick = () => U.go(b.dataset.tab)));

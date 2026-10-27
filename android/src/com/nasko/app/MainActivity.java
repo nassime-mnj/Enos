@@ -13,6 +13,7 @@ import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.net.http.SslCertificate;
 import android.net.http.SslError;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -80,6 +81,9 @@ public class MainActivity extends Activity {
     private volatile String pendingShare = "";        // capture d'ecran partagee vers l'application (menu Partager) : base64 en memoire seulement, lue UNE fois par le JavaScript
     private volatile String pendingImport = "";       // fichier chiffre recu par enos://import (en memoire seulement) ; applique uniquement apres saisie du code
     private int importFails = 0;
+    private volatile boolean keepAlive = false;      // Super Enos s'entraîne : la page reste active en arrière-plan (service de premier plan + verrou de réveil)
+    private boolean paused = false;
+    private android.content.BroadcastReceiver trainStop;
 
     // ------------------------------------------------------------------ cycle de vie
     @Override
@@ -210,6 +214,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        paused = false;
         web.onResume();
         if (offline) ui.post(probe);
     }
@@ -218,13 +223,52 @@ public class MainActivity extends Activity {
     protected void onPause() {
         CookieManager.getInstance().flush();
         ui.removeCallbacks(probe);
-        web.onPause();
+        paused = true;
+        if (!keepAlive) web.onPause();                 // entraînement en cours : on ne gèle pas la page (sinon Stockfish s'arrête avec l'écran)
         super.onPause();
+    }
+
+    /** Super Enos : garde l'application active en arrière-plan (service de premier plan + verrou de réveil) ou relâche. Appelé par le pont, sur le thread principal. */
+    void setKeepAlive(final boolean on, final String text) {
+        ui.post(new Runnable() {
+            @Override
+            public void run() {
+                if (on == keepAlive) return;
+                keepAlive = on;
+                if (on) {
+                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 12);     // sans elle, le service tourne mais la notification reste cachée
+                    if (trainStop == null) {
+                        trainStop = new android.content.BroadcastReceiver() {
+                            @Override
+                            public void onReceive(android.content.Context c, Intent i) {
+                                keepAlive = false;
+                                if (paused && web != null) web.onPause();
+                                if (onLocalApp && web != null) web.evaluateJavascript("window.ENOS&&ENOS.trainUi&&ENOS.trainUi.stopFromNative()", null);
+                            }
+                        };
+                        android.content.IntentFilter f = new android.content.IntentFilter(TrainService.ACTION_STOP);
+                        if (Build.VERSION.SDK_INT >= 33) registerReceiver(trainStop, f, android.content.Context.RECEIVER_NOT_EXPORTED);
+                        else registerReceiver(trainStop, f);
+                    }
+                    TrainService.start(MainActivity.this, text);
+                } else {
+                    TrainService.stop(MainActivity.this);
+                    if (paused && web != null) web.onPause();
+                }
+            }
+        });
     }
 
     @Override
     protected void onDestroy() {
         ui.removeCallbacksAndMessages(null);
+        keepAlive = false;
+        TrainService.stop(this);
+        try {
+            if (trainStop != null) unregisterReceiver(trainStop);
+        } catch (Exception ignored) {
+        }
         try {
             if (netCb != null) ((ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(netCb);
         } catch (Exception ignored) {

@@ -4,7 +4,7 @@
 (() => {
   const E = window.ENOS, $ = E.$, esc = E.esc, U = E.ui, B = E.board, L = E.link;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-  const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null };
+  const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null, seen: E.chessLocal.startSeen(START) };    // seen : passages de chaque position (pas de nulle par répétition)
   const KEYLAB = { brilliant: ["Brillant", "#1acfd6"], book: ["Théorie", "#a8896c"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
 
   // Parties ET analyse de partie : moteur local (chess_local.js / chess_review.js), sans PC.
@@ -89,13 +89,15 @@
     status(`${E.settings.get("persona", "enos") === "eto" ? "ETO" : "E.N.O.S."} réfléchit…`);
     E.vibrate(10);
     try {
-      const r = await api("/api/mobile/chess/play", { fen: fenBefore, uci, power: G.power, answer: true });
-      G.hist.push({ fen: fenBefore, san: r.san });
+      const r = await api("/api/mobile/chess/play", { fen: fenBefore, uci, power: G.power, answer: true, seen: G.seen });
+      G.hist.push({ fen: fenBefore, san: r.san, seen: G.seen });
+      if (r.seen) G.seen = r.seen;
       if (r.reply) G.hist.push({ fen: null, san: r.reply.san });
       G.fen = r.fen; G.legal = r.legal; G.check = r.check; G.over = r.over; G.ev = r.eval;
       G.last = r.reply ? [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)] : [from, to];
       if (r.reply) { anim = r.reply.uci; E.chessSound.forSan(r.reply.san); }
-      status(r.over || (r.check ? "Échec !" : "À toi de jouer"));
+      status(r.over || (r.reply && r.reply.brilliant ? "✨ Coup brillant !! " + (r.check ? "Échec !" : "À toi de jouer") : r.check ? "Échec !" : "À toi de jouer"));
+      if (r.reply && r.reply.brilliant) E.vibrate([30, 40, 30]);
       if (r.over) { E.vibrate(40); if (E.chessLearn) E.chessLearn.addGame(G.me, r.over, G.power); }
       comment(r);
     } catch (e) { G.fen = fenBefore; G.last = null; anim = ""; status("✕ " + e.message); }
@@ -119,14 +121,14 @@
   }
 
   async function newGame(color, power) {
-    G.me = color; G.power = power; G.fen = START; G.hist = []; G.last = null; G.sel = ""; G.hint = null; G.over = ""; G.check = false; G.ev = null; G.flip = color === "b";
+    G.me = color; G.power = power; G.fen = START; G.hist = []; G.seen = E.chessLocal.startSeen(START); G.last = null; G.sel = ""; G.hint = null; G.over = ""; G.check = false; G.ev = null; G.flip = color === "b";
     E.settings.set("chess.power", power);
     G.busy = true; paint(); status("Préparation…");
     let anim = "";
     try {
       if (color === "b") {
-        const r = await api("/api/mobile/chess/engine", { fen: START, power });
-        G.hist.push({ fen: START, san: r.reply.san }); G.fen = r.fen; G.legal = r.legal; G.last = [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)]; G.ev = r.eval;
+        const r = await api("/api/mobile/chess/engine", { fen: START, power, seen: G.seen });
+        G.hist.push({ fen: START, san: r.reply.san }); if (r.seen) G.seen = r.seen; G.fen = r.fen; G.legal = r.legal; G.last = [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)]; G.ev = r.eval;
         anim = r.reply.uci; E.chessSound.forSan(r.reply.san);
       } else {
         G.legal = (await api("/api/mobile/chess/state", { fen: START })).legal;
@@ -215,14 +217,14 @@
     $("#ch-flip").onclick = () => { G.flip = !G.flip; paint(); };
     $("#ch-hint").onclick = async () => {
       if (!myTurn()) return;
-      try { const h = await api("/api/mobile/chess/hint", { fen: G.fen }); G.hint = [h.uci.slice(0, 2), h.uci.slice(2, 4)]; G.sel = ""; status("Indice : " + h.san); paint(); } catch (e) { status("✕ " + e.message); }
+      try { const h = await api("/api/mobile/chess/hint", { fen: G.fen, seen: G.seen }); G.hint = [h.uci.slice(0, 2), h.uci.slice(2, 4)]; G.sel = ""; status("Indice : " + h.san); paint(); } catch (e) { status("✕ " + e.message); }
     };
     $("#ch-undo").onclick = () => {
       if (G.busy || G.hist.length < 2) return;
       const target = G.hist.length % 2 === 0 ? G.hist[G.hist.length - 2] : G.hist[G.hist.length - 1];
       if (!target || !target.fen) return;
       G.hist.length = G.hist.length - (G.hist.length % 2 === 0 ? 2 : 1);
-      G.fen = target.fen; G.last = null; G.sel = ""; G.hint = null; G.over = ""; G.ev = null;
+      G.fen = target.fen; G.seen = target.seen || E.chessLocal.startSeen(target.fen); G.last = null; G.sel = ""; G.hint = null; G.over = ""; G.ev = null;
       api("/api/mobile/chess/state", { fen: G.fen }).then((r) => { G.legal = r.legal; }).catch(() => {});
       status("Coup annulé"); paint();
     };

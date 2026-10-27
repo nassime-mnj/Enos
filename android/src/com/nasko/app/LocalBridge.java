@@ -251,6 +251,12 @@ final class LocalBridge {
         }
     }
 
+    /** Super Enos : true = l'entraînement continue en arrière-plan (notification permanente + verrou de réveil), false = relâche. */
+    @JavascriptInterface
+    public void keepAlive(boolean on, String text) {
+        if (ok()) act.setKeepAlive(on, text == null ? "" : text.length() > 120 ? text.substring(0, 120) : text);
+    }
+
     @JavascriptInterface
     public void wake() {
         if (ok()) act.wakeRelay();

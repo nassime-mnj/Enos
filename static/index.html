@@ -200,6 +200,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <link rel="stylesheet" href="/static/study.css">
 <link rel="stylesheet" href="/static/mobile.css">
 <link rel="stylesheet" href="/static/defi.css">
+<link rel="stylesheet" href="/static/train.css?v=1">
 <link rel="stylesheet" href="/static/persona.css?v=20261005d">
 <link rel="stylesheet" href="/static/sysdash.css">
 <link rel="stylesheet" href="/static/theme_coreboard.css">
@@ -1157,7 +1158,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
   <div class="tm-top"><h2>CHESS<small>VOUS CONTRE E.N.O.S. · STOCKFISH</small></h2>
     <label class="cs-power" for="cs-pow"><span id="cs-powtxt">Puissance : 100 % (Équivalent : 3200 Elo)</span><input type="range" id="cs-pow" min="1" max="100" step="1" value="100" aria-label="Puissance d'E.N.O.S."></label>
     <select id="cs-opp" class="cs-sel" title="Adversaire du duel" aria-label="Adversaire du duel"><option value="enos">ADVERSAIRE · E.N.O.S.</option><option value="eto">ADVERSAIRE · ETO</option><option value="eto_brillant">ADVERSAIRE · ETO BRILLANT (3200)</option></select>
-    <select id="cs-mode" class="cs-sel" title="Mode de jeu : défi contre E.N.O.S., ou cours avec ETO qui commente votre partie contre un bot virtuel" aria-label="Mode de jeu"><option value="enos">DÉFI · E.N.O.S.</option><option value="coach">COURS · MOI VS BOT + COACH ETO</option><option value="speedrun">SPEEDRUN · ETO VS BOT</option><option value="titans">⚔ CHOC DES TITANS · E.N.O.S. VS ETO</option><option value="boss">👑 BOSS FINAL · STOCKFISH</option></select><select id="cs-boss" class="cs-sel" hidden title="Qui affronte le boss Stockfish ?" aria-label="Challenger du boss"><option value="eto">ETO VS STOCKFISH</option><option value="enos">E.N.O.S. VS STOCKFISH</option><option value="duo">E.N.O.S. + ETO VS STOCKFISH</option></select><select id="cs-elo" class="cs-sel" hidden title="Niveau du bot virtuel (ETO le simule à partir de ses 3200 Elo)" aria-label="Elo du bot"><option value="400">Bot 400 Elo</option><option value="600" selected>Bot 600 Elo</option><option value="800">Bot 800 Elo</option><option value="1000">Bot 1000 Elo</option><option value="1200">Bot 1200 Elo</option><option value="1500">Bot 1500 Elo</option><option value="1800">Bot 1800 Elo</option><option value="2200">Bot 2200 Elo</option><option value="2600">Bot 2600 Elo</option><option value="3200">⭐ ETO Brillant · 3200 Elo (sacrifices !!)</option></select><button class="btn sm" id="cs-sr-pause" hidden title="Mettre la partie en pause">⏸ PAUSE</button><button class="btn sm titans" id="cs-titans" title="Match spectateur : E.N.O.S. contre ETO, 3200 Elo chacun, ils se répondent en direct">⚔ ORGANISER UN 1v1 E.N.O.S. VS ETO</button><button class="btn sm" id="cs-w">NOUVELLE PARTIE · BLANCS</button><button class="btn sm" id="cs-b">NOIRS</button><button class="btn sm" id="cs-hbtn">HISTORIQUE</button><select id="cs-theme" class="cs-sel" title="Thème des pièces (plateau Godot)" aria-label="Thème des pièces"></select><select id="cs-board" class="cs-sel" title="Plateau : couleurs des cases (26 plateaux)" aria-label="Plateau"></select><select id="cs-vtheme" class="cs-sel" title="Style visuel du plateau (matériaux, néon, yeux des cavaliers)" aria-label="Style visuel du plateau"></select><span class="persona-slot" data-persona-slot></span><button class="btn sm" id="cs-mic" title="Parler à E.N.O.S. pendant la partie (trash talk)">🎤 TRASH TALK</button><button class="btn sm" id="cs-discord" title="Écoute Discord : E.N.O.S. / ETO entendent la voix de votre ami en appel (audio de sortie du PC) et lui répondent à voix haute">🎧 ÉCOUTE DISCORD : OFF</button><label class="dim" id="cs-discord-mixl" style="font-size:11px;white-space:nowrap" title="Fusionner aussi votre micro avec l'audio du bureau"><input type="checkbox" id="cs-discord-mic"> + mon micro</label><span id="cs-discord-lv" class="dim" style="font-size:11px" hidden></span><button class="btn sm" id="cs-stop" title="Couper la voix d'E.N.O.S. et lui répondre tout de suite">⏹ INTERROMPRE</button><button class="btn sm" id="cs-revbtn" title="Bilan de la partie : précision, niveau estimé, coups par catégorie">BILAN</button><button class="btn sm warn" id="cs-resign" title="Abandonner la partie en cours">ABANDONNER</button><button class="btn sm" id="cs-cond" hidden title="Revenir à la position posée pour la rejouer autrement">↩ MISE EN CONDITION</button><button class="btn sm" id="cs-close">✕ FERMER</button></div>
+    <select id="cs-mode" class="cs-sel" title="Mode de jeu : défi contre E.N.O.S., ou cours avec ETO qui commente votre partie contre un bot virtuel" aria-label="Mode de jeu"><option value="enos">DÉFI · E.N.O.S.</option><option value="coach">COURS · MOI VS BOT + COACH ETO</option><option value="speedrun">SPEEDRUN · ETO VS BOT</option><option value="titans">⚔ CHOC DES TITANS · E.N.O.S. VS ETO</option><option value="boss">👑 BOSS FINAL · STOCKFISH</option></select><select id="cs-boss" class="cs-sel" hidden title="Qui affronte le boss Stockfish ?" aria-label="Challenger du boss"><option value="eto">ETO VS STOCKFISH</option><option value="enos">E.N.O.S. VS STOCKFISH</option><option value="duo">E.N.O.S. + ETO VS STOCKFISH</option></select><select id="cs-elo" class="cs-sel" hidden title="Niveau du bot virtuel (ETO le simule à partir de ses 3200 Elo)" aria-label="Elo du bot"><option value="400">Bot 400 Elo</option><option value="600" selected>Bot 600 Elo</option><option value="800">Bot 800 Elo</option><option value="1000">Bot 1000 Elo</option><option value="1200">Bot 1200 Elo</option><option value="1500">Bot 1500 Elo</option><option value="1800">Bot 1800 Elo</option><option value="2200">Bot 2200 Elo</option><option value="2600">Bot 2600 Elo</option><option value="3200">⭐ ETO Brillant · 3200 Elo (sacrifices !!)</option></select><button class="btn sm" id="cs-sr-pause" hidden title="Mettre la partie en pause">⏸ PAUSE</button><button class="btn sm titans" id="cs-titans" title="Match spectateur : E.N.O.S. contre ETO, 3200 Elo chacun, ils se répondent en direct">⚔ ORGANISER UN 1v1 E.N.O.S. VS ETO</button><button class="btn sm" id="cs-w">NOUVELLE PARTIE · BLANCS</button><button class="btn sm" id="cs-b">NOIRS</button><button class="btn sm" id="cs-hbtn">HISTORIQUE</button><button class="btn sm" id="cs-trbtn" title="Super Enos s'entraîne en arrière-plan (LLM) contre E.N.O.S., Stockfish et ETO">🧠 SUPER ENOS</button><select id="cs-theme" class="cs-sel" title="Thème des pièces (plateau Godot)" aria-label="Thème des pièces"></select><select id="cs-board" class="cs-sel" title="Plateau : couleurs des cases (26 plateaux)" aria-label="Plateau"></select><select id="cs-vtheme" class="cs-sel" title="Style visuel du plateau (matériaux, néon, yeux des cavaliers)" aria-label="Style visuel du plateau"></select><span class="persona-slot" data-persona-slot></span><button class="btn sm" id="cs-mic" title="Parler à E.N.O.S. pendant la partie (trash talk)">🎤 TRASH TALK</button><button class="btn sm" id="cs-discord" title="Écoute Discord : E.N.O.S. / ETO entendent la voix de votre ami en appel (audio de sortie du PC) et lui répondent à voix haute">🎧 ÉCOUTE DISCORD : OFF</button><label class="dim" id="cs-discord-mixl" style="font-size:11px;white-space:nowrap" title="Fusionner aussi votre micro avec l'audio du bureau"><input type="checkbox" id="cs-discord-mic"> + mon micro</label><span id="cs-discord-lv" class="dim" style="font-size:11px" hidden></span><button class="btn sm" id="cs-stop" title="Couper la voix d'E.N.O.S. et lui répondre tout de suite">⏹ INTERROMPRE</button><button class="btn sm" id="cs-revbtn" title="Bilan de la partie : précision, niveau estimé, coups par catégorie">BILAN</button><button class="btn sm warn" id="cs-resign" title="Abandonner la partie en cours">ABANDONNER</button><button class="btn sm" id="cs-cond" hidden title="Revenir à la position posée pour la rejouer autrement">↩ MISE EN CONDITION</button><button class="btn sm" id="cs-close">✕ FERMER</button></div>
   <div class="cs-wrap">
     <div class="cs-left"><div id="cs-board" aria-label="Plateau d'échecs"></div><div id="cs-embed" hidden aria-hidden="true"></div><div id="cs-promo" hidden></div><div id="cs-status"></div></div>
     <div class="cs-right">
@@ -1191,11 +1192,43 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       </div>
     </div>
   </div>
+  <div id="cs-train" hidden role="dialog" aria-label="Super Enos : entraînement">
+    <div class="tm-top"><h2>SUPER ENOS · ENTRAÎNEMENT<small id="tr-sub">ARRÊTÉ</small></h2><button class="btn sm" id="tr-close">✕ RETOUR</button></div>
+    <div class="tr-wrap">
+      <div class="tr-col">
+        <div class="tr-card">
+          <h3>LANCER</h3>
+          <div class="tm-row tr-opps"><label><input type="checkbox" id="tr-enos" checked> E.N.O.S.</label><label><input type="checkbox" id="tr-sf" checked> STOCKFISH</label><label><input type="checkbox" id="tr-eto" checked> ETO</label></div>
+          <div class="tm-row"><select id="tr-games" class="cs-sel" aria-label="Nombre de parties"><option value="0">Sans fin</option><option value="6">6 parties</option><option value="30">30 parties</option><option value="120">120 parties</option></select>
+            <select id="tr-secs" class="cs-sel" aria-label="Réflexion par coup"><option value="0.3">Rapide · 0,3 s</option><option value="0.6" selected>Normal · 0,6 s</option><option value="1.5">Profond · 1,5 s</option></select>
+            <label title="Le LLM départage les coups équivalents et rédige une leçon après chaque partie"><input type="checkbox" id="tr-llm" checked> LLM</label></div>
+          <div class="tm-row"><button class="btn" id="tr-go">▶ LANCER L'ENTRAÎNEMENT</button><button class="btn warn" id="tr-stop" hidden>⏹ ARRÊTER</button></div>
+          <div class="tm-row"><label><input type="checkbox" id="tr-auto"> Relancer au démarrage d'E.N.O.S.</label><button class="btn sm" id="tr-reset">EFFACER LA MÉMOIRE</button></div>
+          <p class="tr-note" id="tr-err" hidden></p>
+          <p class="tr-note">Tourne en arrière-plan sur le PC : tu peux fermer cette fenêtre. Pas de nulle par répétition, coups brillants de Stockfish en priorité.</p>
+        </div>
+        <div class="tr-card">
+          <h3>EN DIRECT<span id="tr-live"></span></h3>
+          <div id="tr-board"></div>
+          <div class="cs-evalw"><div class="cs-evalb"><i id="tr-eval"></i></div><b id="tr-evtxt">0,0</b></div>
+          <div class="tr-say" id="tr-say"></div>
+          <div id="tr-moves"></div>
+        </div>
+      </div>
+      <div class="tr-col">
+        <div class="tr-card"><h3>PROFILS AFFRONTÉS</h3><div id="tr-prof"></div></div>
+        <div class="tr-card"><h3>LEÇONS APPRISES</h3><div id="tr-lessons"></div></div>
+        <div class="tr-card"><h3>OUVERTURES</h3><div id="tr-open"></div></div>
+        <div class="tr-card"><h3>DERNIÈRES PARTIES</h3><div id="tr-games-list"></div></div>
+      </div>
+    </div>
+  </div>
 </section>
 <script src="/static/team.js"></script>
 <script src="/static/power.js"></script>
 <script src="/static/mobile.js"></script>
 <script src="/static/defi.js?v=20261026a"></script>
+<script src="/static/train.js?v=1"></script>
 <script src="/static/notify.js?v=2"></script>
 <script src="/static/agenda.js?v=2"></script>
 <script src="/static/home.js?v=2"></script>

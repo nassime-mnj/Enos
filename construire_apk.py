@@ -37,7 +37,7 @@ def find_jdk():
     for base in (r"C:\Program Files\Eclipse Adoptium", r"C:\Program Files\Java", r"C:\Program Files\Microsoft", r"C:\Program Files\Android\Android Studio"):
         cands += sorted(glob.glob(os.path.join(base, "*")), reverse=True) + [os.path.join(base, "jbr")]
     for c in cands:
-        if c and os.path.isfile(os.path.join(c, "bin", "javac.exe")) and os.path.isfile(os.path.join(c, "bin", "keytool.exe")):
+        if c and any(os.path.isfile(os.path.join(c, "bin", "javac" + e)) and os.path.isfile(os.path.join(c, "bin", "keytool" + e)) for e in (".exe", "")):   # Windows, ou Linux (CI GitHub)
             return c
     return None
 
@@ -140,6 +140,7 @@ def main():
     ap.add_argument("--installer-sdk", action="store_true")
     ap.add_argument("--accepter-licences", action="store_true")
     ap.add_argument("--version-code", default="", help="par defaut : numero precedent + 1 (android/version.txt)")
+    ap.add_argument("--test-build", action="store_true", help="version TEST : autre identifiant (com.nasko.app.test) et nom « Eto TEST », installable a cote de l'application normale, sans la cle de signature habituelle")
     a = ap.parse_args()
 
     if not JDK:
@@ -170,9 +171,17 @@ def main():
     print("1/6 ressources (aapt2)")
     run([tools["aapt2"], "compile", "--dir", os.path.join(BUILD, "res"), "-o", os.path.join(BUILD, "res.zip")])
     base = os.path.join(BUILD, "base.apk")
-    run([tools["aapt2"], "link", "-o", base, "-I", jar, "--manifest", os.path.join(A, "AndroidManifest.xml"), "--min-sdk-version", MIN_SDK,
+    manifest = os.path.join(A, "AndroidManifest.xml")
+    extra = []
+    if a.test_build:                                 # autre identifiant : coexiste avec l'application normale (les classes Java gardent leur paquet d'origine)
+        manifest = os.path.join(BUILD, "AndroidManifest.xml")
+        txt = open(os.path.join(A, "AndroidManifest.xml"), encoding="utf-8").read().replace('android:label="Eto"', 'android:label="Eto TEST"')
+        open(manifest, "w", encoding="utf-8").write(txt)
+        extra = ["--rename-manifest-package", "com.nasko.app.test", "--custom-package", "com.nasko.app"]
+        name += "-test"
+    run([tools["aapt2"], "link", "-o", base, "-I", jar, "--manifest", manifest, "--min-sdk-version", MIN_SDK,
          "--target-sdk-version", PLATFORM, "--version-code", str(code), "--version-name", name, "-R", os.path.join(BUILD, "res.zip"),
-         "-A", os.path.join(A, "assets"), "--java", os.path.join(BUILD, "gen"), "--auto-add-overlay"])
+         "-A", os.path.join(A, "assets"), "--java", os.path.join(BUILD, "gen"), "--auto-add-overlay", *extra])
 
     print("2/6 compilation Java")
     srcs = glob.glob(os.path.join(A, "src", "**", "*.java"), recursive=True) + glob.glob(os.path.join(BUILD, "gen", "**", "*.java"), recursive=True)
@@ -198,7 +207,8 @@ def main():
     sha = hashlib.sha256(open(OUT, "rb").read()).hexdigest()
     with open(OUT + ".json", "w", encoding="utf-8") as f:
         json.dump({"versionCode": code, "versionName": name, "sha256": sha, "size": os.path.getsize(OUT)}, f)
-    open(vfile, "w").write(str(code))
+    if not a.test_build:
+        open(vfile, "w").write(str(code))
     print("6/6 termine")
     print(f"\nAPK prete : {OUT}  ({os.path.getsize(OUT) // 1024} Ko)")
     print("Installation : ouvrez  https://<IP du PC>:8443/nasko.apk  sur le telephone (page de connexion) et autorisez l'installation depuis cette source.")

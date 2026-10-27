@@ -78,3 +78,12 @@
 .cl-l input[type=range]{width:100%;accent-color:var(--red);min-height:44px}
 #cl-sleep .btn.on{border-color:var(--red);background:var(--red-deep)}
 #tool-chill .suite-body>*,#tool-audiolab .suite-body>*,#tool-sprites .suite-body>*{min-width:0}
+
+/* ---- Super Enos (m_train.js) */
+#tool-train .card{min-width:0}
+#su-cfg.lock{opacity:.55;pointer-events:none}
+#su-opps .su-opp{height:34px;padding:0 14px;border-radius:17px;border:1px solid var(--line);background:#101012;font:700 12.5px var(--ui);letter-spacing:.6px;color:var(--muted)}
+#su-opps .su-opp.on{border-color:var(--red);color:#fff;background:var(--red-deep)}
+.su-note{margin:8px 0 0;padding:8px 12px;border-radius:10px;border:1px solid #6b4d12;background:#251c08;color:#f5c542;font-size:13.5px;line-height:1.4}
+.su-say{margin-top:10px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#0b0b0d;font-size:14px;font-style:italic}
+.su-les{padding:9px 2px;border-top:1px solid var(--line);font-size:14.5px;line-height:1.45}.su-les:first-child{border-top:0}.su-les small{display:block;color:var(--muted);font-size:12px}
