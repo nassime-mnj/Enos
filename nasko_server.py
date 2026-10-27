@@ -1,6 +1,7 @@
 """Serveur local E.N.O.S. (FastAPI) : logique, automatisation, ElevenLabs, interface web sur localhost."""
 import asyncio
 import ipaddress
+import base64
 import json
 import logging
 import os
@@ -264,6 +265,7 @@ class SecurityMiddleware:
             nasko_team.touch(uuid, ip, hdr.get("user-agent", ""))
         st["device_uuid"] = uuid if nasko_team.valid_uuid(uuid) else ""
         st["edition"] = nasko_team.edition(uuid, local) if authed else "eto"
+        st["full"] = bool(authed and not local and st["edition"] == "dev" and nasko_team.is_full(uuid))      # droits complets accordés par le propriétaire, depuis le PC
 
         async def send2(msg):
             if msg["type"] == "http.response.start" and counted:
@@ -428,9 +430,18 @@ def dev_only(request: Request):
 
 
 def local_only(request: Request):
-    """Actions sensibles (lancer des programmes, lire les fichiers) : uniquement depuis ce PC."""
+    """Actions sensibles (lancer des programmes, lire les fichiers) : depuis ce PC, ou depuis un téléphone auquel le propriétaire a donné les DROITS COMPLETS (réglage fait sur le PC)."""
+    if not is_local(request) and not request.scope.get("state", {}).get("full"):
+        raise HTTPException(403, "action réservée au PC où tourne E.N.O.S. (ou à un téléphone avec droits complets).")
+
+
+def pc_strict(request: Request):
+    """Gestion de la confiance (appareils, clés, appairage, réseau, profil) : strictement ce PC, même pour un téléphone aux droits complets."""
     if not is_local(request):
-        raise HTTPException(403, "action réservée au PC où tourne E.N.O.S.")
+        raise HTTPException(403, "réservé au PC : la confiance se gère depuis le PC lui-même.")
+
+
+_PCONLY = [Depends(need_token), Depends(pc_strict)]      # strictement ce PC (confiance, clés, appairage, réseau)
 
 
 class Login(BaseModel):
@@ -511,7 +522,7 @@ def device_forget(request: Request):
 
 
 # --- gestion des appareils (PC uniquement)
-@app.get("/api/devices", dependencies=[Depends(need_token), Depends(local_only)])
+@app.get("/api/devices", dependencies=_PCONLY)
 def list_devices():
     cfg = load_config()
     trusted, vpn = cfg.get("trusted_ips") or [], bool(cfg.get("allow_vpn_ranges"))
@@ -519,14 +530,14 @@ def list_devices():
             "trusted_ips": trusted}
 
 
-@app.delete("/api/devices/{device_id}", dependencies=[Depends(need_token), Depends(local_only)])
+@app.delete("/api/devices/{device_id}", dependencies=_PCONLY)
 def revoke_device(device_id: str):
     if not devices.revoke(device_id):
         raise HTTPException(404, "appareil inconnu")
     return list_devices()
 
 
-@app.post("/api/devices/revoke-all", dependencies=[Depends(need_token), Depends(local_only)])
+@app.post("/api/devices/revoke-all", dependencies=_PCONLY)
 def revoke_all_devices():
     devices.revoke_all()
     return list_devices()
@@ -537,7 +548,7 @@ class TrustIP(BaseModel):
     trusted: bool
 
 
-@app.post("/api/trusted-ips", dependencies=[Depends(need_token), Depends(local_only)])
+@app.post("/api/trusted-ips", dependencies=_PCONLY)
 def set_trusted_ip(body: TrustIP):
     """Ajoute/retire une IP locale de la liste `trusted_ips` (accès sans code ni jeton depuis cette adresse)."""
     ip = body.ip.strip()
@@ -728,6 +739,7 @@ def status(request: Request):
     return {"welcome": welcome,
         "greeting": greeting,
         "local": is_local(request),
+        "full": bool(request.scope.get("state", {}).get("full")),            # téléphone aux droits complets : l'interface affiche aussi les modules « ce PC seulement »
         "device": ({"name": request.state.device["name"], "via": request.state.device["via"]}
                    if request.state.device else None),
         "mic": nasko_stt.default_input_name() if is_local(request) else None,
@@ -1232,7 +1244,7 @@ def ping():
 
 
 _VENDOR = {"codemirror.bundle.js": "codemirror.bundle.js", "wavesurfer.min.js": "wavesurfer.min.js", "wavesurfer.regions.min.js": "wavesurfer.regions.min.js"}
-_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
+_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "scan_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
                  "imgproc.js": "text/javascript", "imgproc.css": "text/css", "anim.js": "text/javascript", "anim.css": "text/css",
                  "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css",
                  "tabs.js": "text/javascript", "tabs.css": "text/css", "env.js": "text/javascript", "env.css": "text/css", "audio.js": "text/javascript", "audio.css": "text/css", "compress.js": "text/javascript", "compress.css": "text/css", "pdfed.js": "text/javascript", "pdfed.css": "text/css", "studio.js": "text/javascript", "studio.css": "text/css", "syllabus.js": "text/javascript", "syllabus.css": "text/css", "quick.js": "text/javascript", "background.js": "text/javascript", "background.css": "text/css", "quick.css": "text/css", "quicklib.js": "text/javascript", "talk.js": "text/javascript", "talk.css": "text/css", "colis.js": "text/javascript", "colis.css": "text/css", "search.js": "text/javascript", "search.css": "text/css",
@@ -1273,7 +1285,7 @@ def _imgcat(cat):
 
 
 _IMG = [Depends(need_token), Depends(dev_only)]          # premium : PC ou appareil de confiance (Eto Dev)
-_LOCAL = [Depends(need_token), Depends(local_only)]      # strictement ce PC
+_LOCAL = [Depends(need_token), Depends(local_only)]      # ce PC, ou un téléphone aux droits complets
 _REMOTE = [Depends(need_token)]          # routes utilisables depuis un appareil de confiance (téléphone), pas seulement depuis le PC
 
 
@@ -1624,13 +1636,13 @@ def security_status(request: Request):
     return out
 
 
-@app.get("/api/security/pairing", dependencies=_LOCAL)
+@app.get("/api/security/pairing", dependencies=_PCONLY)
 def security_pairing():
     tok = sec.pairing_token()
     return {"token": tok, "qr": _qr(tok), "fingerprint": sec.fingerprint(), "created": sec.keys().get("created", "")}
 
 
-@app.post("/api/security/rotate", dependencies=_LOCAL)
+@app.post("/api/security/rotate", dependencies=_PCONLY)
 def security_rotate():
     sec.rotate()
     return {"ok": True, "token": sec.pairing_token(), "fingerprint": sec.fingerprint()}
@@ -1647,7 +1659,7 @@ class SecConfig(BaseModel):
     api_key_inject_remote: bool | None = None
 
 
-@app.post("/api/security/config", dependencies=_LOCAL)
+@app.post("/api/security/config", dependencies=_PCONLY)
 def security_config(b: SecConfig):
     vals = {k: v for k, v in b.model_dump().items() if v is not None}
     if vals:
@@ -3024,24 +3036,81 @@ def settings_pick(b: PickKey):
     return {"path": res[0] if res else None}
 
 
+# --- ETO / IA pour la page « Apprendre / Conseiller » (le LLM configuré sur ce PC) ------------------------------------------------------------------------
+class ChessLLM(BaseModel):
+    system: str = ""
+    user: str
+    max_tokens: int = 300
+    json_mode: bool = False
+
+
+@app.post("/api/chess/llm", dependencies=_LOCAL)
+def chess_llm(b: ChessLLM):
+    cfg = load_config()
+    if not nasko_llm.configured(cfg):
+        raise HTTPException(400, "LLM non configuré : ajoute llm_api_key dans nasko_config.json.")
+    try:
+        return {"text": nasko_llm.complete(cfg, b.system[:3000], b.user[:14000], max_tokens=max(40, min(b.max_tokens, 900)), clean=not b.json_mode)}
+    except nasko_llm.LLMError as e:
+        raise HTTPException(502, str(e))
+
+
+class ChessVision(BaseModel):
+    image: str                     # data URL ou base64 (JPEG/PNG)
+    ask: str
+    system: str = ""
+    max_tokens: int = 400
+
+
+@app.post("/api/chess/vision", dependencies=_LOCAL)
+def chess_vision(b: ChessVision):
+    cfg = load_config()
+    if not nasko_llm.configured(cfg):
+        raise HTTPException(400, "LLM non configuré : ajoute llm_api_key dans nasko_config.json.")
+    raw = b.image.split(",", 1)[-1]
+    try:
+        data = base64.b64decode(raw, validate=False)
+    except Exception:                                                     # noqa: BLE001
+        raise HTTPException(400, "image illisible")
+    if len(data) > 6_000_000:
+        raise HTTPException(413, "image trop lourde")
+    try:
+        return {"text": nasko_llm.vision_raw(cfg, b.system[:1500] or "Tu lis des échiquiers.", b.ask[:1500], data, max_tokens=max(60, min(b.max_tokens, 800)))}
+    except nasko_llm.LLMError as e:
+        raise HTTPException(502, str(e))
+
+
 # --- appareils de confiance
 class DeviceApprove(BaseModel):
     uuid: str
     name: str = ""
 
 
-@app.get("/api/team/devices", dependencies=_LOCAL)
+@app.get("/api/team/devices", dependencies=_PCONLY)
 def team_devices():
     return nasko_team.snapshot()
 
 
-@app.post("/api/team/devices", dependencies=_LOCAL)
+@app.post("/api/team/devices", dependencies=_PCONLY)
 def team_device_approve(b: DeviceApprove):
     _team(nasko_team.approve, b.uuid.strip(), b.name)
     return nasko_team.snapshot()
 
 
-@app.delete("/api/team/devices/{uuid}", dependencies=_LOCAL)
+class DeviceFull(BaseModel):
+    on: bool
+
+
+@app.post("/api/team/devices/{uuid}/full", dependencies=_PCONLY)
+def team_device_full(uuid: str, b: DeviceFull):
+    """Droits complets d'un appareil de confiance (comme ce PC). Réservé au PC : un téléphone ne peut jamais s'en donner."""
+    if not nasko_team.set_full(uuid, b.on):
+        raise HTTPException(404, "appareil inconnu : approuve-le d'abord")
+    sec.event("droits complets", "local", uuid[:12], "accordés" if b.on else "retirés")
+    return nasko_team.snapshot()
+
+
+@app.delete("/api/team/devices/{uuid}", dependencies=_PCONLY)
 def team_device_remove(uuid: str):
     if not nasko_team.remove(uuid):
         raise HTTPException(404, "appareil inconnu")
@@ -4950,7 +5019,7 @@ def role_info():
     return nasko_roles.info()
 
 
-@app.post("/api/role/select", dependencies=_LOCAL)
+@app.post("/api/role/select", dependencies=_PCONLY)
 def role_select(b: RoleSelect):
     try:
         nasko_roles.select(b.role, b.pin, b.new_pin)
@@ -4960,7 +5029,7 @@ def role_select(b: RoleSelect):
     return nasko_roles.info()
 
 
-@app.post("/api/role/pin", dependencies=_LOCAL)
+@app.post("/api/role/pin", dependencies=_PCONLY)
 def role_pin(b: RolePin):
     try:
         nasko_roles.change_pin(b.role, b.pin, b.new_pin)
@@ -5038,7 +5107,7 @@ def cloud_status():
     return nasko_cloud.status()
 
 
-@app.post("/api/cloud/login", dependencies=_LOCAL)
+@app.post("/api/cloud/login", dependencies=_PCONLY)
 def cloud_login(b: CloudLogin):
     try:
         return nasko_cloud.login(b.url, b.email, b.password, b.totp)
@@ -5046,7 +5115,7 @@ def cloud_login(b: CloudLogin):
         raise HTTPException(e.status if 400 <= e.status < 600 else 400, {"detail": str(e), **e.extra} if e.extra.get("mfa_required") else str(e))
 
 
-@app.post("/api/cloud/logout", dependencies=_LOCAL)
+@app.post("/api/cloud/logout", dependencies=_PCONLY)
 def cloud_logout():
     return nasko_cloud.logout()
 
@@ -5106,7 +5175,7 @@ def mirror_stop():
     return nasko_mirror.status()
 
 
-@app.post("/api/mirror/pair", dependencies=_LOCAL)
+@app.post("/api/mirror/pair", dependencies=_PCONLY)
 def mirror_pair(b: MirrorPair):
     try:
         nasko_mirror.pair(b.host.strip(), b.port, b.code.strip())
@@ -5272,7 +5341,7 @@ def onboarding_finish(b: OnbDone):
     return {"ok": True}
 
 
-@app.post("/api/pair/start", dependencies=_LOCAL)
+@app.post("/api/pair/start", dependencies=_PCONLY)
 async def pair_start():
     """Bouton « APPAIRER LE TÉLÉPHONE » : paquet chiffré + QR code + code à 10 caractères (voir nasko_pairing)."""
     try:
@@ -5282,12 +5351,12 @@ async def pair_start():
         raise HTTPException(500, "Appairage impossible : " + str(e)[:160])
 
 
-@app.get("/api/pair/status", dependencies=_LOCAL)
+@app.get("/api/pair/status", dependencies=_PCONLY)
 def pair_status():
     return nasko_pairing.status()
 
 
-@app.post("/api/pair/cancel", dependencies=_LOCAL)
+@app.post("/api/pair/cancel", dependencies=_PCONLY)
 def pair_cancel():
     return {"ok": True, "was_active": nasko_pairing.cancel()}
 
@@ -5315,7 +5384,7 @@ async def ota_check():
         raise HTTPException(502, "serveur de mise à jour injoignable : " + e.__class__.__name__)
 
 
-@app.post("/api/ota/install", dependencies=_LOCAL)
+@app.post("/api/ota/install", dependencies=_PCONLY)
 def ota_install():
     if nasko_update_signal.managed():
         _managed_gone()
@@ -5413,14 +5482,15 @@ def mobile_chess_review_status(job: str):
 
 
 @app.get("/api/mobile/pc", dependencies=_MOBILE)
-def mobile_pc():
+def mobile_pc(request: Request):
     """Instantané léger pour l'onglet PC du téléphone : jauges, ventilateurs (lecture seule), batterie, scène en cours, profil d'alimentation."""
     s = nasko_sysctl.sensors()
     return {"host": socket.gethostname(), "now": time.time(), "uptime_s": int(time.time() - _BOOT), "version": nasko_ota.current_version(),
             "cpu": s.get("cpu"), "ram": s.get("ram"), "gpu": s.get("gpu"), "battery": s.get("battery"), "disk": s.get("disk"), "fans": s.get("fans"),
             "profile": _mobile_profile(), "running": nasko_tasks.running_scenes(),
             "agent": {"running": nasko_agent.status["running"], "sent": nasko_agent.status["sent_total"]},
-            "caps": {"fans_write": False, "power": bool(load_config().get("remote_power", True))}}
+            "caps": {"fans_write": False, "power": bool(load_config().get("remote_power", True))},
+            "full": bool(request.scope.get("state", {}).get("full"))}
 
 
 @app.post("/api/agenda/sync", dependencies=_MOBILE)
@@ -6292,7 +6362,7 @@ def _network_info():
             "vpn_enabled": bool(load_config().get("allow_vpn_ranges"))}
 
 
-@app.get("/api/network", dependencies=[Depends(need_token), Depends(local_only)])
+@app.get("/api/network", dependencies=_PCONLY)
 def network():
     return _network_info()
 
@@ -6301,7 +6371,7 @@ class Toggle(BaseModel):
     enabled: bool
 
 
-@app.post("/api/network/toggle", dependencies=[Depends(need_token), Depends(local_only)])
+@app.post("/api/network/toggle", dependencies=_PCONLY)
 def network_toggle(body: Toggle):
     """Active/désactive l'accès téléphone à chaud (sans relancer) et mémorise le choix dans nasko_config.json."""
     try:

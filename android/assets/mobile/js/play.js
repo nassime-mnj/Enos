@@ -1,28 +1,20 @@
 "use strict";
-// ÉCHECS SUR LE TÉLÉPHONE : jouer contre le Stockfish du PC (niveau réglable) et analyser tes parties (PGN collé depuis Chess.com) avec les conseils d'ETO.
-// Le PC fait tout le calcul (service sans état /api/mobile/chess/*) ; le téléphone dessine le plateau. Hors ligne : écran verrouillé avec « reconnecter ».
-// Analyse d'une partie TERMINÉE seulement : pas d'aide en direct (contre des humains ce serait de la triche).
+// ÉCHECS SUR LE TÉLÉPHONE : jouer contre le Stockfish embarqué (niveau réglable) et analyser tes parties (PGN collé depuis Chess.com) avec les conseils d'ETO.
+// Tout est local (chess_local.js + chess_review.js) : aucun PC requis. Les contre-ETO / Titans / Boss sont dans le module « Défis » (m_defis.js).
 (() => {
   const E = window.ENOS, $ = E.$, esc = E.esc, U = E.ui, B = E.board, L = E.link;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null };
-  const KEYLAB = { brilliant: ["Brillant", "#1acfd6"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
+  const KEYLAB = { brilliant: ["Brillant", "#1acfd6"], book: ["Théorie", "#a8896c"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
 
-  // Parties : moteur local (chess_local.js), sans PC. Seule l'ANALYSE de partie (review) passe par le PC.
-  const api = async (path, body) => {
-    if (!/\/review/.test(path)) return E.chessLocal.call(path, body);
-    const r = await L.api(path, { method: "POST", body });
-    const j = r.json() || {};
-    if (r.status !== 200) throw new Error(j.detail || "Erreur " + r.status);
-    return j;
-  };
+  // Parties ET analyse de partie : moteur local (chess_local.js / chess_review.js), sans PC.
+  const api = (path, body) => E.chessLocal.call(path, body);
 
   // ------------------------------------------------------------------ structure
   function build() {
     const sv = document.createElement("div");
     sv.id = "tool-chess"; sv.className = "subview"; sv.hidden = true;
     sv.innerHTML = `<button class="back" data-back>◂ MODULES</button>
-      <div id="ch-lock" class="card locked" hidden><h2>PC hors ligne</h2><p>Les échecs utilisent le Stockfish de ton PC. Allume-le et reste sur le même Wi-Fi.</p><div class="row"><button class="btn" id="ch-retry">RECONNECTER</button></div></div>
       <div id="ch-main">
         <div class="seg" id="ch-seg" data-p="enos"><button data-t="play" class="on">JOUER</button><button data-t="review">ANALYSER</button><i class="seg-ind"></i></div>
         <div id="ch-play">
@@ -35,12 +27,13 @@
             <div class="ch-credit">Pièces : Vecteezy « Chess board with pieces set »</div>
             <div class="row"><button class="btn" id="ch-new">NOUVELLE PARTIE</button><button class="btn" id="ch-hint">INDICE</button></div>
             <div class="row" style="margin-top:8px"><button class="btn" id="ch-undo">ANNULER</button><button class="btn" id="ch-flip">RETOURNER</button></div>
+            <div class="row" style="margin-top:8px"><button class="btn" id="ch-defis">✦ ETO BRILLANT &amp; DÉFIS</button><button class="btn" id="ch-adv">📷 CONSEILLER</button></div>
           </div>
         </div>
         <div id="ch-review" hidden>
           <div class="card">
             <h3>Analyser une partie</h3>
-            <p class="muted" style="margin-bottom:10px;font-size:14px">Joue contre un bot sur Chess.com, puis <b>Partager › PGN › copier</b> et colle ici. Le PC juge chaque coup, ETO t'explique comment progresser.</p>
+            <p class="muted" style="margin-bottom:10px;font-size:14px">Joue contre un bot sur Chess.com, puis <b>Partager › PGN › copier</b> et colle ici. Chaque coup est jugé sur ton téléphone, ETO t'explique comment progresser.</p>
             <textarea id="rv-pgn" class="ta" rows="5" placeholder="Colle le PGN de la partie ici…" spellcheck="false"></textarea>
             <label class="fld" style="padding:10px 0 0">Ton pseudo Chess.com<input id="rv-user" type="text" style="max-width:48%;height:40px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#0a0a0c;color:var(--text);font:600 15px var(--ui)" autocapitalize="off" spellcheck="false"></label>
             <div class="row"><button class="btn pri" id="rv-go">ANALYSER LA PARTIE</button></div>
@@ -158,24 +151,15 @@
 
   // ------------------------------------------------------------------ analyser
   let revRes = null, step = 0;
-  function startReview() {
+  async function startReview() {
     const pgn = $("#rv-pgn").value.trim();
     if (pgn.length < 20) return U.toast("Colle d'abord le PGN de la partie.", "warn");
     E.settings.set("chesscom", $("#rv-user").value.trim());
-    if (L.state !== "online") return U.toast("L'analyse de partie utilise le PC : allume-le et reste sur le même Wi-Fi.", "warn", 5000);
     $("#rv-go").disabled = true; $("#rv-prog").hidden = false; $("#rv-prog i").style.width = "4%"; $("#rv-out").innerHTML = "";
-    api("/api/mobile/chess/review", { pgn, me: "auto", username: $("#rv-user").value.trim() }).then((j) => poll(j.job)).catch((e) => { U.toast(e.message, "warn", 6000); $("#rv-go").disabled = false; $("#rv-prog").hidden = true; });
-  }
-  async function poll(job) {
-    for (let i = 0; i < 200; i++) {
-      await E.sleep(1100);
-      let s;
-      try { const r = await L.api("/api/mobile/chess/review/" + job); s = r.json(); } catch (e) { continue; }
-      if (!s) continue;
-      $("#rv-prog i").style.width = Math.max(4, Math.round((s.progress || 0) * 100)) + "%";
-      if (s.state === "done") { $("#rv-go").disabled = false; $("#rv-prog").hidden = true; revRes = s.result; step = 0; showReview(); if (E.chessLearn) E.chessLearn.addReview(s.result); E.vibrate(25); return; }
-      if (s.state === "error") { U.toast("Analyse impossible : " + s.error, "warn", 7000); break; }
-    }
+    try {
+      revRes = await E.brain.reviewGame({ pgn, me: "auto", username: $("#rv-user").value.trim(), onProgress: (p) => { $("#rv-prog i").style.width = Math.max(4, Math.round(p * 100)) + "%"; } });
+      step = 0; showReview(); if (E.chessLearn) E.chessLearn.addReview(revRes); E.vibrate(25);
+    } catch (e) { U.toast(e.message, "warn", 7000); }
     $("#rv-go").disabled = false; $("#rv-prog").hidden = true;
   }
 
@@ -216,9 +200,6 @@
   }
 
   // ------------------------------------------------------------------ branchement
-  function applyLink() {
-    $("#ch-lock").hidden = true; $("#ch-main").hidden = false;                 // jouer ne demande plus le PC
-  }
   function init() {
     build();
     const seg = $("#ch-seg");
@@ -245,10 +226,10 @@
       api("/api/mobile/chess/state", { fen: G.fen }).then((r) => { G.legal = r.legal; }).catch(() => {});
       status("Coup annulé"); paint();
     };
-    $("#ch-retry").onclick = () => L.probeNow();
+    $("#ch-defis").onclick = () => E.modules.open("defis");
+    $("#ch-adv").onclick = () => E.modules.open("advisor");
     $("#rv-go").onclick = startReview;
     $("#rv-user").value = E.settings.get("chesscom", "");
-    E.on("link", applyLink); applyLink();
     paint();
   }
   E.chessUi = { init, open() { if (!G.hist.length && G.fen === START) { paint(); } } };

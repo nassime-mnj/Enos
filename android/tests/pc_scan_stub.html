@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>stub</title>
+<section id="cd"></section><section id="cs" hidden></section><section id="df" hidden></section>
+<button id="cd-shot"></button><button id="cd-mem" hidden></button><input type="file" id="cd-shotf" hidden>
+<script>
+// faux « Mise en condition » : enregistre ce que scan_launch.js demande à defi.js
+window.CALLS = [];
+window.enosCD = { board: {}, apply(board, turn, flip, castling) { this.board = board; window.CALLS.push({board, turn, flip, castling}); }, message(t, err) { window.CALLS.push({msg: t, err}); } };
+</script>
+<script src="/static/scan_launch.js"></script>

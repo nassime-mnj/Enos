@@ -105,7 +105,7 @@
     if (s.hidden) return false;
     const done = () => { s.hidden = true; s.className = "sheet"; s.style.transform = ""; s.style.animation = ""; s.innerHTML = ""; $("#scrim").hidden = true; };
     if (instant) done(); else { s.classList.add("closing"); setTimeout(done, 200); }
-    if (onClose) { const f = onClose; onClose = null; f(); }
+    if (onClose) { const f = onClose; onClose = null; setTimeout(f, 0); }          // après le fn de l'option choisie : sinon confirm() / les promotions répondraient toujours « non / dame »
     return true;
   };
   U.confirm = (title, text, okLabel, danger) => new Promise((res) => {

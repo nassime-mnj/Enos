@@ -97,6 +97,8 @@
   N.deviceId = () => (N.available ? B.deviceId() : "dev-browser");
   N.version = () => (N.available ? B.version() : "dev");
   N.openPcUi = () => { if (N.available) B.openPcUi(); };
+  // Menu Partager d'Android : une image envoyée à E.N.O.S. (capture d'écran d'un échiquier) -> base64, lue une seule fois
+  N.pendingShare = () => { const b = window.Enos; return N.available && b && b.pendingShare ? b.pendingShare() : ""; };
   N.openPcModule = (id) => { if (N.available) B.openPcModule(String(id)); else U_dev(id); };
   function U_dev(id) { if (E.ui) E.ui.toast("Ouvre « " + id + " » : disponible dans l'application Android.", "warn"); }
   N.wake = () => { if (N.available) B.wake(); };

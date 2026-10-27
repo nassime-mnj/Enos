@@ -25,31 +25,54 @@
   const skillOf = (power) => Math.max(0, Math.min(20, Math.round(((power || 50) - 1) / 99 * 20)));
   const timeOf = (power) => Math.round(250 + (power || 50) * 9);
 
-  /** Meilleur coup pour `fen`. Retourne {uci, cp (point de vue des Blancs) | mate}. Les requêtes sont sérialisées. */
-  L.think = (fen, power, ms) => {
+  /** Recherche générique. o : {skill 0-20, multipv, movetime, depth, searchmoves:[uci]}. Retourne {best, lines:[{uci, pv:[uci], cp|mate (point de vue du camp au trait), depth}]}. Sérialisée. */
+  const run = (fen, o) => {
     const job = queue.then(async () => {
       const w = await start();
       return new Promise((resolve) => {
-        const white = fen.split(" ")[1] !== "b";
-        let score = null;
+        const byPv = {};
         const onMsg = (e) => {
           const line = String(e.data);
-          const m = line.match(/score (cp|mate) (-?\d+)/);
-          if (m && !/lowerbound|upperbound/.test(line)) score = { kind: m[1], v: +m[2] * (white ? 1 : -1) };
+          if (line.startsWith("info") && / pv /.test(line) && !/lowerbound|upperbound/.test(line)) {
+            const sc = line.match(/score (cp|mate) (-?\d+)/), mp = line.match(/multipv (\d+)/), d = line.match(/ depth (\d+)/), pv = line.split(" pv ")[1];
+            if (sc && pv) {
+              const k = mp ? +mp[1] : 1, list = pv.trim().split(/\s+/);
+              byPv[k] = { uci: list[0], pv: list, depth: d ? +d[1] : 0, ...(sc[1] === "cp" ? { cp: +sc[2] } : { mate: +sc[2] }) };
+            }
+          }
           if (line.startsWith("bestmove")) {
             w.removeEventListener("message", onMsg);
-            const uci = line.split(" ")[1];
-            resolve({ uci: uci === "(none)" ? "" : uci, cp: score && score.kind === "cp" ? score.v : null, mate: score && score.kind === "mate" ? score.v : null });
+            const best = line.split(" ")[1];
+            resolve({ best: best === "(none)" ? "" : best, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
           }
         };
         w.addEventListener("message", onMsg);
-        w.postMessage("setoption name Skill Level value " + skillOf(power));
+        w.postMessage("setoption name Skill Level value " + (o.skill == null ? 20 : o.skill));
+        w.postMessage("setoption name MultiPV value " + (o.multipv || 1));
         w.postMessage("position fen " + fen);
-        w.postMessage("go movetime " + (ms || timeOf(power)));
+        w.postMessage("go " + (o.depth ? "depth " + o.depth + " " : "") + "movetime " + (o.movetime || 600) + (o.searchmoves && o.searchmoves.length ? " searchmoves " + o.searchmoves.join(" ") : ""));
       });
     });
     queue = job.catch(() => {});
     return job;
+  };
+  /** Score en centipions du point de vue des BLANCS (mat = ±(10000 - n)). */
+  L.whiteScore = (line, fen) => {
+    const s = fen.split(" ")[1] === "b" ? -1 : 1;
+    if (line.mate != null) return s * (line.mate > 0 ? 10000 - line.mate : -10000 - line.mate);
+    return s * (line.cp || 0);
+  };
+  /** Interrompt la recherche en cours (le résultat partiel est rendu aussitôt). */
+  L.abort = () => { if (worker) worker.postMessage("stop"); };
+  /** Analyse à pleine force : plusieurs lignes, coups imposés (searchmoves). */
+  L.analyse = (fen, o) => run(fen, { skill: 20, ...o });
+
+  /** Meilleur coup pour `fen`. Retourne {uci, cp (point de vue des Blancs) | mate}. Les requêtes sont sérialisées. */
+  L.think = async (fen, power, ms) => {
+    const white = fen.split(" ")[1] !== "b";
+    const r = await run(fen, { skill: skillOf(power), movetime: ms || timeOf(power) });
+    const top = r.lines[0];
+    return { uci: r.best, cp: top && top.cp != null ? top.cp * (white ? 1 : -1) : null, mate: top && top.mate != null ? top.mate * (white ? 1 : -1) : null };
   };
 
   const uciOf = (m) => m.from + m.to + (m.promotion || "");

@@ -158,7 +158,7 @@
       $("rg-conn").innerHTML = c.devices.length ? c.devices.map((p) => `<div class="tm-item" data-id="${esc(p.id)}"><div class="grow"><b>${esc(p.name)}</b>${p.ip_trusted ? ' <span class="tm-tag me">IP DE CONFIANCE</span>' : ""}<br><small>${esc(p.ip)} · vu il y a ${iso(p.last_seen)}</small></div><button class="btn sm" data-a="rev">RÉVOQUER</button></div>`).join("")
         : '<div class="tm-empty">Aucun téléphone connecté. (Activez [ ACCÈS TÉLÉPHONE ] dans le menu, puis entrez le code sur le téléphone.)</div>';
     } catch (e) { $("rg-conn").innerHTML = `<div class="tm-empty">Liste indisponible : ${esc(e.message)}</div>`; }
-    $("rg-devs").innerHTML = d.devices.length ? d.devices.map((p) => `<div class="tm-item" data-u="${esc(p.uuid)}"><div class="grow"><b>${esc(p.name)}</b><br><small class="tm-uuid">${esc(p.uuid)}</small><br><small>${p.last_seen ? "vu il y a " + ago(p.last_seen) + " · " + esc(p.ip) : "jamais connecté"}</small></div><button class="btn sm" data-a="no">RÉVOQUER</button></div>`).join("") : '<div class="tm-empty">Aucun appareil approuvé.</div>';
+    $("rg-devs").innerHTML = d.devices.length ? d.devices.map((p) => `<div class="tm-item" data-u="${esc(p.uuid)}"><div class="grow"><b>${esc(p.name)}</b><br><small class="tm-uuid">${esc(p.uuid)}</small><br><small>${p.last_seen ? "vu il y a " + ago(p.last_seen) + " · " + esc(p.ip) : "jamais connecté"}</small></div><button class="btn sm" data-a="full" title="Le téléphone agit sur ce PC comme ce PC lui-même (programmes, fichiers). Ne l'active que sur TON téléphone.">${p.full ? "DROITS COMPLETS : OUI" : "DROITS COMPLETS : NON"}</button> <button class="btn sm" data-a="no">RÉVOQUER</button></div>`).join("") : '<div class="tm-empty">Aucun appareil approuvé.</div>';
     const n = d.pending.length;
     [$("rg-badge"), $("rg-pend")].forEach((x) => { x.textContent = n || ""; x.hidden = !n; });
   }
@@ -174,6 +174,7 @@
     });
     $("rg-devs").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-a]"); if (!b) return;
+      if (b.dataset.a === "full") { const row = b.closest(".tm-item"), on = !/OUI/.test(b.textContent); act(() => post("/api/team/devices/" + encodeURIComponent(row.dataset.u) + "/full", { on })); return; }
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "CONFIRMER ?"; setTimeout(() => { b.classList.remove("armed"); b.textContent = "RÉVOQUER"; }, 4000); return; }
       act(() => api("/api/team/devices/" + encodeURIComponent(b.closest(".tm-item").dataset.u), { method: "DELETE" }));
     });

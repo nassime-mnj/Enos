@@ -38,6 +38,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.Locale;
 
 import org.json.JSONObject;
@@ -75,6 +77,7 @@ public class MainActivity extends Activity {
     private FilesBridge files;
     private GalleryScan gallery;
     private ConnectivityManager.NetworkCallback netCb;
+    private volatile String pendingShare = "";        // capture d'ecran partagee vers l'application (menu Partager) : base64 en memoire seulement, lue UNE fois par le JavaScript
     private volatile String pendingImport = "";       // fichier chiffre recu par enos://import (en memoire seulement) ; applique uniquement apres saisie du code
     private int importFails = 0;
 
@@ -138,10 +141,45 @@ public class MainActivity extends Activity {
         super.onNewIntent(i);
         setIntent(i);
         handleIntent(i);
-        if (onLocalApp && web != null) web.evaluateJavascript("window.ENOS&&ENOS.importer&&ENOS.importer.check()", null);
+        if (onLocalApp && web != null) {
+            web.evaluateJavascript("window.ENOS&&ENOS.importer&&ENOS.importer.check()", null);
+            if (!pendingShare.isEmpty()) web.evaluateJavascript("window.ENOS&&ENOS.native&&ENOS.native._shared&&ENOS.native._shared()", null);
+        }
+    }
+
+    /** Menu Partager d'Android : une image (ex. capture d'ecran d'un echiquier) est lue en memoire (12 Mo max) ; le JavaScript la recupere par pendingShare(). */
+    private void readShared(Intent i) {
+        try {
+            String type = i.getType();
+            if (type == null || !type.startsWith("image/")) return;
+            Uri u = i.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (u == null) return;
+            InputStream in = getContentResolver().openInputStream(u);
+            if (in == null) return;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[65536];
+            int n;
+            long total = 0;
+            while ((n = in.read(buf)) > 0) {
+                total += n;
+                if (total > 12L * 1024 * 1024) { in.close(); return; }
+                out.write(buf, 0, n);
+            }
+            in.close();
+            pendingShare = android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP);
+        } catch (Exception ignored) {
+            pendingShare = "";
+        }
+    }
+
+    String pendingShare() {
+        String b = pendingShare;
+        pendingShare = "";
+        return b;
     }
 
     private void handleIntent(Intent i) {
+        if (i != null && Intent.ACTION_SEND.equals(i.getAction())) readShared(i);
         Uri d = i == null ? null : i.getData();
         if (d != null && "enos".equals(d.getScheme()) && "import".equals(d.getHost())) {
             String b = d.getQueryParameter("d");

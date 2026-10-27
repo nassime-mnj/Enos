@@ -33,15 +33,8 @@
     ]],
     ["Avec ton PC", [
       { id: "pc", n: "Tests F6", s: "Lancer ton jeu à distance", i: "play", k: "pc", tab: "pc" },
-      { id: "b-ch", n: "Mode Chill", s: "Ambiance audio du PC", i: "music", k: "pc" },
-      { id: "b-dm", n: "Discussion", s: "L'Œil du PC · plein écran", i: "eye", k: "pc" },
       { id: "colis", n: "Colis", s: "Gérer les colis en attente", i: "box", k: "pc" },
-      { id: "b-subs", n: "Abonnements", s: "Coût mensuel · résilier en un geste", i: "gauge", k: "pc" },
       { id: "b-sy", n: "Sync", s: "PC ⇄ mobile · fichiers", i: "sync", k: "pc" },
-      { id: "b-cp", n: "Compression", s: "Image & vidéo sur le PC", i: "box", k: "pc" },
-      { id: "b-au", n: "Labo audio", s: "Vidéo → WAV · SFX", i: "music", k: "pc" },
-      { id: "b-ip", n: "Images (PC)", s: "Sprite Slicer · livraison", i: "img", k: "pc" },
-      { id: "b-av", n: "Animations", s: "Visualiseur pixel art", i: "film", k: "pc" },
       { id: "b-hb", n: "Hub équipe", s: "Entrepôt · chat", i: "users", k: "pc" },
       { id: "b-rg", n: "Réglages du PC", s: "Thèmes du PC, profil, appareils", i: "gear", k: "pc" },
     ]],
@@ -51,8 +44,6 @@
       { id: "b-og", n: "Organisateur", s: "Fichiers du PC", i: "folder", k: "locked", why: "Il déplace et supprime des fichiers du PC." },
       { id: "b-yt", n: "YouTube Uploader", s: "Envoi de vidéos", i: "yt", k: "locked", why: "Il utilise ta connexion Google et les vidéos du PC." },
       { id: "b-tb", n: "Gestion Google", s: "Onglets Chrome du PC", i: "globe", k: "locked", why: "Il contrôle le navigateur du PC." },
-      { id: "b-st", n: "Apprentissage", s: "ETO enseigne les ouvertures", i: "chess", k: "locked", why: "Il dépend du plateau 3D et de l'état de la partie sur le PC.", alt: "chess", altn: "Jouer aux échecs sur le téléphone" },
-      { id: "b-df", n: "Défis", s: "Jeux contre E.N.O.S.", i: "chess", k: "locked", why: "Même raison : partie stockée sur le PC.", alt: "chess", altn: "Jouer aux échecs sur le téléphone" },
       { id: "b-dev", n: "Dev Manager", s: "WSL, dépôts, scripts", i: "term", k: "locked", why: "Il exécute des commandes sur le PC." },
       { id: "b-se", n: "Sécurité", s: "Clé, chemins, alertes", i: "shield", k: "locked", why: "Il gère les accès au PC : à régler depuis le PC." },
       { id: "b-api", n: "API du PC", s: "Quotas côté PC", i: "gauge", k: "locked", why: "Compteurs du PC, lisibles seulement sur le PC.", alt: "api", altn: "Ouvrir le Contrôle API du téléphone" },
@@ -71,26 +62,29 @@
     ALL = GROUPS.flatMap((g) => g[1]);
   }
 
+  // DROITS COMPLETS : si le propriétaire les a accordés à ce téléphone (sur le PC : Réglages → Appareils de confiance), les modules « réservés au PC » s'ouvrent comme les autres
+  const full = () => !!(L.state === "online" && L.snap && L.snap.full);
+  const kindOf = (m) => (m.k === "locked" && full() ? "pc" : m.k);
   function grid() {
     const online = L.state === "online";
-    $("#mod-grid").innerHTML = GROUPS.map(([title, mods]) => `<h4 class="mg-h">${esc(title)}</h4><div class="mod-grid">${mods.map((m) => {
-      const off = m.k === "pc" && !online;
-      return `<button class="mtile ${m.k}${off ? " off" : ""}" data-m="${m.id}">${m.k === "locked" ? `<i class="lk">${ico("lock")}</i>` : ""}<span class="ic">${m.svg ? `<svg viewBox="0 0 24 24">${m.svg}</svg>` : ico(m.i)}</span><b>${esc(m.n)}</b><small>${esc(m.s)}</small></button>`;
+    $("#mod-grid").innerHTML = GROUPS.map(([title, mods]) => `<h4 class="mg-h">${esc(title === "Réservé au PC (sécurité)" && full() ? "Pilotage du PC · droits complets" : title)}</h4><div class="mod-grid">${mods.map((m) => {
+      const k = kindOf(m), off = k === "pc" && !online;
+      return `<button class="mtile ${k}${off ? " off" : ""}" data-m="${m.id}">${k === "locked" ? `<i class="lk">${ico("lock")}</i>` : ""}<span class="ic">${m.svg ? `<svg viewBox="0 0 24 24">${m.svg}</svg>` : ico(m.i)}</span><b>${esc(m.n)}</b><small>${esc(m.s)}</small></button>`;
     }).join("")}</div>`).join("");
   }
 
   function open(id) {
     const m = ALL.find((x) => x.id === id);
     if (!m) return;
-    if (m.k === "locked") {
-      return U.sheet({ title: m.n + " · réservé au PC", html: `<p class="muted" style="margin-bottom:14px;line-height:1.5">${esc(m.why)} Il reste donc utilisable <b>uniquement sur le PC</b> : si tu perds ton téléphone, personne ne peut s'en servir pour agir sur ton ordinateur.</p>`,
+    if (kindOf(m) === "locked") {
+      return U.sheet({ title: m.n + " · réservé au PC", html: `<p class="muted" style="margin-bottom:14px;line-height:1.5">${esc(m.why)} Pour le piloter depuis ce téléphone (qui t'appartient comme le PC), donne-lui les <b>droits complets</b> : sur le PC, <b>Réglages du PC → Appareils de confiance → DROITS COMPLETS</b>. Ça ne se règle que depuis le PC, jamais depuis un téléphone.</p>`,
         options: m.alt ? [{ label: m.altn, fn: () => open(m.alt) }] : [] });
     }
-    if (m.k === "pc" && L.state !== "online") { U.toast("PC hors ligne : allume-le sur le même Wi-Fi.", "warn"); E.link.probeNow(); return; }
+    if (kindOf(m) === "pc" && L.state !== "online") { U.toast("Ce module pilote ton PC : il doit être allumé (même Wi-Fi ou Tailscale).", "warn"); E.link.probeNow(); return; }
     if (m.suite) return E.suite.open(id);
     if (m.tab) return U.go(m.tab);
     if (id === "theme") return themeSheet();
-    if (m.k === "pc" && !m.sub) return E.native.openPcModule(id);
+    if (kindOf(m) === "pc" && !m.sub) return E.native.openPcModule(id);
     E.tools.show(id);
     E.apps.enter(id);
     if (id === "chess") E.chessUi.open();
@@ -119,14 +113,27 @@
     s.querySelector("#th-h").oninput = (e) => { T.apply(+e.target.value); s.querySelector("#th-v").textContent = e.target.value + "°"; s.querySelectorAll(".preset").forEach((x) => x.classList.remove("on")); };
   }
 
+  // Partage Android : une capture envoyée à E.N.O.S. ouvre le Conseiller brillants avec la position déjà lue
+  function takeShared() {
+    const b64 = E.native.pendingShare && E.native.pendingShare();
+    if (!b64) return;
+    U.go("tools"); open("advisor");
+    const t0 = Date.now(), wait = setInterval(() => {
+      const el = document.querySelector("#tool-advisor .suite-body");
+      if ((el && el._loadShot) || Date.now() - t0 > 4000) { clearInterval(wait); if (el && el._loadShot) el._loadShot("data:image/png;base64," + b64); }
+    }, 60);
+  }
+  E.native._shared = takeShared;
+
   E.modules = {
     init() {
       const home = $("#tools-home");
-      home.innerHTML = '<div id="mod-grid"></div><p class="hint">Les modules « Avec ton PC » se débloquent dès que ton PC est connecté.</p>';
+      home.innerHTML = '<div id="mod-grid"></div><p class="hint">Tout ce qui est « Sur ton téléphone » marche sans le PC. Les modules « Avec ton PC » pilotent ton ordinateur : ils se débloquent quand il est connecté.</p>';
       addSuiteGroups();
       grid();
       $("#mod-grid").addEventListener("click", (e) => { const t = e.target.closest(".mtile"); if (t) open(t.dataset.m); });
       E.on("link", grid);
+      setTimeout(takeShared, 700);                                                    // l'application vient d'être lancée par « Partager »
       E.on("settings", (k) => { if (k === "hue") { /* déjà appliqué */ } });
     },
     open,

@@ -250,6 +250,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       <button class="btn local-only friends-ok" id="b-dev">DEV MANAGER<small>WSL Ubuntu · dépôts WSL · git clone · VS Code · scripts .sh de chaque dépôt</small></button>
       <button class="btn local-only dev-ok" id="b-st">APPRENTISSAGE ÉCHECS<small>ETO enseigne les ouvertures · flèches · retour en arrière · pratique</small></button>
       <button class="btn friends-ok" id="b-learn">APPRENDRE LES ÉCHECS<small>Puzzles · ouvertures · coups brillants · leçons · conseils personnalisés</small></button>
+      <button class="btn friends-ok" id="b-adv">CONSEILLER BRILLANTS<small>Colle une capture d'écran : les pièces sont reconnues, ETO cherche le meilleur coup et les sacrifices « !! »</small></button>
       <button class="btn local-only dev-ok" id="b-df">DÉFI<small>Jeux contre E.N.O.S. · Échecs (Stockfish)</small></button>
       <button class="btn local-only dev-ok" id="b-gs">SYNC GODOT<small>Diffuser ma mise à jour · alerte automatique à l'associé</small></button>
       <button class="btn friends-ok" id="b-rg">15. RÉGLAGES<small>Thèmes · profil · appareils de confiance<span class="bdg" id="rg-badge"></span></small></button>
@@ -1127,7 +1128,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       <div id="cd-board" aria-label="Plateau de mise en condition"></div>
       <div id="cd-pal" class="cd-pal" aria-label="Pièces à poser"></div>
       <div class="cd-row">
-        <button class="btn sm" id="cd-start">POSITION DE DÉPART</button><button class="btn sm" id="cd-clear">VIDER</button><button class="btn sm" id="cd-flip">⇅ RETOURNER</button>
+        <button class="btn sm" id="cd-start">POSITION DE DÉPART</button><button class="btn sm" id="cd-clear">VIDER</button><button class="btn sm" id="cd-flip">⇅ RETOURNER</button><button class="btn sm" id="cd-shot" title="Colle (Ctrl+V) ou choisis une capture d'écran d'un échiquier : les pièces sont reconnues et posées toutes seules">📷 CAPTURE D'ÉCRAN</button><button class="btn sm" id="cd-mem" hidden title="Après correction : E.N.O.S. retient ton jeu de pièces, les prochaines captures seront lues sans erreur">✓ MÉMORISER MES PIÈCES</button><input type="file" id="cd-shotf" accept="image/*" hidden>
         <label class="cd-opt">Trait <select id="cd-turn" class="cs-sel"><option value="w">aux Blancs</option><option value="b">aux Noirs</option></select></label>
       </div>
       <div class="cd-row cd-castle" title="Un roque n'est possible que si le roi et la tour sont à leur place">
@@ -1194,7 +1195,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <script src="/static/team.js"></script>
 <script src="/static/power.js"></script>
 <script src="/static/mobile.js"></script>
-<script src="/static/defi.js?v=20261005d"></script>
+<script src="/static/defi.js?v=20261026a"></script>
 <script src="/static/notify.js?v=2"></script>
 <script src="/static/agenda.js?v=2"></script>
 <script src="/static/home.js?v=2"></script>
@@ -1210,5 +1211,6 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <script src="/static/updatebar.js"></script>
 <script src="/static/study.js"></script>
 <script src="/static/learn_launch.js"></script>
+<script src="/static/scan_launch.js"></script>
 </body>
 </html>

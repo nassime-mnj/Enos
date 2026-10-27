@@ -797,6 +797,12 @@
     $("cs-coach-log").innerHTML = ""; $("cs-judge").textContent = ""; CC.over = 0;
     await request(() => post("/api/chess/new", { color: player, power: pw, mode: "enos", elo: null, fen: j.fen }));
   }
+  // capture d'écran -> position (static/scan_launch.js) : pose les pièces reconnues dans la mise en condition
+  window.enosCD = {
+    get board() { return CD.board; },
+    apply(board, turn, flip, castling) { CD.board = board; CD.turn = turn === "b" ? "b" : "w"; CD.flip = !!flip; CD.castle = { K: 0, Q: 0, k: 0, q: 0 }; [...(castling || "")].forEach((c) => { if (c in CD.castle) CD.castle[c] = 1; }); CD.sel = null; openCond(); cdChanged(); },
+    message: (t, err) => cdMsg(t, err),
+  };
   $("cd-call-enos").onclick = () => cdCall("enos");
   $("cd-call-eto").onclick = () => cdCall("eto");
   $("df-cond").onclick = () => { document.body.classList.remove("menu-open"); openCond(); };

@@ -76,6 +76,22 @@ def set_preview(uuid, on):
     return False
 
 
+def is_full(uuid):
+    """Droits COMPLETS : l'appareil agit sur le PC comme le PC lui-même (lancer des programmes, lire les fichiers…). Accordé UNIQUEMENT depuis ce PC (jamais par un téléphone)."""
+    return valid_uuid(uuid) and any(x["uuid"].lower() == uuid.lower() and x.get("full") for x in _load()["devices"])
+
+
+def set_full(uuid, on):
+    with lock:
+        d = _load()
+        for x in d["devices"]:
+            if x["uuid"].lower() == (uuid or "").lower():
+                x["full"] = bool(on)
+                _save(d)
+                return True
+    return False
+
+
 def edition(uuid, local):
     """Ce PC = toujours « dev ». Un appareil distant n'est « dev » (Eto Dev / E.N.O.S.) que si son UUID est dans la liste de confiance
     et qu'il n'est pas en aperçu grand public."""

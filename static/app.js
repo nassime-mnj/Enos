@@ -410,7 +410,7 @@ setInterval(() => ($("clock").textContent = new Date().toLocaleTimeString("fr-FR
     const st = await api("/api/status");
     window.enosUser = st.user ? st.user.label : ""; window.dispatchEvent(new Event("enos-user"));
     typeGreeting(st.greeting);
-    if (!st.local) {
+    if (!st.local && !st.full) {
       document.body.classList.add("remote");
       $("devname").textContent = st.device ? st.device.name + (st.device.via === "ip" ? " · IP de confiance" : " · appareil de confiance") : "";
       // raccourcis du tiroir : passent par E.N.O.S. (le LLM lance l'action sur le PC) ; les actions directes restent réservées au PC

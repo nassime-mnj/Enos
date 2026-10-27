@@ -3,14 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Apprendre les échecs</title>
+<title>Échecs · Apprendre & Conseiller</title>
 <link rel="stylesheet" href="pc.css">
 <link rel="stylesheet" href="chess.css">
 </head>
 <body>
-<header><b>E.N.O.S.</b><span>APPRENDRE LES ÉCHECS</span><button id="close" hidden>FERMER ✕</button></header>
-<main><div id="tool-learn"><div class="suite-body" id="app"></div></div></main>
-<div id="scrim" hidden></div><div id="sheet" class="sheet" hidden></div>
+<header><b>E.N.O.S.</b><span id="ttl">ÉCHECS</span><button id="close" hidden>FERMER ✕</button></header>
+<main>
+  <div class="seg" id="tabs" data-p="enos" style="margin-bottom:14px"><button data-t="learn" class="on">APPRENDRE</button><button data-t="advisor">CONSEILLER BRILLANTS</button><i class="seg-ind"></i></div>
+  <div id="tool-learn"><div class="suite-body" id="app-learn"></div></div>
+  <div id="tool-advisor" hidden><div class="suite-body" id="app-advisor"></div></div>
+</main>
+<div id="scrim" hidden></div><div id="sheet" class="sheet" hidden></div><div id="toast" hidden></div>
 <script src="pc_shim.js"></script>
 <script src="chess.js"></script>
 <script src="chess_sounds_data.js"></script>

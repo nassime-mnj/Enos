@@ -30,6 +30,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Partager : une image (capture d'ecran d'un echiquier) envoyee a E.N.O.S. ouvre le Conseiller brillants -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
             <!-- enos://import?d=... : ouvre l'import de configuration envoyee par le PC (le contenu est chiffre ; le code est demande a l'utilisateur) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

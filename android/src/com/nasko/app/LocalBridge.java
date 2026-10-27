@@ -133,6 +133,12 @@ final class LocalBridge {
     }
 
     // ------------------------------------------------------------------ import de la configuration du PC (chiffree, code saisi par l'utilisateur)
+    /** Image partagee vers l'application (base64, "" s'il n'y en a pas) : lue une seule fois. */
+    @JavascriptInterface
+    public String pendingShare() {
+        return ok() ? act.pendingShare() : "";
+    }
+
     @JavascriptInterface
     public String pendingImport() {
         return ok() ? act.pendingImport() : "";

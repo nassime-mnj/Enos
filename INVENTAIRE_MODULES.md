@@ -22,6 +22,7 @@ E.N.O.S. est un logiciel de bureau Windows : un serveur local (Python / FastAPI)
 | Édition `dev` / `eto` | `nasko_team.edition()`, `/api/edition` | `dev` pour le PC et les appareils de confiance approuvés ; `eto` (grand public) pour tous les autres appareils distants. |
 | Classes CSS | `local-only`, `remote-only`, `dev-only`, `prem` | Masquent les boutons **uniquement sur un appareil distant non approuvé**. Sur le PC, tout s'affiche toujours. |
 | Dépendances d'API | `_LOCAL`, `_IMG`, `_MOBILE`, `_REMOTE` | Blocage réel côté serveur. Certaines routes ont leur garde à l'intérieur (`local_only`, `is_local`). |
+| **Droits complets** (2026-10-26) | `nasko_team.set_full`, `local_only`, `_PCONLY`, `/api/team/devices/{uuid}/full` | Un appareil de confiance auquel le propriétaire a coché « DROITS COMPLETS » (Réglages du PC → Appareils de confiance) franchit aussi les routes `_LOCAL` / `local_only` (lancer des programmes, lire les fichiers…). La gestion de la confiance (appareils, clés, appairage, réseau, profil, mise à jour) reste `_PCONLY` : strictement ce PC. Désactivé par défaut. |
 | Aperçu grand public | `/api/edition/preview` | Bascule Eto Dev ↔ Eto sur un appareil approuvé (5 appuis sur le logo). |
 | Profil Nassime / Raf | `profile_id`, `enos_profiles.json` | **Ne concerne que les chemins** (Godot, projet, entrepôt…), pas des droits. |
 | Persona ENOS / ETO | `persona` | Personnalité et voix, pas des droits. |
@@ -129,7 +130,7 @@ E.N.O.S. est un logiciel de bureau Windows : un serveur local (Python / FastAPI)
 | Choc des Titans | `nasko_titans` : match ENOS contre ETO, « guerre des commentaires » | 🖥 |
 | Apprentissage échecs | `opening_manager`, `/api/study`, ouvertures PGN animées par ETO | 🖥 |
 | Thèmes visuels du plateau | `nasko_visualtheme` : le LLM choisit une esthétique | 🖥 |
-| Échecs sur téléphone | `nasko_mobchess` : le Stockfish du PC prêté au mobile | ⭐ |
+| Échecs sur téléphone | Stockfish.js embarqué (`chess_local.js`, `chess_brain.js`) : parties, Défis (ETO Brillant, Titans, Boss…), analyse de PGN, Conseiller brillants (capture d'écran → position) — sans PC. `nasko_mobchess` n'est plus nécessaire. | — |
 | Œil de bureau | Widget Godot flottant (`nasko_pet`, WebSocket `/ws/pet`) | 🖥 |
 | Aspirateur | L'Œil bascule vers l'autre écran | 🖥 |
 | Écoute Discord | `nasko_loopback` : capture l'audio de sortie du PC | 🖥 |
@@ -160,7 +161,7 @@ E.N.O.S. est un logiciel de bureau Windows : un serveur local (Python / FastAPI)
 | Sync PC ⇄ mobile (10) | Envoi de fichiers, liens temporaires `/dl`, QR | 🖥 (envoi : 🌐) |
 | Visu à distance | `nasko_screen` : fenêtre des scènes Godot | 🌐 |
 | Application Android | Mode autonome (Groq, ElevenLabs, .ics) et mode connecté au PC ; coffre Android Keystore | — |
-| Modules mobiles | Agenda, Œil, photos, dossiers, nettoyeur, contrôle API, thèmes, échecs | — |
+| Modules mobiles | Agenda, Œil, photos, dossiers, nettoyeur, contrôle API, thèmes, échecs, Défis, Conseiller brillants, Apprendre, Labo audio, Images & animations, Mode Chill, Compression, Abonnements, PDF, scanner, coffre-fort, CinePulse… (tous sans PC) | — |
 
 ## 10. Réglages et profils
 

@@ -301,7 +301,7 @@ class Gate(Base):
         from fastapi.testclient import TestClient
         from pydantic import BaseModel
         block = SERVER[SERVER.index("class RoleSelect(BaseModel)"):SERVER.index("class AgendaAction(BaseModel)")]
-        ns = {"app": FastAPI(), "_REMOTE": [], "_LOCAL": [], "BaseModel": BaseModel, "HTTPException": HTTPException, "nasko_roles": R, "sec": types.SimpleNamespace(event=lambda *a: None),
+        ns = {"app": FastAPI(), "_REMOTE": [], "_LOCAL": [], "_PCONLY": [], "BaseModel": BaseModel, "HTTPException": HTTPException, "nasko_roles": R, "sec": types.SimpleNamespace(event=lambda *a: None),
               "nasko_epita": types.SimpleNamespace(_mem={"zeus": 1}), "nasko_pdf": types.SimpleNamespace(new_session=lambda: None, JOB={}), "nasko_studio": types.SimpleNamespace(UP=self.tmp + "/x", JOB={}),
               "nasko_receipts": types.SimpleNamespace(UP=self.tmp + "/y", JOB={}), "nasko_syllabus": types.SimpleNamespace(JOB={}), "shutil": shutil}
         exec(compile(block, "block", "exec"), ns)
