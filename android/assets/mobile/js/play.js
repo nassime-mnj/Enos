@@ -73,6 +73,20 @@
     paint();
   }
 
+  /** Jugement de mon coup (Brillant, Meilleur, Gaffe…) : évalue la position avant et après avec le moteur du téléphone. null si indisponible. */
+  async function judgeMine(fenBefore, uci) {
+    try {
+      const K = E.brain, color = fenBefore.split(" ")[1], ch = new Chess(fenBefore);
+      const m = ch.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+      if (!m) return null;
+      const before = await K.evaluate(fenBefore, 450), after = await K.evaluate(ch.fen(), 450);
+      const j = await K.judge(fenBefore, uci, before, after, color, 450);
+      let q = j.q;
+      if (before.best && uci === before.best && q.key !== "brilliant" && q.loss <= 8) q = { ...q, key: "best" };
+      return q && KEYLAB[q.key] ? { key: q.key, loss: q.loss } : null;
+    } catch (e) { return null; }
+  }
+
   async function move(from, to, pos) {
     const isPromo = pos.m[from].toLowerCase() === "p" && (to[1] === "8" || to[1] === "1");
     let uci = from + to;
@@ -88,15 +102,24 @@
     E.chessSound.forSan(san0 || uci);
     status(`${E.settings.get("persona", "enos") === "eto" ? "ETO" : "E.N.O.S."} réfléchit…`);
     E.vibrate(10);
+    let mine = null, replied = false;                                           // jugement de MON coup (affiché dès qu'il est prêt, pendant que l'adversaire réfléchit)
+    const judged = judgeMine(fenBefore, uci).then((j) => {
+      mine = j;
+      if (j && !replied) B.render($("#ch-board"), B.applyUci(pos, uci), { flip: G.flip, last: [from, to], onTap, badge: { sq: to, key: j.key, id: "m" + G.hist.length } });
+      return j;
+    });
     try {
       const r = await api("/api/mobile/chess/play", { fen: fenBefore, uci, power: G.power, answer: true, seen: G.seen });
-      G.hist.push({ fen: fenBefore, san: r.san, seen: G.seen });
+      replied = true; await Promise.race([judged, new Promise((res) => setTimeout(res, 2500))]);
+      G.hist.push({ fen: fenBefore, san: r.san, seen: G.seen, key: mine ? mine.key : "" });
       if (r.seen) G.seen = r.seen;
       if (r.reply) G.hist.push({ fen: null, san: r.reply.san });
       G.fen = r.fen; G.legal = r.legal; G.check = r.check; G.over = r.over; G.ev = r.eval;
       G.last = r.reply ? [r.reply.uci.slice(0, 2), r.reply.uci.slice(2, 4)] : [from, to];
       if (r.reply) { anim = r.reply.uci; E.chessSound.forSan(r.reply.san); G.badge = r.reply.brilliant ? { sq: r.reply.uci.slice(2, 4), key: "brilliant", id: G.hist.length } : null; }
-      status(r.over || (r.reply && r.reply.brilliant ? "✨ Coup brillant !! " + (r.check ? "Échec !" : "À toi de jouer") : r.check ? "Échec !" : "À toi de jouer"));
+      const verdict = mine ? "Ton coup : " + KEYLAB[mine.key][0] + " · " : "";
+      status(r.over || verdict + (r.reply && r.reply.brilliant ? "✨ Coup brillant !! " + (r.check ? "Échec !" : "À toi de jouer") : r.check ? "Échec !" : "À toi de jouer"));
+      if (mine && mine.key === "brilliant") E.vibrate([30, 40, 30]);
       if (r.reply && r.reply.brilliant) E.vibrate([30, 40, 30]);
       if (r.over) { E.vibrate(40); if (E.chessLearn) E.chessLearn.addGame(G.me, r.over, G.power); }
       comment(r);
