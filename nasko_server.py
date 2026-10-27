@@ -61,6 +61,7 @@ import nasko_agenda
 import nasko_agent
 import nasko_epita
 import nasko_mobchess
+import nasko_train
 import nasko_onboarding
 import nasko_pairing
 import nasko_ota
@@ -1237,7 +1238,7 @@ _STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js
                  "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css",
                  "tabs.js": "text/javascript", "tabs.css": "text/css", "env.js": "text/javascript", "env.css": "text/css", "audio.js": "text/javascript", "audio.css": "text/css", "compress.js": "text/javascript", "compress.css": "text/css", "pdfed.js": "text/javascript", "pdfed.css": "text/css", "studio.js": "text/javascript", "studio.css": "text/css", "syllabus.js": "text/javascript", "syllabus.css": "text/css", "quick.js": "text/javascript", "background.js": "text/javascript", "background.css": "text/css", "quick.css": "text/css", "quicklib.js": "text/javascript", "talk.js": "text/javascript", "talk.css": "text/css", "colis.js": "text/javascript", "colis.css": "text/css", "search.js": "text/javascript", "search.css": "text/css",
                  "youtube.js": "text/javascript", "youtube.css": "text/css", "cleaner.js": "text/javascript", "cleaner.css": "text/css", "organizer.js": "text/javascript", "organizer.css": "text/css",
-                 "notify.js": "text/javascript", "pet.js": "text/javascript", "devmanager.js": "text/javascript", "devmanager.css": "text/css", "mobile.js": "text/javascript", "mobile.css": "text/css", "defi.js": "text/javascript", "defi.css": "text/css",
+                 "notify.js": "text/javascript", "pet.js": "text/javascript", "devmanager.js": "text/javascript", "devmanager.css": "text/css", "mobile.js": "text/javascript", "mobile.css": "text/css", "defi.js": "text/javascript", "defi.css": "text/css", "train.js": "text/javascript", "train.css": "text/css",
                  "persona.js": "text/javascript", "stockfish.png": "image/png", "apimon.js": "text/javascript", "apimon.css": "text/css", "eto8_atlas.png": "image/png", "eto8_index.json": "application/json", "persona.css": "text/css", "eto_face.js": "text/javascript", "eto_expressions.json": "application/json"}
 
 
@@ -4164,6 +4165,44 @@ def chess_history_position(game_id: str, ply: int = 0):
     return _chs(nasko_chess.position_at, game_id, ply)
 
 
+# --- SUPER ENOS : entraînement en arrière-plan (LLM) contre E.N.O.S., Stockfish et ETO. Le thread vit dans ce serveur : fermer la fenêtre ne l'arrête pas.
+class TrainStart(BaseModel):
+    opponents: list[str] = []
+    games: int = 0               # 0 : sans fin, jusqu'à l'arrêt
+    secs: float = 0.6            # réflexion par coup
+    llm: bool = True
+    threads: int = 1
+
+
+class TrainAuto(BaseModel):
+    on: bool = False
+
+
+@app.get("/api/train/status", dependencies=_LOCAL)
+def train_status():
+    return nasko_train.status()
+
+
+@app.post("/api/train/start", dependencies=_LOCAL)
+def train_start(b: TrainStart):
+    return _chs(nasko_train.start, b.opponents, b.games, b.secs, b.llm, b.threads)
+
+
+@app.post("/api/train/stop", dependencies=_LOCAL)
+def train_stop():
+    return nasko_train.stop()
+
+
+@app.post("/api/train/reset", dependencies=_LOCAL)
+def train_reset():
+    return _chs(nasko_train.reset)
+
+
+@app.post("/api/train/autostart", dependencies=_LOCAL)
+def train_autostart(b: TrainAuto):
+    return nasko_train.set_autostart(b.on)
+
+
 @app.post("/api/chess/install", dependencies=_LOCAL)
 def chess_install():
     _chs(nasko_chess.install_stockfish)
@@ -5412,6 +5451,22 @@ def mobile_chess_review_status(job: str):
     return _mob(nasko_mobchess.review_status, job)
 
 
+# Le téléphone pilote l'entraînement de Super Enos qui tourne SUR LE PC (le PC calcule, le téléphone suit en direct)
+@app.get("/api/mobile/train/status", dependencies=_MOBILE)
+def mobile_train_status():
+    return nasko_train.status()
+
+
+@app.post("/api/mobile/train/start", dependencies=_MOBILE)
+def mobile_train_start(b: TrainStart):
+    return _mob(nasko_train.start, b.opponents, b.games, b.secs, b.llm, b.threads)
+
+
+@app.post("/api/mobile/train/stop", dependencies=_MOBILE)
+def mobile_train_stop():
+    return nasko_train.stop()
+
+
 @app.get("/api/mobile/pc", dependencies=_MOBILE)
 def mobile_pc():
     """Instantané léger pour l'onglet PC du téléphone : jauges, ventilateurs (lecture seule), batterie, scène en cours, profil d'alimentation."""
@@ -5440,6 +5495,7 @@ for _m in (nasko_clipper, nasko_babel, nasko_tilt):
 atexit.register(nasko_agent.stop)
 atexit.register(nasko_afk.afk.stop)
 atexit.register(nasko_mobchess.close)
+atexit.register(nasko_train.stop)
 atexit.register(nasko_devmanager.stop_all)
 
 
@@ -6006,6 +6062,7 @@ async def _chat_startup():
     _chat_started["v"] = True
     nasko_chat.trim()
     nasko_chat.prime_seen()
+    threading.Thread(target=nasko_train.autostart_if_enabled, daemon=True).start()   # Super Enos : relance de l'entraînement si l'option « au démarrage » est cochée
     threading.Thread(target=_gs_relay_on, daemon=True).start()   # écoute permanente des alertes de mise à jour (relais par dossier partagé, local)
     if load_config().get("chat_channel_open"):                  # le canal était ouvert : il se rouvre tout seul
         def reopen():

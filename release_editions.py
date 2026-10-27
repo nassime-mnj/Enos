@@ -27,7 +27,7 @@ PY_MODULES = {                                    # modules Python propres à un
     "apimon": ["nasko_apimon"],
     "devtools": ["nasko_env", "nasko_git", "nasko_godotsync", "nasko_godotdiag", "nasko_anim", "nasko_audio"],
     "depot": ["nasko_wsl", "nasko_devmanager", "nasko_depot", "nasko_depot_git", "nasko_depot_study", "nasko_depot_forge", "nasko_depot_term"],   # Dépôt Intranet + Dev Manager : donnés aussi à Friends
-    "leisure": ["nasko_chess", "nasko_chessbridge", "nasko_mobchess", "nasko_pet", "opening_manager"],
+    "leisure": ["nasko_chess", "nasko_chessbridge", "nasko_mobchess", "nasko_nodraw", "nasko_train", "nasko_pet", "opening_manager"],
     "creator": ["nasko_compress", "nasko_youtube"],
     "system": ["nasko_cleaner", "nasko_sysctl", "nasko_sysmon", "nasko_diag", "nasko_power"],
     "google": ["nasko_tabs", "nasko_ext", "nasko_webauto"],

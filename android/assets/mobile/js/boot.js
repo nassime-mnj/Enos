@@ -12,6 +12,7 @@
     E.cloud.start();
     E.apps.init();
     E.chessUi.init();
+    E.trainUi.init();
     E.modules.init();
     E.$$("[data-back]").forEach((b) => (b.onclick = () => E.tools.show("")));
     E.settingsInit();

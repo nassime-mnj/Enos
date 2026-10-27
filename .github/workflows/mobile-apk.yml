@@ -1,0 +1,71 @@
+# APK Android installable DEPUIS LE TÉLÉPHONE, sans passer par le PC.
+#
+# À chaque push qui touche l'application mobile (ou à la main : onglet Actions › « APK mobile » › Run workflow), l'APK est construite
+# et publiée dans une pré-version GitHub. Sur le téléphone : ouvrir la page Releases du dépôt (navigateur ou application GitHub),
+# toucher le fichier .apk, autoriser « installer des applications inconnues » pour le navigateur, installer.
+#
+# Deux modes, choisis automatiquement :
+#   RELEASE  si le secret ENOS_KEYSTORE_B64 (+ ENOS_KEYSTORE_PASS) existe : APK signée avec TA clé -> elle MET À JOUR l'application déjà installée (mêmes données, mêmes clés).
+#            Pré-version « mobile-latest ».
+#   TEST     sinon : APK « Eto TEST » (identifiant com.nasko.app.test) signée avec une clé jetable -> s'installe À CÔTÉ de l'application normale pour la tester ;
+#            pour installer la suivante, désinstaller d'abord la précédente « Eto TEST » (clé différente à chaque construction). Pré-version « mobile-test ».
+#
+# Ajouter la clé une fois (depuis le PC où elle a été créée) :  base64 -w0 android/signing/enos-release.jks   puis Settings › Secrets and variables › Actions :
+#   ENOS_KEYSTORE_B64 = ce texte, ENOS_KEYSTORE_PASS = contenu de android/signing/enos-release.pass
+name: APK mobile
+on:
+  push:
+    branches: ["**"]
+    paths: ["android/**", "construire_apk.py", "logo*.png", ".github/workflows/mobile-apk.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pillow
+      - name: Clé de signature
+        id: sign
+        env:
+          KS_B64: ${{ secrets.ENOS_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ENOS_KEYSTORE_PASS }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/enos.jks"
+            echo "ENOS_KEYSTORE=$RUNNER_TEMP/enos.jks" >> "$GITHUB_ENV"
+            echo "ENOS_KEYSTORE_PASS=$KS_PASS" >> "$GITHUB_ENV"
+            echo "mode=release" >> "$GITHUB_OUTPUT"; echo "tag=mobile-latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=test" >> "$GITHUB_OUTPUT"; echo "tag=mobile-test" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Construire l'APK
+        run: |
+          CODE=$(( $(cat android/version.txt) + GITHUB_RUN_NUMBER ))
+          FLAGS=""
+          [ "${{ steps.sign.outputs.mode }}" = "test" ] && FLAGS="--test-build"
+          python construire_apk.py --version-code "$CODE" $FLAGS
+          mkdir -p out
+          cp ENOS.apk "out/ENOS-${{ steps.sign.outputs.mode }}.apk"
+          cp ENOS.apk.json out/version.json
+      - name: Publier la pré-version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.sign.outputs.tag }}"; MODE="${{ steps.sign.outputs.mode }}"
+          SHA=$(python -c "import json;print(json.load(open('out/version.json'))['sha256'])")
+          NOTES="Construite depuis ${GITHUB_REF_NAME} (${GITHUB_SHA::7}). Mode ${MODE}. SHA-256 de l'APK : ${SHA}"
+          [ "$MODE" = "test" ] && NOTES="$NOTES. Version TEST : s'installe à côté de l'application normale (identifiant com.nasko.app.test)."
+          gh release delete "$TAG" --cleanup-tag -y || true
+          gh release create "$TAG" out/* --prerelease --target "$GITHUB_SHA" --title "APK mobile (${MODE})" --notes "$NOTES"
+          echo "### APK prête" >> "$GITHUB_STEP_SUMMARY"
+          echo "Depuis le téléphone : https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"

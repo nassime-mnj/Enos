@@ -24,6 +24,7 @@
     ["Sur ton téléphone", [
       { id: "agenda", n: "Agenda", s: "Cours, rendus, tâches", i: "cal", k: "native" },
       { id: "chess", n: "Échecs", s: "Contre E.N.O.S. · hors ligne", i: "chess", k: "native", sub: true },
+      { id: "train", n: "Super Enos", s: "Entraînement LLM · arrière-plan", i: "chess", k: "native", sub: true },
       { id: "eye", n: "Œil", s: "E.N.O.S. · ETO en face à face", i: "eye", k: "native" },
       { id: "img", n: "Photos", s: "Compresser la pellicule", i: "img", k: "native" },
       { id: "files", n: "Dossiers", s: "Ranger Téléchargements, documents", i: "folder", k: "native" },
@@ -94,6 +95,7 @@
     E.tools.show(id);
     E.apps.enter(id);
     if (id === "chess") E.chessUi.open();
+    if (id === "train") E.trainUi.open();
   }
 
   // ------------------------------------------------------------------ thèmes

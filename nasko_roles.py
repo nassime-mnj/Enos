@@ -82,7 +82,7 @@ PREFIX_CAPS = (
     # --- création avancée, jeux et loisirs
     ("/api/cloud", "cloud"), ("/api/mirror", "mirror"), ("/api/clipper", "gaming"), ("/api/afk", "gaming"), ("/api/babel", "gaming"), ("/api/tilt", "gaming"), ("/api/brb", "gaming"), ("/api/compress", "creator"), ("/api/youtube", "creator"),
     ("/api/chess", "leisure"), ("/api/study", "leisure"), ("/api/pet", "leisure"), ("/api/chill", "leisure"), ("/ws/chess", "leisure"), ("/ws/pet", "leisure"),
-    ("/api/mobile/chess", "leisure"),
+    ("/api/mobile/chess", "leisure"), ("/api/train", "leisure"), ("/api/mobile/train", "leisure"),
 )
 _SORTED = tuple(sorted(PREFIX_CAPS, key=lambda x: -len(x[0])))
 GUARDED_ROOTS = ("/api", "/ws", "/ext")          # le reste (page, /static, /dl, /login…) n'est pas une donnée : non gardé

@@ -130,6 +130,7 @@ E.N.O.S. est un logiciel de bureau Windows : un serveur local (Python / FastAPI)
 | Apprentissage échecs | `opening_manager`, `/api/study`, ouvertures PGN animées par ETO | 🖥 |
 | Thèmes visuels du plateau | `nasko_visualtheme` : le LLM choisit une esthétique | 🖥 |
 | Échecs sur téléphone | `nasko_mobchess` : le Stockfish du PC prêté au mobile | ⭐ |
+| Super Enos (entraînement) | `nasko_train` : LLM contre E.N.O.S./Stockfish/ETO en arrière-plan, leçons mémorisées ; `nasko_nodraw` : pas de nulle par répétition | 🖥 (⭐ pilotage depuis le téléphone) |
 | Œil de bureau | Widget Godot flottant (`nasko_pet`, WebSocket `/ws/pet`) | 🖥 |
 | Aspirateur | L'Œil bascule vers l'autre écran | 🖥 |
 | Écoute Discord | `nasko_loopback` : capture l'audio de sortie du PC | 🖥 |

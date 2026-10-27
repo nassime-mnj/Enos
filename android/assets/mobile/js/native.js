@@ -96,6 +96,8 @@
   // ------------------------------------------------------------------ divers
   N.deviceId = () => (N.available ? B.deviceId() : "dev-browser");
   N.version = () => (N.available ? B.version() : "dev");
+  // Super Enos : true = l'entraînement continue en arrière-plan (service de premier plan Android + verrou de réveil), false = relâche
+  N.keepAlive = (on, text) => { try { if (N.available && B.keepAlive) B.keepAlive(!!on, text || ""); } catch (e) { /* ancienne coque sans service : l'entraînement s'arrête avec l'écran */ } };
   N.openPcUi = () => { if (N.available) B.openPcUi(); };
   N.openPcModule = (id) => { if (N.available) B.openPcModule(String(id)); else U_dev(id); };
   function U_dev(id) { if (E.ui) E.ui.toast("Ouvre « " + id + " » : disponible dans l'application Android.", "warn"); }
