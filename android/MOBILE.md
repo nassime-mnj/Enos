@@ -87,3 +87,11 @@ non testée sur appareil réel à ce jour.
   - Avec les secrets `ENOS_KEYSTORE_B64` + `ENOS_KEYSTORE_PASS` (ta clé `android/signing/enos-release.jks` en base64 et son mot de passe, à ajouter une fois dans Settings › Secrets and variables › Actions) : APK **signée avec ta clé**, elle met à jour l'application installée (mêmes clés, mêmes données). Pré-version `mobile-latest`.
   - Sans secrets : APK **« Eto TEST »** (`com.nasko.app.test`, clé jetable), qui s'installe **à côté** de l'application normale ; pour installer la suivante, désinstaller d'abord la précédente « Eto TEST ». Pré-version `mobile-test`. Les clés d'API sont à ressaisir (coffre propre à chaque application).
   - Le numéro de version = `android/version.txt` + numéro d'exécution du workflow (toujours croissant). `py construire_apk.py --test-build` fabrique la même version TEST en local ; le script tourne aussi sous Linux.
+
+## Revue, coups possibles et Cours en direct (1.17)
+- **Revue sans perte** : ⏮ ◂ ▸ ⏭ et liste des coups cliquable dans JOUER (`play.js`, `G.line` / `G.view`) ; ANNULER reste un vrai « reprendre un coup ».
+- **Coups possibles** (`chess_tools.js`) : MEILLEUR / BRILLANTS / EXCELLENTS / BONS ; le coup est joué puis déjoué avec flèches (coup, cibles, réponse attendue).
+- **Bilan interactif** : « 📊 BILAN DE LA PARTIE » ou PGN collé ; précision des deux camps, courbe cliquable, catégories filtrables, meilleur coup en flèche.
+- **Cours en direct** (`chess_course.js`) : ETO joue une ouverture ou résout une tactique contre 400–2000 Elo, montre chaque alternative (jouée puis déjouée), demande « compris ? », « INTERROMPRE ETO » → l'élève rejoue et ETO le surveille. « ETO prend la main » (Conseiller) l'applique à une position lue sur capture d'écran.
+- **Effet Brillant** façon PC : case bleue, onde sur les cases de même couleur, pastille « Brillant ! » qui glisse à côté du « !! », rayons de fourchette (`board.js` : `B.brilliantFx`).
+- PC : mêmes fichiers dans `static/learn/` (`build_learn_data.py --sync`) + `chess_viewer.js` (bouton « 🔍 REVUE » dans CHESS). Test : `android/tests/t_chess_tools.py`.

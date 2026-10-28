@@ -809,6 +809,18 @@
   $("cd-close").onclick = () => { $("cd").hidden = true; $("df").hidden = false; };
   $("cs-cond").onclick = () => { SR.on = false; embedStop(); openCond(); };
 
+  // ---- revue de la partie (page static/learn/#game) : on lui passe les coups jugés ; la partie reste intacte dans CHESS
+  async function openReview() {
+    const st = S.st; if (!st || !st.active) return ($("cs-status").textContent = "Aucune partie à revoir : joue d'abord quelques coups.");
+    try {
+      const g = await api("/api/chess/moves");
+      const data = { sans: g.moves.map((m) => m.san), judged: g.moves, me: g.me, startFen: g.start, title: st.over ? "Partie terminée" : "Partie en cours" };
+      localStorage.setItem("enos_game_view", JSON.stringify(data));
+      if (window.enosOpenLearn) window.enosOpenLearn("#game");
+    } catch (e) { $("cs-status").textContent = "✕ " + e.message; }
+  }
+  $("cs-ana").onclick = openReview;
+
   async function openChess() {
     loadThemes(); loadBoards(); loadVisual();
     embedStart();

@@ -1839,6 +1839,15 @@ def build_review(moves, me_color):
             "critical": [{"n": m["n"], "san": m["san"], "label": m["label"], "key": m["key"], "loss": m["loss"], "best": m.get("best", "")} for m in bad]}
 
 
+def full_moves():
+    """Toute la partie en cours (pas seulement les 60 derniers demi-coups de state()) pour la revue : coups jugés + position de départ."""
+    with _lock:
+        b = G["board"]
+        if b is None or not G["moves"]:
+            raise ChessError("Aucune partie à revoir.")
+        return {"moves": list(G["moves"]), "start": b.root().fen(), "me": "w" if G["me"] == chess.WHITE else "b", "over": _result()}
+
+
 def current_review():
     with _lock:
         if G["board"] is None or not G["moves"]:

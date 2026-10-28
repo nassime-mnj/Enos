@@ -47,6 +47,8 @@
           <h3>2 · Le conseil d'ETO</h3>
           <div class="seg" id="ad-lvl" data-p="eto"><button data-l="fast">RAPIDE</button><button data-l="normal" class="on">NORMAL</button><button data-l="deep">PROFOND</button><i class="seg-ind"></i></div>
           <div class="row" style="margin-top:10px"><button class="btn pri" id="ad-go">TROUVER LES COUPS BRILLANTS</button></div>
+          <div class="row" style="margin-top:8px"><button class="btn" id="ad-take">🎮 ETO PREND LA MAIN SUR CETTE PARTIE</button></div>
+          <p class="muted" style="font-size:12.5px;margin-top:6px">ETO joue le camp au trait depuis cette position, contre un adversaire de ton choix, et t'explique chaque coup. Tu peux l'interrompre pour reprendre la main.</p>
           <div class="rv-prog" id="ad-prog" hidden><i></i></div>
           <div id="ad-out"></div>
           <p class="muted" style="font-size:12px;margin-top:10px">À utiliser contre des bots ou pour t'entraîner. Contre un humain, c'est de la triche.</p>
@@ -121,6 +123,12 @@
         G.mode = b.dataset.m; G.sel = "";
         $("#ad-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); $("#ad-seg").dataset.p = G.mode === "edit" ? "enos" : "eto"; paint();
       }));
+      $("#ad-take").onclick = () => {
+        const bad = validate();
+        if (bad) return A.toast(bad, "warn");
+        if (!E.chessCourse) return A.toast("Le cours en direct n'est pas chargé.", "warn");
+        E.chessCourse.takeOver(fen(), { side: G.turn }).catch((e) => A.toast(e.message, "warn"));
+      };
       $("#ad-turn").onclick = () => { G.turn = G.turn === "w" ? "b" : "w"; G.res = null; G.pick = -1; $("#ad-out").innerHTML = ""; paint(); };
       $("#ad-flip").onclick = () => { G.flip = !G.flip; paint(); };
       $("#ad-undo").onclick = () => { const h = G.hist.pop(); if (!h) return; G.map = h.map; G.turn = h.turn; G.last = h.last; G.sel = ""; G.res = null; G.pick = -1; $("#ad-out").innerHTML = ""; paint(); };

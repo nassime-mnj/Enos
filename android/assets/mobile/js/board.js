@@ -56,14 +56,79 @@
     setTimeout(() => c.remove(), 1500);
   };
 
+  // ---- FLÈCHES : [{from, to, color, w}]. Le cavalier trace un « L ». Teintes du PC : joué jaune, meilleur vert, menace rouge, brillant or.
+  B.ARROW = { played: "#f5b81f", best: "#34d16b", threat: "#f2405a", punish: "#3a80ff", brilliant: "#ffcb1f", alt: "#5fb3ff", target: "#ff7a45" };
+  const NS = "http://www.w3.org/2000/svg";
+  const ctr = (sq, flip) => { const [x, y] = pos(sq, flip); return [x + 0.5, y + 0.5]; };
+  const paintArrows = (st, list, flip) => {
+    const sig = (list || []).map((a) => a.from + a.to + (a.color || "")).join("|") + (flip ? "f" : "");
+    if (sig === st.arSig) return;                                                // mêmes flèches : l'animation d'apparition n'est pas rejouée
+    st.arSig = sig; st.ar.replaceChildren();
+    (list || []).forEach((a, i) => {
+      if (!a.from || !a.to || a.from === a.to) return;
+      const col = a.color || B.ARROW.best, w = a.w || 0.16, [x1, y1] = ctr(a.from, flip), [x2, y2] = ctr(a.to, flip);
+      const dx = x2 - x1, dy = y2 - y1, knight = (Math.abs(dx) === 1 && Math.abs(dy) === 2) || (Math.abs(dx) === 2 && Math.abs(dy) === 1);
+      const pts = knight ? (Math.abs(dy) === 2 ? [[x1, y1], [x1, y2], [x2, y2]] : [[x1, y1], [x2, y1], [x2, y2]]) : [[x1, y1], [x2, y2]];
+      const last = pts[pts.length - 1], prev = pts[pts.length - 2], L = Math.hypot(last[0] - prev[0], last[1] - prev[1]), ux = (last[0] - prev[0]) / L, uy = (last[1] - prev[1]) / L;
+      const base = [last[0] - ux * 0.42, last[1] - uy * 0.42], px = -uy, py = ux;
+      const g = document.createElementNS(NS, "g"); g.setAttribute("class", "ar"); g.style.animationDelay = i * 90 + "ms"; g.setAttribute("opacity", a.alpha || 0.88);
+      const pl = document.createElementNS(NS, "polyline");
+      pl.setAttribute("points", pts.slice(0, -1).concat([base]).map((q) => q.join(",")).join(" ")); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", col); pl.setAttribute("stroke-width", w); pl.setAttribute("stroke-linejoin", "round"); pl.setAttribute("stroke-linecap", "round");
+      const tri = document.createElementNS(NS, "polygon");
+      tri.setAttribute("points", [last, [base[0] + px * 0.27, base[1] + py * 0.27], [base[0] - px * 0.27, base[1] - py * 0.27]].map((q) => q.join(",")).join(" ")); tri.setAttribute("fill", col); tri.setAttribute("stroke", "none");
+      const dot = document.createElementNS(NS, "circle"); dot.setAttribute("cx", x1); dot.setAttribute("cy", y1); dot.setAttribute("r", 0.13); dot.setAttribute("fill", col); dot.setAttribute("stroke", "none");
+      g.append(pl, tri, dot); st.ar.append(g);
+    });
+  };
+
+  // Pièces adverses (cavalier et plus) attaquées depuis `sq` : cibles de la « fourchette » d'un coup brillant. Géométrie seule, sans règles d'échec.
+  const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+  B.attacks = (map, sq) => {
+    const p = map[sq]; if (!p) return [];
+    const t = p.toLowerCase(), white = p === p.toUpperCase(), f0 = sq.charCodeAt(0) - 97, r0 = +sq[1] - 1, out = [];
+    const at = (f, r) => (f >= 0 && f < 8 && r >= 0 && r < 8 ? "abcdefgh"[f] + (r + 1) : null);
+    const hit = (s) => { const q = map[s]; if (q && (q === q.toUpperCase()) !== white && VAL[q.toLowerCase()] >= 3) out.push(s); };
+    const slide = (dirs) => dirs.forEach(([df, dr]) => { for (let f = f0 + df, r = r0 + dr; ; f += df, r += dr) { const s = at(f, r); if (!s) break; if (map[s]) { hit(s); break; } } });
+    if (t === "n") [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]].forEach(([a, b]) => { const s = at(f0 + a, r0 + b); if (s) hit(s); });
+    if (t === "p") [-1, 1].forEach((df) => { const s = at(f0 + df, r0 + (white ? 1 : -1)); if (s) hit(s); });
+    if (t === "k") for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (a || b) { const s = at(f0 + a, r0 + b); if (s) hit(s); }
+    if (t === "r" || t === "q") slide([[1, 0], [-1, 0], [0, 1], [0, -1]]);
+    if (t === "b" || t === "q") slide([[1, 1], [1, -1], [-1, 1], [-1, -1]]);
+    return out.sort((a, b) => VAL[map[b].toLowerCase()] - VAL[map[a].toLowerCase()]).slice(0, 3);
+  };
+
+  /** Effet « COUP BRILLANT » du PC : case d'arrivée remplie de bleu, onde sur les cases de même couleur, pastille « Brillant ! » qui surgit puis glisse à côté du « !! », rayon vers chaque pièce attaquée. */
+  B.brilliantFx = (el, sq, targets) => {
+    const st = el && el._cb; if (!st || !sq) return;
+    const holder = document.createElement("div"); holder.className = "bfx"; st.fx.append(holder);
+    const f0 = sq.charCodeAt(0) - 97, r0 = +sq[1] - 1, [cx, cy] = pos(sq, st.flip);
+    const cell = (s, cls, delay) => { const c = document.createElement("div"); c.className = "fxs " + cls; place(c, s, st.flip); if (delay) c.style.animationDelay = delay + "ms"; holder.append(c); return c; };
+    for (let f = 0; f < 8; f++) for (let r = 0; r < 8; r++) if ((f + r) % 2 === (f0 + r0) % 2 && !(f === f0 && r === r0)) {
+      const s = "abcdefgh"[f] + (r + 1), [x, y] = pos(s, st.flip);
+      cell(s, "bfx-wave", Math.round(Math.hypot(x - cx, y - cy) * 85));
+    }
+    cell(sq, "bfx-fill");
+    const lab = cell(sq, "bfx-lab"), b = document.createElement("b"); b.textContent = "Brillant !"; lab.append(b);
+    const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", "0 0 8 8"); svg.setAttribute("class", "bfx-rays"); holder.append(svg);
+    (targets || []).forEach((t, i) => {
+      const [x1, y1] = ctr(sq, st.flip), [x2, y2] = ctr(t, st.flip), d = 100 + i * 110;
+      for (const [w, o, cl] of [[0.22, 0.28, "#6fdcff"], [0.1, 0.95, "#ffffff"]]) {
+        const ln = document.createElementNS(NS, "line"); ln.setAttribute("x1", x1); ln.setAttribute("y1", y1); ln.setAttribute("x2", x2); ln.setAttribute("y2", y2);
+        ln.setAttribute("stroke", cl); ln.setAttribute("stroke-width", w); ln.setAttribute("stroke-linecap", "round"); ln.setAttribute("opacity", o); ln.setAttribute("class", "bfx-ray"); ln.style.animationDelay = d + "ms"; svg.append(ln);
+      }
+      cell(t, "bfx-tgt", d + 300);
+    });
+    setTimeout(() => holder.remove(), 3300);
+  };
+
   B.render = (el, map, opts) => {
     opts = opts || {};
     const flip = !!opts.flip;
     let st = el._cb;
     if (!st) {
       el.classList.add("cboard");
-      el.innerHTML = '<div class="cb-sq"></div><div class="cb-pc"></div><div class="cb-fx"></div>';
-      st = el._cb = { sq: el.firstChild, pc: el.children[1], fx: el.children[2], nodes: new Map(), flip, badgeId: null, endId: null };
+      el.innerHTML = '<div class="cb-sq"></div><div class="cb-pc"></div><svg class="cb-ar" viewBox="0 0 8 8"></svg><div class="cb-fx"></div>';
+      st = el._cb = { sq: el.firstChild, pc: el.children[1], ar: el.children[2], fx: el.children[3], arSig: "", nodes: new Map(), flip, badgeId: null, endId: null };
       el.addEventListener("click", (e) => {
         if (!el._cb.onTap) return;
         const r = el.getBoundingClientRect(), x = Math.min(7, Math.max(0, Math.floor((e.clientX - r.left) / r.width * 8))), y = Math.min(7, Math.max(0, Math.floor((e.clientY - r.top) / r.height * 8)));
@@ -89,7 +154,7 @@
     st.sq.innerHTML = h;
 
     // ---- pièces
-    if (st.flip !== flip) { st.pc.replaceChildren(); st.nodes.clear(); st.fx.replaceChildren(); st.flip = flip; st.badgeId = null; }
+    if (st.flip !== flip) { st.pc.replaceChildren(); st.nodes.clear(); st.fx.replaceChildren(); st.flip = flip; st.badgeId = null; st.arSig = ""; }
     const nodes = st.nodes, mk = (sq, p, instant) => {
       const n = document.createElement("img");
       n.className = "pce" + (instant ? " nt" : ""); n.src = PIECE_URL(p); n.alt = ""; n.draggable = false; n.dataset.p = p;
@@ -116,6 +181,8 @@
     }
     for (const sq of Object.keys(map)) if (!nodes.has(sq)) mk(sq, map[sq], true);
 
+    paintArrows(st, opts.arrows, flip);
+
     // ---- symbole de qualité du dernier coup : {sq, key, id}. Même id = même coup : le symbole reste sans rejouer l'animation.
     const bd = opts.badge && B.BADGES[opts.badge.key] ? opts.badge : null, old = st.fx.querySelector(".fx-badge");
     if (old) old.parentNode.remove();
@@ -124,7 +191,7 @@
       const fresh = st.badgeId !== bd.id, [g, col] = B.BADGES[bd.key], c = fxCell(st, bd.sq), b = document.createElement("b");
       b.className = "fx-badge" + (fresh ? " pop" : "") + " k-" + bd.key; b.textContent = g; b.style.setProperty("--c", col); c.append(b);
       st.badgeId = bd.id;
-      if (fresh && ["brilliant", "great", "blunder"].includes(bd.key)) setTimeout(() => B.burst(el, bd.sq, bd.key), 120);
+      if (fresh && ["brilliant", "great", "blunder"].includes(bd.key)) setTimeout(() => { B.burst(el, bd.sq, bd.key); if (bd.key === "brilliant") B.brilliantFx(el, bd.sq, B.attacks(map, bd.sq)); }, 120);
     }
     // ---- mat : pulsation sur le roi, une seule fois par fin de partie
     if (opts.end && st.endId !== opts.end.id) { st.endId = opts.end.id; B.burst(el, opts.end.sq, "mate"); }

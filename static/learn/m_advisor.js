@@ -25,6 +25,7 @@
           <div id="ad-shot" hidden>
             <canvas id="ad-prev" aria-label="Capture avec l'échiquier repéré"></canvas>
             <div class="muted" id="ad-found" style="font-size:13px;margin:4px 0"></div>
+            <label class="chip2" style="display:inline-flex;gap:8px;margin:6px 0"><input type="checkbox" id="ad-auto" ${E.settings.get("advisor.auto", true) ? "checked" : ""}> Chercher les brillants dès que la capture est lue</label>
             <div class="row" id="ad-mem" hidden><button class="btn" id="ad-learn">✓ C'EST BON : MÉMORISER CE JEU DE PIÈCES</button></div>
             <div class="muted" id="ad-memn" style="font-size:12px;margin:2px 0 6px"></div>
             <details id="ad-adj"><summary class="muted" style="font-size:13px;padding:6px 0">Mal cadré ? Ajuster</summary>
@@ -46,6 +47,8 @@
           <h3>2 · Le conseil d'ETO</h3>
           <div class="seg" id="ad-lvl" data-p="eto"><button data-l="fast">RAPIDE</button><button data-l="normal" class="on">NORMAL</button><button data-l="deep">PROFOND</button><i class="seg-ind"></i></div>
           <div class="row" style="margin-top:10px"><button class="btn pri" id="ad-go">TROUVER LES COUPS BRILLANTS</button></div>
+          <div class="row" style="margin-top:8px"><button class="btn" id="ad-take">🎮 ETO PREND LA MAIN SUR CETTE PARTIE</button></div>
+          <p class="muted" style="font-size:12.5px;margin-top:6px">ETO joue le camp au trait depuis cette position, contre un adversaire de ton choix, et t'explique chaque coup. Tu peux l'interrompre pour reprendre la main.</p>
           <div class="rv-prog" id="ad-prog" hidden><i></i></div>
           <div id="ad-out"></div>
           <p class="muted" style="font-size:12px;margin-top:10px">À utiliser contre des bots ou pour t'entraîner. Contre un humain, c'est de la triche.</p>
@@ -120,6 +123,12 @@
         G.mode = b.dataset.m; G.sel = "";
         $("#ad-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); $("#ad-seg").dataset.p = G.mode === "edit" ? "enos" : "eto"; paint();
       }));
+      $("#ad-take").onclick = () => {
+        const bad = validate();
+        if (bad) return A.toast(bad, "warn");
+        if (!E.chessCourse) return A.toast("Le cours en direct n'est pas chargé.", "warn");
+        E.chessCourse.takeOver(fen(), { side: G.turn }).catch((e) => A.toast(e.message, "warn"));
+      };
       $("#ad-turn").onclick = () => { G.turn = G.turn === "w" ? "b" : "w"; G.res = null; G.pick = -1; $("#ad-out").innerHTML = ""; paint(); };
       $("#ad-flip").onclick = () => { G.flip = !G.flip; paint(); };
       $("#ad-undo").onclick = () => { const h = G.hist.pop(); if (!h) return; G.map = h.map; G.turn = h.turn; G.last = h.last; G.sel = ""; G.res = null; G.pick = -1; $("#ad-out").innerHTML = ""; paint(); };
@@ -185,7 +194,10 @@
         G.read = rd; $("#ad-mem").hidden = false; memNote();
         G.mode = "edit"; $("#ad-seg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x.dataset.m === "edit"));
         paint();
-        if (auto) { E.vibrate(15); status(validate() || `${n} pièces reconnues. Vérifie le plateau, puis lance le conseil.`, !!validate()); }
+        if (auto) {
+          E.vibrate(15); status(validate() || `${n} pièces reconnues. Vérifie le plateau, puis lance le conseil.`, !!validate());
+          if ($("#ad-auto").checked && !validate() && !low && !G.busy) setTimeout(() => $("#ad-go").click(), 150);                  // capture nette et position valide : le conseil part tout seul
+        }
       }
       function memNote() {
         const n = E.boardScan.memorySize();
@@ -201,6 +213,7 @@
         if (window.ENOS_PM) return Promise.resolve();
         return new Promise((res, rej) => { const s = document.createElement("script"); s.src = (E.assetBase || "") + "data/piece_model.js"; s.onload = res; s.onerror = () => rej(new Error("Modèle de reconnaissance introuvable.")); document.head.appendChild(s); });
       }
+      $("#ad-auto").onchange = () => E.settings.set("advisor.auto", $("#ad-auto").checked);
       $("#ad-pick").onclick = async () => { const f = (await A.pick({ accept: "image/*" }))[0]; if (f) loadShot(f); };
       $("#ad-paste").onclick = async () => {
         try {
@@ -245,7 +258,7 @@
           const h = await E.brain.hunt(f, { multipv: 3, topMs: top, sacMs: sac, maxSac: 8, tolerance: 40 });
           const items = [];
           if (h.best) items.push({ uci: h.best.uci, san: h.best.san, score: h.best.score, mate: h.best.mate, line: h.best.line, best: true, loss: 0, brilliant: false, sac: E.brain.isSacrifice(f, h.best.uci) });
-          h.sacrifices.forEach((s) => { if (!items.some((i) => i.uci === s.uci)) items.push({ uci: s.uci, san: s.san, score: s.score, mate: s.mate, line: s.line, loss: s.loss, brilliant: s.brilliant, sac: true, piece: s.piece, deficit: s.deficit }); else { const i = items.find((x) => x.uci === s.uci); i.sac = true; i.brilliant = s.brilliant; } });
+          h.sacrifices.filter((s) => s.brilliant || s.loss <= 500).forEach((s) => { if (!items.some((i) => i.uci === s.uci)) items.push({ uci: s.uci, san: s.san, score: s.score, mate: s.mate, line: s.line, loss: s.loss, brilliant: s.brilliant, sac: true, piece: s.piece, deficit: s.deficit }); else { const i = items.find((x) => x.uci === s.uci); i.sac = true; i.brilliant = s.brilliant; } });
           h.lines.slice(1).forEach((l) => { if (!items.some((i) => i.uci === l.uci)) items.push({ uci: l.uci, san: l.san, score: l.score, mate: l.mate, line: E.brain.sanLine(f, l.pv, 6), loss: Math.max(0, h.best.score - l.score), brilliant: false, sac: false }); });
           // le meilleur coup est un sacrifice jugé brillant ? (les brillants d'abord)
           items.forEach((i) => { if (i.best && i.sac) i.brilliant = h.sacrifices.some((s) => s.uci === i.uci && s.brilliant) || i.brilliant; });

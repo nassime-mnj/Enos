@@ -12,6 +12,7 @@
     f.src = "/static/learn/" + (hash || ""); f.title = "Échecs"; f.style.cssText = "width:100%;height:100%;border:0";
     box.append(f); document.body.append(box);
   };
+  window.enosOpenLearn = open;
   const learn = document.getElementById("b-learn"), adv = document.getElementById("b-adv");
   if (learn) learn.addEventListener("click", () => open(""));
   if (adv) adv.addEventListener("click", () => open("#advisor"));

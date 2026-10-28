@@ -6,6 +6,7 @@ window.ENOS = window.ENOS || {};
 (() => {
   const E = window.ENOS;
   E.esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  E.$ = (s, r) => (r || document).querySelector(s);
   E.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   E.vibrate = () => {};
   E.assetBase = "";
@@ -60,7 +61,8 @@ window.ENOS = window.ENOS || {};
     name: () => "ETO",
     PERSONAS: { eto: { system: () => SYS.eto }, enos: { system: () => SYS.enos } },
     chat: async (persona, text, onDelta, opts) => (await post("/api/chess/llm", { system: (opts && opts.system) || SYS[persona] || "", user: text, max_tokens: 260 })).text,
-    speak() {},
+    speak(persona, text) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(String(text || "").replace(/<[^>]+>/g, " ")); u.lang = "fr-FR"; u.rate = 1.05; speechSynthesis.speak(u); } catch (e) { /* pas de synthèse vocale */ } },
+    stopVoice() { try { speechSynthesis.cancel(); } catch (e) { /* rien à couper */ } },
   };
 
   // ---- registre de modules + outils communs (fichiers, presse-papiers) comme suite.js du téléphone

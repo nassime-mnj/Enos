@@ -82,7 +82,7 @@ def sync_pc():
              ("data/learn_puzzles.js", "data/learn_puzzles.js"), ("data/learn_openings.js", "data/learn_openings.js"),
              # Conseiller brillants (chargé à la demande par pc_boot.js) : moteur, cerveau, reconnaissance de capture d'écran
              ("vendor/stockfish_src.js", "stockfish_src.js"), ("js/chess_local.js", "chess_local.js"), ("js/chess_brain.js", "chess_brain.js"),
-             ("js/board_scan.js", "board_scan.js"), ("js/m_advisor.js", "m_advisor.js"), ("data/piece_model.js", "data/piece_model.js")]
+             ("js/chess_tools.js", "chess_tools.js"), ("js/chess_course.js", "chess_course.js"), ("js/board_scan.js", "board_scan.js"), ("js/m_advisor.js", "m_advisor.js"), ("data/piece_model.js", "data/piece_model.js")]
     files += [("img/chess/" + n, "img/chess/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "chess")) if n.endswith(".png")]
     for a, b in files:
         os.makedirs(os.path.dirname(os.path.join(PC, b)), exist_ok=True)

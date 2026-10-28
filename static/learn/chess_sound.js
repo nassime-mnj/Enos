@@ -21,14 +21,14 @@
     f.type = "bandpass"; f.frequency.value = 1800; ng.gain.value = 0.5; src.buffer = n; src.connect(f); f.connect(ng); ng.connect(a.destination); src.start(t);
   }
 
-  /** kind : move | capture | check | promote | mate */
+  /** kind : move | capture | check | promote | mate | brilliant */
   S.play = async (kind) => {
     if (!E.settings.get("chess.sound", true)) return;
     try {
       const a = ac();
       if (a.state === "suspended") await a.resume();
       if (kind === "capture") return capture(a);
-      const b = await load(kind === "check" || kind === "promote" || kind === "mate" ? kind : "move");
+      const b = await load(kind === "check" || kind === "promote" || kind === "mate" || kind === "brilliant" ? kind : "move");
       if (!b) return;
       const s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start();
     } catch (e) { /* audio indisponible : le jeu continue en silence */ }

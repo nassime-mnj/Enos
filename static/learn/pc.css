@@ -39,3 +39,7 @@ details summary{cursor:pointer}
 .chip2{color:#cfcfd6;font-size:14px;cursor:pointer}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:10px 18px;border-radius:12px;background:#17171b;border:1px solid var(--line);z-index:30;font-size:14px}
 main{max-width:720px}
+/* Cours en direct (chess_course.js) : plein écran sous la feuille de dialogue */
+.course-ov{z-index:10}.co-top .back{padding:0 12px;height:36px;border-radius:12px;border:1px solid var(--line);font:700 12px var(--ui);letter-spacing:1.4px}
+.co-scroll{max-width:640px;width:100%;margin:0 auto}
+.co-top{padding:12px 20px!important}

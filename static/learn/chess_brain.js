@@ -9,8 +9,8 @@
   const FR = { n: "cavalier", b: "fou", r: "tour", q: "dame" };
   const FILES = "abcdefgh";
   const MAT = 10000, CAP = 1000;
-  K.QUALITY = { brilliant: "Brillant", best: "Meilleur coup", excellent: "Excellent", good: "Bon", inaccuracy: "Imprécision", mistake: "Erreur", blunder: "Gaffe" };
-  K.KEYS = ["brilliant", "best", "excellent", "good", "inaccuracy", "mistake", "blunder"];
+  K.QUALITY = { brilliant: "Brillant", book: "Théorie", best: "Meilleur coup", excellent: "Excellent", good: "Bon", inaccuracy: "Imprécision", mistake: "Erreur", blunder: "Gaffe" };
+  K.KEYS = ["brilliant", "book", "best", "excellent", "good", "inaccuracy", "mistake", "blunder"];
   K.MAT = MAT;
 
   // ------------------------------------------------------------------ plateau
@@ -81,6 +81,28 @@
   K.sacrificeMoves = (fen) => {
     const ch = new Chess(fen);
     return ch.moves({ verbose: true }).map(uciOf).filter((u) => { try { return K.isSacrifice(fen, u); } catch (e) { return false; } });
+  };
+
+  // ------------------------------------------------------------------ théorie (livre d'ouvertures Lichess, voir m_learn.js)
+  /** Charge l'arbre des ouvertures (data/learn_openings.js) si besoin. -> promesse (true si le livre est disponible). */
+  K.loadBook = () => {
+    const L = E.learnLib;
+    if (!L || !L.trie) return Promise.resolve(false);
+    if (L.root) return Promise.resolve(true);
+    return new Promise((res) => {
+      const done = () => { try { L.root = L.trie(window.ENOS_OPENINGS); res(true); } catch (e) { res(false); } };
+      if (window.ENOS_OPENINGS) return done();
+      const s = document.createElement("script"); s.src = (E.assetBase || "") + "data/learn_openings.js"; s.onload = done; s.onerror = () => res(false); document.head.appendChild(s);
+    });
+  };
+  /** La ligne (liste de SAN depuis le début) est-elle dans le livre ? -> nom de l'ouverture (ou "") si oui, null sinon. */
+  K.inBook = (path) => {
+    const L = E.learnLib;
+    if (!L || !L.root || !path.length) return null;
+    let n = L.root;
+    for (const s of path) { n = n.c[s]; if (!n) return null; }
+    const nm = L.nameAt(L.root, path);
+    return nm ? nm[1] : "";
   };
 
   // ------------------------------------------------------------------ jugement
@@ -231,6 +253,7 @@
   const label = (k) => K.QUALITY[k] || k;
   K.describe = (q, sanMove, bestSan) => {
     if (q.key === "brilliant") return `${sanMove}!! Un sacrifice qui paie : l'évaluation reste bonne (${fmt(q.after)}).`;
+    if (q.key === "book") return `${sanMove} : coup de théorie${q.opening ? " (" + q.opening + ")" : ""}.`;
     if (q.key === "best") return `${sanMove} : le meilleur coup de la position.`;
     if (q.key === "excellent") return `${sanMove} : excellent, presque aussi bon que le meilleur.`;
     if (q.key === "good") return `${sanMove} : un bon coup.${bestSan ? " Le moteur préférait " + bestSan + "." : ""}`;

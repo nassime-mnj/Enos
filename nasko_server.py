@@ -4217,6 +4217,11 @@ def chess_move(b: ChessMove):
     return _chs(nasko_chess.move, b.uci, b.promotion)
 
 
+@app.get("/api/chess/moves", dependencies=_LOCAL)
+def chess_moves():
+    return _chs(nasko_chess.full_moves)
+
+
 @app.get("/api/chess/review", dependencies=_LOCAL)
 def chess_review():
     return _chs(nasko_chess.current_review)
