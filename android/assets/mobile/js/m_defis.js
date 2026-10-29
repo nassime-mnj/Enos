@@ -55,6 +55,7 @@
         <div id="df-game" hidden>
           <button class="back" id="df-back" style="margin-bottom:8px">◂ DÉFIS</button>
           <div class="card" style="padding:12px">
+            <div id="df-botchat" hidden></div>
             <div class="df-pl" id="df-top"></div>
             <div class="ch-evalbar"><i id="df-eval"></i><b id="df-evt">0,0</b></div>
             <div id="df-board"></div>
@@ -132,8 +133,13 @@
         $("#df-home").hidden = true; $("#df-game").hidden = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
         K.loadBook().then((ok) => { if (!ok && g) g.inBook = false; });
+        const bc = E.botChat;
+        const styleBot = [pl[0], pl[1]].find((x) => x.kind === "style");
+        if (bc) { if (styleBot && bc.has(styleBot.style)) bc.mount($("#df-botchat"), styleBot.style, chatCtx); else bc.unmount(); }
         buttons(); paint(); next(g.token);
       }
+      // résumé de la partie donné au LLM du bot (une phrase)
+      const chatCtx = () => g ? { summary: `coups joués : ${g.moves.slice(-8).map((m) => m.san).join(" ") || "aucun"} ; évaluation ${(g.evalW / 100).toFixed(1)} (positif = avantage Blancs) ; le bot a les ${g.pl.w.kind === "style" ? "Blancs" : "Noirs"}` } : {};
 
       const sideName = (c) => g.pl[c].name;
       function buttons() {
@@ -147,7 +153,7 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
+      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmount(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
@@ -294,6 +300,11 @@
         if (g.id === "coach" && humanMove && mv.q.key !== "best") say = txt;
         if (say) { const box2 = $("#df-say"); box2.hidden = false; box2.textContent = say; box2.onclick = () => E.ai && E.ai.speak && E.ai.speak(g.pl[mv.color].kind === "eto" ? "eto" : "enos", say); }
         if (humanMove || g.mode.duel) llm(mv, humanMove);
+        if (E.botChat && g.pl[mv.color === "w" ? "b" : "w"] && (g.pl.w.kind === "style" || g.pl.b.kind === "style")) {
+          const botMove = g.pl[mv.color].kind === "style", k = mv.q.key, p = botMove ? "bot_" : "h_";
+          const kind = k === "brilliant" ? p + "brilliant" : k === "blunder" ? p + "blunder" : k === "mistake" ? p + "mistake" : (k === "best" || k === "excellent") ? (botMove ? "good" : "h_good") : g.ch.in_check() && botMove ? "check" : "chat";
+          if (!g.ch.in_checkmate()) E.botChat.event(kind, { san: mv.san });
+        }
       }
       // commentaire facultatif d'ETO (Groq) pour les coups marquants
       async function llm(mv, humanMove) {
@@ -339,6 +350,10 @@
         if (!g) return;
         g.over = result; g.busy = false; g.token++;
         paint(); status(result);
+        if (E.botChat && (g.pl.w.kind === "style" || g.pl.b.kind === "style") && !stopped) {
+          const bw = g.pl.w.kind === "style" ? "w" : "b", win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : "";
+          E.botChat.event(!win ? "draw" : /Abandon/.test(result) ? (win === bw ? "resign_win" : "mate_lose") : win === bw ? "mate_win" : "mate_lose");
+        }
         const rev = K.buildReview(g.moves, g.me || "w");
         const accW = K.buildReview(g.moves, "w").me.accuracy, accB = K.buildReview(g.moves, "b").me.accuracy;
         if (g.mode.human && g.me && !stopped && E.chessLearn) E.chessLearn.addGame(g.me, result, g.pl[g.me === "w" ? "b" : "w"].power || 100);
@@ -357,6 +372,7 @@
       function replay(rec) {
         if (!rec || !rec.mv || !rec.mv.length) return;
         if (g) { g.token++; L.abort && L.abort(); }
+        if (E.botChat) E.botChat.unmount();
         const fens = [START], c = new Chess();
         rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
         const R = { rec, fens, k: 0, speed: 1, playing: false };

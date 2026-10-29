@@ -95,3 +95,6 @@ non testée sur appareil réel à ce jour.
 - **Cours en direct** (`chess_course.js`) : ETO joue une ouverture ou résout une tactique contre 400–2000 Elo, montre chaque alternative (jouée puis déjouée), demande « compris ? », « INTERROMPRE ETO » → l'élève rejoue et ETO le surveille. « ETO prend la main » (Conseiller) l'applique à une position lue sur capture d'écran.
 - **Effet Brillant** façon PC : case bleue, onde sur les cases de même couleur, pastille « Brillant ! » qui glisse à côté du « !! », rayons de fourchette (`board.js` : `B.brilliantFx`).
 - PC : mêmes fichiers dans `static/learn/` (`build_learn_data.py --sync`) + `chess_viewer.js` (bouton « 🔍 REVUE » dans CHESS). Test : `android/tests/t_chess_tools.py`.
+
+## Chat box des bots Nasko / Lelex (Défis)
+Illustration en haut du plateau (`img/bots/*.png`), bulle de parole façon Chess.com et petite messagerie (💬 : historique + champ pour leur écrire). Répliques écrites dans leur façon de parler (`data/bot_lines.js`, placeholders `{me}`, `{san}`) selon les événements de la partie (coup brillant, gaffe, échec, mat, nulle, abandon…) ; avec une clé Groq, les moments forts et tes messages passent par le LLM avec leur style en exemple. Code : `js/bot_chat.js`, hooks dans `m_defis.js` (`launch`, `judge`, `finish`). Test : `t_botchat.py`.
