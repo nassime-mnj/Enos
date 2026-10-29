@@ -50,7 +50,7 @@ jobs:
           fi
       - name: Construire l'APK
         run: |
-          CODE=$(( $(cat android/version.txt) + GITHUB_RUN_NUMBER ))
+          CODE=$(( $(cat android/version.txt) + 1 ))      # version.txt = dernière version publiée (18 -> APK 1.19) ; à incrémenter à la main pour une nouvelle version
           FLAGS=""
           [ "${{ steps.sign.outputs.mode }}" = "test" ] && FLAGS="--test-build"
           python construire_apk.py --version-code "$CODE" $FLAGS
