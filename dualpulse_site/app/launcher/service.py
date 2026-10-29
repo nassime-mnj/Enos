@@ -728,3 +728,31 @@ def agenda_sync(uid, tasks, since):
         rows = c.execute("SELECT task_id,data FROM agenda_tasks WHERE user_id=? AND updated>?", (uid, float(since or 0))).fetchall()
         c.commit()
     return [json.loads(r["data"]) for r in rows if r["task_id"] not in accepted], tnow
+
+
+# ---------------------------------------------------------------- mémoire de Super Enos / profils de style : un document PAR APPAREIL (jamais de conflit d'écriture)
+# Chaque appareil n'écrase que le sien et reçoit ceux des autres : le cerveau commun = la fusion (somme des compteurs, union des leçons/parties) calculée côté client.
+# Si l'appli est supprimée, son document reste dans le compte : la réinstallation le récupère.
+BRAIN_KINDS = ("superenos",)
+BRAIN_MAX_BYTES, BRAIN_MAX_DEVICES = 700_000, 12
+_DEV = re.compile(r"^[A-Za-z0-9_\-]{6,64}$")
+
+
+def brain_sync(uid, kind, device, doc):
+    if kind not in BRAIN_KINDS or not _DEV.match(device or ""):
+        raise AuthError(400, "Invalid brain document.")
+    tnow = now()
+    with db._lock:
+        c = _c()
+        if doc is not None:
+            raw = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
+            if len(raw.encode("utf-8")) > BRAIN_MAX_BYTES:
+                raise AuthError(413, "Brain document too large.")
+            c.execute("INSERT INTO brain_docs(user_id,kind,device,data,updated) VALUES(?,?,?,?,?) ON CONFLICT(user_id,kind,device) DO UPDATE SET data=excluded.data, updated=excluded.updated",
+                      (uid, kind, device, raw, tnow))
+            old = c.execute("SELECT device FROM brain_docs WHERE user_id=? AND kind=? ORDER BY updated DESC", (uid, kind)).fetchall()[BRAIN_MAX_DEVICES:]
+            for r in old:
+                c.execute("DELETE FROM brain_docs WHERE user_id=? AND kind=? AND device=?", (uid, kind, r["device"]))
+        rows = c.execute("SELECT device,data,updated FROM brain_docs WHERE user_id=? AND kind=? AND device<>?", (uid, kind, device)).fetchall()
+        c.commit()
+    return [{"device": r["device"], "updated": r["updated"], "doc": json.loads(r["data"])} for r in rows], tnow

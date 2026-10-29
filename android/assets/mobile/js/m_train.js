@@ -25,13 +25,62 @@
   const fresh = () => ({ games: [], profiles: { enos: emptyProf(), stockfish: emptyProf(), eto: emptyProf() }, lessons: [], openings: {}, plies: 0 });
   const loadMem = () => { const m = E.store.get("train.mem", null) || fresh(); OPPS.forEach((o) => (m.profiles[o] = m.profiles[o] || emptyProf())); return m; };
   const saveMem = (m) => E.store.set("train.mem", m);
+  // ------------------------------------------------------------------ cloud : cerveau commun au téléphone et au PC (un document par appareil, fusion à l'affichage)
+  // Chaque appareil n'envoie que SA mémoire ; celle des autres est gardée à part (m.remote). Appli désinstallée : son document reste dans le compte et revient à la réinstallation.
+  const devId = () => { let d = E.store.get("train.dev", ""); if (!d) { d = "ph-" + Math.random().toString(36).slice(2, 8) + Date.now().toString(36); E.store.set("train.dev", d); } return d; };
+  function mergeDocs(docs) {
+    const out = { profiles: {}, lessons: [], games: [], openings: {}, plies: 0 }, seen = new Set();
+    OPPS.forEach((o) => (out.profiles[o] = emptyProf()));
+    docs.forEach((d) => {
+      const x = d.doc || {};
+      Object.entries(x.profiles || {}).forEach(([o, p]) => { const q = (out.profiles[o] = out.profiles[o] || emptyProf()); Object.keys(q).forEach((k) => (q[k] += p[k] || 0)); });
+      (x.lessons || []).forEach((l) => { if (l.text && !seen.has(l.text)) { seen.add(l.text); out.lessons.push(l); } });
+      out.games.push(...(x.games || []));
+      Object.entries(x.openings || {}).forEach(([n, v]) => { const q = (out.openings[n] = out.openings[n] || { w: 0, d: 0, l: 0 }); ["w", "d", "l"].forEach((k) => (q[k] += v[k] || 0)); });
+      out.plies += x.plies || 0;
+    });
+    out.lessons.sort((a, b) => (a.t || 0) - (b.t || 0)); out.games.sort((a, b) => (a.t || 0) - (b.t || 0));
+    out.lessons = out.lessons.slice(-KEEP_LESSONS); out.games = out.games.slice(-KEEP_GAMES);
+    return out;
+  }
+  function effective(m) {
+    const r = m.remote;
+    if (!r) return m;
+    const e = { ...m, profiles: {}, openings: {} }, seen = new Set(), ls = [];
+    OPPS.forEach((o) => { e.profiles[o] = {}; Object.keys(emptyProf()).forEach((k) => (e.profiles[o][k] = ((m.profiles[o] || {})[k] || 0) + (((r.profiles || {})[o] || {})[k] || 0))); });
+    m.lessons.concat(r.lessons || []).sort((a, b) => (a.t || 0) - (b.t || 0)).forEach((l) => { if (!seen.has(l.text)) { seen.add(l.text); ls.push(l); } });
+    e.lessons = ls.slice(-KEEP_LESSONS);
+    e.games = m.games.concat(r.games || []).sort((a, b) => (a.t || 0) - (b.t || 0)).slice(-KEEP_GAMES);
+    Object.entries(m.openings).forEach(([n, v]) => (e.openings[n] = { ...v }));
+    Object.entries(r.openings || {}).forEach(([n, v]) => { const q = (e.openings[n] = e.openings[n] || { w: 0, d: 0, l: 0 }); ["w", "d", "l"].forEach((k) => (q[k] += v[k] || 0)); });
+    e.plies = m.plies + (r.plies || 0);
+    return e;
+  }
+  let lastSync = 0;
+  async function cloudSync(force) {
+    const C = E.cloud;
+    if (!C || !C.loggedIn() || !E.settings.get("cloudBrain", true)) return { ok: false, devices: 0 };
+    if (!force && Date.now() - lastSync < 30000) return { ok: true, devices: T.cloudDevices || 0 };
+    const m = loadMem(), doc = { games: m.games, profiles: m.profiles, lessons: m.lessons, openings: m.openings, plies: m.plies };
+    try {
+      const r = await C.req("/brain/sync", { method: "POST", body: { kind: "superenos", device: devId(), doc } });
+      if (r.status !== 200) return { ok: false, devices: 0, error: (r.json && r.json.detail) || "Erreur " + r.status };
+      lastSync = Date.now();
+      const docs = (r.json && r.json.docs) || [], m2 = loadMem();
+      m2.remote = mergeDocs(docs); saveMem(m2); T.cloudDevices = docs.length;
+      return { ok: true, devices: docs.length };
+    } catch (e) { return { ok: false, devices: 0, error: String(e && e.message || e) }; }          // hors ligne : l'entraînement continue en local
+  }
+
   function summary(m) {
+    m = effective(m);
     const profiles = {};
     OPPS.forEach((o) => { const p = m.profiles[o]; profiles[o] = { g: p.g, w: p.w, d: p.d, l: p.l, brilliants: p.brilliants, dodged: p.dodged, acpl: p.loss_n ? Math.round(p.loss_sum / p.loss_n * 10) / 10 : null, score: p.g ? Math.round((p.w + 0.5 * p.d) / p.g * 100) : null }; });
     const openings = Object.entries(m.openings).sort((a, b) => (b[1].w + b[1].d + b[1].l) - (a[1].w + a[1].d + a[1].l)).slice(0, 6).map(([name, v]) => ({ name, ...v }));
     return { profiles, lessons: m.lessons.slice(-10), games: m.games.slice(-10), openings, plies: m.plies };
   }
   function lessonsText(m, opp) {
+    m = effective(m);
     const pick = m.lessons.filter((x) => x.opp === opp).slice(-3).concat(m.lessons.slice(-3)), seen = new Set(), out = [];
     pick.forEach((x) => { if (!seen.has(x.text)) { seen.add(x.text); out.push("- " + x.text); } });
     return out.slice(-6).join("\n") || "(aucune leçon pour l'instant)";
@@ -175,6 +224,7 @@
     N.keepAlive(true, "Partie 1 · " + T.cfg.opponents.map((o) => NAMES[o]).join(" · "));        // service de premier plan : l'entraînement continue écran éteint
     paint();
     try {
+      await cloudSync(true);                                                // d'abord récupérer ce que le PC a appris
       let i = 0;
       while (!T.stop && (T.cfg.games <= 0 || T.done < T.cfg.games)) {
         const opps = T.cfg.opponents, opp = opps[i % opps.length], color = Math.floor(i / opps.length) % 2 === 0 ? "w" : "b";
@@ -182,6 +232,7 @@
         const out = await playGame(opp, color, loadMem());
         if (!out) break;
         record(out.rec, out.ch, out.code, out.why, await lesson(out.rec, out.ch, out.code, out.why));
+        cloudSync();
         T.done++;
         paint();
         await E.sleep(300);
@@ -309,6 +360,7 @@
   }
 
   E.trainUi = {
+    cloudSync, summary: () => summary(loadMem()),
     init,
     open() { lastFen = ""; if (T.where === "pc") pcPoll(); else paint(); },
     stopFromNative() { T.stop = true; paint(); },            // « Arrêter » dans la notification

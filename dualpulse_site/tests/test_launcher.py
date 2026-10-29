@@ -646,3 +646,21 @@ if __name__ == "__main__":
                 bad += 1; print("!! ", name); traceback.print_exc()
     print("\nTOUT OK" if not bad else f"\n{bad} ÉCHEC(S)")
     sys.exit(1 if bad else 0)
+
+
+def test_brain_sync_one_doc_per_device_private_and_survives_reinstall():
+    c = fresh()
+    ceo = make_ceo(c)
+    a, b2 = invited(c, ceo, "friends", "a@x.fr"), invited(c, ceo, "friends", "b@x.fr")
+    A, B = H(a["access_token"]), H(b2["access_token"])
+    phone = {"games": [{"id": "g1"}], "plies": 40, "profiles": {"eto": {"g": 1}}}
+    assert c.post(V + "/brain/sync", json={"device": "phone-aaaaaa", "doc": phone}, headers=A).json()["docs"] == []            # rien d'autre à recevoir
+    pc = c.post(V + "/brain/sync", json={"device": "pc-bbbbbbb", "doc": {"plies": 7}}, headers=A).json()["docs"]
+    assert len(pc) == 1 and pc[0]["device"] == "phone-aaaaaa" and pc[0]["doc"]["plies"] == 40                                   # le PC reçoit l'entraînement du téléphone
+    # appli supprimée puis réinstallée (nouvel identifiant) : le document de l'ancien appareil est toujours là
+    again = c.post(V + "/brain/sync", json={"device": "phone-new-ccc", "doc": None}, headers=A).json()["docs"]
+    assert {d["device"] for d in again} == {"phone-aaaaaa", "pc-bbbbbbb"}
+    assert c.post(V + "/brain/sync", json={"device": "phone-new-ccc", "doc": None}, headers=B).json()["docs"] == []              # privé : un autre compte ne voit rien
+    assert c.post(V + "/brain/sync", json={"device": "x", "doc": {}}, headers=A).status_code in (400, 422)
+    assert c.post(V + "/brain/sync", json={"device": "phone-aaaaaa", "kind": "autre", "doc": {}}, headers=A).status_code == 400
+    assert c.post(V + "/brain/sync", json={"device": "phone-aaaaaa", "doc": {"x": "y" * 800_000}}, headers=A).status_code == 413

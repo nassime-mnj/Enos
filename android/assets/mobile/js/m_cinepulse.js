@@ -25,16 +25,27 @@
       const end = (c) => c.start + c.dur;
       const pEnd = () => S.clips.reduce((m, c) => Math.max(m, end(c)), 0);
       const asset = (id) => S.assets.find((a) => a.id === id);
+      const FX = E.cpfx, spd = (c) => c.speed || 1, fxOf = (c) => FX.norm(c.fx), srcLen = (c) => c.dur * spd(c);       // srcLen : durée de média consommée par le clip
+      let exportDest = null;                                                                                             // pendant l'export : le son part vers le fichier, pas vers les haut-parleurs
+      const outNode = () => exportDest || ac().destination;
       const overlaps = (tr, s, e, ex) => S.clips.some((c) => c.id !== ex && c.track === tr && c.start < e - 1e-6 && end(c) > s + 1e-6);
 
       el.innerHTML = `<div class="cp">
-        <div class="card cp-mon"><div class="cp-screen"><video playsinline hidden></video><span class="cp-empty">Aucun plan vidéo sous le curseur</span><b class="cp-tc cp-tcv">00:00:00:00</b></div></div>
+        <div class="card cp-mon"><div class="cp-screen"><video playsinline hidden></video><div class="cp-vig"></div><span class="cp-spd" hidden></span><span class="cp-empty">Aucun plan vidéo sous le curseur</span><b class="cp-tc cp-tcv">00:00:00:00</b></div></div>
         <div class="card cp-tlc"><div class="cp-bar cp-top"><button class="cpb" id="cp-zo" aria-label="Zoom arrière">−</button><input type="range" id="cp-zoom" min="0" max="1000" aria-label="Zoom"><button class="cpb" id="cp-zi" aria-label="Zoom avant">+</button><button class="cpb wide" id="cp-fit">Ajuster</button><span class="muted" id="cp-sc"></span></div>
           <div class="cp-scroll"><div class="cp-content"><div class="cp-rrow"><div class="cp-corner"></div><canvas class="cp-ruler"></canvas></div>
             ${TRACKS.map(([id, ty]) => `<div class="cp-row ${ty}"><div class="cp-head" data-t="${id}" role="button" aria-label="Piste ${id}">${id}</div><div class="cp-lane" data-t="${id}"></div></div>`).join("")}
             <div class="cp-ov"><div class="cp-guide"></div><div class="cp-ph"></div></div></div></div>
           <div class="cp-tip" hidden></div>
           <div class="cp-clipbar" hidden><button class="cpb" id="cp-nl" aria-label="Reculer d'une image">◀</button><button class="cpb" id="cp-nr" aria-label="Avancer d'une image">▶</button><button class="cpb wide" id="cp-ts" title="Début du clip au curseur">⇤ Début</button><button class="cpb wide" id="cp-te" title="Fin du clip au curseur">Fin ⇥</button><button class="cpb" id="cp-del" aria-label="Supprimer le clip">🗑</button></div></div>
+        <div class="card cp-insp" hidden>
+          <div class="cp-tabs"><button data-p="speed" class="on">⚡ VITESSE</button><button data-p="fx">🎨 FILTRES</button><button data-p="aud">🔊 AUDIO</button></div>
+          <div class="cp-panel" data-p="speed"></div><div class="cp-panel" data-p="fx" hidden></div><div class="cp-panel" data-p="aud" hidden></div>
+        </div>
+        <div class="card cp-exp"><h3>Exporter<span class="sp" id="cp-expinfo"></span></h3>
+          <div class="row"><select id="cp-expres" class="sel"><option value="1280x720">720p · 1280×720</option><option value="854x480">480p · rapide</option><option value="1920x1080">1080p · lent</option></select><button class="btn pri" id="cp-export">⬆ EXPORTER LA VIDÉO</button></div>
+          <div class="cp-prog" hidden><i></i></div>
+          <p class="muted" style="font-size:12.5px;margin-top:8px">La vidéo est montée sur le téléphone avec tous tes effets, vitesses et volumes, puis enregistrée (WebM). Garde l'écran allumé pendant l'export.</p></div>
         <div class="card"><h3>Soundboard<span class="sp"><button class="cpb wide" id="cp-imp">+ Importer</button></span></h3>
           <div class="cp-pads"></div><p class="muted" style="font-size:13px;margin-top:8px">Maintiens ⠿ et glisse sur une piste, ou touche ＋ pour poser au curseur (piste active : touche son nom).</p></div>
         <div class="cp-dock"><div class="cp-dg"><button class="cpb" data-a="start" aria-label="Début">⏮</button><button class="cpb" data-a="back" aria-label="Image précédente">◀▏</button><button class="cpb play" data-a="play" aria-label="Lecture">▶</button><button class="cpb" data-a="fwd" aria-label="Image suivante">▕▶</button></div>
@@ -49,10 +60,11 @@
       // ------------------------------------------------------------ audio
       const ac = () => (ctx ??= new (window.AudioContext || window.webkitAudioContext)());
       const buffer = (a) => (a.buf ??= a.file.arrayBuffer().then((b) => ac().decodeAudioData(b)).catch(() => null));
-      async function importFiles() {
-        for (const f of await A.pick({ accept: "audio/*,video/*", multiple: true })) {
+      async function importFiles() { return importList(await A.pick({ accept: "audio/*,video/*", multiple: true })); }
+      async function importList(files) {
+        for (const f of files) {
           const kind = f.type.startsWith("video") ? "video" : "audio", url = URL.createObjectURL(f);
-          const dur = await new Promise((res) => { const m = document.createElement(kind === "video" ? "video" : "audio"); m.preload = "metadata"; m.onloadedmetadata = () => res(isFinite(m.duration) ? m.duration : 0); m.onerror = () => res(0); m.src = url; });
+          const dur = await new Promise((res) => { const m = document.createElement(kind === "video" ? "video" : "audio"); m.preload = "metadata"; m.onloadedmetadata = () => { if (isFinite(m.duration)) return res(m.duration); m.ondurationchange = () => { if (isFinite(m.duration)) res(m.duration); }; m.currentTime = 1e7; setTimeout(() => res(isFinite(m.duration) ? m.duration : 0), 4000); };   /* WebM enregistré par le téléphone : durée inconnue tant qu'on n'a pas été à la fin */ m.onerror = () => res(0); m.src = url; });
           if (!dur) { A.toast("Format illisible : " + f.name, "warn"); continue; }
           const a = { id: uid(), name: f.name, kind, url, file: f, dur: r3(dur), peaks: null };
           S.assets.push(a); pads();
@@ -100,7 +112,7 @@
         const cl = S.clips.filter((c) => asset(c.asset)?.kind === "audio" && end(c) > S.ph), bufs = await Promise.all(cl.map((c) => buffer(asset(c.asset))));
         if (my !== gen) return;
         t0 = S.ph; c0 = a.currentTime + 0.08; sources = [];
-        cl.forEach((c, i) => { if (!bufs[i]) return; const s = a.createBufferSource(); s.buffer = bufs[i]; s.connect(a.destination); const k = Math.max(0, t0 - c.start); s.start(c0 + Math.max(0, c.start - t0), c.in + k, c.dur - k); sources.push(s); });
+        cl.forEach((c, i) => { if (!bufs[i]) return; const s = a.createBufferSource(), g = a.createGain(), k = Math.max(0, t0 - c.start); s.buffer = bufs[i]; s.playbackRate.value = spd(c); g.gain.value = (c.vol ?? 100) / 100; s.connect(g); g.connect(outNode()); s.start(c0 + Math.max(0, c.start - t0), c.in + k * spd(c)); s.stop(c0 + end(c) - t0); sources.push(s); });
         S.playing = true; $("[data-a=play]").textContent = "⏸"; loop();
       }
       function loop() {
@@ -122,10 +134,13 @@
         let c = null;
         for (const [id, ty] of TRACKS) { if (ty !== "video") continue; c = S.clips.find((x) => x.track === id && S.ph >= x.start && S.ph < end(x)); if (c) break; }
         const a = c && asset(c.asset);
-        if (!a) { if (!video.paused) video.pause(); video.hidden = true; $(".cp-empty").hidden = false; return; }
+        if (!a) { if (!video.paused) video.pause(); video.hidden = true; $(".cp-empty").hidden = false; $(".cp-vig").style.opacity = 0; $(".cp-spd").hidden = true; return; }
         video.hidden = false; $(".cp-empty").hidden = true;
+        video.style.filter = FX.css(c.fx); video.playbackRate = spd(c);
+        const vg = FX.vignette(c.fx); $(".cp-vig").style.opacity = vg ? 1 : 0; if (vg) $(".cp-vig").style.background = FX.vignetteCss(vg);
+        const sb = $(".cp-spd"); sb.hidden = spd(c) === 1; sb.textContent = spd(c) + "×";
         if (video.dataset.src !== a.url) { video.dataset.src = a.url; video.src = a.url; }
-        const target = c.in + S.ph - c.start;
+        const target = c.in + (S.ph - c.start) * spd(c);
         if (S.playing) { if (video.paused) { video.currentTime = target; video.play().catch(() => {}); } else if (Math.abs(video.currentTime - target) > 0.25) video.currentTime = target; }
         else { if (!video.paused) video.pause(); if (Math.abs(video.currentTime - target) > 0.001) video.currentTime = target; }
       }
@@ -187,15 +202,16 @@
           const d = A.h(`<div class="cp-clip ${a.kind}${c.id === S.sel ? " sel" : ""}" data-id="${c.id}">${a.kind === "audio" ? "<canvas></canvas>" : ""}<span></span><i class="h l"></i><i class="h r"></i></div>`);
           d.style.left = c.start * S.pps + "px"; d.style.width = Math.max(3, c.dur * S.pps) + "px"; d.querySelector("span").textContent = a.name;
           lanes[c.track].append(d);
-          if (a.kind === "audio") { const cv = d.querySelector("canvas"); cv.width = clamp(Math.ceil(c.dur * S.pps), 1, 1500); cv.height = 44; wave(cv, a, c.in / a.dur, (c.in + c.dur) / a.dur, "rgba(255,255,255,.8)"); }
+          if (a.kind === "audio") { const cv = d.querySelector("canvas"); cv.width = clamp(Math.ceil(c.dur * S.pps), 1, 1500); cv.height = 44; wave(cv, a, c.in / a.dur, (c.in + srcLen(c)) / a.dur, "rgba(255,255,255,.8)"); }
         });
       }
       function syncBar() {
         $(".cp-clipbar").hidden = !S.clips.some((c) => c.id === S.sel);
+        inspector();
         el.querySelectorAll(".cp-head").forEach((h) => h.classList.toggle("act", h.dataset.t === S.track));
       }
       function changed() { layout(); renderClips(); drawRuler(); syncVideo(); restart(); syncBar(); }
-      function addClip(a, track, start) { const c = { id: uid(), asset: a.id, track, start, in: 0, dur: a.dur }; S.clips.push(c); S.sel = c.id; changed(); }
+      function addClip(a, track, start) { const c = { id: uid(), asset: a.id, track, start, in: 0, dur: a.dur, speed: 1, vol: 100, fx: { ...FX.DEFAULT } }; S.clips.push(c); S.sel = c.id; changed(); }
       function addAtPlayhead(a) {
         const cands = TRACKS.filter(([, ty]) => ty === a.kind).map(([id]) => id).sort((x, y) => (y === S.track) - (x === S.track)), s = S.ph;
         const tr = cands.find((id) => !overlaps(id, s, s + a.dur));
@@ -235,8 +251,8 @@
         const move = (ev) => {
           const dx = (ev.clientX - x0) / S.pps; let sn = null;
           if (mode === "M") { const r = place(o.start + dx, o.dur, c.id); sn = r.sn; cur = { ...o, start: r.start, track: laneAt(ev.clientX, ev.clientY, a.kind) || cur.track }; }
-          else if (mode === "L") { const r = edge(o.start + dx); sn = r.sn; const s = r3(clamp(r.t, o.start - o.in, o.start + o.dur - MIN_DUR)); cur = { ...o, start: s, in: r3(o.in + s - o.start), dur: r3(o.dur - (s - o.start)) }; }
-          else { const r = edge(o.start + o.dur + dx); sn = r.sn; cur = { ...o, dur: r3(clamp(r.t, o.start + MIN_DUR, o.start + a.dur - o.in) - o.start) }; }
+          else if (mode === "L") { const r = edge(o.start + dx); sn = r.sn; const s = r3(clamp(r.t, o.start - o.in / spd(o), o.start + o.dur - MIN_DUR)); cur = { ...o, start: s, in: r3(o.in + (s - o.start) * spd(o)), dur: r3(o.dur - (s - o.start)) }; }
+          else { const r = edge(o.start + o.dur + dx); sn = r.sn; cur = { ...o, dur: r3(clamp(r.t, o.start + MIN_DUR, o.start + (a.dur - o.in) / spd(o)) - o.start) }; }
           bad = overlaps(cur.track, cur.start, cur.start + cur.dur, c.id);
           d.style.left = cur.start * S.pps + "px"; d.style.width = Math.max(3, cur.dur * S.pps) + "px";
           d.style.transform = `translateY(${lanes[cur.track].getBoundingClientRect().top - top0}px)`; d.classList.toggle("bad", bad);
@@ -303,7 +319,7 @@
       const nudge = (dir) => { const c = sel(); if (!c) return; const s = Math.max(0, r3(c.start + dir * stepT())); if (overlaps(c.track, s, s + c.dur, c.id)) return A.toast("Collision avec un autre clip.", "warn"); c.start = s; changed(); };
       $("#cp-nl").onclick = () => nudge(-1);
       $("#cp-nr").onclick = () => nudge(1);
-      $("#cp-ts").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); const d = S.ph - c.start; c.in = r3(c.in + d); c.start = S.ph; c.dur = r3(c.dur - d); changed(); };
+      $("#cp-ts").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); const d = S.ph - c.start; c.in = r3(c.in + d * spd(c)); c.start = S.ph; c.dur = r3(c.dur - d); changed(); };
       $("#cp-te").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); c.dur = r3(S.ph - c.start); changed(); };
       $("#cp-imp").onclick = importFiles;
       $("#cp-snap").onclick = (e) => { S.snap = !S.snap; e.currentTarget.classList.toggle("on", S.snap); };
@@ -316,8 +332,99 @@
       $("#cp-split").onclick = () => {
         const hit = (c) => S.ph > c.start + 0.001 && S.ph < end(c) - 0.001, c = S.clips.find((x) => x.id === S.sel && hit(x)) || S.clips.find(hit);
         if (!c) return A.toast("Place le curseur dans un clip.", "warn");
-        S.clips.push({ ...c, id: uid(), start: S.ph, in: r3(c.in + S.ph - c.start), dur: r3(end(c) - S.ph) }); c.dur = r3(S.ph - c.start); changed();
+        S.clips.push({ ...c, fx: { ...c.fx }, id: uid(), start: S.ph, in: r3(c.in + (S.ph - c.start) * spd(c)), dur: r3(end(c) - S.ph) }); c.dur = r3(S.ph - c.start); changed();
       };
+      // ------------------------------------------------------------ inspecteur : vitesse, filtres, audio du clip sélectionné
+      const slider = (key, label, min, max, step, val, unit) => `<label class="cp-sl"><span>${label}<b data-v="${key}">${val}${unit}</b></span><input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${val}"></label>`;
+      let insTab = "speed", insId = null, insStamp = "";
+      function inspector() {
+        const c = sel(), box = $(".cp-insp");
+        box.hidden = !c;
+        if (!c) { insId = null; return; }
+        const a = asset(c.asset), isV = a.kind === "video";
+        if (!isV && insTab === "fx") insTab = "speed";
+        const stamp = c.id + "|" + spd(c) + "|" + insTab;
+        if (stamp === insStamp && insId === c.id) return;                 // ne reconstruit pas les curseurs pendant qu'on les glisse
+        insId = c.id; insStamp = stamp;
+        box.querySelectorAll(".cp-tabs button").forEach((b) => { b.classList.toggle("on", b.dataset.p === insTab); b.hidden = b.dataset.p === "fx" && !isV; });
+        box.querySelectorAll(".cp-panel").forEach((p) => (p.hidden = p.dataset.p !== insTab));
+        const f = fxOf(c);
+        $('.cp-panel[data-p="speed"]').innerHTML = `<div class="cp-chips">${FX.SPEEDS.map((v) => `<button class="cp-chip${v === spd(c) ? " on" : ""}" data-sp="${v}">${v}×</button>`).join("")}</div>
+          ${slider("speed", "Accélérateur", 0.25, 8, 0.05, spd(c), "×")}<p class="muted cp-note">Le clip dure maintenant ${ms(c.dur)} sur la timeline. Au-dessus de 1× il raccourcit, en dessous il s'allonge (le clip voisin bloque si la place manque).</p>`;
+        $('.cp-panel[data-p="fx"]').innerHTML = `<div class="cp-chips">${FX.PRESETS.map(([n], i) => `<button class="cp-chip" data-pr="${i}">${n}</button>`).join("")}</div>
+          ${slider("blur", "Flou gaussien", 0, 20, 0.5, f.blur, " px")}${slider("bright", "Luminosité", 40, 180, 1, f.bright, " %")}${slider("contrast", "Contraste", 40, 200, 1, f.contrast, " %")}
+          ${slider("sat", "Saturation", 0, 300, 1, f.sat, " %")}${slider("hue", "Teinte", 0, 360, 1, f.hue, "°")}${slider("sepia", "Sépia", 0, 100, 1, f.sepia, " %")}
+          ${slider("gray", "Noir & blanc", 0, 100, 1, f.gray, " %")}${slider("invert", "Négatif", 0, 100, 1, f.invert, " %")}${slider("vig", "Vignette", 0, 100, 1, f.vig, " %")}`;
+        $('.cp-panel[data-p="aud"]').innerHTML = `${slider("vol", "Volume du clip", 0, 200, 1, c.vol ?? 100, " %")}<p class="muted cp-note">La vitesse change aussi la hauteur du son (comme un disque qu'on accélère).</p>`;
+      }
+      function setSpeed(c, v) {
+        v = clamp(Math.round(v * 100) / 100, 0.25, 8);
+        const nd = r3(c.dur * spd(c) / v);
+        if (overlaps(c.track, c.start, c.start + nd, c.id)) { A.toast("Pas assez de place sur la piste pour cette vitesse.", "warn"); insStamp = ""; return inspector(); }
+        c.speed = v; c.dur = Math.max(MIN_DUR, nd); insStamp = ""; changed();
+      }
+      $(".cp-insp").addEventListener("click", (e) => {
+        const c = sel(); if (!c) return;
+        const tab = e.target.closest(".cp-tabs button"), sp = e.target.closest("[data-sp]"), pr = e.target.closest("[data-pr]");
+        if (tab) { insTab = tab.dataset.p; insStamp = ""; return inspector(); }
+        if (sp) return setSpeed(c, +sp.dataset.sp);
+        if (pr) { c.fx = { ...FX.DEFAULT, ...FX.PRESETS[+pr.dataset.pr][1] }; insStamp = ""; inspector(); syncVideo(); }
+      });
+      $(".cp-insp").addEventListener("input", (e) => {
+        const c = sel(), k = e.target.dataset.k; if (!c || !k) return;
+        const v = +e.target.value, lab = $(`.cp-insp [data-v="${k}"]`);
+        if (k === "speed") { if (lab) lab.textContent = v + "×"; return; }                 // la vitesse s'applique au relâchement (elle change la durée du clip)
+        if (k === "vol") { c.vol = v; if (lab) lab.textContent = v + " %"; return; }
+        c.fx = { ...fxOf(c), [k]: v }; if (lab) lab.textContent = v + (k === "blur" ? " px" : k === "hue" ? "°" : " %"); syncVideo();
+      });
+      $(".cp-insp").addEventListener("change", (e) => { const c = sel(); if (c && e.target.dataset.k === "speed") setSpeed(c, +e.target.value); });
+
+      // ------------------------------------------------------------ export : montage rendu en temps réel (canvas + MediaRecorder), avec effets, vitesses et volumes
+      let exporting = false, lastExport = null;
+      async function exportVideo() {
+        if (exporting) return;
+        const total = pEnd(); if (!total) return A.toast("La timeline est vide.", "warn");
+        if (typeof MediaRecorder === "undefined") return A.toast("L'export vidéo n'est pas disponible sur cet appareil.", "err");
+        const [W, H] = $("#cp-expres").value.split("x").map(Number);
+        const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"].find((m) => MediaRecorder.isTypeSupported(m));
+        if (!mime) return A.toast("Aucun format d'export pris en charge.", "err");
+        exporting = true; pause(); setPh(0, false);
+        const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+        const g = cv.getContext("2d"), a = ac(); await a.resume();
+        exportDest = a.createMediaStreamDestination();
+        if (!video._src) video._src = a.createMediaElementSource(video);                      // le son des plans vidéo passe aussi par WebAudio (donc dans le fichier)
+        try { video._src.disconnect(); } catch (x) { /* pas encore branché */ }
+        video._src.connect(exportDest);
+        const stream = cv.captureStream(30); exportDest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+        const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: W >= 1920 ? 10e6 : 5e6 }), chunks = [];
+        rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+        const bar = $(".cp-prog"), fill = bar.firstElementChild; bar.hidden = false; $("#cp-export").disabled = true;
+        const draw = () => {
+          g.filter = "none"; g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+          let c = null;
+          for (const [id, ty] of TRACKS) { if (ty !== "video") continue; c = S.clips.find((x) => x.track === id && S.ph >= x.start && S.ph < end(x)); if (c) break; }
+          if (c && video.videoWidth) {
+            const k = Math.min(W / video.videoWidth, H / video.videoHeight), w = video.videoWidth * k, h = video.videoHeight * k;
+            g.filter = FX.css(c.fx, W / Math.max(1, video.clientWidth || 360)); g.drawImage(video, (W - w) / 2, (H - h) / 2, w, h); g.filter = "none";
+            const vg = FX.vignette(c.fx);
+            if (vg) { const r = Math.hypot(W, H) / 2, gr = g.createRadialGradient(W / 2, H / 2, r * (0.62 - vg * 0.2), W / 2, H / 2, r); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, `rgba(0,0,0,${vg * 0.9})`); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
+          }
+          fill.style.width = Math.min(100, S.ph / total * 100) + "%";
+        };
+        const done = new Promise((res) => (rec.onstop = res));
+        rec.start(500);
+        await play();
+        await new Promise((res) => { const tick = () => { draw(); if (S.playing) requestAnimationFrame(tick); else res(); }; tick(); });
+        draw(); await new Promise((r) => setTimeout(r, 300));
+        rec.stop(); await done;
+        try { video._src.disconnect(); video._src.connect(a.destination); } catch (x) { /* ignoré */ }
+        exportDest = null; exporting = false; bar.hidden = true; $("#cp-export").disabled = false; fill.style.width = "0";
+        const blob = new Blob(chunks, { type: mime.split(";")[0] }), name = `CinePulse_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.${mime.includes("mp4") ? "mp4" : "webm"}`;
+        lastExport = blob; $("#cp-expinfo").textContent = `${(blob.size / 1048576).toFixed(1)} Mo`;
+        await A.save(name, blob.type, new Uint8Array(await blob.arrayBuffer()), "videos");
+      }
+      $("#cp-export").onclick = exportVideo;
+      el._api = { S, importList, exportVideo, setSpeed: (id, v) => setSpeed(S.clips.find((c) => c.id === id), v), addClip, asset, get lastExport() { return lastExport; } };
       layout(); drawRuler(); pads(); updatePh(true); syncBar();
     },
   });

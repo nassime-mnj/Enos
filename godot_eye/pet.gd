@@ -278,7 +278,7 @@ func _process(dt: float) -> void:
 		bubble_label.visible_characters = int(text_len * clampf(text_t / text_dur, 0.0, 1.0))
 		if text_t >= text_dur + 0.2:
 			text_active = false
-			bubble_hold = 4.5
+			bubble_hold = maxf(4.5, 2.0 + text_len * 0.06)               # un conseil long reste lisible plus longtemps (mode texte silencieux)
 	elif bubble_hold > 0.0:
 		bubble_hold -= dt
 		if bubble_hold <= 0.0:
@@ -411,7 +411,14 @@ func say(text: String, audio_path := "") -> void:
 			text_dur = clampf(st.get_length() * 0.92, 0.8, 30.0)       # le texte s'écrit à la vitesse de la voix
 	text_active = true
 	bubble_hold = 0.0
-	create_tween().tween_property(bubble, "modulate:a", 1.0 if opt_bubble else 0.0, 0.2)
+	# apparition « pop » : la bulle surgit au-dessus de l'œil (échelle élastique + léger glissement), puis le fondu de sortie existant la fait disparaître
+	bubble.pivot_offset = Vector2(bubble.size.x * 0.5, bubble.size.y)
+	bubble.scale = Vector2(0.82, 0.82)
+	bubble.position.y = 22.0
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(bubble, "modulate:a", 1.0 if opt_bubble else 0.0, 0.18)
+	tw.tween_property(bubble, "scale", Vector2.ONE, 0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(bubble, "position:y", 10.0, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	flare = 0.7
 
 

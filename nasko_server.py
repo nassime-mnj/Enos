@@ -62,6 +62,7 @@ import nasko_agenda
 import nasko_agent
 import nasko_epita
 import nasko_mobchess
+import nasko_lol
 import nasko_train
 import nasko_onboarding
 import nasko_pairing
@@ -1245,7 +1246,7 @@ def ping():
 
 
 _VENDOR = {"codemirror.bundle.js": "codemirror.bundle.js", "wavesurfer.min.js": "wavesurfer.min.js", "wavesurfer.regions.min.js": "wavesurfer.regions.min.js"}
-_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "scan_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
+_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "purge_launch.js": "text/javascript", "purge.js": "text/javascript", "scan_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
                  "imgproc.js": "text/javascript", "imgproc.css": "text/css", "anim.js": "text/javascript", "anim.css": "text/css",
                  "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css",
                  "tabs.js": "text/javascript", "tabs.css": "text/css", "env.js": "text/javascript", "env.css": "text/css", "audio.js": "text/javascript", "audio.css": "text/css", "compress.js": "text/javascript", "compress.css": "text/css", "pdfed.js": "text/javascript", "pdfed.css": "text/css", "studio.js": "text/javascript", "studio.css": "text/css", "syllabus.js": "text/javascript", "syllabus.css": "text/css", "quick.js": "text/javascript", "background.js": "text/javascript", "background.css": "text/css", "quick.css": "text/css", "quicklib.js": "text/javascript", "talk.js": "text/javascript", "talk.css": "text/css", "colis.js": "text/javascript", "colis.css": "text/css", "search.js": "text/javascript", "search.css": "text/css",
@@ -4272,6 +4273,11 @@ def train_reset():
     return _chs(nasko_train.reset)
 
 
+@app.post("/api/train/cloud", dependencies=_LOCAL)
+def train_cloud():
+    return nasko_train.cloud_sync(force=True)
+
+
 @app.post("/api/train/autostart", dependencies=_LOCAL)
 def train_autostart(b: TrainAuto):
     return nasko_train.set_autostart(b.on)
@@ -4927,6 +4933,33 @@ def pet_interrupt():
     return {"ok": True}
 
 
+class LolConfig(BaseModel):
+    enabled: bool | None = None
+    mode: str | None = None                  # "text" : bulle silencieuse · "voice" : voix + bulle
+    interval: int | None = None
+    need_game: bool | None = None
+
+
+@app.get("/api/lol/status", dependencies=_LOCAL)
+def lol_status():
+    return nasko_lol.status()
+
+
+@app.post("/api/lol/config", dependencies=_LOCAL)
+def lol_config(b: LolConfig):
+    return nasko_lol.set_config(b.model_dump(exclude_none=True))
+
+
+@app.post("/api/lol/analyse", dependencies=_LOCAL)
+def lol_analyse_now():
+    """ANALYSER MAINTENANT : une capture, un conseil (sans attendre la boucle ni la détection de la partie)."""
+    try:
+        _sig, ctx = nasko_lol.step(None, force=True)
+    except Exception as e:                                                   # noqa: BLE001
+        raise HTTPException(400, f"Analyse impossible : {str(e)[:160]}")
+    return {"context": ctx, **nasko_lol.status()}
+
+
 class PetVacuum(BaseModel):
     dir: str = "auto"          # "auto" (vers l'autre écran) | "right" | "left"
 
@@ -5571,6 +5604,7 @@ atexit.register(nasko_agent.stop)
 atexit.register(nasko_afk.afk.stop)
 atexit.register(nasko_mobchess.close)
 atexit.register(nasko_train.stop)
+atexit.register(nasko_lol.stop)
 atexit.register(nasko_devmanager.stop_all)
 
 
@@ -6137,6 +6171,7 @@ async def _chat_startup():
     _chat_started["v"] = True
     nasko_chat.trim()
     nasko_chat.prime_seen()
+    threading.Thread(target=nasko_lol.autostart_if_enabled, daemon=True).start()
     threading.Thread(target=nasko_train.autostart_if_enabled, daemon=True).start()   # Super Enos : relance de l'entraînement si l'option « au démarrage » est cochée
     threading.Thread(target=_gs_relay_on, daemon=True).start()   # écoute permanente des alertes de mise à jour (relais par dossier partagé, local)
     if load_config().get("chat_channel_open"):                  # le canal était ouvert : il se rouvre tout seul

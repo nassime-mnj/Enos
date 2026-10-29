@@ -53,6 +53,7 @@ def conn():
                 content TEXT NOT NULL, created_at REAL NOT NULL);
               CREATE INDEX IF NOT EXISTS clipboard_user ON clipboard(user_id, id);
               CREATE TABLE IF NOT EXISTS agenda_tasks(user_id INTEGER NOT NULL, task_id TEXT NOT NULL, data TEXT NOT NULL, updated REAL NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(user_id, task_id));
+              CREATE TABLE IF NOT EXISTS brain_docs(user_id INTEGER NOT NULL, kind TEXT NOT NULL, device TEXT NOT NULL, data TEXT NOT NULL, updated REAL NOT NULL, PRIMARY KEY(user_id, kind, device));
               CREATE TABLE IF NOT EXISTS update_tokens(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, token_hash TEXT NOT NULL UNIQUE, device TEXT NOT NULL DEFAULT '',
                 created_at REAL NOT NULL, expires_at REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0, last_used REAL);
               CREATE TABLE IF NOT EXISTS mobile_devices(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, device_id TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', platform TEXT NOT NULL DEFAULT '',

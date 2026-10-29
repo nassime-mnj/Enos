@@ -15,8 +15,13 @@
     { id: "enos", t: "Défi E.N.O.S.", s: "Ton niveau, de 250 à 3200 Elo", human: true },
     { id: "coach", t: "Cours avec ETO", s: "Toi contre un bot · ETO commente", human: true },
     { id: "speedrun", t: "Speedrun", s: "ETO contre un bot", human: false },
-    { id: "titans", t: "⚔ Choc des Titans", s: "E.N.O.S. contre ETO", human: false },
+    { id: "titans", t: "⚔ Choc des Titans", s: "E.N.O.S. contre ETO", human: false, duel: true },
     { id: "boss", t: "👑 Boss final", s: "Stockfish plein régime", human: false },
+    { id: "nasko", t: "🎭 Nasko", s: "Le bot qui joue comme La_Loi_De_Fortes", human: true, style: true },
+    { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
+    { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
+    { id: "ebs", t: "✦ ETO Brillant vs Stockfish", s: "Combat spectateur · enregistré", human: false, duel: true },
+    { id: "ebd", t: "✦ ETO Brillant + E.N.O.S. vs Stockfish", s: "Duo contre le boss · enregistré", human: false, duel: true },
   ];
 
   const TAUNT = {
@@ -36,6 +41,10 @@
       const B = E.board, K = E.brain, L = E.chessLocal, $ = (s) => el.querySelector(s);
       const name = (who) => (who === "eto" ? "ETO" : who === "enos" ? "E.N.O.S." : who);
       let g = null;                                                        // partie en cours
+      let STY = window.ENOS_STYLE || null;                                  // profils de style (data/style_bots.js)
+      const ALIEN = { "": "e2e4", "e2e4 c7c6": "d2d4", "e2e4 c7c6 d2d4 d7d5": "b1c3", "e2e4 c7c6 d2d4 d7d5 b1c3 d5e4": "c3e4", "e2e4 c7c6 d2d4 d7d5 b1c3 d5e4 c3e4 g8f6": "e4g5",
+        "e2e4 c7c6 d2d4 d7d5 b1c3 d5e4 c3e4 g8f6 e4g5 h7h6": "g5f7" };
+      if (!STY) { const sc = document.createElement("script"); sc.src = (E.assetBase || "") + "data/style_bots.js"; sc.onload = () => { STY = window.ENOS_STYLE; }; document.head.appendChild(sc); }
 
       el.innerHTML = `
         <div id="df-home">
@@ -63,9 +72,12 @@
       function paintHist() {
         const h = hist().slice().reverse();
         $("#df-hn").textContent = h.length ? h.length + " partie" + (h.length > 1 ? "s" : "") : "";
-        $("#df-hist").innerHTML = h.length ? h.map((x, i) => `<div class="it"><span class="n">${esc(x.title)}<small>${esc(x.result)} · ${x.plies} coups · ✦ ${x.brill} brillant${x.brill > 1 ? "s" : ""}${x.acc != null ? " · précision " + x.acc + " %" : ""} · ${new Date(x.t).toLocaleDateString("fr-FR")}</small></span><button class="mini" data-pgn="${h.length - 1 - i}">PGN</button></div>`).join("") : '<p class="muted">Aucune partie pour l\'instant.</p>';
+        $("#df-hist").innerHTML = h.length ? h.map((x, i) => `<div class="it"><span class="n">${esc(x.title)}<small>${esc(x.result)} · ${x.plies} coups · ✦ ${x.brill} brillant${x.brill > 1 ? "s" : ""}${x.acc != null ? " · précision " + x.acc + " %" : ""} · ${new Date(x.t).toLocaleDateString("fr-FR")}</small></span>${x.mv ? `<button class="mini" data-rev="${h.length - 1 - i}">▶ REVOIR</button>` : ""}<button class="mini" data-pgn="${h.length - 1 - i}">PGN</button></div>`).join("") : '<p class="muted">Aucune partie pour l\'instant.</p>';
       }
-      $("#df-hist").onclick = (e) => { const b = e.target.closest("[data-pgn]"); if (b) A.copy(hist()[+b.dataset.pgn].pgn || ""); };
+      $("#df-hist").onclick = (e) => {
+        const r = e.target.closest("[data-rev]"); if (r) return replay(hist()[+r.dataset.rev]);
+        const b = e.target.closest("[data-pgn]"); if (b) A.copy(hist()[+b.dataset.pgn].pgn || "");
+      };
       el.querySelectorAll(".df-mode").forEach((b) => (b.onclick = () => setup(b.dataset.m)));
 
       function setup(id) {
@@ -78,6 +90,8 @@
         else if (id === "coach") body = colorSeg + `<label class="fld">Niveau du bot</label><select id="su-elo" class="sel">${ELOS.map((e) => `<option value="${e}" ${e === elo ? "selected" : ""}>Bot ${e} Elo</option>`).join("")}</select>`;
         else if (id === "speedrun") body = `<label class="fld">Niveau du bot</label><select id="su-elo" class="sel">${ELOS.map((e) => `<option value="${e}" ${e === elo ? "selected" : ""}>Bot ${e} Elo</option>`).join("")}</select>`;
         else if (id === "titans") body = `<p class="muted" style="line-height:1.5">Spectacle : E.N.O.S. (Stockfish pur) joue les Blancs, ETO (chasseur de sacrifices) les Noirs. Ils se répondent en direct.</p>`;
+        else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
+        else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
         else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
         const s = E.ui.sheet({ title: m.t, html: body, options: [{ label: "COMMENCER", cls: "pri", fn: () => {
           if (id === "enos") E.settings.set("chess.power", pow);
@@ -95,6 +109,7 @@
       // ------------------------------------------------------------------ partie
       function players(id, o) {
         const hu = { human: true, name: "Toi" };
+        if (id === "nasko" || id === "lelex") { const op = { kind: "style", style: id, elo: STY && STY[id] ? STY[id].eloEst : 1000, name: id === "nasko" ? "Nasko" : "Lelex" }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "brillant") return o.color === "w" ? [hu, { kind: "eto", elo: 3200, name: "ETO Brillant" }] : [{ kind: "eto", elo: 3200, name: "ETO Brillant" }, hu];
         if (id === "enos") { const op = { kind: "sf", elo: B.powerToElo(o.pow), power: o.pow, name: "E.N.O.S." }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "coach") { const op = { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }; return o.color === "w" ? [hu, op] : [op, hu]; }
@@ -102,6 +117,8 @@
         if (id === "titans") return [{ kind: "sf", elo: 3200, power: 100, name: "E.N.O.S." }, { kind: "eto", elo: 3200, name: "ETO" }];
         const boss = { kind: "sf", elo: 3200, power: 100, name: "Stockfish" };
         const ch = o.boss === "duo" ? { kind: "duo", elo: 3200, power: 100, name: "E.N.O.S. + ETO" } : o.boss === "enos" ? { kind: "sf", elo: 3200, power: 100, name: "E.N.O.S." } : { kind: "eto", elo: 3200, name: "ETO" };
+        const EB = { kind: "eto", elo: 3200, name: "ETO Brillant" }, EN = { kind: "sf", elo: 3200, power: 100, name: "E.N.O.S." }, duo = { kind: "duo", elo: 3200, power: 100, name: "ETO Brillant + E.N.O.S." };
+        if (id === "ebe" || id === "ebs" || id === "ebd") { const a = id === "ebd" ? duo : EB, b = id === "ebe" ? EN : boss; return o.color === "b" ? [b, a] : [a, b]; }
         return [ch, boss];
       }
 
@@ -110,7 +127,7 @@
         if (g) g.token++;
         const me = m.human ? (pl[0].human ? "w" : "b") : null;
         g = { id, mode: m, pl: { w: pl[0], b: pl[1] }, me, token: (g ? g.token : 0) + 1, ch: new Chess(), fen: START, evalW: 0, bestUci: "", moves: [], snaps: [], over: "", busy: false, paused: false, sel: "", hint: null, last: null,
-          brill: { w: 0, b: 0 }, inBook: true, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
+          brill: { w: 0, b: 0 }, inBook: true, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
         g.ch.header("Event", m.t.replace(/[^\p{L}\p{N} .]/gu, "").trim(), "White", pl[0].name, "Black", pl[1].name, "Date", new Date().toISOString().slice(0, 10).replace(/-/g, "."));
         $("#df-home").hidden = true; $("#df-game").hidden = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
@@ -130,7 +147,8 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      $("#df-back").onclick = () => { if (g) { g.token++; L.abort && L.abort(); } $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
+      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
+      $("#df-back").onclick = backHome;
 
       function paint(anim) {
         const pos = B.parse(g.fen), turn = pos.turn;
@@ -188,6 +206,7 @@
 
       async function botMove(fen, p, duo) {
         const ch = new Chess(fen);
+        if (p.kind === "style") return styleMove(fen, p);
         if (p.kind === "eto" || (p.kind === "duo" && duo % 2 === 1)) {
           const m = await K.etoMove(fen, { topMs: 900, sacMs: 1500 });
           return { uci: m.uci, brilliant: m.brilliant };
@@ -196,6 +215,28 @@
         const r = await L.think(fen, p.power || powerOfElo(p.elo), p.power >= 100 ? 1000 : undefined);
         if (!r.uci) throw new Error("Le moteur n'a pas répondu.");
         return { uci: r.uci };
+      }
+
+      // ---- bots de style (Nasko, Lelex) : livre d'ouvertures du joueur, puis Stockfish + fréquence d'erreurs mesurée sur ses parties
+      const wpick = (items) => { let t = items.reduce((a, x) => a + x[1], 0), r = Math.random() * t; for (const [v, w] of items) { if ((r -= w) <= 0) return v; } return items[items.length - 1][0]; };
+      async function styleMove(fen, p) {
+        const S = STY && STY[p.style], ch = new Chess(fen), turn = ch.turn();
+        const hist = g.ch.history({ verbose: true }), path = hist.map((m) => m.from + m.to + (m.promotion || "")).join(" ");
+        const legal = new Set(ch.moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion || "")));
+        const alien = p.style === "nasko" && turn === "w" ? ALIEN[path] : null;                     // le Gambit Alien contre la Caro-Kann reste son arme favorite
+        if (alien && legal.has(alien)) return { uci: alien };
+        const node = S && S.book[turn][path];
+        if (node) { const ok = Object.entries(node).filter(([u]) => legal.has(u)); if (ok.length) return { uci: wpick(ok) }; }
+        const lines = await L.lines(fen, 6, 450);
+        if (!lines.length) { const r = await L.think(fen, powerOfElo(p.elo)); return { uci: r.uci }; }
+        const top = lines[0], k = S ? S.skill : { mistake: 0.15, blunder: 0.08 }, roll = Math.random();
+        const cand = lines.filter((l) => !top.mate || l.mate);
+        let pool;
+        if (!top.mate && roll < k.blunder) pool = lines.filter((l) => top.cp - l.cp >= 250 && !l.mate);
+        else if (!top.mate && roll < k.blunder + k.mistake) pool = lines.filter((l) => top.cp - l.cp >= 100 && top.cp - l.cp < 250 && !l.mate);
+        if (!pool || !pool.length) pool = cand.filter((l) => top.cp - l.cp <= 30);
+        const w = (l) => { const m = ch.move({ from: l.uci.slice(0, 2), to: l.uci.slice(2, 4), promotion: l.uci[4] }); if (!m) return 1; ch.undo(); return 1 + (m.captured ? (S ? S.capRate : 0.2) * 3 : 0) + (/[+#]/.test(m.san) ? (S ? S.checkRate : 0.12) * 4 : 0); };
+        return { uci: wpick(pool.map((l) => [l.uci, w(l)])) };
       }
 
       // joue le coup, le juge, met à jour l'écran puis passe la main
@@ -222,7 +263,7 @@
           if (name == null) g.inBook = false;
           else if (q.key !== "brilliant" && q.loss < 250) { q.key = "book"; q.label = K.QUALITY.book; q.opening = name; }
         }
-        ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "" });
+        ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ ew: ev.w, san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "" });
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
         judge(g.moves[g.moves.length - 1], meta);
         g.busy = false;
@@ -252,14 +293,14 @@
         if (g.ch.in_checkmate()) say = pick(TAUNT.mate);
         if (g.id === "coach" && humanMove && mv.q.key !== "best") say = txt;
         if (say) { const box2 = $("#df-say"); box2.hidden = false; box2.textContent = say; box2.onclick = () => E.ai && E.ai.speak && E.ai.speak(g.pl[mv.color].kind === "eto" ? "eto" : "enos", say); }
-        if (humanMove || g.id === "titans") llm(mv, humanMove);
+        if (humanMove || g.mode.duel) llm(mv, humanMove);
       }
       // commentaire facultatif d'ETO (Groq) pour les coups marquants
       async function llm(mv, humanMove) {
         if (!E.ai || !E.ai.configured() || !E.settings.get("chess.comment", true)) return;
-        if (!["brilliant", "blunder", "mistake"].includes(mv.q.key) && !(g.id === "titans" && g.moves.length % 6 === 0)) return;
-        const seq = ++g.sayN, tok = g.token, persona = (g.id === "titans" ? (mv.color === "b" ? "eto" : "enos") : E.settings.get("persona", "enos") === "eto" ? "eto" : "enos");
-        const q = `Partie d'échecs${g.id === "titans" ? " entre E.N.O.S. (Blancs) et ETO (Noirs)" : ""}. Dernier coup : ${mv.san} par ${g.pl[mv.color].name}, jugé ${mv.q.label} (${mv.q.loss} cp de perte). ${mv.bestSan ? "Le meilleur était " + mv.bestSan + "." : ""} Évaluation : ${K.fmt(g.evalW)} (Blancs). Réagis en UNE phrase courte, dans ton style.`;
+        if (!["brilliant", "blunder", "mistake"].includes(mv.q.key) && !(g.mode.duel && g.moves.length % 6 === 0)) return;
+        const seq = ++g.sayN, tok = g.token, persona = (g.mode.duel ? (g.pl[mv.color].kind === "eto" ? "eto" : "enos") : E.settings.get("persona", "enos") === "eto" ? "eto" : "enos");
+        const q = `Partie d'échecs${g.mode.duel ? ` entre ${g.pl.w.name} (Blancs) et ${g.pl.b.name} (Noirs)` : ""}. Dernier coup : ${mv.san} par ${g.pl[mv.color].name}, jugé ${mv.q.label} (${mv.q.loss} cp de perte). ${mv.bestSan ? "Le meilleur était " + mv.bestSan + "." : ""} Évaluation : ${K.fmt(g.evalW)} (Blancs). Réagis en UNE phrase courte, dans ton style.`;
         try {
           const t = await E.ai.chat(persona, q, () => {}, { oneShot: true, system: E.ai.PERSONAS[persona].system(E.ai.name()) + " Tu commentes une partie d'échecs : une seule phrase." });
           if (seq === g.sayN && tok === g.token) { const b = $("#df-say"); b.hidden = false; b.textContent = t; b.onclick = () => E.ai.speak(persona, t); }
@@ -302,15 +343,65 @@
         const accW = K.buildReview(g.moves, "w").me.accuracy, accB = K.buildReview(g.moves, "b").me.accuracy;
         if (g.mode.human && g.me && !stopped && E.chessLearn) E.chessLearn.addGame(g.me, result, g.pl[g.me === "w" ? "b" : "w"].power || 100);
         if (g.moves.length >= 2) {
-          const list = hist(); list.push({ t: Date.now(), title: g.mode.t.replace(/[^\p{L}\p{N} .'-]/gu, "").trim() + " · " + g.pl.w.name + " – " + g.pl.b.name, result, plies: g.moves.length, brill: g.brill.w + g.brill.b, acc: g.me ? (g.me === "w" ? accW : accB) : null, pgn: g.ch.pgn() });
-          E.settings.set("defi.hist", list.slice(-20));
+          const list = hist(); list.push({ t: Date.now(), title: g.mode.t.replace(/[^\p{L}\p{N} .'-]/gu, "").trim() + " · " + g.pl.w.name + " – " + g.pl.b.name, result, plies: g.moves.length, brill: g.brill.w + g.brill.b, acc: g.me ? (g.me === "w" ? accW : accB) : null, pgn: g.ch.pgn(),
+            id: g.id, pw: g.pl.w.name, pb: g.pl.b.name, pk: [g.pl.w.kind || "", g.pl.b.kind || ""], bw: g.brill.w, bb: g.brill.b, me: g.me, accW, accB,
+            mv: g.moves.map((m) => [m.uci, m.san, m.q.key, m.q.loss | 0, m.ew === undefined ? null : m.ew, m.bestSan || ""]) });   // enregistrement complet : [uci, san, jugement, perte, éval Blancs, meilleur coup]
+          E.settings.set("defi.hist", list.slice(-40));
         }
         const row = (c) => `<div class="df-sum"><b>${esc(sideName(c))}</b><span>précision ${(c === "w" ? accW : accB) == null ? "—" : (c === "w" ? accW : accB) + " %"}</span><span style="color:#1acfd6">✦ ${g.brill[c]} brillant${g.brill[c] > 1 ? "s" : ""}</span></div>`;
         E.vibrate(40);
         if (g.moves.length >= 2) E.ui.sheet({ title: result, html: `${row("w")}${row("b")}<p class="muted" style="margin-top:10px;font-size:13px">${rev.critical.length ? "Moments clés : " + rev.critical.map((c) => `coup ${Math.ceil(c.n / 2)} (${c.san} ${c.label.toLowerCase()})`).join(", ") + "." : "Aucune gaffe majeure."}</p>`, options: [{ label: "COPIER LE PGN", fn: () => A.copy(g.ch.pgn()) }, { label: "REJOUER", fn: () => launch(g.id, g.o) }, { label: "FERMER" }] });
       }
 
-      el._api = { launch, get g() { return g; }, setup };
+      // ------------------------------------------------------------------ replay d'une partie enregistrée (même plateau, mêmes jugements)
+      function replay(rec) {
+        if (!rec || !rec.mv || !rec.mv.length) return;
+        if (g) { g.token++; L.abort && L.abort(); }
+        const fens = [START], c = new Chess();
+        rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
+        const R = { rec, fens, k: 0, speed: 1, playing: false };
+        const base = { id: rec.id || "replay", mode: { human: false, t: rec.title }, pl: { w: { name: rec.pw || "Blancs", elo: 3200 }, b: { name: rec.pb || "Noirs", elo: 3200 } }, me: null,
+          token: (g ? g.token : 0) + 1, ch: new Chess(), fen: START, evalW: 0, bestUci: "", moves: [], snaps: [], over: "", busy: false, paused: false, sel: "", hint: null, last: null,
+          brill: { w: 0, b: 0 }, flip: rec.me === "b", R };
+        g = base;
+        $("#df-home").hidden = true; $("#df-game").hidden = false; $("#df-judge").hidden = true; $("#df-say").hidden = true;
+        const draw = (anim) => {
+          const k = R.k, mvs = rec.mv.slice(0, k);
+          g.ch = new Chess(fens[k]); g.fen = fens[k];
+          g.moves = mvs.map((m, i) => ({ san: m[1], uci: m[0], color: i % 2 ? "b" : "w", q: { key: m[2], label: K.QUALITY[m[2]] || m[2], loss: m[3] }, bestSan: m[5], n: i + 1 }));
+          g.brill = { w: g.moves.filter((m) => m.color === "w" && m.q.key === "brilliant").length, b: g.moves.filter((m) => m.color === "b" && m.q.key === "brilliant").length };
+          g.evalW = k ? (mvs[k - 1][4] == null ? 0 : mvs[k - 1][4]) : 0;
+          g.last = k ? [mvs[k - 1][0].slice(0, 2), mvs[k - 1][0].slice(2, 4)] : null;
+          paint(anim && k ? mvs[k - 1][0] : undefined);
+          const cur = k ? g.moves[k - 1] : null, box = $("#df-judge");
+          box.hidden = !cur;
+          if (cur) box.innerHTML = `<span class="kchip" style="--c:${COL[cur.q.key] || "#999"}">${esc(cur.q.label.toUpperCase())}</span><span>${esc(g.pl[cur.color].name)} · ${esc(K.describe(cur.q, cur.san, cur.bestSan))}</span>`;
+          $("#df-say").hidden = true;
+          status(`Coup ${k} / ${rec.mv.length}` + (k === rec.mv.length ? " · " + rec.result : ""));
+          const sl = $("#rp-seek"); if (sl) sl.value = k;
+          const pb = $("#rp-play"); if (pb) pb.textContent = R.playing ? "⏸" : "▶";
+          const sp = $("#rp-speed"); if (sp) sp.textContent = R.speed + "×";
+        };
+        const go = (k, anim) => { R.k = Math.max(0, Math.min(rec.mv.length, k)); draw(anim); };
+        const stop = () => { R.playing = false; clearTimeout(R.timer); };
+        const tick = () => {
+          if (!R.playing || g !== base) return;
+          if (R.k >= rec.mv.length) { stop(); return draw(); }
+          go(R.k + 1, true);
+          R.timer = setTimeout(tick, 900 / R.speed);
+        };
+        $("#df-btns").innerHTML = `<div class="rp-bar"><button class="btn" id="rp-first">⏮</button><button class="btn" id="rp-prev">◂</button><button class="btn" id="rp-play">▶</button><button class="btn" id="rp-next">▸</button><button class="btn" id="rp-last">⏭</button><button class="btn" id="rp-speed">1×</button><button class="btn" id="b-flip">⟲</button></div><input type="range" id="rp-seek" min="0" max="${rec.mv.length}" value="0" style="width:100%;accent-color:var(--red);margin-top:8px">`;
+        const on = (id, f) => { $("#" + id).onclick = f; };
+        on("rp-first", () => { stop(); go(0); }); on("rp-prev", () => { stop(); go(R.k - 1); }); on("rp-next", () => { stop(); go(R.k + 1, true); }); on("rp-last", () => { stop(); go(rec.mv.length); });
+        on("rp-play", () => { if (R.playing) return stop(), draw(); if (R.k >= rec.mv.length) go(0); R.playing = true; draw(); R.timer = setTimeout(tick, 400 / R.speed); });
+        on("rp-speed", () => { R.speed = R.speed >= 8 ? 1 : R.speed * 2; draw(); });
+        on("b-flip", () => { g.flip = !g.flip; draw(); });
+        $("#rp-seek").oninput = (e) => { stop(); go(+e.target.value); };
+        $("#df-back").onclick = () => { stop(); g.token++; $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); $("#df-back").onclick = backHome; };
+        go(0);
+      }
+
+      el._api = { launch, replay, get g() { return g; }, setup };
       paintHist();
     },
   });

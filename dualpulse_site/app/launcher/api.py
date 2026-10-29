@@ -133,6 +133,12 @@ class AgendaSync(BaseModel):
     tasks: list[dict] = Field(default_factory=list, max_length=500)
 
 
+class BrainSync(BaseModel):
+    kind: str = "superenos"
+    device: str
+    doc: dict | None = None            # None : lecture seule (récupérer les documents des autres appareils)
+
+
 class Wish(BaseModel):
     email: str = Field(max_length=254)
 
@@ -296,6 +302,13 @@ def build(admin_guard, admin_path):
             raise service.AuthError(429, "Too many syncs, please try again in a minute.")
         tasks, tnow = service.agenda_sync(u["id"], b.tasks, b.since)
         return {"tasks": tasks, "now": tnow}
+
+    @r.post(V1 + "/brain/sync")
+    def brain_sync(b: BrainSync, u=Depends(current_user)):
+        if not limits.ok("lbrain", u["id"], 60):
+            raise service.AuthError(429, "Too many syncs, please try again in a minute.")
+        docs, tnow = service.brain_sync(u["id"], b.kind, b.device, b.doc)
+        return {"docs": docs, "now": tnow}
 
     # ------------------------------------------------------------ bannières, liste de souhaits
     @r.get(V1 + "/news")

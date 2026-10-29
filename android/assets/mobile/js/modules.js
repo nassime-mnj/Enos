@@ -54,7 +54,7 @@
   // outils de la suite (suite.js : JSON/XML, dépenses, PDF, scanner…) : groupes ajoutés après « Sur ton téléphone »
   function addSuiteGroups() {
     if (!E.suite) return;
-    const NAMES = { chess: "Échecs & apprentissage", dev: "Code & apprentissage", pro: "Productivité (comme sur le PC)", scan: "Scanner & stockage", sync: "Synchronisation" };
+    const NAMES = { chess: "Échecs & apprentissage", games: "Jeux", dev: "Code & apprentissage", pro: "Productivité (comme sur le PC)", scan: "Scanner & stockage", sync: "Synchronisation" };
     let at = 1;
     Object.keys(NAMES).forEach((g) => {
       const list = E.suite.modules.filter((m) => (m.group || "pro") === g).map((m) => ({ id: m.id, n: m.title, s: m.sub || "", svg: m.icon, k: "native", suite: true }));

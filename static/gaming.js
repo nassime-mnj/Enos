@@ -35,6 +35,24 @@
     return c;
   }
 
+  function lolCard() {
+    const c = section("ASSISTANT LEAGUE OF LEGENDS", "lecture d'écran seule · conseils de l'Œil"), n = note(), st = el("div", { className: "tm-note" });
+    api("/api/lol/status").then((o) => {
+      const save = (k) => (v) => api("/api/lol/config", { [k]: v }).then((s) => paint(s)).catch((e) => say(n, e.message));
+      const mode = el("select", { onchange: () => save("mode")(mode.value) }, el("option", { value: "text", text: "Conseils textuels silencieux (bulle au-dessus de l'Œil)" }), el("option", { value: "voice", text: "Conseils vocaux (voix + bulle)" }));
+      mode.value = o.mode;
+      const every = el("input", { type: "number", min: 10, max: 120, value: o.interval, style: "width:80px", onchange: () => save("interval")(+every.value) });
+      const paint = (s) => say(st, (s.running ? (s.waiting ? "En attente de la partie…" : "Actif") : "Inactif") + " · " + s.frames + " captures, " + s.calls + " analyses" + (s.last_advice ? " · dernier conseil : " + s.last_advice : "") + (s.error ? " · " + s.error : ""));
+      c.append(el("div", { className: "tm-note", text: "100 % lecture seule, comme Blitz ou Porofessor : l'Œil regarde uniquement les pixels de l'écran. Aucune lecture de la mémoire du jeu, aucune injection, aucun clic ni touche envoyés : c'est toi qui joues. Rien n'est capturé tant que la partie n'est pas lancée." }),
+        toggle("Activer l'assistant (une capture réduite toutes les N secondes est envoyée à ton LLM de vision)", o.enabled, save("enabled")),
+        el("div", { className: "tm-row" }, el("span", { text: "Mode des conseils" }), mode, el("span", { text: "Toutes les (s)" }), every),
+        toggle("Attendre que League of Legends soit lancé avant de capturer", o.need_game, save("need_game")),
+        el("div", { className: "tm-row" }, btn("ANALYSER MAINTENANT", guard(n, async () => { say(n, "Analyse en cours…"); const r = await api("/api/lol/analyse", {}); say(n, r.context && r.context.advice ? "Conseil : " + r.context.advice : "Rien à signaler."); paint(r); }))), st, n);
+      paint(o); setInterval(() => { if (!document.hidden && $("rg") && !$("rg").hidden) api("/api/lol/status").then(paint).catch(() => {}); }, 5000);
+    }).catch(() => c.append(el("div", { className: "tm-note", text: "Indisponible dans cette édition." })));
+    return c;
+  }
+
   function clipperCard() {
     const c = section("AUTO-CLIPPER IA", "moments forts → vertical 9:16"), n = note(), list = el("div"), st = el("div", { className: "tm-note" });
     const save = (k) => (v) => api("/api/clipper/config", { values: { [k]: v } }).then(refresh).catch((e) => say(n, e.message));
@@ -117,7 +135,7 @@
   function build() {
     const p = document.querySelector('#rg [data-p="th"]');
     if (!p || $("gm-root")) return;
-    const root = el("div", { id: "gm-root" }, el("h2", { text: "GAMING" }), petCard(), clipperCard(), babelCard(), tiltCard(), brbCard());
+    const root = el("div", { id: "gm-root" }, el("h2", { text: "GAMING" }), petCard(), lolCard(), clipperCard(), babelCard(), tiltCard(), brbCard());
     p.appendChild(root);
   }
   function init() {

@@ -186,3 +186,5 @@
 .co-ask .row{display:flex;flex-wrap:wrap;gap:8px}.co-ask .btn{flex:1 1 40%}
 
 #co-board.cboard{max-width:min(100%,460px)}
+.rp-bar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.rp-bar .btn{padding:10px 0;min-width:0}
+#df-hist .it .mini+.mini{margin-left:6px}

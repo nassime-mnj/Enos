@@ -91,8 +91,95 @@ def reset():
     return summary()
 
 
+# ----------------------------------------------------------------------------- cloud : le cerveau de Super Enos est commun au PC et au téléphone
+# Chaque appareil envoie SON document (jamais celui des autres) ; ce qu'il reçoit des autres appareils est gardé à part (m["remote"]) et fusionné à l'affichage.
+# Résultat : un seul entraînement, et la réinstallation de l'appli retrouve tout (l'ancien document reste dans le compte).
+def _device_id():
+    c = nasko_core.load_config()
+    if not c.get("brain_device"):
+        import uuid
+        nasko_core.update_config({"brain_device": "pc-" + uuid.uuid4().hex[:12]})
+        c = nasko_core.load_config()
+    return c["brain_device"]
+
+
+def merge_docs(docs):
+    out = {"profiles": {o: _empty_profile() for o in OPPONENTS}, "lessons": [], "games": [], "openings": {}, "plies": 0}
+    seen = set()
+    for d in docs:
+        doc = d.get("doc") or {}
+        for o, p in (doc.get("profiles") or {}).items():
+            q = out["profiles"].setdefault(o, _empty_profile())
+            for k in q:
+                q[k] += p.get(k, 0)
+        for l in doc.get("lessons") or []:
+            if l.get("text") and l["text"] not in seen:
+                seen.add(l["text"])
+                out["lessons"].append(l)
+        out["games"] += doc.get("games") or []
+        for n, v in (doc.get("openings") or {}).items():
+            q = out["openings"].setdefault(n, {"w": 0, "d": 0, "l": 0})
+            for k in q:
+                q[k] += v.get(k, 0)
+        out["plies"] += doc.get("plies", 0)
+    out["lessons"] = sorted(out["lessons"], key=lambda x: x.get("t", 0))[-KEEP_LESSONS:]
+    out["games"] = sorted(out["games"], key=lambda x: x.get("t", 0))[-KEEP_GAMES:]
+    return out
+
+
+def effective(m):
+    """Mémoire vue par l'interface et par le LLM : celle de cet appareil + celle des autres appareils du compte."""
+    r = m.get("remote")
+    if not r:
+        return m
+    e = dict(m)
+    e["profiles"] = {o: {k: m["profiles"].get(o, _empty_profile()).get(k, 0) + r["profiles"].get(o, {}).get(k, 0) for k in _empty_profile()} for o in OPPONENTS}
+    seen, ls = set(), []
+    for l in sorted(m["lessons"] + r["lessons"], key=lambda x: x.get("t", 0)):
+        if l["text"] not in seen:
+            seen.add(l["text"])
+            ls.append(l)
+    e["lessons"] = ls[-KEEP_LESSONS:]
+    e["games"] = sorted(m["games"] + r["games"], key=lambda x: x.get("t", 0))[-KEEP_GAMES:]
+    ops = {n: dict(v) for n, v in m["openings"].items()}
+    for n, v in r["openings"].items():
+        q = ops.setdefault(n, {"w": 0, "d": 0, "l": 0})
+        for k in q:
+            q[k] += v.get(k, 0)
+    e["openings"] = ops
+    e["plies"] = m["plies"] + r["plies"]
+    return e
+
+
+_last_sync = [0.0]
+
+
+def cloud_sync(force=False):
+    """Envoie la mémoire de CET appareil et récupère celle des autres. Silencieux hors ligne / sans compte. -> {"ok", "devices", "error"}."""
+    import nasko_cloud
+    c = nasko_core.load_config()
+    if not c.get("cloud_refresh") or not c.get("cloud_brain", True):
+        return {"ok": False, "devices": 0, "error": "" if not c.get("cloud_refresh") else "désactivé"}
+    if not force and time.time() - _last_sync[0] < 30:
+        return {"ok": True, "devices": len((memory().get("remote") or {}).get("_n", [])), "error": ""}
+    with _lock:
+        m = memory()
+        doc = {k: m[k] for k in ("games", "profiles", "lessons", "openings", "plies")}
+    try:
+        d = nasko_cloud.request("POST", "/brain/sync", {"kind": "superenos", "device": _device_id(), "doc": doc})
+    except Exception as e:                                                    # noqa: BLE001 — hors ligne : l'entraînement continue en local
+        return {"ok": False, "devices": 0, "error": str(e)[:120]}
+    _last_sync[0] = time.time()
+    with _lock:
+        m = memory()
+        m["remote"] = merge_docs(d.get("docs") or [])
+        m["remote"]["_n"] = [x.get("device") for x in d.get("docs") or []]
+        _save(m)
+    return {"ok": True, "devices": len(d.get("docs") or []), "error": ""}
+
+
 def summary():
-    m = memory()
+    m = effective(memory())
     prof = {}
     for o, p in m["profiles"].items():
         prof[o] = {**{k: p[k] for k in ("g", "w", "d", "l", "brilliants", "dodged")}, "acpl": round(p["loss_sum"] / p["loss_n"], 1) if p["loss_n"] else None,
@@ -110,6 +197,7 @@ def status():
         out["elapsed"] = int(time.time() - S["started"]) if S["running"] else 0
         out["stockfish"] = bool(C.stockfish_path())
         out["memory"] = summary()
+        out["cloud"] = {"on": bool(nasko_core.load_config().get("cloud_refresh")) and nasko_core.load_config().get("cloud_brain", True), "devices": len((memory().get("remote") or {}).get("_n", []))}
         return out
 
 
@@ -161,6 +249,7 @@ class _Brain:
 
 
 def _lessons_text(m, opp):
+    m = effective(m)
     ls = [x for x in m["lessons"] if x.get("opp") in (opp, "all")][-3:] + m["lessons"][-3:]
     seen, out = set(), []
     for x in ls:
@@ -402,6 +491,7 @@ def _record(rec, board, code, why, lesson):
 def _loop(cfg):
     me = foe = None
     try:
+        cloud_sync(force=True)                                                   # d'abord récupérer ce que le téléphone a appris
         me, foe = _open_engines(cfg["threads"])
         brain = _Brain(cfg["llm"])
         _set(llm=brain.on, llm_error="" if brain.on or not cfg["llm"] else "LLM non configuré : Super Enos s'entraîne avec Stockfish seul (clé dans nasko_config.json).")
@@ -418,6 +508,7 @@ def _loop(cfg):
             rec, board, code, why = out
             _record(rec, board, code, why, _lesson(rec, board, code, why, brain, memory()))
             _set(games_done=S["games_done"] + 1)
+            cloud_sync()
             time.sleep(0.5)
     except C.ChessError as e:
         _set(error=str(e))

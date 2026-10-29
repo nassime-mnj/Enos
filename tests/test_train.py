@@ -124,5 +124,33 @@ class Train(unittest.TestCase):
         self.assertTrue(T.memory()["autostart"])                 # l'effacement de la mémoire garde le réglage
 
 
+    def test_cloud_brain_merges_other_devices_and_survives_reinstall(self):
+        import nasko_cloud
+        phone = {"games": [{"t": 5, "opp": "eto", "color": "w", "result": "w", "why": "mat", "plies": 30}], "plies": 30, "openings": {"Sicilienne": {"w": 1, "d": 0, "l": 0}},
+                 "profiles": {"eto": {"g": 3, "w": 2, "d": 0, "l": 1, "loss_sum": 90.0, "loss_n": 30, "brilliants": 1, "dodged": 0}}, "lessons": [{"t": 5, "opp": "eto", "result": "w", "text": "Appris sur le téléphone"}]}
+        sent = []
+        cfg0, req0, upd0 = nasko_core.load_config, nasko_cloud.request, nasko_core.update_config
+        store = {"cloud_refresh": "x"}
+        nasko_core.load_config = lambda: dict(store)
+        nasko_core.update_config = lambda d: store.update(d)
+        nasko_cloud.request = lambda method, path, json=None: (sent.append(json), {"docs": [{"device": "phone-1", "doc": phone}]})[1]
+        try:
+            T._last_sync[0] = 0
+            r = T.cloud_sync(force=True)
+            self.assertTrue(r["ok"] and r["devices"] == 1)
+            self.assertNotIn("remote", sent[0]["doc"])                                    # on n'envoie que SA mémoire
+            self.assertEqual(sent[0]["device"], store["brain_device"])
+            s = T.summary()                                                              # appli neuve (rien appris ici) : l'entraînement du téléphone est là
+            self.assertEqual(s["profiles"]["eto"]["g"], 3)
+            self.assertEqual(s["plies"], 30)
+            self.assertTrue(any("téléphone" in l["text"] for l in s["lessons"]))
+            T._record({"opp": "eto", "color": "w", "san": [], "brilliants": 0, "dodged": 0, "loss_sum": 10.0, "loss_n": 2}, chess.Board(), "w", "test", "Leçon locale")
+            self.assertEqual(T.summary()["profiles"]["eto"]["g"], 4)                      # somme, sans double compte
+            self.assertEqual(T.memory()["profiles"]["eto"]["g"], 1)
+            store.pop("cloud_refresh")
+            self.assertFalse(T.cloud_sync(force=True)["ok"])                              # pas de compte : silencieux
+        finally:
+            nasko_core.load_config, nasko_cloud.request, nasko_core.update_config = cfg0, req0, upd0
+
 if __name__ == "__main__":
     unittest.main()

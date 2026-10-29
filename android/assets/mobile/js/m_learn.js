@@ -111,6 +111,7 @@
     ["Le mat du couloir", "backRankMate", "Le roi enfermé derrière ses propres pions est maté par une tour ou une dame sur la dernière rangée. Crée une « lucarne » (un pion avancé d'une case) pour t'en protéger, et cherche ce motif chez l'adversaire."],
     ["La déviation et l'attraction", "deflection", "Déviation : tu forces une pièce défensive à quitter son poste. Attraction : tu attires une pièce (souvent le roi) sur une case où elle sera frappée. Demande-toi toujours : qui défend la case clé, et comment l'en éloigner ?"],
     ["Le coup intermédiaire", "intermezzo", "Au lieu de la réponse attendue (reprendre), tu intercales un coup plus fort, souvent un échec ou une menace, avant de reprendre. Avant de recapturer automatiquement, cherche un échec ou une capture meilleure."],
+    ["Le Gambit Alien", "opening", "Une ouverture-piège des Blancs contre la Caro-Kann : 1.e4 c6 2.d4 d5 3.Nc3 dxe4 4.Nxe4 Nf6 5.Ng5 h6? 6.Nxf7!? Le cavalier prend f7 pour attirer le roi au centre et l'empêcher de roquer ; tu comptes ensuite sur Bc4, Qf3 et Bf4 pour exploiter les cases blanches. Objectivement douteux : avec une pièce de plus et une défense précise, les Noirs s'en sortent. Pour le contrer : ne joue pas 5...h6 (préfère 5...e6 ou 5...Bf5, développe vite et roque), ou évite la ligne avec 1...c5. Contre un joueur de moins de 1500 Elo, en blitz, il fait des dégâts. Tu le trouves dans OUVERTURES ; Nasko le joue contre la Caro-Kann."],
     ["Le sacrifice", "sacrifice", "Donner du matériel pour une attaque de mat, un gain de matériel plus grand ou une position dominante. Un sacrifice se calcule : avant de le jouer, vérifie les coups forcés (échecs, captures, menaces de mat) jusqu'au bout."],
     ["Le roi exposé", "exposedKing", "Un roi sans abri de pions est une cible. Ouvre les lignes (sacrifice de pion, poussée), amène la dame et un cavalier, et chaque échec doit avoir un but. Défends-toi en roquant et en gardant les pions devant ton roi."],
     ["Pièces en prise", "hangingPiece", "Beaucoup de parties se perdent sur des pièces laissées sans protection. Avant chaque coup : liste les pièces de l'adversaire non protégées et les tiennes. Une pièce en prise, c'est un cadeau ou une gaffe."],
@@ -294,6 +295,7 @@
         const root = $("#lr-openings");
         let built = false;
         const CURATED = [
+          ["Gambit Alien (contre la Caro-Kann)", "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nf6 Ng5 h6 Nxf7", "Ouverture agressive et non officielle : après 5.Ng5 h6?, les Blancs sacrifient le cavalier en f7 (6.Nxf7) pour chasser le roi noir au centre. Piège redoutable sous 1500 Elo, mais douteux contre une bonne défense."],
           ["Italienne (Giuoco Piano)", "e4 e5 Nf3 Nc6 Bc4 Bc5", "Développement rapide et attaque sur f7. Idéale pour débuter : plan c3 + d4 pour prendre le centre."],
           ["Espagnole (Ruy Lopez)", "e4 e5 Nf3 Nc6 Bb5", "La reine des ouvertures classiques : pression sur le cavalier c6 qui défend e5. Jeu positionnel riche."],
           ["Gambit Dame", "d4 d5 c4", "Tu offres un pion pour dominer le centre. Les Noirs peuvent accepter ou refuser (Slave, Orthodoxe)."],

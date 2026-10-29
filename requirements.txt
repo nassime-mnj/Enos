@@ -30,3 +30,4 @@ pillow-heif
 opencv-python-headless<5   # Studio média : floutage (détecteurs Haar : absents d'OpenCV 5)
 pystray   # icône de la zone de notification (Windows)
 pynput   # Smart AFK (écouteurs globaux + frappes simulées)
+mss
