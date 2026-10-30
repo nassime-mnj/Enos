@@ -253,3 +253,15 @@ html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-event
 .bot-av.awake{animation:awake 1.4s ease-out;box-shadow:0 0 22px #ff1a3caa}
 @keyframes awake{0%{filter:brightness(4) contrast(2);transform:scale(1.25)}40%{filter:hue-rotate(90deg) brightness(1.6)}100%{filter:none;transform:none}}
 @media (prefers-reduced-motion:reduce){html.ghor body::after,.bot-av.awake{animation:none}}
+
+/* ---- Naskolit (muet) et la roue du Jester */
+.bot-av.mute{animation:zzzBreath 3.2s ease-in-out infinite alternate}
+@keyframes zzzBreath{to{transform:scale(1.025);filter:brightness(.92)}}
+.df-wheel{position:fixed;inset:0;z-index:85;display:grid;place-items:center;background:radial-gradient(ellipse at center,#2a0710d9,#000e);backdrop-filter:blur(5px)}
+.wh-box{display:flex;flex-direction:column;align-items:center;gap:16px;font:800 14px var(--ui);letter-spacing:3px;color:#fff}
+.wh-wrap{--wr:min(36vw,150px);position:relative;width:calc(var(--wr) * 2);height:calc(var(--wr) * 2)}
+.wh{position:absolute;inset:0;border-radius:50%;border:5px solid #c9a227;box-shadow:0 0 34px #c9a22799,inset 0 0 22px #000a}
+.wh span{position:absolute;left:50%;top:50%;width:0;height:0;display:grid;place-items:center;font:800 13px var(--ui);color:#fff;text-shadow:0 1px 3px #000}
+.wh-ptr{position:absolute;left:50%;top:-14px;z-index:2;width:0;height:0;margin-left:-11px;border:11px solid transparent;border-top:24px solid #fff;border-bottom:0;filter:drop-shadow(0 2px 4px #000)}
+.wh-res{min-height:34px;font:800 26px var(--ui);letter-spacing:1px;color:#ffd24a}.wh-res b{font-size:34px}
+@media (prefers-reduced-motion:reduce){.bot-av.mute{animation:none}}

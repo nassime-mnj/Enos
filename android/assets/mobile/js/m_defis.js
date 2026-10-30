@@ -22,6 +22,8 @@
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
     { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo par erreur adverse ou meilleur coup", human: true },
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
+    { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
+    { id: "jester", t: "🃏 Le Jester", s: "Une roue tire son Elo au sort (1-3200) tous les 10 coups", human: true },
     { id: "combat", t: "⚔ Combat de bots", s: "Nasko vs Pénoire, Lelex vs ETO… tu choisis", human: false, duel: true },
     { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
     { id: "ebs", t: "✦ ETO Brillant vs Stockfish", s: "Combat spectateur · enregistré", human: false, duel: true },
@@ -60,14 +62,16 @@
         enos: () => ({ kind: "sf", elo: 3200, power: 100, name: "E.N.O.S.", talk: "enos" }),
         stockfish: () => ({ kind: "sf", elo: 3200, power: 100, pure: true, name: "Stockfish" }),
         naskurieux: () => ({ kind: "sf", elo: 1, name: "Naskurieux", talk: "naskurieux", title: "GM", gain: true }),       // GM à 1 Elo : +200 à chaque inexactitude / erreur / gaffe de l'adversaire
+        naskolit: () => ({ kind: "sf", elo: 3200, name: "Naskolit", talk: "naskolit", title: "GM", lose: true }),             // GM à 3200 Elo : -100 à chaque imprécision (ou pire) de sa part et à chaque meilleur coup de l'adversaire ; il ne parle pas
+        jester: () => ({ kind: "sf", elo: 1600, name: "Le Jester", talk: "jester", wheel: true }),                         // la roue tire son Elo (1-3200) avant son 1er coup puis tous les 10 de ses coups
         ghorghor: () => ({ kind: "style", style: "lelex", elo: 1400, skill: { mistake: 0.12, blunder: 0.05 }, name: "GhorGhor", talk: "ghorghor", transform: true }),   // style Lelex ; 3 pièces mineures perdues -> GhorGhor le vrai
       };
-      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor"];
+      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester"];
       const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
-      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
-        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
+        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
 
       el.innerHTML = `
         <div id="df-home">
@@ -118,6 +122,8 @@
         else if (id === "titans") body = `<p class="muted" style="line-height:1.5">Spectacle : E.N.O.S. (Stockfish pur) joue les Blancs, ETO (chasseur de sacrifices) les Noirs. Ils se répondent en direct.</p>`;
         else if (id === "penoire") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">La version <b>pénoire</b> de Nasko : <b>2500 Elo</b>, il <b style="color:#1acfd6">cherche chaque sacrifice brillant !!</b> comme ETO, ne répète jamais et ne t'épargne pas… Il a toujours un mot pour toi à la fin.</p>` + colorSeg;
         else if (id === "naskurieux") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">L'agent <b>Naskurieux</b> est <b>Grand Maître</b>… mais il démarre à <b>1 Elo</b>. À chaque <b>imprécision, erreur ou gaffe</b> de ton adversaire il gagne <b style="color:#1acfd6">+200 Elo</b>, et autant <b>chaque fois qu'il joue lui-même le meilleur coup</b>. Il joue de mieux en mieux : ne lui fais aucun cadeau.</p>` + colorSeg;
+        else if (id === "naskolit") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>Naskolit</b> dort… et pourtant il est <b>Grand Maître à 3200 Elo</b>. Mais il <b>perd 100 Elo</b> à chaque imprécision (ou pire) qu'il commet, et à chaque fois que <b>tu trouves le meilleur coup</b>. Il ne dit pas un mot.</p>` + colorSeg;
+        else if (id === "jester") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Le <b>Jester</b> lance une <b>roue</b> avant son premier coup puis tous les <b>10 coups</b> : elle lui attribue un Elo au hasard entre <b>1 et 3200</b>, et il joue à ce niveau jusqu'au prochain tour de roue.</p>` + colorSeg;
         else if (id === "ghorghor") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>GhorGhor</b> joue comme Lelex, niveau <b>1400</b>. Mais s'il perd <b>plus de 2 pièces mineures</b> (cavaliers, fous)… quelque chose se réveille.</p>` + colorSeg;
         else if (id === "combat") {
           const opt = (v) => Object.entries(FIGHT_NAMES).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${n}</option>`).join(""), last = E.settings.get("defi.combat", ["nasko", "penoire"]);
@@ -265,6 +271,8 @@
         if (p.human) { status("À toi de jouer"); return; }
         if (g.paused) return;
         g.busy = true; status(`${p.kind === "duo" ? name(g.duoTurn++ % 2 ? "eto" : "enos") : p.name} réfléchit…`); paint();
+        const own = g.moves.filter((m) => m.color === turn).length, every = (g.o && g.o.wheelEvery) || 10;
+        if (p.wheel && own % every === 0 && p.lastSpin !== own) { await spinWheel(p, turn, own); if (!g || tok !== g.token) return; }          // la roue du Jester
         let mv;
         try { mv = await botMove(g.fen, p, g.duoTurn - 1); } catch (e) { g.busy = false; return status("✕ " + e.message); }
         if (tok !== g.token) return;
@@ -363,6 +371,9 @@
           g.pl[turn].elo = Math.min(3200, g.pl[turn].elo + 200); mvRec.eloSelf = g.pl[turn].elo;
           E.ui.toast(`${g.pl[turn].name} : meilleur coup, +200 Elo → ${g.pl[turn].elo}`, "ok", 2600);
         }
+        const dropElo = (col) => { const q2 = g.pl[col]; q2.elo = Math.max(1, q2.elo - 100); mvRec.eloDown = { col, elo: q2.elo }; E.ui.toast(`${q2.name} : −100 Elo → ${q2.elo}`, "warn", 2600); };
+        if (g.pl[turn].lose && ["inaccuracy", "mistake", "blunder"].includes(q.key)) dropElo(turn);                  // Naskolit se trompe
+        if (g.pl[victim].lose && (q.key === "best" || q.key === "brilliant")) dropElo(victim);                         // ... ou l'adversaire trouve le meilleur coup
         if (m.captured && (m.captured === "n" || m.captured === "b")) { g.lostMinor[victim]++; mvRec.minorLost = { col: victim, n: g.lostMinor[victim] }; }
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
         judge(g.moves[g.moves.length - 1], meta);
@@ -406,6 +417,7 @@
         const prev = g.moves.length >= 2 ? g.moves[g.moves.length - 2].ew : 0, swing = (mv.ew - prev) * (c === "w" ? 1 : -1);
         const say = (I, kind) => !!I && I.say(kind, { ...d, elo: g.pl[I === g.talk.w ? "w" : "b"].elo });
         // ce que l'ADVERSAIRE du joueur qui vient de jouer répond : Elo gagné (Naskurieux) et pièces mineures perdues (GhorGhor) priment sur la réaction habituelle
+        if (mv.eloDown) { /* Naskolit ne parle pas : rien à dire */ }
         const ml = mv.minorLost, oOverride = mv.eloUp ? "elo_up" : ml && g.talk[ml.col] && g.pl[ml.col].transform && ml.n < 3 ? "minor_lost" : "";
         if (mv.q.opening) { if (g.openName !== mv.q.opening) g.openName = mv.q.opening; d.open = g.openName; if (!g.openSaid && g.moves.length >= 3) { g.openSaid = true; say(T, "open_announce") || say(O, "open_announce"); } }
         if (mv.bookExit) { if (g.moves.length <= 10) say(O, "open_refused") || say(T, "open_end"); else say(T, "open_end") || say(O, "open_end"); }
@@ -427,6 +439,32 @@
           if (pov <= -300 && n - (g.fr[col] || -99) >= 8) { g.fr[col] = n; say(I, "frustration"); }
           else if (pov >= 500 && n - (g.wn[col] || -99) >= 10) { g.wn[col] = n; say(I, "winning"); }
         });
+      }
+
+      // ---- la roue du Jester : un Elo au hasard entre 1 et 3200, joué jusqu'au prochain tour de roue
+      async function spinWheel(p, col, own) {
+        const elo = 1 + Math.floor(Math.random() * 3200), tok = g.token, SEG = 8, COL8 = ["#a52727", "#1b1b22", "#c9a227", "#2b2b36", "#a52727", "#1b1b22", "#c9a227", "#2b2b36"];
+        p.lastSpin = own; p.spins = (p.spins || 0) + 1;
+        const idx = Math.min(SEG - 1, Math.floor((elo - 1) / 400)), within = ((elo - 1) % 400) / 400, ang = idx * 45 + within * 45;
+        const o = document.createElement("div");
+        o.className = "df-wheel";
+        o.innerHTML = `<div class="wh-box"><b>🃏 LA ROUE DU JESTER</b><div class="wh-wrap"><i class="wh-ptr"></i><div class="wh" style="background:conic-gradient(${COL8.map((c, i) => `${c} ${i * 45}deg ${(i + 1) * 45}deg`).join(",")})">${COL8.map((c, i) => `<span style="transform:rotate(${i * 45 + 22.5}deg) translateY(calc(var(--wr) * -.72))">${i * 400 + (i ? 0 : 1)}</span>`).join("")}</div></div><div class="wh-res">…</div></div>`;
+        document.body.appendChild(o);
+        const fast = window.matchMedia("(prefers-reduced-motion: reduce)").matches || !E.settings.get("anim", true), wh = o.querySelector(".wh"), res = o.querySelector(".wh-res");
+        E.vibrate([15, 30, 15]);
+        if (!fast) { wh.style.transition = "transform 3.4s cubic-bezier(.12,.72,.1,1)"; void wh.offsetWidth; wh.style.transform = `rotate(${360 * 5 - ang}deg)`; }
+        else wh.style.transform = `rotate(${-ang}deg)`;
+        await sleep(fast ? 500 : 3500);
+        if (!g || tok !== g.token) { o.remove(); return; }
+        res.innerHTML = `<b>${elo}</b> Elo`; E.vibrate(25);
+        await sleep(fast ? 500 : 1100);
+        o.remove();
+        if (!g || tok !== g.token) return;
+        p.elo = elo;
+        paint();
+        E.ui.toast(`${p.name} : la roue donne ${elo} Elo`, "ok", 2600);
+        const inst = g.talk && g.talk[col];
+        if (inst) inst.say(elo < 800 ? "wheel_low" : elo < 2400 ? "wheel_mid" : "wheel_high", { elo });
       }
 
       // ---- GhorGhor se réveille : il dit sa phrase, l'écran glitche, l'ambiance s'assombrit, l'illustration change et il devient GhorGhor le vrai (GM, 3200 Elo, joue comme ETO Brillant)
@@ -492,7 +530,7 @@
         let s = null;
         for (let i = 0; i < n && g.snaps.length; i++) { s = g.snaps.pop(); g.ch.undo(); }
         if (!s) return;
-        g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.seen = s.seen || L.startSeen(s.fen); if (s.lostMinor) g.lostMinor = s.lostMinor; if (s.elos) { if (g.pl.w.gain) g.pl.w.elo = s.elos.w; if (g.pl.b.gain) g.pl.b.elo = s.elos.b; } g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
+        g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.seen = s.seen || L.startSeen(s.fen); if (s.lostMinor) g.lostMinor = s.lostMinor; if (s.elos) { for (const c of ["w", "b"]) { const pp = g.pl[c]; if (pp.gain || pp.lose || pp.wheel) pp.elo = s.elos[c]; } } g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true;
         paint(); status("Coup annulé"); next(g.token);
       }

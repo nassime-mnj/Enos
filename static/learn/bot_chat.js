@@ -11,13 +11,15 @@
     naskurieux: { name: "Naskurieux", img: "img/bots/naskurieux.png", title: "GM", style: "Tu es Naskurieux, agent secret en costume noir avec oreillette, version « furieuse » de Nasko. Tu démarres à 1 Elo (tu es nul) mais tu es Grand Maître : à chaque erreur de ton adversaire tu gagnes 200 Elo et tu deviens de plus en plus sûr de toi. Français d'ado, ironique : « bg », « blud », « mission », « oreillette », « comme quoi » 😭." },
     ghorghor: { name: "GhorGhor", img: "img/bots/ghorghor.png", style: "Tu es GhorGhor, bot de 1400 Elo, pote de Lelex : phrases très courtes, taquin, « XDDD », « vrm mdrr », « C'est réel », « Att att ». Tu caches une vraie puissance." },
     ghorreal: { name: "GhorGhor le vrai", img: "img/bots/ghorghor_vrai.png", title: "GM", style: "Tu es GhorGhor le vrai, Grand Maître 3200 Elo, calme, froid, menaçant, lunettes noires. Phrases courtes et sombres en français, une pointe d'humour noir." },
+    naskolit: { name: "Naskolit", img: "img/bots/naskolit.png", title: "GM", mute: true, style: "" },
+    jester: { name: "Le Jester", img: "img/bots/jester.png", style: "Tu es le Jester, bouffon de cour élégant et malicieux, joueur d'échecs. Tu parles en français avec esprit : allusions à la cour, aux cartes, à la roue du destin, jamais lourd ni répétitif ; une phrase courte, un trait d'humour fin, parfois une devinette." },
     eto: { name: "ETO Brillant", title: "GM", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
     enos: { name: "E.N.O.S.", title: "GM", ph: ["ENOS", "#e0243c"], style: "Tu es E.N.O.S., IA froide, précise et technique, un brin arrogante. Phrases courtes, en français." },
   };
   // probabilité qu'un événement déclenche une réplique ; les moments forts parlent toujours
   const PROB = { greet: 1, open_announce: 0.85, open_end: 0.7, open_refused: 1, bot_brilliant: 1, h_brilliant: 1, bot_blunder: 0.95, h_blunder: 0.95, bot_mistake: 0.5, h_mistake: 0.5, super: 0.8, good: 0.18, h_good: 0.2,
-    check: 0.35, check_received: 0.35, elo_up: 1, elo_self: 1, transform: 1, minor_lost: 0.9, frustration: 0.6, winning: 0.5, mate_coming: 1, mate_danger: 1, mate_win: 1, mate_lose: 1, draw: 1, resign_win: 1, chat: 0.14 };
-  const STRONG = new Set(["elo_up", "elo_self", "transform", "minor_lost", "greet", "open_announce", "open_end", "open_refused", "bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_coming", "mate_danger", "mate_win", "mate_lose", "draw", "resign_win"]);
+    check: 0.35, check_received: 0.35, elo_up: 1, elo_self: 1, transform: 1, wheel_low: 1, wheel_mid: 1, wheel_high: 1, minor_lost: 0.9, frustration: 0.6, winning: 0.5, mate_coming: 1, mate_danger: 1, mate_win: 1, mate_lose: 1, draw: 1, resign_win: 1, chat: 0.14 };
+  const STRONG = new Set(["wheel_low", "wheel_mid", "wheel_high", "elo_up", "elo_self", "transform", "minor_lost", "greet", "open_announce", "open_end", "open_refused", "bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_coming", "mate_danger", "mate_win", "mate_lose", "draw", "resign_win"]);
   const END = new Set(["mate_win", "mate_lose", "draw", "resign_win"]);
   const MIN_GAP = 2;                                                  // demi-coups minimum entre deux répliques d'un même personnage (hors moments forts)
   const LLM_KINDS = new Set(["bot_brilliant", "bot_blunder", "h_brilliant", "h_blunder", "mate_win", "mate_lose"]);
@@ -38,10 +40,11 @@
   function mount(host, id, opts) {
     const c = CH[id];
     if (!c || !host) return null;
-    opts = opts || {};
+    opts = { ...(opts || {}) };
+    if (c.mute) { opts.log = false; opts.shared = false; }                  // Naskolit dort : il ne parle pas (illustration seule)
     const I = { id, host, opts, msgs: [], unread: 0, gap: 99, llm: 0, alive: true };
     host.hidden = false;
-    host.innerHTML = `<div class="bot-banner">${avatar(id)}<div class="bot-bubble" hidden><small>${badge(c.title)}${esc(c.name)}</small><span class="bot-t"></span></div>${opts.log || opts.shared ? `<button class="bot-chatbtn" aria-label="Chat">💬<i hidden></i></button>` : ""}</div>
+    host.innerHTML = `<div class="bot-banner">${avatar(id, c.mute ? "mute" : "")}<div class="bot-bubble" hidden><small>${badge(c.title)}${esc(c.name)}</small><span class="bot-t"></span></div>${opts.log || opts.shared ? `<button class="bot-chatbtn" aria-label="Chat">💬<i hidden></i></button>` : ""}</div>
       ${opts.log ? `<div class="bot-log" hidden><div class="bot-msgs"></div><form class="bot-in"><input type="text" maxlength="160" placeholder="Écris à ${esc(c.name)}…" enterkeyhint="send" autocomplete="off"><button type="submit" aria-label="Envoyer">➤</button></form></div>` : ""}`;
     const btn = host.querySelector(".bot-chatbtn");
     if (btn) btn.onclick = () => { const l = opts.shared ? TR && TR.host : host.querySelector(".bot-log"); if (!l) return; l.hidden = !l.hidden; if (!l.hidden) { I.unread = 0; unreadBadge(I); scroll(l); } };

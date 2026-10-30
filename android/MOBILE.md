@@ -114,3 +114,8 @@ Illustration en haut du plateau (`img/bots/*.png`), bulle de parole façon Chess
 
 ## CinePulse mobile : import et accélérateur bien visibles
 Boutons **📥 Importer une vidéo / 🎵 Importer un son** au centre du moniteur vide, **📥 Importer** dans la barre de la timeline ; une vidéo importée par ces boutons est posée sur la timeline (au curseur) et sélectionnée, donc l'inspecteur **⚡ ACCÉLÉRATEUR / 🎨 FILTRES / 🔊 AUDIO** s'affiche tout de suite (une carte d'indication le signale tant qu'aucun clip n'est sélectionné). Test : `t_cp_import.py`.
+
+## Naskolit et le Jester (1.26)
+- **😴 Naskolit** (pyjama, masque de nuit) : **GM à 3200 Elo**, il **perd 100 Elo** à chaque imprécision (ou erreur/gaffe) qu'il commet **et** à chaque fois que son adversaire trouve le meilleur coup (`lose:true`, plancher 1 Elo). Il **ne parle pas** (`mute:true` dans `bot_chat.js` : illustration seule qui respire, ni bulle ni messagerie).
+- **🃏 Le Jester** (`wheel:true`) : avant son 1er coup puis **tous les 10 de ses coups**, une **roue** (overlay animé, 8 secteurs de 400 Elo) tire un Elo au hasard entre **1 et 3200** ; il joue à ce niveau jusqu'au prochain tour (titre selon l'Elo courant). Personnalité de bouffon élégant et espiègle (jamais lourd) : répliques `wheel_low / wheel_mid / wheel_high` + toutes les situations. `launch('jester', {wheelEvery: n})` règle la fréquence (tests). Respecte `prefers-reduced-motion`.
+- Présents dans les Défis (mode dédié), le Combat de bots et l'Arène PC (cartes + préréglages « Naskolit vs Pénoire », « Le Jester vs ETO Brillant »…). Tests : `t_botchat.py`, `t_defis.py` (17 modes).

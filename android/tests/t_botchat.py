@@ -94,6 +94,26 @@ with sync_playwright() as pw:
     check("ghorghor_vrai.png" in pg.evaluate("document.querySelector('#df-botchat .bot-av').src") and pg.locator("#df-top .ttl-GM").count() == 1, "nouvelle illustration (lunettes) + badge GM")
     pg.click("#df-back")
     check(not pg.evaluate("document.documentElement.classList.contains('ghor')"), "ambiance rétablie en quittant la partie")
+    # --- Naskolit : GM 3200, muet, -100 Elo quand l'adversaire trouve le meilleur coup
+    pg.evaluate(A + ".launch('naskolit', {color: 'w'})")
+    check(pg.evaluate(A + ".g.pl.b.elo") == 3200 and "GM" in pg.inner_text("#df-top"), "Naskolit : GM, 3200 Elo")
+    check(pg.locator("#df-botchat .bot-av.mute").count() == 1 and pg.locator("#df-botchat .bot-chatbtn").count() == 0 and pg.locator("#df-botchat .bot-log").count() == 0, "Naskolit : illustration seule, pas de chat")
+    pg.wait_for_timeout(2500)
+    check(pg.evaluate("document.querySelector('#df-botchat .bot-bubble').hidden"), "Naskolit ne parle pas")
+    pg.evaluate("""() => { const g = %s.g; const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1'; g.ch.load(fen); g.fen = fen; g.moves = []; g.snaps = []; g.inBook = false; }""" % A)
+    pg.click('#df-board [data-sq="h5"]'); pg.click('#df-board [data-sq="f7"]')       # Dxf7# : le meilleur coup
+    pg.wait_for_function(A + ".g.pl.b.elo < 3200", timeout=30000)
+    check(pg.evaluate(A + ".g.pl.b.elo") == 3100, "Naskolit perd 100 Elo (3100) quand le meilleur coup est trouvé")
+    # --- Le Jester : la roue tire un Elo au hasard avant son 1er coup, puis tous les N coups
+    pg.evaluate(A + ".launch('jester', {color: 'w', wheelEvery: 2})")
+    pg.click('#df-board [data-sq="e2"]'); pg.click('#df-board [data-sq="e4"]')
+    pg.wait_for_selector(".df-wheel", timeout=40000)
+    check("JESTER" in pg.inner_text(".df-wheel").upper(), "la roue du Jester s'affiche : " + pg.inner_text(".df-wheel").replace("\n", " ")[:50])
+    pg.wait_for_function("!document.querySelector('.df-wheel')", timeout=15000)
+    e = pg.evaluate(A + ".g.pl.b.elo")
+    check(1 <= e <= 3200 and pg.evaluate(A + ".g.pl.b.spins") == 1, "la roue a fixé l'Elo du Jester : %d" % e)
+    pg.wait_for_function("document.querySelector('#df-botchat .bot-t') && document.querySelector('#df-botchat .bot-t').textContent.length > 8", timeout=8000)
+    check(True, "le Jester commente la roue : « %s »" % pg.inner_text("#df-botchat .bot-t")[:70])
     # autre mode : pas de bot
     pg.evaluate(A + ".launch('enos', {color: 'w', pow: 5, elo: 400})")
     check(pg.evaluate("document.querySelector('#df-botchat').hidden"), "pas de chat hors bots Nasko / Lelex")

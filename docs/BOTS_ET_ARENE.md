@@ -29,11 +29,13 @@ Combattants (`FIGHT` dans `m_defis.js`) :
 | `penoire` | Nasko (pénoire) | 2500 | IM | `K.etoMove` (chasse au brillant) sinon Stockfish bridé à 2500. À la fin : « t'es rincé, deviens plus fort et reviens », « je t'ai lavé, c'était sale »… |
 | `naskurieux` | Naskurieux | 1 → 3200 | GM (imposé) | `gain:true` : **+200 Elo** à chaque inexactitude/erreur/gaffe de l'adversaire **et** à chaque fois qu'il joue le meilleur coup (`best`/`brilliant`) ; son niveau suit l'Elo courant (`p.elo`, `powerOfElo`). |
 | `ghorghor` | GhorGhor | 1400 | – | Style Lelex (`style:"lelex"`, `skill` surchargé). `transform:true` : au **3e cavalier/fou perdu** (`g.lostMinor`), phrase → glitch plein écran (`glitchFx`, `glitchSound`) → `html.ghor` (ambiance sombre) → devient **GhorGhor le vrai** (GM 3200, `kind:"eto"`, image `ghorghor_vrai.png`). Averti aux 1re et 2e pièces perdues (`minor_lost`). |
+| `naskolit` | Naskolit | 3200 → 1 | GM (imposé) | `lose:true` : −100 Elo à chaque inexactitude/erreur/gaffe **de lui** et à chaque `best`/`brilliant` de l'adversaire ; **muet** (`mute:true`, aucune réplique). |
+| `jester` | Le Jester | 1-3200 (roue) | selon l'Elo | `wheel:true` : `spinWheel()` (overlay) tire un Elo avant son 1er coup puis tous les 10 coups (`next()`, `p.lastSpin`) ; répliques `wheel_low/mid/high`. |
 | `eto` | ETO Brillant | 3200 | GM | `K.etoMove`. |
 | `enos` | E.N.O.S. | 3200 | GM | `L.choose` pleine puissance (brillants + anti-répétition). |
 | `stockfish` | Stockfish | 3200 | GM | `pure:true` : aucun filtre. |
 
-Modes (liste `MODES`) : brillant, enos, coach, speedrun, titans, boss, nasko, lelex, penoire, naskurieux, ghorghor, **combat** (choix libre des deux combattants + écran « VS »), ebe/ebs/ebd. Le test `t_defis.py` attend **15** modes.
+Modes (liste `MODES`) : brillant, enos, coach, speedrun, titans, boss, nasko, lelex, penoire, naskurieux, ghorghor, naskolit, jester, **combat** (choix libre des deux combattants + écran « VS »), ebe/ebs/ebd. Le test `t_defis.py` attend **17** modes.
 
 Chat (`bot_chat.js` + `bot_lines.js`) : répliques **pré-écrites** (aucune API requise) par catégorie : `greet chat open_announce open_end open_refused good super check check_received bot_brilliant bot_blunder bot_mistake h_good h_brilliant h_blunder h_mistake frustration winning mate_coming mate_danger mate_win mate_lose draw resign_win reply_*` + spéciales (`elo_up`, `elo_self` pour Naskurieux ; `minor_lost`, `transform` pour GhorGhor). Préfixe `h_` = c'est l'**adversaire** qui l'a fait. Placeholders `{me}` (adversaire), `{san}`, `{open}`, `{elo}`. Avec une clé LLM, les moments forts peuvent être reformulés (`ask`) ; sans clé, tout reste écrit. Anti-bavardage : `PROB`, `MIN_GAP`, un seul bavard par demi-coup sauf `STRONG`.
 Ajouter un personnage : entrée dans `CH` (`bot_chat.js`), un bloc dans `ENOS_BOT_LINES`, un `FIGHT[...]` + éventuellement un `MODES` + une carte `ROSTER` (`arena.js`), l'image dans `img/bots/` (carré 320 px).

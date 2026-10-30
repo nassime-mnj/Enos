@@ -10,12 +10,14 @@
     { id: "ghorghor", name: "GhorGhor", elo: 1400, text: "Style Lelex, 1400 Elo. S'il perd plus de 2 pièces mineures, l'écran glitche : GhorGhor le vrai (GM 3200) se réveille." },
     { id: "penoire", name: "Nasko (pénoire)", elo: 2500, text: "2500 Elo, chasseur de coups brillants comme ETO. Sûr de lui, il a toujours un mot pour toi à la fin." },
     { id: "naskurieux", name: "Naskurieux", elo: 1, title: "GM", text: "Agent GM à 1 Elo : +200 Elo à chaque erreur de son adversaire et à chaque meilleur coup qu'il joue lui-même." },
+    { id: "naskolit", name: "Naskolit", elo: 3200, title: "GM", text: "Il dort, mais il est GM à 3200 Elo. Il perd 100 Elo à chaque imprécision et chaque fois que tu trouves le meilleur coup. Il ne dit pas un mot." },
+    { id: "jester", name: "Le Jester", elo: 1600, eloText: "roue 1-3200", text: "Une roue tire son Elo au hasard (1 à 3200) avant son 1er coup puis tous les 10 coups. Bouffon élégant : il commente avec esprit." },
     { id: "brillant", fighter: "eto", name: "ETO Brillant", elo: 3200, text: "3200 Elo, traque le sacrifice gagnant. Essaie de faire aussi bien : un « !! » ne se refuse pas." },
     { id: "enos", fighter: "enos", name: "E.N.O.S.", elo: 3200, text: "Stockfish pleine puissance, froid et précis. Cherche lui aussi le coup brillant, ne répète jamais." },
   ];
-  const FIGHTERS = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+  const FIGHTERS = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
   const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
-    ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
+    ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
   const tbadge = (elo, title) => (E.botChat ? E.botChat.badge(E.botChat.titleOf(elo, title)) : "");
   const portrait = (id, cls) => {
     const k = id === "brillant" ? "eto" : id;
@@ -36,7 +38,7 @@
       <section class="ar-sec"><h3>AFFRONTE UN BOT</h3><div class="ar-cards">${ROSTER.map((r) => `
         <article class="ar-card" data-id="${r.id}">
           <div class="ar-pt">${portrait(r.fighter || r.id)}</div>
-          <div class="ar-nm">${tbadge(r.elo, r.title)}<b>${esc(r.name)}</b><span>${r.elo} Elo</span></div>
+          <div class="ar-nm">${tbadge(r.elo, r.title)}<b>${esc(r.name)}</b><span>${r.eloText || r.elo + " Elo"}</span></div>
           <p>${esc(r.text)}</p>
           <div class="ar-go"><button class="btn" data-c="w">BLANCS</button><button class="btn" data-c="b">NOIRS</button><button class="btn pri" data-c="r">🎲 AU HASARD</button></div>
         </article>`).join("")}</div></section>

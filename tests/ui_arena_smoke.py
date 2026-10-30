@@ -15,7 +15,7 @@ try:
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
         pg.goto("http://127.0.0.1:8803/#arena")
         pg.wait_for_selector("#ar-lobby .ar-card", timeout=15000)
-        check(pg.locator(".ar-card").count() == 7, "lobby : 7 cartes de combattants")
+        check(pg.locator(".ar-card").count() == 9, "lobby : 9 cartes de combattants")
         check(pg.locator(".ar-card .ttl-GM").count() >= 3 and pg.locator(".ar-card .ttl-IM").count() == 1, "titres GM / IM sur les cartes")
         check(pg.evaluate("[...document.querySelectorAll('.ar-pt img.bot-av')].every(i => i.complete && i.naturalWidth > 50)"), "illustrations chargées")
         pg.screenshot(path="arena_lobby.png")
