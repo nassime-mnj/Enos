@@ -31,13 +31,14 @@
       const overlaps = (tr, s, e, ex) => S.clips.some((c) => c.id !== ex && c.track === tr && c.start < e - 1e-6 && end(c) > s + 1e-6);
 
       el.innerHTML = `<div class="cp">
-        <div class="card cp-mon"><div class="cp-screen"><video playsinline hidden></video><div class="cp-vig"></div><span class="cp-spd" hidden></span><span class="cp-empty">Aucun plan vidéo sous le curseur</span><b class="cp-tc cp-tcv">00:00:00:00</b></div></div>
-        <div class="card cp-tlc"><div class="cp-bar cp-top"><button class="cpb" id="cp-zo" aria-label="Zoom arrière">−</button><input type="range" id="cp-zoom" min="0" max="1000" aria-label="Zoom"><button class="cpb" id="cp-zi" aria-label="Zoom avant">+</button><button class="cpb wide" id="cp-fit">Ajuster</button><span class="muted" id="cp-sc"></span></div>
+        <div class="card cp-mon"><div class="cp-screen"><video playsinline hidden></video><div class="cp-vig"></div><span class="cp-spd" hidden></span><div class="cp-empty"><span>Aucun plan vidéo sous le curseur</span><button class="cpb big" id="cp-impv">📥 Importer une vidéo</button><button class="cpb big" id="cp-impa">🎵 Importer un son</button></div><b class="cp-tc cp-tcv">00:00:00:00</b></div></div>
+        <div class="card cp-tlc"><div class="cp-bar cp-top"><button class="cpb" id="cp-zo" aria-label="Zoom arrière">−</button><input type="range" id="cp-zoom" min="0" max="1000" aria-label="Zoom"><button class="cpb" id="cp-zi" aria-label="Zoom avant">+</button><button class="cpb wide" id="cp-imp2">📥 Importer</button><button class="cpb wide" id="cp-fit">Ajuster</button><span class="muted" id="cp-sc"></span></div>
           <div class="cp-scroll"><div class="cp-content"><div class="cp-rrow"><div class="cp-corner"></div><canvas class="cp-ruler"></canvas></div>
             ${TRACKS.map(([id, ty]) => `<div class="cp-row ${ty}"><div class="cp-head" data-t="${id}" role="button" aria-label="Piste ${id}">${id}</div><div class="cp-lane" data-t="${id}"></div></div>`).join("")}
             <div class="cp-ov"><div class="cp-guide"></div><div class="cp-ph"></div></div></div></div>
           <div class="cp-tip" hidden></div>
           <div class="cp-clipbar" hidden><button class="cpb" id="cp-nl" aria-label="Reculer d'une image">◀</button><button class="cpb" id="cp-nr" aria-label="Avancer d'une image">▶</button><button class="cpb wide" id="cp-ts" title="Début du clip au curseur">⇤ Début</button><button class="cpb wide" id="cp-te" title="Fin du clip au curseur">Fin ⇥</button><button class="cpb" id="cp-del" aria-label="Supprimer le clip">🗑</button></div></div>
+        <div class="card cp-insp-hint"><b>⚡ ACCÉLÉRATEUR</b><span>Importe une vidéo (📥), puis touche son clip dans la timeline : vitesse de 0,25× à 8×, filtres et volume apparaissent ici.</span></div>
         <div class="card cp-insp" hidden>
           <div class="cp-tabs"><button data-p="speed" class="on">⚡ VITESSE</button><button data-p="fx">🎨 FILTRES</button><button data-p="aud">🔊 AUDIO</button></div>
           <div class="cp-panel" data-p="speed"></div><div class="cp-panel" data-p="fx" hidden></div><div class="cp-panel" data-p="aud" hidden></div>
@@ -61,13 +62,17 @@
       const ac = () => (ctx ??= new (window.AudioContext || window.webkitAudioContext)());
       const buffer = (a) => (a.buf ??= a.file.arrayBuffer().then((b) => ac().decodeAudioData(b)).catch(() => null));
       async function importFiles() { return importList(await A.pick({ accept: "audio/*,video/*", multiple: true })); }
-      async function importList(files) {
+      // boutons bien visibles : une vidéo importée est posée tout de suite sur la timeline (au curseur) et sélectionnée -> l'accélérateur ⚡ s'affiche aussitôt
+      async function importVideo() { await importList(await A.pick({ accept: "video/*", multiple: false }), true); }
+      async function importAll() { await importList(await A.pick({ accept: "audio/*,video/*", multiple: true }), true); }
+      async function importList(files, auto) {
         for (const f of files) {
           const kind = f.type.startsWith("video") ? "video" : "audio", url = URL.createObjectURL(f);
           const dur = await new Promise((res) => { const m = document.createElement(kind === "video" ? "video" : "audio"); m.preload = "metadata"; m.onloadedmetadata = () => { if (isFinite(m.duration)) return res(m.duration); m.ondurationchange = () => { if (isFinite(m.duration)) res(m.duration); }; m.currentTime = 1e7; setTimeout(() => res(isFinite(m.duration) ? m.duration : 0), 4000); };   /* WebM enregistré par le téléphone : durée inconnue tant qu'on n'a pas été à la fin */ m.onerror = () => res(0); m.src = url; });
           if (!dur) { A.toast("Format illisible : " + f.name, "warn"); continue; }
           const a = { id: uid(), name: f.name, kind, url, file: f, dur: r3(dur), peaks: null };
           S.assets.push(a); pads();
+          if (auto && kind === "video") { addAtPlayhead(a); const ins = $(".cp-insp"); if (ins && !ins.hidden) ins.scrollIntoView({ behavior: "smooth", block: "nearest" }); A.toast("Vidéo ajoutée : règle l'accélérateur ⚡ ci-dessous.", "ok"); }
           buffer(a).then((b) => { if (b) { a.peaks = peaksOf(b); pads(); renderClips(); } });
         }
       }
@@ -322,6 +327,7 @@
       $("#cp-ts").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); const d = S.ph - c.start; c.in = r3(c.in + d * spd(c)); c.start = S.ph; c.dur = r3(c.dur - d); changed(); };
       $("#cp-te").onclick = () => { const c = sel(); if (!c || S.ph <= c.start + MIN_DUR || S.ph >= end(c)) return A.toast("Place le curseur dans le clip.", "warn"); c.dur = r3(S.ph - c.start); changed(); };
       $("#cp-imp").onclick = importFiles;
+      $("#cp-impv").onclick = importVideo; $("#cp-impa").onclick = importAll; $("#cp-imp2").onclick = importAll;
       $("#cp-snap").onclick = (e) => { S.snap = !S.snap; e.currentTarget.classList.toggle("on", S.snap); };
       $("#cp-zi").onclick = () => setZoom(S.pps * 1.6, viewW() / 2);
       $("#cp-zo").onclick = () => setZoom(S.pps / 1.6, viewW() / 2);
@@ -340,6 +346,7 @@
       function inspector() {
         const c = sel(), box = $(".cp-insp");
         box.hidden = !c;
+        const hint = $(".cp-insp-hint"); if (hint) hint.hidden = !!c;
         if (!c) { insId = null; return; }
         const a = asset(c.asset), isV = a.kind === "video";
         if (!isV && insTab === "fx") insTab = "speed";

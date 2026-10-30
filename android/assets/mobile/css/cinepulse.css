@@ -89,3 +89,11 @@
 .cp-exp .row{display:flex;gap:8px;align-items:center}.cp-exp .row .sel{flex:1}
 .cp-clip.video{background:linear-gradient(180deg,#4a73ee,#3452b8)}
 .cp-clip.audio{background:linear-gradient(180deg,#27b59c,#188574)}
+/* boutons d'import visibles + indication de l'accélérateur */
+.cp-empty{display:flex;flex-direction:column;align-items:center;gap:10px;color:#777}
+.cp-empty[hidden]{display:none}
+.cp-empty .cpb.big{min-height:46px;padding:0 20px;border-radius:14px;border:1px solid var(--red);background:linear-gradient(120deg,var(--btn1),var(--btn2));color:#fff;font:800 14px var(--ui);letter-spacing:.8px}
+.cp-empty .cpb.big:last-child{background:#16161e;border-color:#2a2a36;color:#cfcfd6}
+.cp-insp-hint{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px dashed #2a2a36;background:#0c0c11}
+.cp-insp-hint b{font:800 12px var(--ui);letter-spacing:2px;color:#1acfd6}.cp-insp-hint span{font-size:13.5px;color:#8d8d97;line-height:1.4}
+.cp-insp-hint[hidden]{display:none}
