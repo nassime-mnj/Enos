@@ -90,7 +90,7 @@
     }
   }
 
-  const fmt = (t, I, d) => t.replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{elo\}/g, (d && d.elo) || "").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
+  const fmt = (t, I, d) => t.replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.userName && E.userName()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{elo\}/g, (d && d.elo) || "").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
 
   /** Le personnage « tape » (3 points), puis la réplique apparaît dans la bulle et l'historique. */
   async function speak(I, text) {

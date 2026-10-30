@@ -6,13 +6,15 @@
 <title>Échecs · Apprendre & Conseiller</title>
 <link rel="stylesheet" href="pc.css">
 <link rel="stylesheet" href="chess.css">
+<link rel="stylesheet" href="arena.css">
 </head>
 <body>
 <header><b>E.N.O.S.</b><span id="ttl">ÉCHECS</span><button id="close" hidden>FERMER ✕</button></header>
 <main>
-  <div class="seg" id="tabs" data-p="enos" style="margin-bottom:14px"><button data-t="learn" class="on">APPRENDRE</button><button data-t="advisor">CONSEILLER</button><button data-t="course">COURS EN DIRECT</button><button data-t="game">REVUE</button><i class="seg-ind"></i></div>
+  <div class="seg" id="tabs" data-p="enos" style="margin-bottom:14px"><button data-t="learn" class="on">APPRENDRE</button><button data-t="advisor">CONSEILLER</button><button data-t="course">COURS EN DIRECT</button><button data-t="game">REVUE</button><button data-t="arena">⚔ ARÈNE</button><i class="seg-ind"></i></div>
   <div id="tool-learn"><div class="suite-body" id="app-learn"></div></div>
   <div id="tool-advisor" hidden><div class="suite-body" id="app-advisor"></div></div>
+  <div id="tool-arena" hidden><div class="suite-body" id="app-arena"></div></div>
   <div id="tool-game" hidden><div class="suite-body" id="app-game"></div></div>
   <div id="tool-course" hidden><div class="suite-body" id="app-course"><div class="card"><p class="muted">Le cours en direct s'ouvre en plein écran.</p><div class="row"><button class="btn pri" id="course-go">OUVRIR LE COURS</button></div></div></div></div>
 </main>
@@ -23,6 +25,8 @@
 <script src="chess_sound.js"></script>
 <script src="board.js"></script>
 <script src="m_learn.js"></script>
+<script src="bot_lines.js"></script>
+<script src="bot_chat.js"></script>
 <script src="pc_boot.js"></script>
 </body>
 </html>

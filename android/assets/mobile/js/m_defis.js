@@ -189,7 +189,7 @@
         const bc = E.botChat;
         if (!bc) return;
         bc.unmountAll(); g.talk = {};
-        const opp = (c) => () => { const n = g.pl[c === "w" ? "b" : "w"].name; return n === "Toi" ? (E.ai.name() || "toi") : n; };
+        const opp = (c) => () => { const n = g.pl[c === "w" ? "b" : "w"].name; return n === "Toi" ? ((E.userName && E.userName()) || E.ai.name() || "toi") : n; };
         if (g.mode.human) {
           const c = g.pl.w.human ? "b" : "w", p = g.pl[c];
           if (p.talk && bc.has(p.talk)) g.talk[c] = bc.mount($("#df-botchat"), p.talk, { opp: opp(c), ctx: () => chatCtx(c), log: true });

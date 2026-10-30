@@ -1,0 +1,46 @@
+/* ARÈNE DES BOTS (PC) : interface de bureau par-dessus les composants du téléphone (m_defis.js / bot_chat.js) */
+body.arena-on main{max-width:1500px}
+#tabs .seg-ind{display:none}#tabs button.on{background:linear-gradient(120deg,var(--btn1),var(--btn2));border-radius:10px}
+.arena #df-home>.card:first-child{display:none}                                  /* la liste de modes du téléphone est remplacée par le lobby */
+.arena #df-home{margin-top:6px}
+#ar-lobby{display:grid;gap:18px;margin-bottom:6px}
+.ar-sec{padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(165deg,#151518,#0e0e10)}
+.ar-sec h3{display:flex;align-items:baseline;gap:14px;margin:0 0 14px;font:800 13px var(--ui);letter-spacing:3px;color:var(--muted)}
+.ar-sec h3 span{font:600 12.5px var(--ui);letter-spacing:.4px;color:#6d6d77;text-transform:none}
+.ar-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.ar-card{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#0b0b0d;transition:transform .18s,border-color .2s,box-shadow .2s}
+.ar-card:hover{transform:translateY(-3px);border-color:var(--red);box-shadow:0 14px 34px #000a,0 0 24px color-mix(in srgb,var(--red) 22%,transparent)}
+.ar-pt .bot-av{width:100%;height:auto;aspect-ratio:1/1;border-radius:14px;font-size:30px}
+.ar-nm{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.ar-nm b{font:800 18px var(--ui);color:#fff}.ar-nm span{margin-left:auto;font:700 13px var(--ui);color:var(--muted)}
+.ar-card p{flex:1;font-size:13.5px;line-height:1.45;color:#a4a4ae}
+.ar-go{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ar-go .btn{height:40px;padding:0 8px;letter-spacing:1px;font-size:12px}.ar-go .btn.pri{grid-column:1/-1}
+.ar-presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.ar-presets button{padding:8px 14px;border-radius:16px;border:1px solid var(--line);background:#101012;font:700 13px var(--ui);color:#cfcfd6}.ar-presets button:hover{border-color:var(--red);color:#fff}
+.ar-slots{display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap}
+.ar-slot{display:flex;flex-direction:column;gap:10px;width:min(240px,40%);min-width:180px}.ar-slot label{display:flex;flex-direction:column;gap:6px;font:700 11px var(--ui);letter-spacing:2px;color:var(--muted)}
+.ar-slot select{height:42px;border-radius:12px;border:1px solid var(--line);background:#0b0b0d;color:var(--text);font:700 15px var(--ui);padding:0 10px}
+.ar-vs{display:flex;flex-direction:column;align-items:center;gap:10px}.ar-vs b{font:400 40px var(--pixel);color:var(--red2);text-shadow:0 0 22px var(--red)}
+.ar-fight .row{justify-content:center}.btn.big{flex:none;height:56px;padding:0 44px;font-size:16px}
+.ar-others{display:flex;flex-wrap:wrap;gap:10px}.ar-others .btn{flex:1;min-width:230px}
+
+/* ---- partie : 3 colonnes (combattant · plateau · combattant + transcript) */
+.arena #df-game>.back,.arena #df-back{margin-bottom:10px}
+.arena #df-game>.card{display:grid;grid-template-columns:minmax(230px,300px) minmax(0,1fr) minmax(230px,320px);grid-auto-rows:min-content;column-gap:22px;row-gap:8px;padding:18px;max-width:1400px;margin:0 auto}
+.arena #df-game>.card>*{grid-column:2}
+.arena #df-game>.card>#df-botchat{grid-column:1;grid-row:1}
+.arena #df-game>.card>#df-moves{grid-column:1;grid-row:2 / span 6;display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px 8px;max-height:60vh;overflow-y:auto;padding:12px;border:1px solid var(--line);border-radius:14px;background:#0b0b0d;font-size:14px}
+.arena #df-game>.card>#df-botchat2{grid-column:3;grid-row:1}
+.arena #df-game>.card>#df-botlog{grid-column:3;grid-row:2 / span 6;display:block!important;border-radius:14px}
+.arena #df-botlog:empty{display:none!important}
+.arena #df-botlog .bot-msgs{max-height:60vh}
+.arena #df-game>.card>#df-top{grid-row:1}.arena #df-game>.card>.ch-evalbar{grid-row:2}.arena #df-game>.card>#df-board{grid-row:3}.arena #df-game>.card>#df-bot{grid-row:4}.arena #df-game>.card>#df-judge{grid-row:5}.arena #df-game>.card>#df-say{grid-row:6}.arena #df-game>.card>.ch-top{grid-row:7}.arena #df-game>.card>#df-btns{grid-row:8}
+.arena #df-board{max-width:min(78vh,760px);width:100%}
+.arena .bot-banner{flex-direction:column;align-items:stretch;gap:12px;margin:0}
+.arena .bot-av{width:100%;height:auto;aspect-ratio:1/1;border-radius:18px;font-size:34px}
+.arena .bot-bubble{margin:0;font-size:17px}.arena .bot-bubble::before{left:30px;bottom:auto;top:-9px;border:9px solid transparent;border-bottom-color:#fff;border-top:0}
+.arena .bot-chatbtn{display:none}
+.arena .bot-log[hidden]{display:block!important}.arena .bot-msgs{max-height:34vh}
+.arena .df-pl b{font-size:17px}
+.arena .df-vs .vp .bot-av{width:min(22vw,260px);height:min(22vw,260px)}
+.arena #df-btns .btn{flex:none;min-width:150px}
+@media (max-width:1100px){.arena #df-game>.card{grid-template-columns:minmax(0,1fr)}.arena #df-game>.card>*{grid-column:1!important;grid-row:auto!important}.arena .bot-av{width:110px;height:110px}.arena .bot-banner{flex-direction:row;align-items:flex-end}.arena .bot-bubble::before{left:-9px;top:auto;bottom:16px;border:9px solid transparent;border-right-color:#fff;border-left:0}}

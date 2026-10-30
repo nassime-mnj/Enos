@@ -1,6 +1,6 @@
 "use strict";
 // Ouvre « Échecs · Apprendre & Conseiller » (static/learn/) en plein écran par-dessus l'interface ; la page prévient (postMessage) quand on la ferme.
-// Deux boutons : APPRENDRE LES ÉCHECS (puzzles, ouvertures…) et CONSEILLER BRILLANTS (capture d'écran → coups brillants).
+// Trois boutons : APPRENDRE LES ÉCHECS (puzzles, ouvertures…), CONSEILLER BRILLANTS (capture d'écran → coups brillants) et ARÈNE DES BOTS (#arena).
 (() => {
   let box = null;
   const close = () => { if (box) { box.remove(); box = null; } };
@@ -16,6 +16,8 @@
   const learn = document.getElementById("b-learn"), adv = document.getElementById("b-adv");
   if (learn) learn.addEventListener("click", () => open(""));
   if (adv) adv.addEventListener("click", () => open("#advisor"));
+  const arena = document.getElementById("b-arena");
+  if (arena) arena.addEventListener("click", () => open("#arena"));
   window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data && e.data.enos === "learn-close") close(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 })();

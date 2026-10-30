@@ -10,6 +10,7 @@ window.ENOS = window.ENOS || {};
   E.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   E.vibrate = () => {};
   E.assetBase = "";
+  E.userName = () => E.settings.get("name", "Nassime");                       // prénom donné aux bots quand ils te parlent (chat des Défis)
   const mem = {};
   const raw = { get(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] == null ? null : mem[k]; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } } };
   const store = { get(k, d) { try { const v = raw.get("enos." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { raw.set("enos." + k, JSON.stringify(v)); } };
