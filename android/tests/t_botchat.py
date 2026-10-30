@@ -78,6 +78,8 @@ with sync_playwright() as pw:
     pg.wait_for_function(A + ".g.moves.length >= 4", timeout=40000)
     e1 = pg.evaluate(A + ".g.pl.b.elo")
     check(e1 >= 201 and (e1 - 1) % 200 == 0, "Naskurieux gagne +200 Elo par erreur adverse (f3, g4) : %d Elo" % e1)
+    miss2 = pg.evaluate("() => ['elo_up', 'elo_self'].filter(k => !(window.ENOS_BOT_LINES.naskurieux[k] || []).length)")
+    check(not miss2, "Naskurieux : répliques d'Elo gagné (erreur adverse / meilleur coup) : manque %s" % miss2)
     # --- GhorGhor : perd 3 pièces mineures -> GhorGhor le vrai
     pg.wait_for_function("!" + A + ".g.busy", timeout=20000)
     pg.evaluate(A + ".launch('ghorghor', {color: 'w'})")

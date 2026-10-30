@@ -20,7 +20,7 @@
     { id: "nasko", t: "🎭 Nasko", s: "Le bot qui joue comme La_Loi_De_Fortes", human: true, style: true },
     { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
-    { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo à chaque erreur adverse", human: true },
+    { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo par erreur adverse ou meilleur coup", human: true },
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "combat", t: "⚔ Combat de bots", s: "Nasko vs Pénoire, Lelex vs ETO… tu choisis", human: false, duel: true },
     { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
@@ -117,7 +117,7 @@
         else if (id === "speedrun") body = `<label class="fld">Niveau du bot</label><select id="su-elo" class="sel">${ELOS.map((e) => `<option value="${e}" ${e === elo ? "selected" : ""}>Bot ${e} Elo</option>`).join("")}</select>`;
         else if (id === "titans") body = `<p class="muted" style="line-height:1.5">Spectacle : E.N.O.S. (Stockfish pur) joue les Blancs, ETO (chasseur de sacrifices) les Noirs. Ils se répondent en direct.</p>`;
         else if (id === "penoire") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">La version <b>pénoire</b> de Nasko : <b>2500 Elo</b>, il <b style="color:#1acfd6">cherche chaque sacrifice brillant !!</b> comme ETO, ne répète jamais et ne t'épargne pas… Il a toujours un mot pour toi à la fin.</p>` + colorSeg;
-        else if (id === "naskurieux") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">L'agent <b>Naskurieux</b> est <b>Grand Maître</b>… mais il démarre à <b>1 Elo</b>. À chaque <b>imprécision, erreur ou gaffe</b> de ton adversaire il gagne <b style="color:#1acfd6">+200 Elo</b> et joue de mieux en mieux. Ne lui fais aucun cadeau.</p>` + colorSeg;
+        else if (id === "naskurieux") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">L'agent <b>Naskurieux</b> est <b>Grand Maître</b>… mais il démarre à <b>1 Elo</b>. À chaque <b>imprécision, erreur ou gaffe</b> de ton adversaire il gagne <b style="color:#1acfd6">+200 Elo</b>, et autant <b>chaque fois qu'il joue lui-même le meilleur coup</b>. Il joue de mieux en mieux : ne lui fais aucun cadeau.</p>` + colorSeg;
         else if (id === "ghorghor") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>GhorGhor</b> joue comme Lelex, niveau <b>1400</b>. Mais s'il perd <b>plus de 2 pièces mineures</b> (cavaliers, fous)… quelque chose se réveille.</p>` + colorSeg;
         else if (id === "combat") {
           const opt = (v) => Object.entries(FIGHT_NAMES).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${n}</option>`).join(""), last = E.settings.get("defi.combat", ["nasko", "penoire"]);
@@ -359,6 +359,10 @@
           g.pl[victim].elo = Math.min(3200, g.pl[victim].elo + 200); mvRec.eloUp = g.pl[victim].elo;
           E.ui.toast(`${g.pl[victim].name} : +200 Elo → ${g.pl[victim].elo}`, "ok", 2600); E.vibrate(20);
         }
+        if (g.pl[turn].gain && (q.key === "best" || q.key === "brilliant")) {                   // buff : Naskurieux gagne aussi +200 Elo quand LUI joue le meilleur coup
+          g.pl[turn].elo = Math.min(3200, g.pl[turn].elo + 200); mvRec.eloSelf = g.pl[turn].elo;
+          E.ui.toast(`${g.pl[turn].name} : meilleur coup, +200 Elo → ${g.pl[turn].elo}`, "ok", 2600);
+        }
         if (m.captured && (m.captured === "n" || m.captured === "b")) { g.lostMinor[victim]++; mvRec.minorLost = { col: victim, n: g.lostMinor[victim] }; }
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
         judge(g.moves[g.moves.length - 1], meta);
@@ -409,6 +413,7 @@
         else if (k === "blunder") { say(T, "bot_blunder"); say(O, oOverride || "h_blunder"); }
         else if (k === "mistake") { say(T, "bot_mistake"); say(O, oOverride || "h_mistake"); }
         else if (k === "inaccuracy" && oOverride) say(O, oOverride);
+        else if (k === "best" && mv.eloSelf) say(T, "elo_self");
         else if (k === "best" || k === "excellent") { if (swing >= 120) { say(T, "super"); if (!say(O, oOverride || "h_good")) { /* silence */ } } else say(T, "good") || say(O, oOverride || "h_good"); }
         else if (g.ch.in_check()) { say(T, "check"); say(O, oOverride || "check_received"); }
         else if (oOverride) say(O, oOverride);

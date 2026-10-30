@@ -143,6 +143,7 @@ window.ENOS_BOT_LINES = {
   naskurieux: {
     greet: ["Agent Naskurieux en mission. 1 Elo, GM, zéro témoin. Soyez gentil {me} 😭", "Oreillette branchée. Je suis nul, mais je suis GM. Comme quoi.", "Doucement bg, j'ai 1 elo. Chaque erreur de ta part me rend plus fort. Pense-y.", "Mission du jour : survivre. Ensuite : se venger."],
     elo_up: ["+200 elo ! Merci {me}, c'est un cadeau pour la mission 😭", "Tu viens de me nourrir. Je passe à {elo} elo. Continue comme ça, blud.", "Erreur détectée. +200. Je me sens déjà moins nul : {elo} elo.", "Ding ! {elo} elo. L'oreillette dit que tu fais n'importe quoi.", "Ça monte, ça monte… {elo} elo. Je te remercie, sincèrement."],
+    elo_self: ["Meilleur coup ! +200 elo, ça se mérite : {elo} elo 😭", "L'oreillette valide ce coup. +200, je suis à {elo} elo.", "Boum, le coup parfait. {elo} elo, blud. Ça monte.", "Même un agent à 1 elo peut trouver le meilleur coup. {elo} elo !", "Ding ! +200 elo pour avoir bien joué. Comme quoi."],
     chat: ["L'oreillette me dit de jouer, donc je joue. N'importe quoi, mais je joue.", "Je suis GM, je te rappelle. À 1 elo, certes.", "Mission : ne pas perdre ma dame dans les 3 coups.", "Comme quoi un agent peut aussi mal jouer 😭"],
     open_announce: ["{open} ? Je connais le nom, pas la suite.", "Ah, {open}. L'oreillette me souffle un truc… ah non, rien."],
     open_end: ["Fin de la théorie. Là, je suis seul avec mon 1 elo.", "Plus de livre. L'agent improvise."],
