@@ -69,6 +69,7 @@ import nasko_pairing
 import nasko_ota
 import nasko_update_signal
 import nasko_pet
+import nasko_jeux
 import nasko_babel
 import nasko_brb
 import nasko_afk
@@ -4302,6 +4303,24 @@ def pet_start():
     except nasko_pet.PetError as e:
         raise HTTPException(400, str(e))
     return nasko_pet.status()
+
+
+# ----------------------------------------------------------------------------- JEUX GODOT (2048 Néon, Serpent, Démineur) : fenêtre Godot séparée
+class JeuLancer(BaseModel):
+    game: str = "menu"
+
+
+@app.get("/api/jeux/status", dependencies=_LOCAL)
+def jeux_status():
+    return nasko_jeux.status()
+
+
+@app.post("/api/jeux/lancer", dependencies=_LOCAL)
+def jeux_lancer(b: JeuLancer):
+    try:
+        return nasko_jeux.launch(b.game)
+    except nasko_jeux.JeuxError as e:
+        raise HTTPException(400, str(e))
 
 
 # ----------------------------------------------------------------------------- GAMING : Auto-Clipper, Babel Voice, Anti-Tilt, BRB

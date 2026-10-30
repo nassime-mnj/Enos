@@ -18,6 +18,27 @@
   if (adv) adv.addEventListener("click", () => open("#advisor"));
   const arena = document.getElementById("b-arena");
   if (arena) arena.addEventListener("click", () => open("#arena"));
+  // DÉFI › BOTS et DÉFI › CHESS › mode « BOTS · ARÈNE » : même Arène que le bouton du panneau
+  const dfBots = document.getElementById("df-bots");
+  if (dfBots) dfBots.addEventListener("click", () => open("#arena"));
+  const csMode = document.getElementById("cs-mode");
+  if (csMode) csMode.addEventListener("change", () => {
+    if (csMode.value !== "bots") return;
+    let prev = "enos"; try { prev = localStorage.getItem("enos_chess_mode") || "enos"; } catch (e) { /* stockage indisponible */ }
+    csMode.value = ["enos", "coach", "speedrun", "titans", "boss"].includes(prev) ? prev : "enos";
+    // (écouteur en phase de capture : la valeur est déjà rétablie quand defi.js repeint l'écran avec le mode précédent)
+    open("#arena");
+  }, true);
+  // DÉFI › JEUX NÉON : fenêtre Godot (nasko_jeux.py)
+  const gmsg = document.getElementById("df-gmsg");
+  document.querySelectorAll("[id^=df-g-]").forEach((b) => b.addEventListener("click", async () => {
+    if (gmsg) gmsg.textContent = "Lancement…";
+    try {
+      const r = await fetch("/api/jeux/lancer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: b.id.slice(5) }) });
+      const j = await r.json().catch(() => ({}));
+      if (gmsg) gmsg.textContent = r.ok ? "Jeu lancé dans une nouvelle fenêtre." : (j.detail || "Erreur " + r.status);
+    } catch (e) { if (gmsg) gmsg.textContent = "Impossible de contacter ENOS."; }
+  }));
   window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data && e.data.enos === "learn-close") close(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 })();

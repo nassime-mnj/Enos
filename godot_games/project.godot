@@ -1,0 +1,28 @@
+; Jeux E.N.O.S. (2048 Néon, Serpent, Démineur) : projet Godot lancé depuis DÉFI › JEUX. Tout est dessiné en code : aucun fichier image à importer.
+config_version=5
+
+[application]
+config/name="E.N.O.S. Jeux"
+run/main_scene="res://main.tscn"
+run/max_fps=144
+config/features=PackedStringArray("4.7")
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0.02, 0.012, 0.04, 1)
+
+[autoload]
+
+Sfx="*res://sfx.gd"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/size/window_width_override=1280
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=1
+
+[rendering]
+viewport/hdr_2d=true
+anti_aliasing/quality/msaa_2d=2
+environment/defaults/default_clear_color=Color(0.02, 0.012, 0.04, 1)

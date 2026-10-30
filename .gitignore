@@ -53,3 +53,4 @@ ceo_prefs.json
 # sorties de build mobile (APK, sauvegardes datees, intermediaires)
 mobile_build/
 android/build/
+godot_games/.godot/

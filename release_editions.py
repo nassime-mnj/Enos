@@ -27,14 +27,14 @@ PY_MODULES = {                                    # modules Python propres à un
     "apimon": ["nasko_apimon"],
     "devtools": ["nasko_env", "nasko_git", "nasko_godotsync", "nasko_godotdiag", "nasko_anim", "nasko_audio"],
     "depot": ["nasko_wsl", "nasko_devmanager", "nasko_depot", "nasko_depot_git", "nasko_depot_study", "nasko_depot_forge", "nasko_depot_term"],   # Dépôt Intranet + Dev Manager : donnés aussi à Friends
-    "leisure": ["nasko_chess", "nasko_chessbridge", "nasko_mobchess", "nasko_nodraw", "nasko_train", "nasko_pet", "opening_manager"],
+    "leisure": ["nasko_chess", "nasko_chessbridge", "nasko_mobchess", "nasko_nodraw", "nasko_train", "nasko_pet", "nasko_jeux", "opening_manager"],
     "creator": ["nasko_compress", "nasko_youtube"],
     "system": ["nasko_cleaner", "nasko_sysctl", "nasko_sysmon", "nasko_diag", "nasko_power"],
     "google": ["nasko_tabs", "nasko_ext", "nasko_webauto"],
     "mirror": ["nasko_mirror"],
     "gaming": ["nasko_clipper", "nasko_capture", "nasko_babel", "nasko_tilt", "nasko_brb", "nasko_afk"],
 }
-DIRS = {"leisure": ["godot_chess", "openings"], "depot": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
+DIRS = {"leisure": ["godot_chess", "godot_games", "openings"], "depot": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
 # Le dossier de travail WSL par défaut nomme l'utilisateur Linux du CEO : hors édition CEO il est remplacé par un nom neutre (chaque utilisateur règle le sien dans « ESPACE WSL »).
 OWNER_HOME = re.compile(r"(home(?:\\+|/))nasko\b")
 OWNER_REPLACEMENT = r"\1utilisateur"

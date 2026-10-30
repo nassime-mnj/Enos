@@ -83,7 +83,7 @@ SKIP_ROOT_PY = {"build_release.py", "diagnostic_reveil.py", "creer_voix_eto.py",
                 "creer_relais.py", "wake_relay.py", "release_editions.py", "configurer_llm.py", "creer_raccourci.py", "updater.py", "release_linux.py"}   # outils de développement, inutiles à l'ami
 TREES = {                                  # dossiers livrés tels quels (assets graphiques, thème Coreboard, audio de l'OS, projets Godot de l'Œil et des échecs)
     "static": None, "voix": None, "openings": None, "cascades": None,
-    "godot_eye": None, "godot_chess": None, "godot_neon": None,
+    "godot_eye": None, "godot_chess": None, "godot_neon": None, "godot_games": None,
 }
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", "*.log", ".godot", "*.tmp", "*.part")
 # Jamais copiés (données personnelles ou volumineuses) — listés par --check pour que tu voies ce qui est exclu
@@ -285,7 +285,7 @@ def build_exe():
     if r.returncode != 0:
         die("la compilation a échoué (voir les messages ci-dessus).")
     shutil.rmtree(REL / "build_tmp", ignore_errors=True)
-    for d in ("godot_eye", "godot_chess", "godot_neon"):            # projets Godot lus à côté de l'exe (Œil de bureau, échecs)
+    for d in ("godot_eye", "godot_chess", "godot_neon", "godot_games"):            # projets Godot lus à côté de l'exe (Œil de bureau, échecs)
         if (STAGE / d).is_dir():
             shutil.copytree(STAGE / d, DIST / d, dirs_exist_ok=True)
     shutil.copy2(STAGE / "logo.ico", DIST / "logo.ico")
@@ -372,7 +372,7 @@ def build_linux_package(version, edition, launcher_exe=None, fmt="tar"):
     import release_linux as L
     app_root = DIST / "ENOS" if (DIST / "ENOS").is_dir() else DIST           # --onedir : PyInstaller crée dist/ENOS/
     if app_root != DIST:
-        for d in ("godot_eye", "godot_chess", "godot_neon"):
+        for d in ("godot_eye", "godot_chess", "godot_neon", "godot_games"):
             if (DIST / d).is_dir():
                 shutil.copytree(DIST / d, app_root / d, dirs_exist_ok=True)
     icon = STAGE / "logo-512.png"
