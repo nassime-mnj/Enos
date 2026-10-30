@@ -210,3 +210,30 @@
 .bot-in input{flex:1;min-width:0;height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:#0a0a0c;color:var(--text);font:600 15px var(--ui)}
 .bot-in button{flex:none;width:44px;height:40px;border-radius:12px;background:linear-gradient(120deg,var(--btn1),var(--btn2));color:#fff;font-size:18px}
 @media (prefers-reduced-motion:reduce){.bot-av.talk,.bot-bubble,.bot-m{animation:none}}
+
+/* ---- combats de bots : avatars sans illustration, vainqueur / perdant, écran VS, transcript partagé */
+.bot-av.ph{display:grid;place-items:center;font:800 15px var(--ui);letter-spacing:1.5px;color:#fff;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--c) 55%,#000),#0b0b0d);border-color:var(--c);text-shadow:0 0 10px var(--c)}
+.bot-av.win{box-shadow:0 0 0 2px #ffd24a,0 0 28px #ffd24a99;transform:scale(1.06);transition:.4s}
+.bot-av.lose{filter:grayscale(1) brightness(.6);transition:.4s}
+.bot-bubble.pop{animation:botPop .28s cubic-bezier(.2,.9,.25,1.2)}
+.bot-m b{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7a7a84}
+#df-botlog{margin:0 0 10px;border:1px solid var(--line);border-radius:14px;background:#0b0b0d}
+#df-botchat2 .bot-banner{margin:8px 0 0}
+.df-vs{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% 50%,#2a0710cc,#000e);backdrop-filter:blur(6px)}
+.df-vs .row2{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;padding:0 12px}
+.df-vs .vp{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:0;font:800 16px var(--ui);text-align:center;color:#fff}
+.df-vs .vp .bot-av{width:min(34vw,150px);height:min(34vw,150px);border-radius:20px}
+.df-vs .vp small{font:700 13px var(--ui);color:#8d8d97}
+.df-vs .vp.l{animation:vsL .55s cubic-bezier(.2,.9,.25,1) both}.df-vs .vp.r{animation:vsR .55s cubic-bezier(.2,.9,.25,1) both}
+.df-vs .vs{font:400 34px var(--pixel);color:var(--red2);text-shadow:0 0 24px var(--red);animation:vsB .7s .35s cubic-bezier(.2,1.6,.3,1) both}
+.df-vs .go{font:800 13px var(--ui);letter-spacing:4px;color:#8d8d97;animation:botPop .4s .9s both}
+@keyframes vsL{from{opacity:0;transform:translateX(-80px)}to{opacity:1;transform:none}}
+@keyframes vsR{from{opacity:0;transform:translateX(80px)}to{opacity:1;transform:none}}
+@keyframes vsB{from{opacity:0;transform:scale(2.6)}to{opacity:1;transform:none}}
+.df-pick{display:grid;gap:8px;margin-bottom:12px}
+.df-pick label{display:flex;align-items:center;justify-content:space-between;gap:10px;font:700 13px var(--ui);letter-spacing:1px;color:var(--muted)}
+.df-pick select{flex:1;max-width:62%}
+.df-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.df-presets button{padding:7px 11px;border-radius:14px;border:1px solid var(--line);background:#101012;font:700 12px var(--ui);color:#cfcfd6}
+.df-presets button:active{border-color:var(--red)}
+@media (prefers-reduced-motion:reduce){.df-vs .vp,.df-vs .vs,.df-vs .go{animation:none}}

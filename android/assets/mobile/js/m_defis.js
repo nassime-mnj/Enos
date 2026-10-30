@@ -19,6 +19,8 @@
     { id: "boss", t: "👑 Boss final", s: "Stockfish plein régime", human: false },
     { id: "nasko", t: "🎭 Nasko", s: "Le bot qui joue comme La_Loi_De_Fortes", human: true, style: true },
     { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
+    { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
+    { id: "combat", t: "⚔ Combat de bots", s: "Nasko vs Pénoire, Lelex vs ETO… tu choisis", human: false, duel: true },
     { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
     { id: "ebs", t: "✦ ETO Brillant vs Stockfish", s: "Combat spectateur · enregistré", human: false, duel: true },
     { id: "ebd", t: "✦ ETO Brillant + E.N.O.S. vs Stockfish", s: "Duo contre le boss · enregistré", human: false, duel: true },
@@ -46,6 +48,20 @@
         "e2e4 c7c6 d2d4 d7d5 b1c3 d5e4 c3e4 g8f6 e4g5 h7h6": "g5f7" };
       if (!STY) { const sc = document.createElement("script"); sc.src = (E.assetBase || "") + "data/style_bots.js"; sc.onload = () => { STY = window.ENOS_STYLE; }; document.head.appendChild(sc); }
 
+      // combattants : modèle de joueur (talk = personnage qui parle dans la chat box)
+      const eloOf = (id) => (STY && STY[id] ? STY[id].eloEst : 1000);
+      const FIGHT = {
+        nasko: () => ({ kind: "style", style: "nasko", elo: eloOf("nasko"), name: "Nasko", talk: "nasko" }),
+        penoire: () => ({ kind: "penoire", elo: 2500, name: "Nasko (pénoire)", talk: "penoire" }),
+        lelex: () => ({ kind: "style", style: "lelex", elo: eloOf("lelex"), name: "Lelex", talk: "lelex" }),
+        eto: () => ({ kind: "eto", elo: 3200, name: "ETO Brillant", talk: "eto" }),
+        enos: () => ({ kind: "sf", elo: 3200, power: 100, name: "E.N.O.S.", talk: "enos" }),
+        stockfish: () => ({ kind: "sf", elo: 3200, power: 100, pure: true, name: "Stockfish" }),
+      };
+      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+      const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
+        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
+
       el.innerHTML = `
         <div id="df-home">
           <div class="card"><h3>Choisis ton défi</h3><div class="df-modes">${MODES.map((m) => `<button class="df-mode" data-m="${m.id}"><b>${m.t}</b><small>${m.s}</small></button>`).join("")}</div>
@@ -56,10 +72,12 @@
           <button class="back" id="df-back" style="margin-bottom:8px">◂ DÉFIS</button>
           <div class="card" style="padding:12px">
             <div id="df-botchat" hidden></div>
+            <div id="df-botlog" hidden></div>
             <div class="df-pl" id="df-top"></div>
             <div class="ch-evalbar"><i id="df-eval"></i><b id="df-evt">0,0</b></div>
             <div id="df-board"></div>
             <div class="df-pl" id="df-bot"></div>
+            <div id="df-botchat2" hidden></div>
             <div class="df-judge" id="df-judge" hidden></div>
             <div class="ch-say" id="df-say" hidden></div>
             <div class="ch-moves" id="df-moves"></div>
@@ -91,6 +109,13 @@
         else if (id === "coach") body = colorSeg + `<label class="fld">Niveau du bot</label><select id="su-elo" class="sel">${ELOS.map((e) => `<option value="${e}" ${e === elo ? "selected" : ""}>Bot ${e} Elo</option>`).join("")}</select>`;
         else if (id === "speedrun") body = `<label class="fld">Niveau du bot</label><select id="su-elo" class="sel">${ELOS.map((e) => `<option value="${e}" ${e === elo ? "selected" : ""}>Bot ${e} Elo</option>`).join("")}</select>`;
         else if (id === "titans") body = `<p class="muted" style="line-height:1.5">Spectacle : E.N.O.S. (Stockfish pur) joue les Blancs, ETO (chasseur de sacrifices) les Noirs. Ils se répondent en direct.</p>`;
+        else if (id === "penoire") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">La version <b>pénoire</b> de Nasko : <b>2500 Elo</b>, il <b style="color:#1acfd6">cherche chaque sacrifice brillant !!</b> comme ETO, ne répète jamais et ne t'épargne pas… Il a toujours un mot pour toi à la fin.</p>` + colorSeg;
+        else if (id === "combat") {
+          const opt = (v) => Object.entries(FIGHT_NAMES).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${n}</option>`).join(""), last = E.settings.get("defi.combat", ["nasko", "penoire"]);
+          body = `<p class="muted" style="margin-bottom:10px;line-height:1.5">Spectacle : choisis les deux combattants, ils se parlent pendant la partie (chat), s'affrontent à fond et la partie est <b>enregistrée</b> pour le replay.</p>
+            <div class="df-presets">${PRESETS.map((p, i) => `<button data-p="${i}">${p[2]}</button>`).join("")}</div>
+            <div class="df-pick"><label>Blancs<select id="su-cw" class="sel">${opt(last[0])}</select></label><label>Noirs<select id="su-cb" class="sel">${opt(last[1])}</select></label></div>`;
+        }
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
         else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
@@ -98,11 +123,14 @@
           if (id === "enos") E.settings.set("chess.power", pow);
           if (s.querySelector("#su-elo")) { elo = +s.querySelector("#su-elo").value; E.settings.set("defi.elo", elo); }
           if (s.querySelector("#su-boss")) boss = s.querySelector("#su-boss").value;
+          let cw, cb;
+          if (s.querySelector("#su-cw")) { cw = s.querySelector("#su-cw").value; cb = s.querySelector("#su-cb").value; E.settings.set("defi.combat", [cw, cb]); }
           const c = color === "r" ? (Math.random() < 0.5 ? "w" : "b") : color;
-          launch(id, { color: c, elo, pow, boss });
+          launch(id, { color: c, elo, pow, boss, cw, cb });
         } }, { label: "ANNULER" }] });
         const seg = s.querySelector("#su-col");
         if (seg) seg.querySelectorAll("button").forEach((b) => (b.onclick = () => { color = b.dataset.c; seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); }));
+        s.querySelectorAll(".df-presets button").forEach((b) => (b.onclick = () => { const p = PRESETS[+b.dataset.p]; s.querySelector("#su-cw").value = p[0]; s.querySelector("#su-cb").value = p[1]; E.vibrate(8); }));
         const pw = s.querySelector("#su-pw");
         if (pw) { const u = () => { pow = +pw.value; s.querySelector("#su-pe").textContent = B.powerToElo(pow) + " Elo"; }; pw.oninput = u; u(); }
       }
@@ -110,7 +138,8 @@
       // ------------------------------------------------------------------ partie
       function players(id, o) {
         const hu = { human: true, name: "Toi" };
-        if (id === "nasko" || id === "lelex") { const op = { kind: "style", style: id, elo: STY && STY[id] ? STY[id].eloEst : 1000, name: id === "nasko" ? "Nasko" : "Lelex" }; return o.color === "w" ? [hu, op] : [op, hu]; }
+        if (id === "nasko" || id === "lelex" || id === "penoire") { const op = FIGHT[id](); return o.color === "w" ? [hu, op] : [op, hu]; }
+        if (id === "combat") { const a = FIGHT[o.cw || "nasko"](), b = FIGHT[o.cb || "penoire"](); if (o.cw === o.cb) { a.name += " (Blancs)"; b.name += " (Noirs)"; } return [a, b]; }
         if (id === "brillant") return o.color === "w" ? [hu, { kind: "eto", elo: 3200, name: "ETO Brillant" }] : [{ kind: "eto", elo: 3200, name: "ETO Brillant" }, hu];
         if (id === "enos") { const op = { kind: "sf", elo: B.powerToElo(o.pow), power: o.pow, name: "E.N.O.S." }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "coach") { const op = { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }; return o.color === "w" ? [hu, op] : [op, hu]; }
@@ -128,18 +157,48 @@
         if (g) g.token++;
         const me = m.human ? (pl[0].human ? "w" : "b") : null;
         g = { id, mode: m, pl: { w: pl[0], b: pl[1] }, me, token: (g ? g.token : 0) + 1, ch: new Chess(), fen: START, evalW: 0, bestUci: "", moves: [], snaps: [], over: "", busy: false, paused: false, sel: "", hint: null, last: null,
-          brill: { w: 0, b: 0 }, inBook: true, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
+          brill: { w: 0, b: 0 }, inBook: true, seen: L.startSeen(START), talk: {}, fr: {}, wn: {}, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
         g.ch.header("Event", m.t.replace(/[^\p{L}\p{N} .]/gu, "").trim(), "White", pl[0].name, "Black", pl[1].name, "Date", new Date().toISOString().slice(0, 10).replace(/-/g, "."));
         $("#df-home").hidden = true; $("#df-game").hidden = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
         K.loadBook().then((ok) => { if (!ok && g) g.inBook = false; });
-        const bc = E.botChat;
-        const styleBot = [pl[0], pl[1]].find((x) => x.kind === "style");
-        if (bc) { if (styleBot && bc.has(styleBot.style)) bc.mount($("#df-botchat"), styleBot.style, chatCtx); else bc.unmount(); }
-        buttons(); paint(); next(g.token);
+        chatSetup();
+        buttons(); paint();
+        const tok = g.token;
+        (async () => {
+          if (id === "combat") await vsIntro(tok);                       // écran « VS » : les deux combattants entrent
+          if (!g || tok !== g.token) return;
+          Object.values(g.talk).forEach((I, i) => setTimeout(() => { if (g && tok === g.token) I.say("greet"); }, 300 + i * 1500));
+          next(tok);
+        })();
       }
-      // résumé de la partie donné au LLM du bot (une phrase)
-      const chatCtx = () => g ? { summary: `coups joués : ${g.moves.slice(-8).map((m) => m.san).join(" ") || "aucun"} ; évaluation ${(g.evalW / 100).toFixed(1)} (positif = avantage Blancs) ; le bot a les ${g.pl.w.kind === "style" ? "Blancs" : "Noirs"}` } : {};
+      // résumé de la partie donné au LLM d'un personnage (une phrase)
+      const chatCtx = (c) => g ? { summary: `coups joués : ${g.moves.slice(-8).map((m) => m.san).join(" ") || "aucun"} ; évaluation ${(g.evalW / 100).toFixed(1)} (positif = avantage Blancs) ; tu as les ${c === "w" ? "Blancs" : "Noirs"}` } : {};
+      // personnages qui parlent : un seul bot (face à toi) avec historique + saisie, ou deux combattants avec transcript partagé
+      function chatSetup() {
+        const bc = E.botChat;
+        if (!bc) return;
+        bc.unmountAll(); g.talk = {};
+        const opp = (c) => () => { const n = g.pl[c === "w" ? "b" : "w"].name; return n === "Toi" ? (E.ai.name() || "toi") : n; };
+        if (g.mode.human) {
+          const c = g.pl.w.human ? "b" : "w", p = g.pl[c];
+          if (p.talk && bc.has(p.talk)) g.talk[c] = bc.mount($("#df-botchat"), p.talk, { opp: opp(c), ctx: () => chatCtx(c), log: true });
+        } else {
+          const top = g.flip ? "w" : "b", bot = top === "w" ? "b" : "w";
+          if ([top, bot].some((c) => g.pl[c].talk && bc.has(g.pl[c].talk))) bc.mountTranscript($("#df-botlog"));
+          [[top, "#df-botchat"], [bot, "#df-botchat2"]].forEach(([c, h]) => { const p = g.pl[c]; if (p.talk && bc.has(p.talk)) g.talk[c] = bc.mount($(h), p.talk, { opp: opp(c), ctx: () => chatCtx(c), shared: true }); });
+        }
+      }
+      function vsAvatar(p) { return p.talk && E.botChat ? E.botChat.avatar(p.talk) : `<div class="bot-av ph" style="--c:#8d8d97">SF</div>`; }
+      async function vsIntro(tok) {
+        const o = document.createElement("div");
+        o.className = "df-vs";
+        o.innerHTML = `<div class="row2"><div class="vp l">${vsAvatar(g.pl.w)}<span>${esc(g.pl.w.name)}</span><small>${g.pl.w.elo} Elo · Blancs</small></div><div class="vs">VS</div><div class="vp r">${vsAvatar(g.pl.b)}<span>${esc(g.pl.b.name)}</span><small>${g.pl.b.elo} Elo · Noirs</small></div></div><div class="go">PRÉPAREZ-VOUS</div>`;
+        document.body.appendChild(o);
+        E.vibrate([20, 40, 20]);
+        await new Promise((res) => { const t = setTimeout(res, 2600); o.onclick = () => { clearTimeout(t); res(); }; });
+        o.remove();
+      }
 
       const sideName = (c) => g.pl[c].name;
       function buttons() {
@@ -153,7 +212,7 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmount(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
+      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
@@ -210,17 +269,31 @@
         return "Partie nulle";
       }
 
+      // pas de nulle par répétition : si le coup ramène une position déjà vue (ou mène à un pat…), on le remplace tant que la partie est tenue (même règle que PC : nasko_nodraw)
+      async function nodraw(fen, uci) {
+        if (!g || !g.seen || !L.drawAfter(fen, uci, g.seen)) return uci;
+        const lines = await L.lines(fen, 6, 500);
+        return (await L.pick(fen, lines, uci, g.seen, () => L.lines(fen, 10, 800))).uci;
+      }
       async function botMove(fen, p, duo) {
         const ch = new Chess(fen);
-        if (p.kind === "style") return styleMove(fen, p);
+        if (p.kind === "style") { const r = await styleMove(fen, p); return { ...r, uci: await nodraw(fen, r.uci) }; }
+        if (p.kind === "penoire") {                                          // 2500 Elo, mais cherche le sacrifice brillant comme ETO
+          const m = await K.etoMove(fen, { topMs: 500, sacMs: 800 });
+          if (m.brilliant) { const u = await nodraw(fen, m.uci); return u === m.uci ? { uci: m.uci, brilliant: m.brilliant } : { uci: u }; }
+          const r = await L.choose(fen, powerOfElo(2500), g.seen, { ms: 700 });
+          if (!r || !r.uci) throw new Error("Le moteur n'a pas répondu.");
+          return { uci: r.uci };
+        }
         if (p.kind === "eto" || (p.kind === "duo" && duo % 2 === 1)) {
           const m = await K.etoMove(fen, { topMs: 900, sacMs: 1500 });
-          return { uci: m.uci, brilliant: m.brilliant };
+          const u = await nodraw(fen, m.uci);
+          return u === m.uci ? { uci: m.uci, brilliant: m.brilliant } : { uci: u };
         }
         if (p.elo < 1300 && Math.random() < Math.max(0, (1300 - p.elo) / 1050 * 0.6)) { const l = ch.moves({ verbose: true }); const m = l[Math.floor(Math.random() * l.length)]; return { uci: m.from + m.to + (m.promotion || "") }; }
-        const r = await L.think(fen, p.power || powerOfElo(p.elo), p.power >= 100 ? 1000 : undefined);
-        if (!r.uci) throw new Error("Le moteur n'a pas répondu.");
-        return { uci: r.uci };
+        const r = await L.choose(fen, p.power || powerOfElo(p.elo), g.seen, { pure: !!p.pure, ms: p.power >= 100 ? 1000 : undefined });   // E.N.O.S. (pleine puissance) cherche lui aussi le coup brillant
+        if (!r || !r.uci) throw new Error("Le moteur n'a pas répondu.");
+        return { uci: r.uci, brilliant: r.brilliant ? { piece: r.brilliant.piece, cp: r.brilliant.cp, mate: r.brilliant.mate, line: [] } : undefined };
       }
 
       // ---- bots de style (Nasko, Lelex) : livre d'ouvertures du joueur, puis Stockfish + fréquence d'erreurs mesurée sur ses parties
@@ -249,10 +322,10 @@
       async function commit(uci, meta, tok) {
         g.busy = true;
         const turn = g.ch.turn(), before = g.fen, evalBefore = g.evalW, bestUci = g.bestUci;
-        g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook });
+        g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook, seen: g.seen });
         const m = g.ch.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
         if (!m) { g.busy = false; return status("Coup illégal"); }
-        g.fen = g.ch.fen(); g.last = [m.from, m.to];
+        g.fen = g.ch.fen(); g.last = [m.from, m.to]; g.seen = L.addSeen(g.seen, g.fen);
         E.chessSound && E.chessSound.forSan(m.san);
         paint(uci);
         let ev;
@@ -264,12 +337,13 @@
         const q = j.q, bu = j.before.best || bestUci, bestSan = bu && bu !== uci ? K.san(before, bu) : "";
         if (meta.brilliant && q.loss <= 60) { q.key = "brilliant"; q.label = K.QUALITY.brilliant; }
         if (bu && uci === bu && q.key !== "brilliant" && q.loss <= 8) { q.key = "best"; q.label = K.QUALITY.best; }
+        let bookExit = false;
         if (g.inBook) {                                               // livre d'ouvertures : un coup de théorie n'est jamais jugé sur une évaluation superficielle (comme « Livre » sur Chess.com)
           const path = g.moves.map((x) => x.san).concat(m.san), name = K.inBook(path);
-          if (name == null) g.inBook = false;
+          if (name == null) { g.inBook = false; bookExit = true; }
           else if (q.key !== "brilliant" && q.loss < 250) { q.key = "book"; q.label = K.QUALITY.book; q.opening = name; }
         }
-        ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ ew: ev.w, san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "" });
+        ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ ew: ev.w, san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "", bookExit });
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
         judge(g.moves[g.moves.length - 1], meta);
         g.busy = false;
@@ -300,11 +374,33 @@
         if (g.id === "coach" && humanMove && mv.q.key !== "best") say = txt;
         if (say) { const box2 = $("#df-say"); box2.hidden = false; box2.textContent = say; box2.onclick = () => E.ai && E.ai.speak && E.ai.speak(g.pl[mv.color].kind === "eto" ? "eto" : "enos", say); }
         if (humanMove || g.mode.duel) llm(mv, humanMove);
-        if (E.botChat && g.pl[mv.color === "w" ? "b" : "w"] && (g.pl.w.kind === "style" || g.pl.b.kind === "style")) {
-          const botMove = g.pl[mv.color].kind === "style", k = mv.q.key, p = botMove ? "bot_" : "h_";
-          const kind = k === "brilliant" ? p + "brilliant" : k === "blunder" ? p + "blunder" : k === "mistake" ? p + "mistake" : (k === "best" || k === "excellent") ? (botMove ? "good" : "h_good") : g.ch.in_check() && botMove ? "check" : "chat";
-          if (!g.ch.in_checkmate()) E.botChat.event(kind, { san: mv.san });
-        }
+        chatEvents(mv);
+      }
+      // la chat box réagit à chaque coup : ouverture (annonce, sortie de livre, refus), coups forts, brillants, gaffes, échecs, menaces de mat, frustration
+      function chatEvents(mv) {
+        const bc = E.botChat;
+        if (!bc || !bc.count() || !g.talk) return;
+        bc.tick();
+        const c = mv.color, o = c === "w" ? "b" : "w", T = g.talk[c], O = g.talk[o], k = mv.q.key, d = { san: mv.san, open: g.openName };
+        const prev = g.moves.length >= 2 ? g.moves[g.moves.length - 2].ew : 0, swing = (mv.ew - prev) * (c === "w" ? 1 : -1);
+        const say = (I, kind) => !!I && I.say(kind, d);
+        if (mv.q.opening) { if (g.openName !== mv.q.opening) g.openName = mv.q.opening; d.open = g.openName; if (!g.openSaid && g.moves.length >= 3) { g.openSaid = true; say(T, "open_announce") || say(O, "open_announce"); } }
+        if (mv.bookExit) { if (g.moves.length <= 10) say(O, "open_refused") || say(T, "open_end"); else say(T, "open_end") || say(O, "open_end"); }
+        else if (k === "brilliant") { say(T, "bot_brilliant"); say(O, "h_brilliant"); }
+        else if (k === "blunder") { say(T, "bot_blunder"); say(O, "h_blunder"); }
+        else if (k === "mistake") { say(T, "bot_mistake"); say(O, "h_mistake"); }
+        else if (k === "best" || k === "excellent") { if (swing >= 120) { say(T, "super"); say(O, "h_good"); } else say(T, "good") || say(O, "h_good"); }
+        else if (g.ch.in_check()) { say(T, "check"); say(O, "check_received"); }
+        else say(T, "chat") || say(O, "chat");
+        const ew = mv.ew, win = Math.abs(ew) >= 9000 ? (ew > 0 ? "w" : "b") : "";
+        if (win && !g.mateSaid) { g.mateSaid = true; say(g.talk[win], "mate_coming"); say(g.talk[win === "w" ? "b" : "w"], "mate_danger"); }
+        else if (!win) ["w", "b"].forEach((col) => {
+          const I = g.talk[col];
+          if (!I) return;
+          const pov = ew * (col === "w" ? 1 : -1), n = g.moves.length;
+          if (pov <= -300 && n - (g.fr[col] || -99) >= 8) { g.fr[col] = n; I.say("frustration", d); }
+          else if (pov >= 500 && n - (g.wn[col] || -99) >= 10) { g.wn[col] = n; I.say("winning", d); }
+        });
       }
       // commentaire facultatif d'ETO (Groq) pour les coups marquants
       async function llm(mv, humanMove) {
@@ -323,7 +419,7 @@
         let s = null;
         for (let i = 0; i < n && g.snaps.length; i++) { s = g.snaps.pop(); g.ch.undo(); }
         if (!s) return;
-        g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
+        g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.seen = s.seen || L.startSeen(s.fen); g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true;
         paint(); status("Coup annulé"); next(g.token);
       }
@@ -350,9 +446,15 @@
         if (!g) return;
         g.over = result; g.busy = false; g.token++;
         paint(); status(result);
-        if (E.botChat && (g.pl.w.kind === "style" || g.pl.b.kind === "style") && !stopped) {
-          const bw = g.pl.w.kind === "style" ? "w" : "b", win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : "";
-          E.botChat.event(!win ? "draw" : /Abandon/.test(result) ? (win === bw ? "resign_win" : "mate_lose") : win === bw ? "mate_win" : "mate_lose");
+        if (E.botChat && E.botChat.count() && !stopped && g.talk) {                // la chat box a le dernier mot
+          const win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : "", lose = win === "w" ? "b" : "w";
+          if (!win) Object.values(g.talk).forEach((I) => I.say("draw"));
+          else {
+            const resign = /Abandon/.test(result);
+            if (g.talk[win]) g.talk[win].say(resign ? "resign_win" : "mate_win");
+            if (g.talk[lose] && !resign) g.talk[lose].say("mate_lose");
+            E.botChat.result(g.talk[win] || null);
+          }
         }
         const rev = K.buildReview(g.moves, g.me || "w");
         const accW = K.buildReview(g.moves, "w").me.accuracy, accB = K.buildReview(g.moves, "b").me.accuracy;
@@ -372,7 +474,7 @@
       function replay(rec) {
         if (!rec || !rec.mv || !rec.mv.length) return;
         if (g) { g.token++; L.abort && L.abort(); }
-        if (E.botChat) E.botChat.unmount();
+        if (E.botChat) E.botChat.unmountAll();
         const fens = [START], c = new Chess();
         rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
         const R = { rec, fens, k: 0, speed: 1, playing: false };
