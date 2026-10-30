@@ -6,15 +6,18 @@
   const E = window.ENOS, $ = E.$, esc = E.esc;
   const CH = {
     nasko: { name: "Nasko", img: "img/bots/nasko.png", style: "Tu es Nasko, 20 ans, étudiant en prépa/école d'ingé, joueur d'échecs amateur (Scandinave, Gambit Alien). Tu parles en français d'ado, ironique et un peu intello : « bg », « blud », « psk », « ct », « frr », « comme quoi », « doucement », des 😭😂, tu te moques de toi-même, tu parles d'accuracy et de « !! » ou tomate." },
-    penoire: { name: "Nasko (pénoire)", img: "img/bots/penoire.png", style: "Tu es Nasko version « pénoire » : 2500 Elo, chasseur de coups brillants, très sûr de toi, taquin et arrogant mais jamais méchant. Tu parles en français d'ado comme Nasko : « bg », « blud », « doucement », « comme quoi », « rincé », « Super Nova vs Dying Ant », 😭😂." },
+    penoire: { name: "Nasko (pénoire)", img: "img/bots/penoire.png", title: "IM", style: "Tu es Nasko version « pénoire » : 2500 Elo, chasseur de coups brillants, très sûr de toi, taquin et arrogant mais jamais méchant. Tu parles en français d'ado comme Nasko : « bg », « blud », « doucement », « comme quoi », « rincé », « Super Nova vs Dying Ant », 😭😂." },
     lelex: { name: "Lelex", img: "img/bots/lelex.png", style: "Tu es Lelex, 20 ans, joueur d'échecs amateur. Tu parles en français d'ado, phrases très courtes, taquin : « XDDD », « vrm mdrr », « C'est réel », « Att att », « On va rire un peu », « Fraude sur fraude », « frérot », « la belle époque »." },
-    eto: { name: "ETO Brillant", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
-    enos: { name: "E.N.O.S.", ph: ["ENOS", "#e0243c"], style: "Tu es E.N.O.S., IA froide, précise et technique, un brin arrogante. Phrases courtes, en français." },
+    naskurieux: { name: "Naskurieux", img: "img/bots/naskurieux.png", title: "GM", style: "Tu es Naskurieux, agent secret en costume noir avec oreillette, version « furieuse » de Nasko. Tu démarres à 1 Elo (tu es nul) mais tu es Grand Maître : à chaque erreur de ton adversaire tu gagnes 200 Elo et tu deviens de plus en plus sûr de toi. Français d'ado, ironique : « bg », « blud », « mission », « oreillette », « comme quoi » 😭." },
+    ghorghor: { name: "GhorGhor", img: "img/bots/ghorghor.png", style: "Tu es GhorGhor, bot de 1400 Elo, pote de Lelex : phrases très courtes, taquin, « XDDD », « vrm mdrr », « C'est réel », « Att att ». Tu caches une vraie puissance." },
+    ghorreal: { name: "GhorGhor le vrai", img: "img/bots/ghorghor_vrai.png", title: "GM", style: "Tu es GhorGhor le vrai, Grand Maître 3200 Elo, calme, froid, menaçant, lunettes noires. Phrases courtes et sombres en français, une pointe d'humour noir." },
+    eto: { name: "ETO Brillant", title: "GM", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
+    enos: { name: "E.N.O.S.", title: "GM", ph: ["ENOS", "#e0243c"], style: "Tu es E.N.O.S., IA froide, précise et technique, un brin arrogante. Phrases courtes, en français." },
   };
   // probabilité qu'un événement déclenche une réplique ; les moments forts parlent toujours
   const PROB = { greet: 1, open_announce: 0.85, open_end: 0.7, open_refused: 1, bot_brilliant: 1, h_brilliant: 1, bot_blunder: 0.95, h_blunder: 0.95, bot_mistake: 0.5, h_mistake: 0.5, super: 0.8, good: 0.18, h_good: 0.2,
-    check: 0.35, check_received: 0.35, frustration: 0.6, winning: 0.5, mate_coming: 1, mate_danger: 1, mate_win: 1, mate_lose: 1, draw: 1, resign_win: 1, chat: 0.14 };
-  const STRONG = new Set(["greet", "open_announce", "open_end", "open_refused", "bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_coming", "mate_danger", "mate_win", "mate_lose", "draw", "resign_win"]);
+    check: 0.35, check_received: 0.35, elo_up: 1, transform: 1, minor_lost: 0.9, frustration: 0.6, winning: 0.5, mate_coming: 1, mate_danger: 1, mate_win: 1, mate_lose: 1, draw: 1, resign_win: 1, chat: 0.14 };
+  const STRONG = new Set(["elo_up", "transform", "minor_lost", "greet", "open_announce", "open_end", "open_refused", "bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_coming", "mate_danger", "mate_win", "mate_lose", "draw", "resign_win"]);
   const END = new Set(["mate_win", "mate_lose", "draw", "resign_win"]);
   const MIN_GAP = 2;                                                  // demi-coups minimum entre deux répliques d'un même personnage (hors moments forts)
   const LLM_KINDS = new Set(["bot_brilliant", "bot_blunder", "h_brilliant", "h_blunder", "mate_win", "mate_lose"]);
@@ -23,6 +26,9 @@
   let ALL = [], TR = null, ply = 0, lastSpoke = -1;                  // instances actives, transcript partagé, demi-coup courant, dernier demi-coup où quelqu'un a parlé
   const llmOn = () => E.ai && E.ai.configured && E.ai.configured() && E.settings.get("chess.comment", true);
 
+  // TITRES façon Chess.com (badge rouge) selon l'Elo : GM ≥ 2800 · IM ≥ 2500 · FM ≥ 2300 · CM ≥ 2200 ; `special` impose un titre (Naskurieux est GM à 1 Elo)
+  const titleOf = (elo, special) => (special !== undefined && special !== null ? special : elo >= 2800 ? "GM" : elo >= 2500 ? "IM" : elo >= 2300 ? "FM" : elo >= 2200 ? "CM" : "");
+  const badge = (t) => (t ? `<span class="ttl ttl-${t}" title="${{ GM: "Grand Maître", IM: "Maître International", FM: "Maître FIDE", CM: "Candidat Maître" }[t] || t}">${t}</span>` : "");
   const avatar = (id, cls) => { const c = CH[id]; return c.img ? `<img class="bot-av ${cls || ""}" src="${c.img}" alt="${esc(c.name)}">` : `<div class="bot-av ph ${cls || ""}" style="--c:${c.ph[1]}">${esc(c.ph[0])}</div>`; };
 
   /**
@@ -35,15 +41,24 @@
     opts = opts || {};
     const I = { id, host, opts, msgs: [], unread: 0, gap: 99, llm: 0, alive: true };
     host.hidden = false;
-    host.innerHTML = `<div class="bot-banner">${avatar(id)}<div class="bot-bubble" hidden><small>${esc(c.name)}</small><span class="bot-t"></span></div>${opts.log || opts.shared ? `<button class="bot-chatbtn" aria-label="Chat">💬<i hidden></i></button>` : ""}</div>
+    host.innerHTML = `<div class="bot-banner">${avatar(id)}<div class="bot-bubble" hidden><small>${badge(c.title)}${esc(c.name)}</small><span class="bot-t"></span></div>${opts.log || opts.shared ? `<button class="bot-chatbtn" aria-label="Chat">💬<i hidden></i></button>` : ""}</div>
       ${opts.log ? `<div class="bot-log" hidden><div class="bot-msgs"></div><form class="bot-in"><input type="text" maxlength="160" placeholder="Écris à ${esc(c.name)}…" enterkeyhint="send" autocomplete="off"><button type="submit" aria-label="Envoyer">➤</button></form></div>` : ""}`;
     const btn = host.querySelector(".bot-chatbtn");
-    if (btn) btn.onclick = () => { const l = opts.shared ? TR && TR.host : host.querySelector(".bot-log"); if (!l) return; l.hidden = !l.hidden; if (!l.hidden) { I.unread = 0; badge(I); scroll(l); } };
+    if (btn) btn.onclick = () => { const l = opts.shared ? TR && TR.host : host.querySelector(".bot-log"); if (!l) return; l.hidden = !l.hidden; if (!l.hidden) { I.unread = 0; unreadBadge(I); scroll(l); } };
     const form = host.querySelector(".bot-in");
     if (form) form.onsubmit = (e) => { e.preventDefault(); const i = form.querySelector("input"), t = i.value.trim(); if (t) { i.value = ""; userSays(I, t); } };
     I.say = (kind, d) => fire(I, kind, d);
     ALL.push(I);
     return I;
+  }
+  /** Change le personnage d'une instance (GhorGhor → GhorGhor le vrai) : mêmes options, même emplacement. */
+  function replace(I, id, kindFx) {
+    if (!I || !CH[id]) return I;
+    const host = I.host, opts = I.opts;
+    I.alive = false; ALL = ALL.filter((x) => x !== I);
+    const n = mount(host, id, opts);
+    if (n) { const av = host.querySelector(".bot-av"); if (av && kindFx) av.classList.add(kindFx); }
+    return n;
   }
   /** Transcript partagé des combats (tous les personnages, noms en tête). */
   function mountTranscript(host) { TR = { host, msgs: [] }; host.hidden = true; host.innerHTML = '<div class="bot-msgs"></div>'; }
@@ -55,7 +70,7 @@
   /** À appeler une fois par demi-coup joué : fait avancer les compteurs anti-bavardage. */
   function tick() { ply++; ALL.forEach((I) => I.gap++); }
 
-  const badge = (I) => { const i = I.host.querySelector(".bot-chatbtn i"); if (i) { i.hidden = !I.unread; i.textContent = I.unread; } };
+  const unreadBadge = (I) => { const i = I.host.querySelector(".bot-chatbtn i"); if (i) { i.hidden = !I.unread; i.textContent = I.unread; } };
   const scroll = (box) => { const m = box && (box.querySelector(".bot-msgs") || box); if (m) m.scrollTop = m.scrollHeight; };
   function log(I, who, text) {
     const row = (name) => `<div class="bot-m ${who}">${name ? `<b>${esc(name)}</b> ` : ""}${esc(text)}</div>`;
@@ -64,18 +79,18 @@
       m.insertAdjacentHTML("beforeend", row(""));
       while (m.children.length > 40) m.firstChild.remove();
       scroll(m);
-      if (who === "b" && I.host.querySelector(".bot-log").hidden) { I.unread++; badge(I); }
+      if (who === "b" && I.host.querySelector(".bot-log").hidden) { I.unread++; unreadBadge(I); }
     }
     if (TR) {
       const m = TR.host.querySelector(".bot-msgs");
       m.insertAdjacentHTML("beforeend", row(who === "b" ? CH[I.id].name : ""));
       while (m.children.length > 60) m.firstChild.remove();
       scroll(m);
-      if (who === "b" && TR.host.hidden) { ALL.filter((x) => x.opts.shared).forEach((x) => { x.unread++; badge(x); }); }
+      if (who === "b" && TR.host.hidden) { ALL.filter((x) => x.opts.shared).forEach((x) => { x.unread++; unreadBadge(x); }); }
     }
   }
 
-  const fmt = (t, I, d) => t.replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
+  const fmt = (t, I, d) => t.replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{elo\}/g, (d && d.elo) || "").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
 
   /** Le personnage « tape » (3 points), puis la réplique apparaît dans la bulle et l'historique. */
   async function speak(I, text) {
@@ -132,5 +147,5 @@
   /** Fin de partie : le vainqueur brille, le perdant se grise. winner : "w" | "b" | "" ; colorOf : instance -> couleur. */
   function result(winnerInst) { ALL.forEach((I) => { const a = I.host.querySelector(".bot-av"); if (a) { a.classList.toggle("win", I === winnerInst); a.classList.toggle("lose", !!winnerInst && I !== winnerInst); } }); }
 
-  E.botChat = { has: (id) => !!CH[id], mount, mountTranscript, unmountAll, tick, result, avatar, bots: CH, count: () => ALL.length };
+  E.botChat = { replace, titleOf, badge, has: (id) => !!CH[id], mount, mountTranscript, unmountAll, tick, result, avatar, bots: CH, count: () => ALL.length };
 })();

@@ -237,3 +237,19 @@
 .df-presets button{padding:7px 11px;border-radius:14px;border:1px solid var(--line);background:#101012;font:700 12px var(--ui);color:#cfcfd6}
 .df-presets button:active{border-color:var(--red)}
 @media (prefers-reduced-motion:reduce){.df-vs .vp,.df-vs .vs,.df-vs .go{animation:none}}
+
+/* ---- titres façon Chess.com (GM / IM / FM / CM) */
+.ttl{display:inline-block;margin-right:6px;padding:1px 6px;border-radius:4px;background:#a52727;color:#fff;font:800 11px/16px var(--ui);letter-spacing:.3px;vertical-align:1px}
+.ttl-IM{background:#a52727}.ttl-FM{background:#7a4a1c}.ttl-CM{background:#3f6b4a}
+.vp .ttl{font-size:13px;margin-right:6px}
+
+/* ---- réveil de GhorGhor : glitch + ambiance sombre */
+.glitch-ov{position:fixed;inset:0;z-index:90;pointer-events:none;mix-blend-mode:difference;overflow:hidden}
+.glitch-ov i{position:absolute;left:0;right:0}
+html.ghor #app{transition:filter 1.4s,background 1.4s;filter:brightness(.6) contrast(1.15) saturate(.7)}
+html.ghor{--red:#ff1a3c;--red2:#ff4d63;--halo:#a0001a66}
+html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#00000038 2px 3px),radial-gradient(ellipse at center,transparent 40%,#000c 100%);animation:ghorFlick 5s infinite}
+@keyframes ghorFlick{0%,91%,100%{opacity:1}93%{opacity:.45}95%{opacity:.9}97%{opacity:.35}}
+.bot-av.awake{animation:awake 1.4s ease-out;box-shadow:0 0 22px #ff1a3caa}
+@keyframes awake{0%{filter:brightness(4) contrast(2);transform:scale(1.25)}40%{filter:hue-rotate(90deg) brightness(1.6)}100%{filter:none;transform:none}}
+@media (prefers-reduced-motion:reduce){html.ghor body::after,.bot-av.awake{animation:none}}

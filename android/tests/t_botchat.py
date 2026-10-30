@@ -55,6 +55,43 @@ with sync_playwright() as pw:
     check(pg.evaluate(A + ".g.pl.w.name") != pg.evaluate(A + ".g.pl.b.name"), "Nasko vs Nasko : noms distincts")
     pg.click(".df-vs")
     pg.click("#b-stop") if pg.locator("#b-stop").count() else None
+    # --- titres façon Chess.com selon l'Elo
+    T = "([e, s]) => ENOS.botChat.titleOf(e, s)"
+    got = [pg.evaluate(T, [e, None]) for e in (1300, 2299, 2200, 2300, 2499, 2500, 2799, 2800, 3200)]
+    check(got == ["", "CM", "CM", "FM", "FM", "IM", "IM", "GM", "GM"], "titres : GM ≥ 2800, IM 2500-2799, FM ≥ 2300, CM ≥ 2200 : %s" % got)
+    check(pg.evaluate(T, [1, "GM"]) == "GM", "Naskurieux : GM même à 1 Elo")
+    pg.evaluate(A + ".launch('combat', {color: 'w', cw: 'penoire', cb: 'eto'})"); pg.click(".df-vs")
+    check(pg.locator("#df-top .ttl-GM, #df-bot .ttl-GM").count() == 1 and pg.locator("#df-top .ttl-IM, #df-bot .ttl-IM").count() == 1, "badges IM (Pénoire) et GM (ETO Brillant) à côté des pseudos")
+    pg.evaluate(A + ".launch('combat', {color: 'w', cw: 'nasko', cb: 'lelex'})"); pg.click(".df-vs")
+    check(pg.locator("#df-top .ttl, #df-bot .ttl").count() == 0, "Nasko et Lelex : aucun titre")
+    # --- Naskurieux : 1 Elo, GM, +200 Elo à chaque erreur adverse
+    pg.evaluate(A + ".launch('naskurieux', {color: 'w'})")
+    check(pg.evaluate(A + ".g.pl.b.elo") == 1 and "GM" in pg.inner_text("#df-top"), "Naskurieux : 1 Elo, badge GM : " + pg.inner_text("#df-top").replace("\n", " ")[:40])
+    pg.click('#df-board [data-sq="f2"]'); pg.click('#df-board [data-sq="f3"]')
+    pg.wait_for_function(A + ".g.moves.length >= 2", timeout=40000)
+    pg.wait_for_function("!" + A + ".g.busy", timeout=20000)
+    pg.click('#df-board [data-sq="g2"]'); pg.click('#df-board [data-sq="g4"]')
+    try:                                                                  # g4 est une gaffe : la fenêtre « Gaffe catastrophique » propose de continuer
+        pg.wait_for_selector("#sheet .opt >> text=CONTINUER", timeout=25000); pg.click("#sheet .opt >> text=CONTINUER")
+    except Exception:
+        pass
+    pg.wait_for_function(A + ".g.moves.length >= 4", timeout=40000)
+    e1 = pg.evaluate(A + ".g.pl.b.elo")
+    check(e1 >= 201 and (e1 - 1) % 200 == 0, "Naskurieux gagne +200 Elo par erreur adverse (f3, g4) : %d Elo" % e1)
+    # --- GhorGhor : perd 3 pièces mineures -> GhorGhor le vrai
+    pg.wait_for_function("!" + A + ".g.busy", timeout=20000)
+    pg.evaluate(A + ".launch('ghorghor', {color: 'w'})")
+    check(pg.evaluate(A + ".g.pl.b.elo") == 1400 and pg.locator("#df-top .ttl").count() == 0, "GhorGhor : 1400 Elo, pas de titre")
+    check("ghorghor.png" in pg.evaluate("document.querySelector('#df-botchat .bot-av').src"), "GhorGhor : illustration normale")
+    pg.evaluate("""() => { const g = %s.g; const fen = 'rnbqkb1r/pppppppp/8/8/8/5n2/PPPPPPPP/RNBQKBNR w KQkq - 0 1'; g.ch.load(fen); g.fen = fen; g.moves = []; g.snaps = []; g.inBook = false; g.lostMinor = {w: 0, b: 2}; }""" % A)
+    pg.click('#df-board [data-sq="e2"]'); pg.click('#df-board [data-sq="f3"]')
+    pg.wait_for_selector(".glitch-ov", timeout=30000)
+    check(True, "l'écran glitche")
+    pg.wait_for_function("document.documentElement.classList.contains('ghor')", timeout=15000)
+    check(pg.evaluate(A + ".g.pl.b.elo") == 3200 and pg.evaluate(A + ".g.pl.b.name") == "GhorGhor le vrai", "GhorGhor devient le vrai : 3200 Elo")
+    check("ghorghor_vrai.png" in pg.evaluate("document.querySelector('#df-botchat .bot-av').src") and pg.locator("#df-top .ttl-GM").count() == 1, "nouvelle illustration (lunettes) + badge GM")
+    pg.click("#df-back")
+    check(not pg.evaluate("document.documentElement.classList.contains('ghor')"), "ambiance rétablie en quittant la partie")
     # autre mode : pas de bot
     pg.evaluate(A + ".launch('enos', {color: 'w', pow: 5, elo: 400})")
     check(pg.evaluate("document.querySelector('#df-botchat').hidden"), "pas de chat hors bots Nasko / Lelex")

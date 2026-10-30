@@ -20,6 +20,8 @@
     { id: "nasko", t: "🎭 Nasko", s: "Le bot qui joue comme La_Loi_De_Fortes", human: true, style: true },
     { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
+    { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo à chaque erreur adverse", human: true },
+    { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "combat", t: "⚔ Combat de bots", s: "Nasko vs Pénoire, Lelex vs ETO… tu choisis", human: false, duel: true },
     { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
     { id: "ebs", t: "✦ ETO Brillant vs Stockfish", s: "Combat spectateur · enregistré", human: false, duel: true },
@@ -57,10 +59,15 @@
         eto: () => ({ kind: "eto", elo: 3200, name: "ETO Brillant", talk: "eto" }),
         enos: () => ({ kind: "sf", elo: 3200, power: 100, name: "E.N.O.S.", talk: "enos" }),
         stockfish: () => ({ kind: "sf", elo: 3200, power: 100, pure: true, name: "Stockfish" }),
+        naskurieux: () => ({ kind: "sf", elo: 1, name: "Naskurieux", talk: "naskurieux", title: "GM", gain: true }),       // GM à 1 Elo : +200 à chaque inexactitude / erreur / gaffe de l'adversaire
+        ghorghor: () => ({ kind: "style", style: "lelex", elo: 1400, skill: { mistake: 0.12, blunder: 0.05 }, name: "GhorGhor", talk: "ghorghor", transform: true }),   // style Lelex ; 3 pièces mineures perdues -> GhorGhor le vrai
       };
-      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor"];
+      const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
+      const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
+      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
-        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
+        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
 
       el.innerHTML = `
         <div id="df-home">
@@ -110,6 +117,8 @@
         else if (id === "speedrun") body = `<label class="fld">Niveau du bot</label><select id="su-elo" class="sel">${ELOS.map((e) => `<option value="${e}" ${e === elo ? "selected" : ""}>Bot ${e} Elo</option>`).join("")}</select>`;
         else if (id === "titans") body = `<p class="muted" style="line-height:1.5">Spectacle : E.N.O.S. (Stockfish pur) joue les Blancs, ETO (chasseur de sacrifices) les Noirs. Ils se répondent en direct.</p>`;
         else if (id === "penoire") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">La version <b>pénoire</b> de Nasko : <b>2500 Elo</b>, il <b style="color:#1acfd6">cherche chaque sacrifice brillant !!</b> comme ETO, ne répète jamais et ne t'épargne pas… Il a toujours un mot pour toi à la fin.</p>` + colorSeg;
+        else if (id === "naskurieux") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">L'agent <b>Naskurieux</b> est <b>Grand Maître</b>… mais il démarre à <b>1 Elo</b>. À chaque <b>imprécision, erreur ou gaffe</b> de ton adversaire il gagne <b style="color:#1acfd6">+200 Elo</b> et joue de mieux en mieux. Ne lui fais aucun cadeau.</p>` + colorSeg;
+        else if (id === "ghorghor") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>GhorGhor</b> joue comme Lelex, niveau <b>1400</b>. Mais s'il perd <b>plus de 2 pièces mineures</b> (cavaliers, fous)… quelque chose se réveille.</p>` + colorSeg;
         else if (id === "combat") {
           const opt = (v) => Object.entries(FIGHT_NAMES).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${n}</option>`).join(""), last = E.settings.get("defi.combat", ["nasko", "penoire"]);
           body = `<p class="muted" style="margin-bottom:10px;line-height:1.5">Spectacle : choisis les deux combattants, ils se parlent pendant la partie (chat), s'affrontent à fond et la partie est <b>enregistrée</b> pour le replay.</p>
@@ -138,7 +147,7 @@
       // ------------------------------------------------------------------ partie
       function players(id, o) {
         const hu = { human: true, name: "Toi" };
-        if (id === "nasko" || id === "lelex" || id === "penoire") { const op = FIGHT[id](); return o.color === "w" ? [hu, op] : [op, hu]; }
+        if (FIGHT_HUMAN.includes(id)) { const op = FIGHT[id](); return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "combat") { const a = FIGHT[o.cw || "nasko"](), b = FIGHT[o.cb || "penoire"](); if (o.cw === o.cb) { a.name += " (Blancs)"; b.name += " (Noirs)"; } return [a, b]; }
         if (id === "brillant") return o.color === "w" ? [hu, { kind: "eto", elo: 3200, name: "ETO Brillant" }] : [{ kind: "eto", elo: 3200, name: "ETO Brillant" }, hu];
         if (id === "enos") { const op = { kind: "sf", elo: B.powerToElo(o.pow), power: o.pow, name: "E.N.O.S." }; return o.color === "w" ? [hu, op] : [op, hu]; }
@@ -157,9 +166,10 @@
         if (g) g.token++;
         const me = m.human ? (pl[0].human ? "w" : "b") : null;
         g = { id, mode: m, pl: { w: pl[0], b: pl[1] }, me, token: (g ? g.token : 0) + 1, ch: new Chess(), fen: START, evalW: 0, bestUci: "", moves: [], snaps: [], over: "", busy: false, paused: false, sel: "", hint: null, last: null,
-          brill: { w: 0, b: 0 }, inBook: true, seen: L.startSeen(START), talk: {}, fr: {}, wn: {}, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
+          brill: { w: 0, b: 0 }, inBook: true, seen: L.startSeen(START), talk: {}, fr: {}, wn: {}, lostMinor: { w: 0, b: 0 }, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
         g.ch.header("Event", m.t.replace(/[^\p{L}\p{N} .]/gu, "").trim(), "White", pl[0].name, "Black", pl[1].name, "Date", new Date().toISOString().slice(0, 10).replace(/-/g, "."));
         $("#df-home").hidden = true; $("#df-game").hidden = false;
+        document.documentElement.classList.remove("ghor");
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
         K.loadBook().then((ok) => { if (!ok && g) g.inBook = false; });
         chatSetup();
@@ -193,7 +203,7 @@
       async function vsIntro(tok) {
         const o = document.createElement("div");
         o.className = "df-vs";
-        o.innerHTML = `<div class="row2"><div class="vp l">${vsAvatar(g.pl.w)}<span>${esc(g.pl.w.name)}</span><small>${g.pl.w.elo} Elo · Blancs</small></div><div class="vs">VS</div><div class="vp r">${vsAvatar(g.pl.b)}<span>${esc(g.pl.b.name)}</span><small>${g.pl.b.elo} Elo · Noirs</small></div></div><div class="go">PRÉPAREZ-VOUS</div>`;
+        o.innerHTML = `<div class="row2"><div class="vp l">${vsAvatar(g.pl.w)}<span>${tbadge(g.pl.w)}${esc(g.pl.w.name)}</span><small>${g.pl.w.elo} Elo · Blancs</small></div><div class="vs">VS</div><div class="vp r">${vsAvatar(g.pl.b)}<span>${tbadge(g.pl.b)}${esc(g.pl.b.name)}</span><small>${g.pl.b.elo} Elo · Noirs</small></div></div><div class="go">PRÉPAREZ-VOUS</div>`;
         document.body.appendChild(o);
         E.vibrate([20, 40, 20]);
         await new Promise((res) => { const t = setTimeout(res, 2600); o.onclick = () => { clearTimeout(t); res(); }; });
@@ -212,14 +222,14 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
+      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor"); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
         const pos = B.parse(g.fen), turn = pos.turn;
         const targets = g.sel ? new Chess(g.fen).moves({ square: g.sel, verbose: true }).map((m) => m.to) : [];
         B.render($("#df-board"), pos.m, { flip: g.flip, last: g.last, hint: g.hint, sel: g.sel, targets, check: g.ch.in_check() ? B.kingSquare(pos.m, turn) : "", badge: (() => { const m = g.moves[g.moves.length - 1]; return m && m.uci && m.q && B.BADGES[m.q.key] ? { sq: m.uci.slice(2, 4), key: m.q.key, id: g.moves.length } : null; })(), end: g.ch.in_checkmate() ? { sq: B.kingSquare(pos.m, turn), id: g.moves.length } : null, onTap, anim });
-        const strip = (c) => `<span class="df-dot ${c}"></span><b>${esc(sideName(c))}</b><small>${g.pl[c].elo ? g.pl[c].elo + " Elo" : ""}</small><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>`;
+        const strip = (c) => `<span class="df-dot ${c}"></span>${tbadge(g.pl[c])}<b>${esc(sideName(c))}</b><small>${g.pl[c].elo ? g.pl[c].elo + " Elo" : ""}</small><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>`;
         const top = g.flip ? "w" : "b", bot = g.flip ? "b" : "w";
         $("#df-top").innerHTML = strip(top); $("#df-bot").innerHTML = strip(bot);
         const w = Math.abs(g.evalW) >= 9000 ? (g.evalW > 0 ? 100 : 0) : B.winPct(g.evalW);
@@ -308,7 +318,7 @@
         if (node) { const ok = Object.entries(node).filter(([u]) => legal.has(u)); if (ok.length) return { uci: wpick(ok) }; }
         const lines = await L.lines(fen, 6, 450);
         if (!lines.length) { const r = await L.think(fen, powerOfElo(p.elo)); return { uci: r.uci }; }
-        const top = lines[0], k = S ? S.skill : { mistake: 0.15, blunder: 0.08 }, roll = Math.random();
+        const top = lines[0], k = p.skill || (S ? S.skill : { mistake: 0.15, blunder: 0.08 }), roll = Math.random();
         const cand = lines.filter((l) => !top.mate || l.mate);
         let pool;
         if (!top.mate && roll < k.blunder) pool = lines.filter((l) => top.cp - l.cp >= 250 && !l.mate);
@@ -322,7 +332,7 @@
       async function commit(uci, meta, tok) {
         g.busy = true;
         const turn = g.ch.turn(), before = g.fen, evalBefore = g.evalW, bestUci = g.bestUci;
-        g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook, seen: g.seen });
+        g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook, seen: g.seen, lostMinor: { ...g.lostMinor }, elos: { w: g.pl.w.elo, b: g.pl.b.elo } });
         const m = g.ch.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
         if (!m) { g.busy = false; return status("Coup illégal"); }
         g.fen = g.ch.fen(); g.last = [m.from, m.to]; g.seen = L.addSeen(g.seen, g.fen);
@@ -344,6 +354,12 @@
           else if (q.key !== "brilliant" && q.loss < 250) { q.key = "book"; q.label = K.QUALITY.book; q.opening = name; }
         }
         ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ ew: ev.w, san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "", bookExit });
+        const victim = turn === "w" ? "b" : "w", mvRec = g.moves[g.moves.length - 1];
+        if (g.pl[victim].gain && ["inaccuracy", "mistake", "blunder"].includes(q.key)) {          // Naskurieux : +200 Elo à chaque inexactitude, erreur ou gaffe de l'adversaire
+          g.pl[victim].elo = Math.min(3200, g.pl[victim].elo + 200); mvRec.eloUp = g.pl[victim].elo;
+          E.ui.toast(`${g.pl[victim].name} : +200 Elo → ${g.pl[victim].elo}`, "ok", 2600); E.vibrate(20);
+        }
+        if (m.captured && (m.captured === "n" || m.captured === "b")) { g.lostMinor[victim]++; mvRec.minorLost = { col: victim, n: g.lostMinor[victim] }; }
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
         judge(g.moves[g.moves.length - 1], meta);
         g.busy = false;
@@ -354,6 +370,7 @@
           if (cancel && tok === g.token) { rewind(1); return; }
         }
         if (g.ch.game_over()) return finish(overText());
+        for (const col of ["w", "b"]) { if (g.pl[col].transform && !g.pl[col].done && g.lostMinor[col] >= 3) { await ghorTransform(col, tok); if (tok !== g.token) return; } }   // plus de 2 pièces mineures perdues : GhorGhor se réveille
         if (!g.mode.human) await sleep(g.delay);
         next(tok);
       }
@@ -383,14 +400,18 @@
         bc.tick();
         const c = mv.color, o = c === "w" ? "b" : "w", T = g.talk[c], O = g.talk[o], k = mv.q.key, d = { san: mv.san, open: g.openName };
         const prev = g.moves.length >= 2 ? g.moves[g.moves.length - 2].ew : 0, swing = (mv.ew - prev) * (c === "w" ? 1 : -1);
-        const say = (I, kind) => !!I && I.say(kind, d);
+        const say = (I, kind) => !!I && I.say(kind, { ...d, elo: g.pl[I === g.talk.w ? "w" : "b"].elo });
+        // ce que l'ADVERSAIRE du joueur qui vient de jouer répond : Elo gagné (Naskurieux) et pièces mineures perdues (GhorGhor) priment sur la réaction habituelle
+        const ml = mv.minorLost, oOverride = mv.eloUp ? "elo_up" : ml && g.talk[ml.col] && g.pl[ml.col].transform && ml.n < 3 ? "minor_lost" : "";
         if (mv.q.opening) { if (g.openName !== mv.q.opening) g.openName = mv.q.opening; d.open = g.openName; if (!g.openSaid && g.moves.length >= 3) { g.openSaid = true; say(T, "open_announce") || say(O, "open_announce"); } }
         if (mv.bookExit) { if (g.moves.length <= 10) say(O, "open_refused") || say(T, "open_end"); else say(T, "open_end") || say(O, "open_end"); }
-        else if (k === "brilliant") { say(T, "bot_brilliant"); say(O, "h_brilliant"); }
-        else if (k === "blunder") { say(T, "bot_blunder"); say(O, "h_blunder"); }
-        else if (k === "mistake") { say(T, "bot_mistake"); say(O, "h_mistake"); }
-        else if (k === "best" || k === "excellent") { if (swing >= 120) { say(T, "super"); say(O, "h_good"); } else say(T, "good") || say(O, "h_good"); }
-        else if (g.ch.in_check()) { say(T, "check"); say(O, "check_received"); }
+        else if (k === "brilliant") { say(T, "bot_brilliant"); say(O, oOverride || "h_brilliant"); }
+        else if (k === "blunder") { say(T, "bot_blunder"); say(O, oOverride || "h_blunder"); }
+        else if (k === "mistake") { say(T, "bot_mistake"); say(O, oOverride || "h_mistake"); }
+        else if (k === "inaccuracy" && oOverride) say(O, oOverride);
+        else if (k === "best" || k === "excellent") { if (swing >= 120) { say(T, "super"); if (!say(O, oOverride || "h_good")) { /* silence */ } } else say(T, "good") || say(O, oOverride || "h_good"); }
+        else if (g.ch.in_check()) { say(T, "check"); say(O, oOverride || "check_received"); }
+        else if (oOverride) say(O, oOverride);
         else say(T, "chat") || say(O, "chat");
         const ew = mv.ew, win = Math.abs(ew) >= 9000 ? (ew > 0 ? "w" : "b") : "";
         if (win && !g.mateSaid) { g.mateSaid = true; say(g.talk[win], "mate_coming"); say(g.talk[win === "w" ? "b" : "w"], "mate_danger"); }
@@ -398,10 +419,57 @@
           const I = g.talk[col];
           if (!I) return;
           const pov = ew * (col === "w" ? 1 : -1), n = g.moves.length;
-          if (pov <= -300 && n - (g.fr[col] || -99) >= 8) { g.fr[col] = n; I.say("frustration", d); }
-          else if (pov >= 500 && n - (g.wn[col] || -99) >= 10) { g.wn[col] = n; I.say("winning", d); }
+          if (pov <= -300 && n - (g.fr[col] || -99) >= 8) { g.fr[col] = n; say(I, "frustration"); }
+          else if (pov >= 500 && n - (g.wn[col] || -99) >= 10) { g.wn[col] = n; say(I, "winning"); }
         });
       }
+
+      // ---- GhorGhor se réveille : il dit sa phrase, l'écran glitche, l'ambiance s'assombrit, l'illustration change et il devient GhorGhor le vrai (GM, 3200 Elo, joue comme ETO Brillant)
+      function glitchSound() {
+        try {
+          if (!E.settings.get("chess.sound", true)) return;
+          const ac = (glitchSound.ac = glitchSound.ac || new (window.AudioContext || window.webkitAudioContext)()), t = ac.currentTime;
+          if (ac.state === "suspended") ac.resume();
+          const n = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.4), ac.sampleRate), data = n.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.35 ? 1 : 0.15) * (1 - i / data.length);
+          const src = ac.createBufferSource(), g1 = ac.createGain(), o = ac.createOscillator(), g2 = ac.createGain();
+          src.buffer = n; g1.gain.value = 0.5; src.connect(g1); g1.connect(ac.destination); src.start(t);
+          o.type = "sawtooth"; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(32, t + 1.6); g2.gain.setValueAtTime(0.35, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 1.7); o.connect(g2); g2.connect(ac.destination); o.start(t); o.stop(t + 1.7);
+        } catch (e) { /* audio indisponible */ }
+      }
+      function glitchFx(ms) {
+        const app = document.getElementById("app");
+        if (!app || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !E.settings.get("anim", true)) return sleep(Math.min(ms, 600));
+        const ov = document.createElement("div");
+        ov.className = "glitch-ov";
+        document.body.appendChild(ov);
+        glitchSound();
+        return new Promise((res) => {
+          const t0 = Date.now(), j = (x) => (Math.random() - 0.5) * x;
+          const iv = setInterval(() => {
+            if (Date.now() - t0 > ms) { clearInterval(iv); app.style.transform = ""; app.style.filter = ""; ov.remove(); return res(); }
+            app.style.transform = `translate(${j(18)}px,${j(8)}px) skewX(${j(9)}deg)`;
+            app.style.filter = `hue-rotate(${Math.round(j(200))}deg) contrast(${(1 + Math.random() * 0.9).toFixed(2)}) saturate(${(1 + Math.random() * 2).toFixed(2)})`;
+            ov.innerHTML = Array.from({ length: 6 }, () => `<i style="top:${(Math.random() * 100).toFixed(1)}%;height:${(1 + Math.random() * 9).toFixed(1)}%;left:${j(40).toFixed(0)}px;background:${["#ff0033aa", "#00ffeeaa", "#ffffff88"][Math.floor(Math.random() * 3)]}"></i>`).join("");
+          }, 55);
+        });
+      }
+      async function ghorTransform(col, tok) {
+        const p = g.pl[col], bc = E.botChat, old = g.talk[col];
+        p.done = true;
+        if (old) old.say("transform");
+        await sleep(2000);
+        if (!g || tok !== g.token) return;
+        E.vibrate([60, 40, 60, 40, 140]);
+        await glitchFx(1700);
+        if (!g || tok !== g.token) return;
+        Object.assign(p, { kind: "eto", elo: 3200, name: "GhorGhor le vrai", title: "GM", talk: "ghorreal" });
+        delete p.style; delete p.skill;
+        document.documentElement.classList.add("ghor");                          // l'ambiance de l'application s'assombrit
+        if (bc && old) { const n = bc.replace(old, "ghorreal", "awake"); g.talk[col] = n; setTimeout(() => { if (g && tok === g.token && n) n.say("greet", { elo: 3200 }); }, 500); }
+        paint();
+      }
+
       // commentaire facultatif d'ETO (Groq) pour les coups marquants
       async function llm(mv, humanMove) {
         if (!E.ai || !E.ai.configured() || !E.settings.get("chess.comment", true)) return;
@@ -419,7 +487,7 @@
         let s = null;
         for (let i = 0; i < n && g.snaps.length; i++) { s = g.snaps.pop(); g.ch.undo(); }
         if (!s) return;
-        g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.seen = s.seen || L.startSeen(s.fen); g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
+        g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.seen = s.seen || L.startSeen(s.fen); if (s.lostMinor) g.lostMinor = s.lostMinor; if (s.elos) { if (g.pl.w.gain) g.pl.w.elo = s.elos.w; if (g.pl.b.gain) g.pl.b.elo = s.elos.b; } g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true;
         paint(); status("Coup annulé"); next(g.token);
       }
@@ -474,7 +542,7 @@
       function replay(rec) {
         if (!rec || !rec.mv || !rec.mv.length) return;
         if (g) { g.token++; L.abort && L.abort(); }
-        if (E.botChat) E.botChat.unmountAll();
+        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor");
         const fens = [START], c = new Chess();
         rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
         const R = { rec, fens, k: 0, speed: 1, playing: false };
