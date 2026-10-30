@@ -1,5 +1,5 @@
 "use strict";
-// CHAT BOX DES BOTS (Défis) : illustration + bulle de parole façon Chess.com + messagerie. Répliques PRÉ-ÉCRITES (data/bot_lines.js), aucune clé d'API requise ;
+// CHAT BOX DES BOTS (Défis) : illustration + bulle de parole façon Chess.com + messagerie. Répliques PRÉ-ÉCRITES (js/bot_lines.js), aucune clé d'API requise ;
 // avec une clé Groq, les moments forts (et tes messages, face à un seul bot) peuvent en plus passer par le LLM avec le style du personnage.
 // Plusieurs bots peuvent parler dans la même partie (combats) : chaque côté a sa bannière, un transcript partagé réunit tout.
 (() => {
@@ -91,7 +91,7 @@
     I.gap = 0; lastSpoke = ply;
   }
 
-  /** kind : voir data/bot_lines.js. d : {san, open}. Renvoie true si le personnage va parler. */
+  /** kind : voir js/bot_lines.js. d : {san, open}. Renvoie true si le personnage va parler. */
   function fire(I, kind, d) {
     if (!I || !I.alive) return false;
     const strong = STRONG.has(kind), p = PROB[kind] == null ? 0.2 : PROB[kind];
