@@ -133,7 +133,7 @@
       const toView = (sq) => { const [x, y] = C4.XY(sq); return ROT[G.view](x, y); };
       const CELL = 100 / 14;
       const place = (node, sq) => { const [vx, vy] = toView(sq); node.style.left = vx * CELL + "%"; node.style.top = vy * CELL + "%"; };
-      const spriteOf = (v) => { const o = C4.ownerOf(v), t = C4.typeOf(v); return `img/chess/${o === 0 || o === 3 ? "b" : "w"}${C4.LETTER[t]}.png`; };
+      const spriteOf = (v) => { const o = C4.ownerOf(v), t = C4.typeOf(v); return `img/chess/${o === 1 || o === 2 ? "w" : "b"}${C4.LETTER[t]}.png`; };       // 4 = pièces grisées d'un joueur éliminé
 
       function buildBoard() {
         const sqs = $(".ro-sqs"), pcs = $(".ro-pcs");
@@ -170,8 +170,8 @@
       }
       function hud() {
         const st = G.st, o = st.turn;
-        const hs = G.seats.filter((x) => x.human), multi = hs.length > 1;
-        $("#ro-turn").innerHTML = G.over ? "Bataille terminée" : `<i class="ro-dot" style="background:${COLORS[o]}"></i>${G.seats[o].human ? (multi ? "🎙 Joue le coup de " : "À toi, ") : ""}<b>${esc(G.seats[o].name)}</b>${G.seats[o].human ? (multi ? ` <small>(pièces ${SEAT[o].toLowerCase()})</small>` : "") : " réfléchit…"}`;
+        const hs = G.seats.filter((x) => x.human), multi = hs.length > 1, ck = !G.over && C4.inCheck(st, o) >= 0;
+        $("#ro-turn").innerHTML = G.over ? "Bataille terminée" : `<i class="ro-dot" style="background:${COLORS[o]}"></i>${G.seats[o].human ? (multi ? "🎙 Joue le coup de " : "À toi, ") : ""}<b>${esc(G.seats[o].name)}</b>${G.seats[o].human ? (multi ? ` <small>(pièces ${SEAT[o].toLowerCase()})</small>` : "") : " réfléchit…"}${ck ? ' <span class="ro-chk">♚ ÉCHEC !</span>' : ""}`;
         const sayBox = $("#ro-say"); sayBox.hidden = G.over || !G.seats[o].human;
         const t = C4.stormIn(st);
         $("#ro-stormhud").textContent = !st.storm ? "" : t === Infinity ? "🌪 tempête terminée" : t <= 8 ? `🌪 effondrement dans ${t} coups !` : `🌪 dans ${t} coups`;
@@ -254,20 +254,24 @@
         const from = r.from, to = r.to;
         // pièce prise
         const victim = G.pc.get(to);
-        if (victim && r.captured) { G.pc.delete(to); victim.classList.add("out"); setTimeout(() => victim.remove(), 320); boom(to, r.captured.type); }
+        if (victim && r.captured) { G.pc.delete(to); victim.classList.add("out"); setTimeout(() => victim.remove(), 320); boom(to, r.captured.owner === C4.DEAD ? 1 : r.captured.type); }
         // pièce qui bouge
         const mover = G.pc.get(from);
         if (mover) { G.pc.delete(from); G.pc.set(to, mover); place(mover, to); mover.classList.add("lift"); setTimeout(() => mover.classList.remove("lift"), 260); if (r.promo) { mover.src = spriteOf(st.b[to]); mover.dataset.v = st.b[to]; } }
-        // éliminations / tempête : on retire les éléments dont la case ne correspond plus
+        // éliminations / tempête : les pièces d'un joueur éliminé se GRISENT (elles restent), celles détruites par la tempête disparaissent
         if (r.eliminated.length || r.storm) {
-          for (const [sq, n] of Array.from(G.pc)) if (!st.b[sq] || +n.dataset.v !== st.b[sq]) { if (st.b[sq] && C4.ownerOf(st.b[sq]) === C4.ownerOf(+n.dataset.v) && C4.typeOf(st.b[sq]) !== C4.typeOf(+n.dataset.v)) continue; G.pc.delete(sq); n.classList.add("out"); setTimeout(() => n.remove(), 450); }
+          for (const [sq, n] of Array.from(G.pc)) {
+            const cur = st.b[sq], was = +n.dataset.v;
+            if (!cur) { G.pc.delete(sq); n.classList.add("out"); setTimeout(() => n.remove(), 450); }
+            else if (cur !== was && C4.ownerOf(cur) === C4.DEAD && C4.typeOf(cur) === C4.typeOf(was)) { n.dataset.v = cur; n.src = spriteOf(cur); n.className = "pc c4 greyed"; }
+          }
         }
         if (r.storm) { quake(); ticker("🌪 La tempête dévore le bord du plateau !"); E.vibrate([40, 40, 80]); for (const s of Object.keys(G.chat)) say(+s, "r_storm", {}); }
         if (G.over === false) { E.chessSound && E.chessSound.play(r.captured ? "capture" : "move"); }
         // commentaires
         events(r, o);
         const info = AI.afterMove(G.seats[o].ai || { moves: 0 }, { captured: !!r.captured });
-        if (r.captured && G.seats[r.captured.owner].ai) AI.afterMove(G.seats[r.captured.owner].ai, { lost: true });
+        if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].ai) AI.afterMove(G.seats[r.captured.owner].ai, { lost: true });
         if (info && info.elo != null) { ticker(`🎡 La roue donne ${info.elo} Elo au Jester !`); say(o, info.elo < 800 ? "wheel_low" : info.elo < 2400 ? "wheel_mid" : "wheel_high", { elo: info.elo }); }
         G.sel = -1; G.legal = new Set();
         if (E.botChat) E.botChat.tick();
@@ -277,25 +281,21 @@
         const nm = (s) => G.seats[s].name, TY = ["", "pion", "cavalier", "fou", "tour", "dame", "roi"];
         if (r.captured) {
           const c = r.captured;
-          if (C4.VALUE[c.type] >= 5 || c.type === C4.K) ticker(`${nm(o)} capture ${c.type === C4.K ? "le ROI" : "la " + TY[c.type]} de ${nm(c.owner)} !`);
+          if (c.owner === C4.DEAD) ticker(`${nm(o)} détruit une pièce grisée`);
+          else if (C4.VALUE[c.type] >= 5 || c.type === C4.K) ticker(`${nm(o)} capture ${c.type === C4.K ? "le ROI" : "la " + TY[c.type]} de ${nm(c.owner)} !`);
           else ticker(`${nm(o)} prend ${c.type === C4.P ? "un pion" : "un " + TY[c.type]} de ${nm(c.owner)}`);
-          if (C4.VALUE[c.type] >= 3) { say(o, "r_capture", { san: TY[c.type] }, "super"); say(c.owner, "r_lost", { san: TY[c.type] }, "bot_blunder"); }
+          if (c.owner !== C4.DEAD && C4.VALUE[c.type] >= 3) { say(o, "r_capture", { san: TY[c.type] }, "super"); say(c.owner, "r_lost", { san: TY[c.type] }, "bot_blunder"); }
         }
-        for (const e of r.eliminated) {
-          const by = r.captured && r.captured.owner === e ? o : -1;
-          ticker(by >= 0 ? `💀 ${nm(e)} est ÉLIMINÉ par ${nm(by)} !` : `💀 ${nm(e)} est emporté par la tempête !`);
-          E.vibrate([30, 40, 30, 40, 120]); koFx(e);
-          say(e, "r_elim_lose", {}, "mate_lose");
-          if (by >= 0) say(by, "r_elim_win", {}, "mate_win");
+        for (const e of r.elim) {
+          const why = e.why, by = e.by;
+          ticker(why === "mate" ? `♚ ÉCHEC ET MAT ! ${nm(e.o)} est éliminé par ${nm(by)} : ses pièces sont grisées` : why === "stalemate" ? `🤝 PAT : ${nm(e.o)} n'a plus aucun coup, il est éliminé (pièces grisées)` : `💀 ${nm(e.o)} est emporté par la tempête !`);
+          E.vibrate([30, 40, 30, 40, 120]); koFx(e.o); E.chessSound && E.chessSound.play("mate");
+          say(e.o, "r_elim_lose", {}, "mate_lose");
+          if (why === "mate" && by >= 0) say(by, "r_elim_win", {}, "mate_win");
         }
-        // roi menacé / menace sur la cible
-        const st = G.st;
-        for (let s = 0; s < 4; s++) {
-          if (!st.alive[s] || !G.chat[s]) continue;
-          const k = C4.kingSq(st, s);
-          let attacked = false;
-          for (let e = 0; e < 4; e++) if (e !== s && st.alive[e] && !C4.allied(st, s, e) && C4.attackedBy(st, e)[k]) attacked = true;
-          if (attacked && !G.warned[s]) { G.warned[s] = true; say(s, "check_received", {}); } else if (!attacked) G.warned[s] = false;
+        if (r.check && !r.elim.length) {
+          ticker(`♚ Échec à ${nm(r.check.who)} !`); E.chessSound && E.chessSound.play("check");
+          say(r.check.by, "check", {}); say(r.check.who, "check_received", {});
         }
       }
 
@@ -463,7 +463,7 @@
         A.toast("Entraînement terminé : coche « Bots entraînés » pour les utiliser.", "ok", 5000);
       };
 
-      el._api = { launch, get g() { return G; }, cfg: () => cfg, back };
+      el._api = { rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back };
       fillSeats(); palmares();
     },
   });

@@ -46,8 +46,9 @@
     const u = C4.make(st, m);
     let sc = 0;
     if (cap) {
-      const co = ownerOf(cap), ct = typeOf(cap), val = ct === K ? 5000 : MATV[ct];
-      sc += val * w.cap * (co === ai.target ? 1.5 : ai.foes && !ai.foes[co] ? 0.6 : 1);
+      const co = ownerOf(cap), ct = typeOf(cap);
+      if (co !== C4.DEAD) sc += MATV[ct] * w.cap * (co === ai.target ? 1.5 : ai.foes && !ai.foes[co] ? 0.6 : 1);
+      else sc += 8;                                                               // ouvrir une ligne en prenant une pièce grisée : petit bonus
     }
     if ((m >> 16) & 1) sc += 700;
     // cases attaquées par les ennemis après le coup (matrices partagées par tous les calculs de ce coup)
@@ -61,6 +62,7 @@
       const v = b[i];
       if (!v) continue;
       const po = ownerOf(v), ty = typeOf(v), x = i % N, y = (i / N) | 0;
+      if (po === C4.DEAD) continue;
       if (po === o) {
         if (ty === K) {
           kSq = i;
@@ -81,8 +83,11 @@
         const mv = ty === K ? 800 : MATV[ty], hostile = po === ai.target ? 1.5 : ai.foes && !ai.foes[po] ? 0.5 : 1;
         sc -= mv * 0.04 * w.foe * hostile;                                          // moins ils en ont, mieux c'est
         if (myAtt[i]) sc += (foeAtt[i] ? mv * 0.12 : mv * 0.3) * w.threat * hostile;
-        if (ty === K) {                                                              // roi adverse : échec (= capture au prochain tour si rien ne change), cases de fuite attaquées
-          if (myAtt[i]) sc += (foeAtt[i] ? 120 : 420) * w.threat * hostile;
+        if (ty === K) {                                                              // roi adverse : échec / mat (= capture au prochain tour si rien ne change), cases de fuite attaquées
+          if (myAtt[i]) {
+            sc += (foeAtt[i] ? 120 : 420) * w.threat * hostile;
+            if (ctx.mateTest && C4.moves(st, po).length === 0) sc += 6000 * hostile;   // échec et mat !
+          }
           let esc = 0, safe = 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) { const nx = x + dx, ny = y + dy; if (!C4.playable(st, nx, ny)) continue; const bb = b[nx + ny * N]; if (bb && ownerOf(bb) === po) continue; esc++; if (myAtt[nx + ny * N]) safe++; }
           if (esc) sc += (safe / esc) * 160 * w.threat * hostile;
           if (po === ai.target && ctx.hunters) for (const h of ctx.hunters) sc -= (Math.abs(h % N - x) + Math.abs(((h / N) | 0) - y)) * 1.6 * w.hunt;
@@ -101,7 +106,7 @@
     for (let i = 0; i < 4; i++) { if (!st.alive[i]) continue; if (C4.allied(st, o, i)) team.push(i); else enemies.push(i); }
     const hunters = [];
     for (let i = 0; i < SQ; i++) { const v = st.b[i]; if (v && ownerOf(v) === o && [Q, R, KN].includes(typeOf(v))) hunters.push(i); }
-    const ctx = { enemies, team, hunters };
+    const ctx = { enemies, team, hunters, mateTest: true };
     let best = -1, bs = -Infinity;
     const k = Math.max(0, ai.noise) * 100 * ai.skill;
     for (const m of list) {

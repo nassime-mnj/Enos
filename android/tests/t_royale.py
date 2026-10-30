@@ -75,6 +75,20 @@ with sync_playwright() as pw:
     pg.click("#ro-share"); pg.wait_for_selector("#sheet img[alt=plateau]", timeout=10000)
     check(ev("document.querySelector('#sheet img[alt=plateau]').src.startsWith('data:image/png')"), "image du plateau générée pour l'ami")
     pg.keyboard.press("Escape")
+    # --- échec et mat : le roi maté est éliminé, ses pièces restent GRISÉES sur le plateau
+    ev("""() => { const c = %s.cfg(); c.seats.forEach((s, i) => { s.who = i === 0 ? 'human' : ['', 'nasko', 'lelex', 'enos'][i]; s.team = i; }); c.storm = 'off'; c.speed = 'slow'; }""" % A)
+    ev(A + ".launch()")
+    pg.wait_for_timeout(500)
+    ev("""() => { const g = %s.g, C4 = ENOS.c4, b = g.st.b, q = (x, y) => y * 14 + x; b.fill(0);
+      b[q(7, 13)] = C4.cell(0, C4.K); b[q(0, 3)] = C4.cell(1, C4.K); b[q(0, 5)] = C4.cell(1, C4.P); b[q(6, 0)] = C4.cell(2, C4.K); b[q(13, 6)] = C4.cell(3, C4.K);
+      b[q(5, 4)] = C4.cell(0, C4.R); b[q(7, 5)] = C4.cell(0, C4.R); g.st.turn = 0; g.hist = []; %s.rebuild(); }""" % (A, A))
+    pg.fill("#ro-sayin", "h9 h11"); pg.press("#ro-sayin", "Enter")
+    pg.wait_for_function(A + ".g.st.alive[1] === false", timeout=8000)
+    check("ÉCHEC ET MAT" in pg.inner_text("#ro-ticker"), "annonce de l'échec et mat : " + pg.inner_text("#ro-ticker"))
+    pg.wait_for_timeout(600)
+    check(pg.locator("#ro-board .pc.c4").count() == 2, "le roi et le pion du joueur maté restent sur le plateau, GRISÉS (%d)" % pg.locator("#ro-board .pc.c4").count())
+    check(pg.locator(".ro-ban.ko").count() == 1 and pg.locator(".ro-ban.ko").get_attribute("data-s") == "1", "bannière « ÉLIMINÉ » sur le joueur de gauche")
+    check(ev(A + ".g.st.pts[0]") == 15, "+15 points pour le mat")
     # --- alliés : captures interdites entre coéquipiers
     ok = ev("""() => { const C4 = ENOS.c4, s = C4.newGame({teams: [0, 1, 0, 3]}); s.b.fill(0); s.b[7 * 14 + 7] = C4.cell(0, C4.R); s.b[7 * 14 + 4] = C4.cell(2, C4.P); s.b[7 * 14 + 10] = C4.cell(1, C4.P);
       const to = C4.moves(s, 0).map(C4.to); return [to.includes(7 * 14 + 4), to.includes(7 * 14 + 10)]; }""")

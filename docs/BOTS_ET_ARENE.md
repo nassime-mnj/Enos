@@ -76,7 +76,7 @@ Voir `docs/CHESS_OPTIMISATIONS.md` (Stockfish WASM sur mobile, Syzygy, ponder…
 
 | Fichier | Rôle |
 |---|---|
-| `js/chess4.js` | Règles pures (UMD : navigateur et Node). Cases = entiers 0-195 (`y*14+x`), pièce = `(propriétaire+1)*8 + type`, coup = `from | to<<8 | promo<<16`. `newGame({teams, storm})`, `moves`, `play` (élimination, tempête), `attackedBy`, `ranking`. |
+| `js/chess4.js` | Règles pures (UMD : navigateur et Node), **échec et mat** (`C4.moves` = coups légaux, `C4.pseudo` = pseudo-légaux, `C4.inCheck`), joueur éliminé = pièces du propriétaire `C4.DEAD` (grisées, inertes, capturables pour 0 point). Cases = entiers 0-195 (`y*14+x`), pièce = `(propriétaire+1)*8 + type`, coup = `from | to<<8 | promo<<16`. `newGame({teams, storm})`, `moves`, `play` (élimination, tempête), `attackedBy`, `ranking`. |
 | `js/chess4_ai.js` | IA 1 coup + menaces (≈ 1 ms/coup), personnalités (`PERSONA`), `evolve()` = apprentissage (1+1)-ES sur 9 poids. |
 | `js/m_royale.js` | Module (`E.suite.register({id:"royale"})`) : réglages (sièges, équipes, cibles, tempête), plateau en `left/top` en %, rotation de la vue (`ROT/UNROT`), chat des bots, effets, annulation, coup dicté, image du plateau, Académie. |
 | `css/royale.css` | Mobile d'abord ; ≥ 1000 px : bannières à gauche/droite du plateau (PC). Les bannières ont une **hauteur fixe** (une bulle ne doit jamais décaler le plateau). |
@@ -85,4 +85,4 @@ Voir `docs/CHESS_OPTIMISATIONS.md` (Stockfish WASM sur mobile, Syzygy, ponder…
 PC : onglet « 👑 ROYALE ×4 » de `static/learn/` (`pc_boot.js` : `need.royale`) ; fichiers copiés par `python build_learn_data.py --sync`. Bouton « BATTLE ROYALE ×4 » (`#b-royale`) dans `static/index.html`.
 Pièges : (1) le test doit attendre ~450 ms après l'ouverture d'un module (animation `pgFwd` de `transitions.css` décale le plateau) ; (2) `AI.afterMove` reçoit `{captured}` / `{lost}` ; (3) dans la boucle de jeu, ne jamais réutiliser un `st` périmé après un ↶ (le jeton `G.token` change).
 Idées non faites : GhorGhor qui « se réveille » en Royale, tempête avec zones aléatoires, parties en ligne (voir `docs/DISCORD_AMI.md`), recherche plus profonde pour E.N.O.S., sauvegarde / replay des batailles.
-
+(4 Chess : le roi maté ou pat est **éliminé mais ses pièces restent grisées** ; un roi vivant n'est jamais capturé ; la tempête détruit tout ce qui est hors de la zone, pièces grisées comprises.)

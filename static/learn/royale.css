@@ -87,3 +87,9 @@
 .ro-sq.d .co{color:#ffffffa0}
 .ro-say{display:flex;gap:8px;margin:6px 0}.ro-say input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:#0a0a0c;color:var(--text);font:700 16px var(--ui);text-transform:lowercase}
 .ro-say .btn{flex:none;height:44px;padding:0 14px}.ro-say[hidden]{display:none}
+/* pièces d'un joueur éliminé : grisées et inertes */
+.pc.c4{filter:grayscale(1) brightness(1.1) contrast(.85) opacity(.5);transition:filter .8s}
+.pc.greyed{animation:greyIn .9s}
+@keyframes greyIn{from{filter:none;transform:scale(1.2)}to{transform:none}}
+.ro-cap img.c4{filter:grayscale(1) opacity(.5)}
+.ro-chk{margin-left:8px;padding:1px 8px;border-radius:8px;background:#a52727;color:#fff;font:800 12px var(--ui);letter-spacing:1px;animation:blink .8s infinite}

@@ -4,13 +4,15 @@
 // Plateau en croix 14×14 (coins 3×3 retirés = 160 cases), 4 armées de 16 pièces face à face :
 //     joueur 0 = BAS (monte)    joueur 1 = GAUCHE (va vers la droite)    joueur 2 = HAUT (descend)    joueur 3 = DROITE (va vers la gauche)
 // Ordre de jeu : sens horaire 0 → 1 → 2 → 3. Coordonnées (x, y) avec y = 0 en haut de l'écran.
-// Règles de cette variante (volontairement simples, « chacun pour soi ») :
+// Règles de cette variante (« chacun pour soi », comme sur le vrai plateau 4Chess) :
 //   - pièces et déplacements des échecs ; PAS de roque, PAS de prise en passant ;
-//   - pas d'échec ni de mat : on CAPTURE LE ROI. Roi capturé = joueur ÉLIMINÉ (ses pièces disparaissent) ;
+//   - ÉCHEC ET MAT : un coup qui laisserait son propre roi attaqué (par un adversaire, pas par un allié) est illégal ; un roi ne se capture jamais ;
+//     un joueur dont c'est le tour, sans coup légal et en échec, est maté ; sans coup légal et pas en échec (pat), il est éliminé aussi ;
+//   - ÉLIMINÉ = ses pièces restent sur le plateau mais GRISÉES et INERTES (elles bloquent le jeu, n'attaquent plus, se capturent pour 0 point) ;
 //   - pion : double pas depuis sa ligne de départ, prise en diagonale « devant », promotion en dame après 8 pas ;
-//   - ALLIANCES : deux alliés ne peuvent pas se capturer (leurs pièces se bloquent) ; la partie se termine quand il ne reste qu'une équipe ;
+//   - ALLIANCES : deux alliés ne peuvent pas se capturer (leurs pièces se bloquent) et ne se mettent pas en échec ; la partie se termine quand il ne reste qu'une équipe ;
 //   - TEMPÊTE (option) : à intervalles réguliers le bord du plateau s'effondre ; les pièces qui s'y trouvent sont détruites (un roi détruit = joueur éliminé) ;
-//   - points : pion 1, cavalier 3, fou 3, tour 5, dame 9, roi 15 ; à la limite de coups le meilleur total gagne.
+//   - points : pion 1, cavalier 3, fou 3, tour 5, dame 9 ; échec et mat +15 pour celui qui le donne ; à la limite de coups le meilleur total gagne.
 (() => {
   const C4 = {};
   const N = 14, SQ = N * N;
@@ -25,12 +27,13 @@
   const XY = (s) => [s % N, (s / N) | 0];
   const SQI = (x, y) => y * N + x;
   const cell = (owner, type) => (owner + 1) * 8 + type;                             // 0 = vide
+  const DEAD = 4;                                                                  // propriétaire des pièces des joueurs éliminés (grisées, inertes)
   const ownerOf = (v) => (v >> 3) - 1;
   const typeOf = (v) => v & 7;
   const KDIR = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
   const NDIR = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
   const BDIR = KDIR.slice(4), RDIR = KDIR.slice(0, 4);
-  Object.assign(C4, { N, SQ, P, KN, B, R, Q, K, LETTER, VALUE, MATV, FWD, NAMES, VALID, XY, SQI, cell, ownerOf, typeOf });
+  Object.assign(C4, { DEAD, N, SQ, P, KN, B, R, Q, K, LETTER, VALUE, MATV, FWD, NAMES, VALID, XY, SQI, cell, ownerOf, typeOf });
 
   // ligne de départ des pions / ligne de promotion de chaque joueur
   const pawnStart = (o, x, y) => (o === 0 ? y === 12 : o === 1 ? x === 1 : o === 2 ? y === 1 : x === 12);
@@ -72,7 +75,7 @@
         if (!playable(s, nx, ny)) return false;
         const d = nx + ny * N, tv = b[d];
         if (!tv) { if (!capturesOnly) cb(f, d, 0); return true; }
-        if (!C4.allied(s, o, ownerOf(tv))) cb(f, d, 0);
+        if (!C4.allied(s, o, ownerOf(tv)) && !(typeOf(tv) === K && ownerOf(tv) !== DEAD)) cb(f, d, 0);          // un roi vivant ne se capture pas : il se mate
         return false;
       };
       if (t === P) {
@@ -87,7 +90,7 @@
           const cx = nx + px * sg, cy = ny + py * sg;
           if (!playable(s, cx, cy)) continue;
           const tv = b[cx + cy * N];
-          if (tv && !C4.allied(s, o, ownerOf(tv))) cb(f, cx + cy * N, promoRow(o, cx, cy) ? 1 : 0);
+          if (tv && !C4.allied(s, o, ownerOf(tv)) && !(typeOf(tv) === K && ownerOf(tv) !== DEAD)) cb(f, cx + cy * N, promoRow(o, cx, cy) ? 1 : 0);
         }
       } else if (t === KN) { for (const [dx, dy] of NDIR) tryTo(x + dx, y + dy); }
       else if (t === K) { for (const [dx, dy] of KDIR) tryTo(x + dx, y + dy); }
@@ -98,7 +101,7 @@
     }
   }
   C4.gen = gen;
-  C4.moves = (s, o, capturesOnly) => { const out = []; gen(s, o, (f, t, pr) => out.push(mv(f, t, pr)), capturesOnly); return out; };
+  C4.pseudo = (s, o, capturesOnly) => { const out = []; gen(s, o, (f, t, pr) => out.push(mv(f, t, pr)), capturesOnly); return out; };
 
   // ------------------------------------------------------------------ jouer / défaire (pour la recherche : ne gère ni élimination ni tempête)
   /** Joue le coup sur s.b ; renvoie l'info d'annulation. */
@@ -109,26 +112,52 @@
   };
   C4.unmake = (s, u) => { s.b[u.f] = u.v; s.b[u.t] = u.cap; };
 
+  // ------------------------------------------------------------------ échec / mat
+  /** Case du roi vivant de `o` (-1 s'il n'y en a pas). */
+  C4.kingSq = (s, o) => { for (let i = 0; i < SQ; i++) if (s.b[i] === cell(o, K)) return i; return -1; };
+  /** Numéro du joueur adverse qui attaque le roi de `o` (premier trouvé), sinon -1. Les alliés ne comptent pas. */
+  C4.inCheck = (s, o, ksq) => {
+    const k = ksq === undefined ? C4.kingSq(s, o) : ksq;
+    if (k < 0) return -1;
+    for (let e = 0; e < 4; e++) if (e !== o && s.alive[e] && !C4.allied(s, o, e) && C4.attackedBy(s, e)[k]) return e;
+    return -1;
+  };
+  /** Coups LÉGAUX de `o` : pseudo-légaux qui ne laissent pas son roi attaqué. */
+  C4.moves = (s, o, capturesOnly) => {
+    const out = [], ks = C4.kingSq(s, o), foes = [];
+    for (let e = 0; e < 4; e++) if (e !== o && s.alive[e] && !C4.allied(s, o, e)) foes.push(e);
+    gen(s, o, (f, t, pr) => {
+      const m = mv(f, t, pr);
+      if (ks < 0) { out.push(m); return; }
+      const u = C4.make(s, m), k = f === ks ? t : ks;
+      let bad = false;
+      for (let i = 0; i < foes.length && !bad; i++) if (C4.attackedBy(s, foes[i])[k]) bad = true;
+      C4.unmake(s, u);
+      if (!bad) out.push(m);
+    }, capturesOnly);
+    return out;
+  };
+
   // ------------------------------------------------------------------ partie : jouer un coup avec tout ce que ça entraîne
   const nextAlive = (s, from) => { for (let i = 1; i <= 4; i++) { const o = (from + i) % 4; if (s.alive[o]) return o; } return from; };
+  /** Élimine `o` : ses pièces RESTENT, grisées et inertes (propriétaire DEAD). why : "mate" | "stalemate" | "storm". */
   function eliminate(s, o, by, why) {
     if (!s.alive[o]) return;
     s.alive[o] = false; s.out.push(o);
-    for (let i = 0; i < SQ; i++) if (s.b[i] && ownerOf(s.b[i]) === o) s.b[i] = 0;
-    s.log.push({ k: "out", o, by: by == null ? -1 : by, why: why || "king" });
+    for (let i = 0; i < SQ; i++) if (s.b[i] && ownerOf(s.b[i]) === o) s.b[i] = cell(DEAD, typeOf(s.b[i]));
+    s.log.push({ k: "out", o, by: by == null ? -1 : by, why: why || "mate" });
   }
-  /** Joue `m` pour le joueur au trait. Renvoie {ok, captured:{owner,type}|null, promo, eliminated:[…], storm:bool}. */
+  /** Joue `m` pour le joueur au trait. Renvoie {ok, captured, promo, eliminated:[…], elim:[{o, why, by}], check:{by, who}|null, storm}. */
   C4.play = (s, m) => {
     const o = s.turn, f = m & 255, t = (m >> 8) & 255, v = s.b[f];
     if (!v || ownerOf(v) !== o || !s.alive[o]) return { ok: false };
-    const cap = s.b[t], res = { ok: true, from: f, to: t, piece: typeOf(v), captured: null, promo: false, eliminated: [], storm: false, owner: o };
+    const cap = s.b[t], res = { ok: true, from: f, to: t, piece: typeOf(v), captured: null, promo: false, eliminated: [], elim: [], check: null, storm: false, owner: o };
     s.b[f] = 0;
     if ((m >> 16) & 1) { s.b[t] = cell(o, Q); res.promo = true; } else s.b[t] = v;
     if (cap) {
       const co = ownerOf(cap), ct = typeOf(cap);
       res.captured = { owner: co, type: ct };
-      s.pts[o] += VALUE[ct]; s.captured[o].push(cap);
-      if (ct === K) { eliminate(s, co, o, "king"); res.eliminated.push(co); s.pts[o] += 0; }
+      if (co !== DEAD) { s.pts[o] += VALUE[ct]; s.captured[o].push(cap); }              // les pièces grisées ne rapportent rien
     }
     s.last = [f, t]; s.ply++;
     s.log.push({ k: "move", o, f, t });
@@ -139,12 +168,22 @@
       for (let i = 0; i < SQ; i++) {
         if (!s.b[i] || playable(s, i % N, (i / N) | 0)) continue;
         const po = ownerOf(s.b[i]);
-        if (typeOf(s.b[i]) === K) { eliminate(s, po, null, "storm"); res.eliminated.push(po); } else s.b[i] = 0;
+        if (typeOf(s.b[i]) === K && po !== DEAD) { eliminate(s, po, null, "storm"); res.eliminated.push(po); res.elim.push({ o: po, why: "storm", by: -1 }); } else s.b[i] = 0;
       }
+      for (let i = 0; i < SQ; i++) if (s.b[i] && !playable(s, i % N, (i / N) | 0)) s.b[i] = 0;          // pièces (même grisées) qui restaient hors de la zone
     }
-    s.turn = nextAlive(s, o);
-    // un joueur sans aucun coup passe son tour (jamais de blocage de la partie)
-    for (let g = 0; g < 4 && s.alive[s.turn] && C4.moves(s, s.turn).length === 0 && teamsAlive(s) > 1; g++) s.turn = nextAlive(s, s.turn);
+    // joueur suivant : s'il n'a aucun coup légal il est maté (en échec) ou pat (pas en échec) -> éliminé ; on passe au suivant
+    let nxt = nextAlive(s, o);
+    for (let g = 0; g < 4 && teamsAlive(s) > 1; g++) {
+      const mvs = C4.moves(s, nxt);
+      if (mvs.length) break;
+      const by = C4.inCheck(s, nxt), why = by >= 0 ? "mate" : "stalemate";
+      if (by >= 0) s.pts[by] += 15;
+      eliminate(s, nxt, by, why); res.eliminated.push(nxt); res.elim.push({ o: nxt, why, by });
+      nxt = nextAlive(s, nxt);
+    }
+    s.turn = nxt;
+    if (teamsAlive(s) > 1) { const by = C4.inCheck(s, nxt); if (by >= 0) res.check = { by, who: nxt }; }
     return res;
   };
   const teamsAlive = (s) => new Set([0, 1, 2, 3].filter((i) => s.alive[i]).map((i) => s.teams[i])).size;
@@ -178,7 +217,6 @@
     }
     return a;
   };
-  C4.kingSq = (s, o) => { for (let i = 0; i < SQ; i++) if (s.b[i] === cell(o, K)) return i; return -1; };
   C4.material = (s, o) => { let m = 0; for (let i = 0; i < SQ; i++) if (s.b[i] && ownerOf(s.b[i]) === o) m += VALUE[typeOf(s.b[i])]; return m; };
   /** Parties après-tempête : prochaine chute dans combien de demi-coups (Infinity sans tempête). */
   C4.stormIn = (s) => { const st = s.storm; if (!st || s.level >= 5) return Infinity; const nxt = s.ply < st.first ? st.first : s.ply + (st.every - ((s.ply - st.first) % st.every)); return nxt - s.ply; };
