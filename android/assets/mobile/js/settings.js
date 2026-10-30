@@ -43,7 +43,7 @@
       <div class="f"><label>Certificat du PC</label><div class="r"><span id="st-fp" style="flex:1;align-self:center;font-size:13px;word-break:break-all" class="${cfg.pinned ? "ok" : "muted"}">${cfg.pinned ? "✓ empreinte validée" : "non validée"}</span><button class="mini" id="st-fp-btn" style="margin:0">VÉRIFIER</button></div></div>
 
       <div class="row"><button class="btn pri" id="st-save">ENREGISTRER</button><button class="btn" id="st-import">IMPORTER DEPUIS LE PC</button></div>
-      <p class="muted" style="margin-top:14px;font-size:12.5px">Version ${esc(N.version())} · les clés ne quittent jamais le coffre Android.</p>` });
+      <p class="muted" style="margin-top:14px;font-size:12.5px">Version ${esc(N.version())}${wu.label ? " · web " + esc(wu.label) : " · web de l’APK"} · les clés ne quittent jamais le coffre Android.</p>` });
 
     s.querySelectorAll("[data-replace]").forEach((b) => (b.onclick = () => { N.vault.del(b.dataset.replace); open(); }));
     s.querySelectorAll("[data-forget]").forEach((b) => (b.onclick = async () => { if (await U.confirm("Effacer ?", "La clé sera supprimée de ce téléphone.", "EFFACER", true)) { N.vault.del(b.dataset.forget); if (b.dataset.forget === "pc_token") N.pc.clear(); E.emit("settings", "pcPaired"); open(); } }));
