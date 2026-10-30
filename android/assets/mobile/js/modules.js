@@ -22,6 +22,9 @@
   // kind : native | pc (a besoin du PC connecté) | locked (réservé au PC)
   const GROUPS = [
     ["Sur ton téléphone", [
+      { id: "s-upd", n: "Mise à jour", s: "Récupérer la dernière version", i: "sync", k: "native" },
+      { id: "s-qr", n: "Appairer le PC", s: "Scanner le QR code du PC", i: "cpu", k: "native" },
+      { id: "s-set", n: "Réglages", s: "Clés, PC, mise à jour", i: "gear", k: "native" },
       { id: "agenda", n: "Agenda", s: "Cours, rendus, tâches", i: "cal", k: "native" },
       { id: "chess", n: "Échecs", s: "Contre E.N.O.S. · hors ligne", i: "chess", k: "native", sub: true },
       { id: "train", n: "Super Enos", s: "Entraînement LLM · arrière-plan", i: "chess", k: "native", sub: true },
@@ -85,6 +88,9 @@
     if (m.suite) return E.suite.open(id);
     if (m.tab) return U.go(m.tab);
     if (id === "theme") return themeSheet();
+    if (id === "s-upd") return E.settingsUi.open("upd");
+    if (id === "s-qr") return E.pairScan.open();
+    if (id === "s-set") return E.settingsUi.open();
     if (kindOf(m) === "pc" && !m.sub) return E.native.openPcModule(id);
     E.tools.show(id);
     E.apps.enter(id);

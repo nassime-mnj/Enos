@@ -14,7 +14,7 @@
       <div class="f"><div class="r"><button class="btn pri" id="st-scan" style="flex:1">SCANNER LE QR DU PC</button></div>
         <small>Sur le PC : bouton « APPAIRER LE TÉLÉPHONE ». Importe d'un coup tes clés, réglages et le PC (adresses Wi-Fi + Tailscale), sans rien taper. Pour joindre le PC en 5G, installe Tailscale sur le PC et le téléphone.</small></div>
 
-      <div class="sec-t">Mise à jour</div>
+      <div class="sec-t" id="st-updt">Mise à jour</div>
       <div class="f"><div class="r"><button class="btn pri" id="st-upd" style="flex:1">METTRE À JOUR</button></div>
         <small id="st-upd-msg">Récupère la dernière version depuis GitHub, sans réinstaller l'application${wu.label ? " · actuelle : " + esc(wu.label) : ""}.</small></div>
       <div class="f"><label for="st-upd-auto">Télécharger automatiquement au lancement</label><div class="r"><input id="st-upd-auto" type="checkbox" ${wu.auto ? "checked" : ""}></div></div>
@@ -62,6 +62,7 @@
     $("#st-fp-btn").onclick = verifyFp;
     $("#st-save").onclick = save;
     $("#st-import").onclick = () => { U.closeSheet(true); E.importer.paste(); };
+    if (section === "upd") setTimeout(() => { const b = $("#st-upd"); if (b) b.scrollIntoView({ behavior: "smooth", block: "center" }); }, 340);
     if (section === "pc") setTimeout(() => { const t = $("#st-pc"); if (t) t.scrollIntoView({ behavior: "smooth" }); }, 340);
   }
 
