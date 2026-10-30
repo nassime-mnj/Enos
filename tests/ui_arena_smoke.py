@@ -43,6 +43,15 @@ try:
         pg.wait_for_selector("#df-botchat .bot-log", timeout=5000)
         check(pg.is_visible("#df-botchat .bot-log") and pg.inner_text("#df-botchat .bot-bubble").strip() != "", "face à Pénoire : bulle + messagerie visibles")
         check("Nassime" in "".join(pg.evaluate("[...document.querySelectorAll('#df-botchat .bot-m')].map(m => m.innerText)")) or True, "prénom")
+        # onglet BATTLE ROYALE ×4 de la même page
+        pg.goto("http://127.0.0.1:8803/?r=1#royale")
+        pg.wait_for_selector("#app-royale .ro-seat", timeout=15000)
+        check(pg.locator(".ro-seat").count() == 4, "ROYALE ×4 : 4 sièges")
+        pg.evaluate("() => { const a = document.querySelector('#app-royale')._api, c = a.cfg(); c.seats.forEach((s, i) => { s.who = ['penoire', 'nasko', 'lelex', 'enos'][i]; s.team = i; }); c.speed = 'fast'; c.storm = 'off'; a.launch(); }")
+        pg.wait_for_selector("#ro-board .pc", timeout=5000)
+        pg.wait_for_function("document.querySelector('#app-royale')._api.g.st.ply >= 6", timeout=30000)
+        cols = pg.evaluate("(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); return [r('.ro-ban[data-pos=\"1\"]').left, r('#ro-board').left, r('.ro-ban[data-pos=\"3\"]').left]; })()")
+        check(cols[0] < cols[1] < cols[2], "ROYALE ×4 : bannières gauche | plateau | droite sur PC : %s" % [round(c) for c in cols])
         check(not errs, "aucune erreur JavaScript : %s" % errs[:2])
         b.close()
 finally:

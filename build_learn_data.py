@@ -84,6 +84,7 @@ def sync_pc():
              ("vendor/stockfish_src.js", "stockfish_src.js"), ("js/chess_local.js", "chess_local.js"), ("js/chess_brain.js", "chess_brain.js"),
              ("js/chess_tools.js", "chess_tools.js"), ("js/chess_course.js", "chess_course.js"), ("js/board_scan.js", "board_scan.js"), ("js/m_advisor.js", "m_advisor.js"), ("data/piece_model.js", "data/piece_model.js"),
              # ARÈNE DES BOTS (onglet ⚔ ARÈNE : m_defis.js est le même code que sur le téléphone ; static/learn/arena.js + arena.css sont propres au PC)
+             ("js/chess4.js", "chess4.js"), ("js/chess4_ai.js", "chess4_ai.js"), ("js/m_royale.js", "m_royale.js"), ("css/royale.css", "royale.css"),
              ("js/m_defis.js", "m_defis.js"), ("js/bot_chat.js", "bot_chat.js"), ("js/bot_lines.js", "bot_lines.js"), ("data/style_bots.js", "data/style_bots.js")]
     files += [("img/bots/" + n, "img/bots/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "bots")) if n.endswith(".png")]
     files += [("img/chess/" + n, "img/chess/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "chess")) if n.endswith(".png")]

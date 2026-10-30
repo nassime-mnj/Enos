@@ -18,8 +18,8 @@
   };
   // probabilité qu'un événement déclenche une réplique ; les moments forts parlent toujours
   const PROB = { greet: 1, open_announce: 0.85, open_end: 0.7, open_refused: 1, bot_brilliant: 1, h_brilliant: 1, bot_blunder: 0.95, h_blunder: 0.95, bot_mistake: 0.5, h_mistake: 0.5, super: 0.8, good: 0.18, h_good: 0.2,
-    check: 0.35, check_received: 0.35, elo_up: 1, elo_self: 1, transform: 1, wheel_low: 1, wheel_mid: 1, wheel_high: 1, minor_lost: 0.9, frustration: 0.6, winning: 0.5, mate_coming: 1, mate_danger: 1, mate_win: 1, mate_lose: 1, draw: 1, resign_win: 1, chat: 0.14 };
-  const STRONG = new Set(["wheel_low", "wheel_mid", "wheel_high", "elo_up", "elo_self", "transform", "minor_lost", "greet", "open_announce", "open_end", "open_refused", "bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_coming", "mate_danger", "mate_win", "mate_lose", "draw", "resign_win"]);
+    check: 0.35, check_received: 0.35, elo_up: 1, elo_self: 1, transform: 1, r_target: 1, r_capture: 0.5, r_lost: 0.6, r_elim_win: 1, r_elim_lose: 1, r_storm: 0.5, r_win: 1, wheel_low: 1, wheel_mid: 1, wheel_high: 1, minor_lost: 0.9, frustration: 0.6, winning: 0.5, mate_coming: 1, mate_danger: 1, mate_win: 1, mate_lose: 1, draw: 1, resign_win: 1, chat: 0.14 };
+  const STRONG = new Set(["r_target", "r_elim_win", "r_elim_lose", "r_win", "wheel_low", "wheel_mid", "wheel_high", "elo_up", "elo_self", "transform", "minor_lost", "greet", "open_announce", "open_end", "open_refused", "bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_coming", "mate_danger", "mate_win", "mate_lose", "draw", "resign_win"]);
   const END = new Set(["mate_win", "mate_lose", "draw", "resign_win"]);
   const MIN_GAP = 2;                                                  // demi-coups minimum entre deux répliques d'un même personnage (hors moments forts)
   const LLM_KINDS = new Set(["bot_brilliant", "bot_blunder", "h_brilliant", "h_blunder", "mate_win", "mate_lose"]);

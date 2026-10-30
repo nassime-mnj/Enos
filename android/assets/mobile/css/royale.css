@@ -1,0 +1,89 @@
+/* BATTLE ROYALE ×4 (m_royale.js) : plateau en croix 14×14, 4 bannières de combattants, tempête, podium. Mobile d'abord ; la mise en page 3 colonnes arrive à partir de 1000 px (PC). */
+#tool-royale .card{min-width:0}
+.ro-hero p{font-size:14.5px;line-height:1.5}
+.ro-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ro-presets button{padding:8px 12px;border-radius:15px;border:1px solid var(--line);background:#101012;font:700 12.5px var(--ui);color:#cfcfd6}.ro-presets button:active{border-color:var(--red)}
+.ro-seats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ro-seat{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid color-mix(in srgb,var(--pc) 55%,var(--line));border-radius:14px;background:linear-gradient(160deg,#121216,#0b0b0d);box-shadow:inset 0 0 22px color-mix(in srgb,var(--pc) 14%,transparent)}
+.ro-seat>b{font:800 12px var(--ui);letter-spacing:2px;color:var(--pc)}
+.ro-sav .bot-av{width:62px;height:62px;border-radius:12px;font-size:13px}
+.ro-seat label{display:flex;flex-direction:column;gap:3px;font:700 10.5px var(--ui);letter-spacing:1.2px;color:var(--muted)}
+.ro-seat select,.ro-seat input{height:34px;min-width:0;padding:0 8px;border-radius:9px;border:1px solid var(--line);background:#0a0a0c;color:var(--text);font:600 13px var(--ui)}
+.ro-teams{margin:2px 2px 0;font-size:13.5px}.ro-hint{margin:6px 2px;font-size:13px;line-height:1.5}
+.ro-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ro-opts label{display:flex;flex-direction:column;gap:4px;font:700 11px var(--ui);letter-spacing:1.2px;color:var(--muted)}
+.ro-opts select{height:38px;border-radius:10px;border:1px solid var(--line);background:#0a0a0c;color:var(--text);font:600 14px var(--ui);padding:0 8px}
+.ro-bar{height:7px;border-radius:5px;background:#1b1b20;margin:10px 0;overflow:hidden}.ro-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--btn1),var(--btn2));transition:width .3s}
+.ro-tlog{display:flex;flex-direction:column;gap:4px;font-size:13px}.ro-tl{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--line)}.ro-tl span{color:var(--muted);text-align:right}
+
+/* ---- partie */
+.ro-hud{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:2px 2px 8px;font:600 15px var(--ui)}
+.ro-hud b{font-weight:800}.ro-dot{display:inline-block;width:11px;height:11px;margin-right:7px;border-radius:50%;background:#555;box-shadow:0 0 10px currentColor}
+#ro-stormhud{font:700 13px var(--ui);color:#8d8d97}#ro-stormhud.hot{color:#ff4d63;animation:blink .7s infinite}
+.ro-arena{display:grid;gap:8px;grid-template-columns:1fr 1fr;grid-template-areas:"top top" "board board" "bottom bottom" "left right"}
+.ro-boardwrap{grid-area:board;min-width:0}
+.ro-ban[data-pos="0"]{grid-area:bottom}.ro-ban[data-pos="1"]{grid-area:left}.ro-ban[data-pos="2"]{grid-area:top}.ro-ban[data-pos="3"]{grid-area:right}
+.ro-ban{position:relative;min-width:0;padding:8px 10px;border:1px solid color-mix(in srgb,var(--pc) 60%,var(--line));border-radius:14px;background:linear-gradient(160deg,#131318,#0b0b0d);transition:.3s}
+.ro-ban.turn{box-shadow:0 0 0 2px var(--pc),0 0 22px color-mix(in srgb,var(--pc) 45%,transparent)}
+.ro-ban.dead{opacity:.55;filter:grayscale(1)}
+.ro-hd{display:flex;align-items:center;gap:7px;min-width:0}.ro-hd .nm{font:800 14px var(--ui);color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ro-hd .ro-dot{background:var(--pc);margin:0;flex:none}.ro-t{font:700 10px var(--ui);letter-spacing:1px;color:var(--pc)}.ro-pts{margin-left:auto;font:800 13px var(--ui);color:#1acfd6}
+.ro-chat{height:64px;margin-top:6px}                                    /* hauteur fixe : une bulle qui apparaît ne décale JAMAIS le plateau */
+.ro-chat .bot-banner{height:100%;min-height:0;margin:0;gap:8px;align-items:flex-end}.ro-chat .bot-av{width:54px;height:54px;border-radius:11px;font-size:12px}
+.ro-chat .bot-bubble{margin:0;padding:5px 9px;font-size:12.5px;border-radius:13px;line-height:1.25;max-height:100%;overflow:hidden}.ro-chat .bot-bubble small{display:none}
+.ro-chat .bot-bubble::before{bottom:12px}
+.ro-cap{display:flex;flex-wrap:wrap;gap:1px;min-height:0;margin-top:4px}.ro-cap img{width:16px;height:16px;opacity:.9}
+.ro-ban.ko::after{content:"ÉLIMINÉ";position:absolute;inset:0;display:grid;place-items:center;font:900 22px var(--ui);letter-spacing:5px;color:#ff4d63;background:#000a;border-radius:14px;transform:rotate(-8deg);animation:koStamp .5s cubic-bezier(.2,1.6,.3,1)}
+@keyframes koStamp{from{opacity:0;transform:scale(2.4) rotate(-8deg)}to{opacity:1;transform:rotate(-8deg)}}
+
+/* ---- plateau */
+.ro-board{position:relative;width:100%;aspect-ratio:1/1;max-width:min(100%,720px);margin:0 auto;border-radius:12px;background:#0a0a0c;box-shadow:0 12px 40px #000a;overflow:hidden}
+.ro-sqs,.ro-pcs,.ro-fx{position:absolute;inset:0}.ro-pcs,.ro-fx{pointer-events:none}
+.ro-sq{position:absolute;box-sizing:border-box}
+.ro-sq.l{background:#e4e6d4}.ro-sq.d{background:#6f8a5c}
+.ro-sq.last::before{content:"";position:absolute;inset:0;background:rgba(255,235,60,.5)}
+.ro-sq.sel::before{content:"";position:absolute;inset:0;background:rgba(255,235,60,.6)}
+.ro-sq.tgt::after{content:"";position:absolute;left:34%;top:34%;width:32%;height:32%;border-radius:50%;background:rgba(0,0,0,.25)}
+.ro-sq.cap::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 3px rgba(255,60,60,.8)}
+.ro-sq.storm{background:repeating-linear-gradient(45deg,#2a0508,#2a0508 5px,#3d0a10 5px,#3d0a10 10px)}
+.ro-sq.warn{animation:warn .8s infinite alternate}
+@keyframes warn{to{box-shadow:inset 0 0 0 100px rgba(255,40,60,.45)}}
+.ro-sq.chk{animation:chk .6s infinite alternate}
+@keyframes chk{to{box-shadow:inset 0 0 14px 4px #ff1a3c}}
+.pc{position:absolute;object-fit:contain;transition:left .26s cubic-bezier(.3,.8,.3,1),top .26s cubic-bezier(.3,.8,.3,1),opacity .3s,transform .3s;will-change:left,top;-webkit-user-drag:none}
+.pc.lift{z-index:5;transform:scale(1.15)}.pc.out{opacity:0;transform:scale(.3) rotate(25deg)}
+.pc.c0{filter:drop-shadow(0 0 1.5px #000) drop-shadow(0 0 4px #ff3b4f)}
+.pc.c1{filter:sepia(1) saturate(2.4) brightness(1.02) drop-shadow(0 0 1.5px #000) drop-shadow(0 0 4px #ffc34a)}
+.pc.c2{filter:hue-rotate(150deg) saturate(2.4) drop-shadow(0 0 1.5px #000) drop-shadow(0 0 4px #1acfd6)}
+.pc.c3{filter:brightness(2.1) contrast(.9) drop-shadow(0 0 1.5px #000) drop-shadow(0 0 4px #8be04d)}
+.ro-cap img.c1{filter:sepia(1) saturate(2.4)}.ro-cap img.c2{filter:hue-rotate(150deg) saturate(2.4)}.ro-cap img.c3{filter:brightness(2.1)}
+.boom{position:absolute;display:grid;place-items:center;font-size:22px;font-style:normal;animation:boom .7s ease-out forwards}
+@keyframes boom{from{transform:scale(.4);opacity:1}to{transform:scale(2.6);opacity:0}}
+.ro-board.shake{animation:shake .35s}.ro-board.quake{animation:quake .9s}
+@keyframes shake{20%{transform:translate(-3px,2px)}40%{transform:translate(3px,-2px)}60%{transform:translate(-2px,-1px)}80%{transform:translate(2px,2px)}}
+@keyframes quake{10%{transform:translate(-6px,3px) rotate(-.4deg)}30%{transform:translate(6px,-3px) rotate(.4deg)}50%{transform:translate(-4px,-2px)}70%{transform:translate(4px,3px)}}
+.ro-ticker{margin:8px 2px;min-height:22px;font:600 14px var(--ui);color:#cfcfd6;text-align:center}
+.ro-end{position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:radial-gradient(ellipse at center,#2a0710d9,#000e);backdrop-filter:blur(5px);animation:botPop .4s}
+.ro-end[hidden]{display:none}
+.ro-podium{display:flex;flex-direction:column;gap:9px;width:min(92vw,420px);padding:20px;border:1px solid var(--line);border-radius:18px;background:#0e0e11}
+.ro-podium h3{margin:0 0 6px;text-align:center;font:800 15px var(--ui);letter-spacing:3px;color:#ffd24a}
+.ro-pod{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--pc) 60%,var(--line));border-radius:12px;background:#121216}
+.ro-pod .md{font-size:24px;min-width:30px;text-align:center}.ro-pod b{flex:1;font:800 16px var(--ui);color:#fff}.ro-pod .pt{font:700 12.5px var(--ui);color:var(--muted)}
+.ro-pod.p0{box-shadow:0 0 22px #ffd24a66;animation:botBob .8s ease-in-out infinite alternate}
+@media (prefers-reduced-motion:reduce){.pc,.ro-board.shake,.ro-board.quake,.boom,.ro-pod.p0,.ro-sq.warn,.ro-sq.chk{animation:none;transition-duration:.01s}}
+
+/* ---- PC / grand écran : bannières à gauche et à droite du plateau */
+@media (min-width:1000px){
+  .ro-arena{grid-template-columns:minmax(230px,300px) minmax(0,720px) minmax(230px,300px);grid-template-areas:". top ." "left board right" ". bottom .";justify-content:center;gap:14px}
+  .ro-ban[data-pos="1"],.ro-ban[data-pos="3"]{align-self:start}
+  .ro-chat{height:auto;min-height:64px}.ro-chat .bot-banner{flex-direction:column;align-items:stretch;height:auto}.ro-chat .bot-av{width:100%;height:auto;aspect-ratio:1/1;max-width:210px;font-size:24px;align-self:center}
+  .ro-chat .bot-bubble{font-size:15px}.ro-chat .bot-bubble::before{left:30px;bottom:auto;top:-9px;border:9px solid transparent;border-bottom-color:#fff;border-top:0}
+  .ro-ban[data-pos="0"] .ro-chat,.ro-ban[data-pos="2"] .ro-chat{height:72px}.ro-ban[data-pos="0"] .ro-chat .bot-banner,.ro-ban[data-pos="2"] .ro-chat .bot-banner{flex-direction:row;align-items:flex-end;height:100%}
+  .ro-ban[data-pos="0"] .bot-av,.ro-ban[data-pos="2"] .bot-av{width:64px;height:64px}
+  .ro-ban[data-pos="0"] .bot-bubble::before,.ro-ban[data-pos="2"] .bot-bubble::before{left:-9px;bottom:14px;top:auto;border:9px solid transparent;border-right-color:#fff;border-left:0}
+  .ro-seats{grid-template-columns:repeat(4,1fr)}
+}
+.ro-sq .co{position:absolute;font:700 9px var(--ui);font-style:normal;color:#0009;pointer-events:none;line-height:1}
+.ro-sq .co.f{right:2px;bottom:1px}.ro-sq .co.r{left:2px;top:1px}
+.ro-sq.d .co{color:#ffffffa0}
+.ro-say{display:flex;gap:8px;margin:6px 0}.ro-say input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:#0a0a0c;color:var(--text);font:700 16px var(--ui);text-transform:lowercase}
+.ro-say .btn{flex:none;height:44px;padding:0 14px}.ro-say[hidden]{display:none}

@@ -271,3 +271,83 @@ window.ENOS_BOT_LINES = {
     reply: ["Je t'écoute, mais mes grelots couvrent un peu.", "Joue, {me}. Le spectacle n'attend pas.", "Intéressant. Continuons la représentation."],
   },
 };
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------
+// BATTLE ROYALE ×4 (m_royale.js) : r_target (annonce sa cible, {me} = la cible) · r_capture · r_lost · r_elim_win (je viens d'éliminer quelqu'un) · r_elim_lose (je suis éliminé) · r_storm · r_win
+(() => {
+  const R = {
+    nasko: {
+      r_target: ["{me}, t'es ma cible. Doucement bg, c'est pas personnel 😭", "Je vais chercher {me} en premier. Les autres, je vous vois 👀", "Plan du jour : m'occuper de {me}, le reste suivra."],
+      r_capture: ["Une pièce de plus au compteur, comme quoi.", "Merci pour le cadeau, blud.", "Je prie pour que ça passe… et ça passe 😭"],
+      r_lost: ["Aïe, ma pièce… Qui m'a fait ça ?", "Ça pique. Je note le nom.", "Bon, j'ai plus qu'à me venger."],
+      r_elim_win: ["Un de moins ! Roi capturé, c'est propre 😭", "Éliminé. Doucement les gars, je sors l'artillerie."],
+      r_elim_lose: ["Mon roi… Gg à celui qui m'a eu, respect.", "Éliminé ?! Bon, je regarde la suite avec du popcorn 😭"],
+      r_storm: ["La tempête arrive, tout le monde au centre blud !", "Le bord s'effondre, comme quoi il faut jamais rester dans un coin."],
+      r_win: ["Dernier debout ! C'était sale, mais je prends 😭", "GG tout le monde. Je suis juste le partisan de ma propre victoire."],
+    },
+    lelex: {
+      r_target: ["{me} ? Att att, t'es ma cible XDDD", "C'est réel : je fonce sur {me}.", "On va rire un peu, {me}."],
+      r_capture: ["XDDD une pièce de gratuite !", "Vrm mdrr, il a laissé ça en prise ??", "Fraude sur fraude."],
+      r_lost: ["Att att, on m'a pris une pièce ??", "Mdrr non pas ma dame.", "C'est réel que j'ai perdu ça ?"],
+      r_elim_win: ["XDDD éliminé ! Au suivant.", "Vrm mdrr, son roi est parti."],
+      r_elim_lose: ["Mdrr j'ai pris cher, gg.", "Éliminé… la belle époque XD"],
+      r_storm: ["Att att, la tempête ! Tout le monde au milieu XDDD", "Le bord disparaît, vrm mdrr."],
+      r_win: ["C'est réel, j'ai gagné ?! XDDD", "Dernier survivant. La belle époque."],
+    },
+    penoire: {
+      r_target: ["{me}, tu es ma cible. Dernière chance de partir 😭", "Je te chasse en premier, {me}. Pas de pitié.", "{me} d'abord. Les autres suivront, blud."],
+      r_capture: ["Une pièce de moins pour toi. Super Nova.", "Merci pour le butin.", "Proprement pris. Applaudis."],
+      r_lost: ["Tu me prends une pièce ? Mignon. Je te la rends avec intérêts.", "Noté. Tu vas le regretter.", "Ça ne change rien. Je reste le plus fort."],
+      r_elim_win: ["Éliminé. Rincé. Un de moins, blud 😭", "Roi capturé. Deviens plus fort et reviens.", "Un de plus sur ma liste."],
+      r_elim_lose: ["Impossible… Éliminé par ça ? Je reviendrai.", "Bien joué. Une seule fois. Je note."],
+      r_storm: ["La tempête ? Je l'avais prévue. Au centre, vite.", "Le bord s'effondre. Les faibles vont tomber."],
+      r_win: ["Dernier debout. Rincés, tous. Super Nova contre Dying Ants 😭", "C'était sale. Revenez plus forts."],
+    },
+    ghorghor: {
+      r_target: ["{me} ? Att att, c'est toi que je chasse XD", "Ma cible : {me}. Vrm mdrr."],
+      r_capture: ["XDDD une pièce !", "Hé hé hé… merci."],
+      r_lost: ["Hé… on me prend une pièce. Doucement.", "Att att. Ça commence à m'énerver."],
+      r_elim_win: ["Éliminé XDDD. Qui est le suivant ?", "Un de moins, vrm."],
+      r_elim_lose: ["Éliminé ?! Mdrr… gg.", "Mon roi ! Att att…"],
+      r_storm: ["La tempête XDDD au centre !", "Le bord disparaît, vrm mdrr."],
+      r_win: ["Dernier survivant ! XDDD", "C'est réel, j'ai gagné."],
+    },
+    naskurieux: {
+      r_target: ["Mission : éliminer {me}. L'oreillette confirme.", "Cible acquise : {me}. Je suis GM, je te rappelle 😭"],
+      r_capture: ["Une capture ! L'agent progresse.", "Butin récupéré. La mission avance."],
+      r_lost: ["On touche à mes pièces ? L'oreillette grésille.", "Perte enregistrée. Vengeance en cours."],
+      r_elim_win: ["Cible neutralisée. Mission accomplie 😭", "Un roi de capturé. L'agent est content."],
+      r_elim_lose: ["Mission échouée… j'avais 1 elo, aussi.", "Éliminé. Retour au QG."],
+      r_storm: ["Alerte tempête ! Repli vers le centre.", "Le terrain rétrécit, l'oreillette panique."],
+      r_win: ["Dernier agent debout. Comme quoi 😭", "Mission accomplie : survivre."],
+    },
+    jester: {
+      r_target: ["{me}, la roue m'a désigné ton roi comme prochain numéro.", "Mesdames et messieurs : {me} sera ma victime d'honneur.", "Ma cible : {me}. Le fou du roi a de la suite dans les idées."],
+      r_capture: ["Une pièce de plus : le bouffon encaisse avec élégance.", "Merci pour le cadeau, il sera bien rangé."],
+      r_lost: ["On me dérobe une pièce ! Quelle impolitesse.", "Un fou perd parfois ses grelots. Pas sa bonne humeur."],
+      r_elim_win: ["Rideau pour ce roi. Applaudissements, s'il vous plaît.", "Éliminé avec grâce. La cour est impressionnée."],
+      r_elim_lose: ["Mon roi s'incline. Le spectacle continue sans moi.", "Éliminé ! Je reste pour critiquer la mise en scène."],
+      r_storm: ["Le plateau s'effondre : voilà un final grandiose.", "La tempête arrive. Même le fou cherche un abri."],
+      r_win: ["Dernier en piste : le bouffon devient roi !", "Le rideau tombe sur ma victoire. Merci, merci."],
+    },
+    eto: {
+      r_target: ["{me} sera ma cible. Voyons s'il y a un sacrifice à la clé ✦", "Mon regard est sur {me}."],
+      r_capture: ["Une prise élégante ✦", "Le butin vient à qui sait le chercher."],
+      r_lost: ["Je perds une pièce. Elle reviendra sous une autre forme.", "Respire. La partie est longue."],
+      r_elim_win: ["Un roi tombe ✦ Merci pour la partie.", "Élimination propre."],
+      r_elim_lose: ["Éliminé. J'ai appris quelque chose de beau ✦", "Mon roi s'éteint. Bravo à toi."],
+      r_storm: ["La tempête approche : tous au centre ✦", "Le bord s'effondre, la beauté se resserre."],
+      r_win: ["Dernier survivant ✦ Quelle belle bataille.", "La victoire est une danse. Merci à tous."],
+    },
+    enos: {
+      r_target: ["Cible assignée : {me}. Plan d'attaque en cours.", "Objectif : neutraliser {me}."],
+      r_capture: ["Capture enregistrée.", "Matériel adverse réduit."],
+      r_lost: ["Perte matérielle enregistrée. Recalcul.", "Pièce perdue. Contre-mesure engagée."],
+      r_elim_win: ["Roi adverse capturé. Joueur éliminé.", "Cible neutralisée."],
+      r_elim_lose: ["Défaite enregistrée. Analyse post-mortem lancée.", "Mon roi est tombé. Félicitations."],
+      r_storm: ["Effondrement détecté : repli au centre.", "Zone réduite. Recalcul des positions."],
+      r_win: ["Dernier survivant : E.N.O.S. Mission accomplie.", "Victoire. Résultat conforme aux prévisions."],
+    },
+  };
+  for (const id in R) Object.assign((window.ENOS_BOT_LINES[id] = window.ENOS_BOT_LINES[id] || {}), R[id]);
+})();
