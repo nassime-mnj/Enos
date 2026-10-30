@@ -8,8 +8,18 @@
       : `<div class="r"><input id="${id}" type="password" placeholder="${ph}" autocomplete="off" spellcheck="false" autocapitalize="off"></div>`}${hint ? `<small>${hint}</small>` : ""}</div>`;
 
   function open(section) {
-    const cfg = N.pc.config();
+    const cfg = N.pc.config(), wu = N.webUpdateInfo();
     const s = U.sheet({ title: "Réglages", html: `
+      <div class="sec-t">Appairer avec le PC</div>
+      <div class="f"><div class="r"><button class="btn pri" id="st-scan" style="flex:1">SCANNER LE QR DU PC</button></div>
+        <small>Sur le PC : bouton « APPAIRER LE TÉLÉPHONE ». Importe d'un coup tes clés, réglages et le PC (adresses Wi-Fi + Tailscale), sans rien taper. Pour joindre le PC en 5G, installe Tailscale sur le PC et le téléphone.</small></div>
+
+      <div class="sec-t">Mise à jour</div>
+      <div class="f"><div class="r"><button class="btn pri" id="st-upd" style="flex:1">METTRE À JOUR</button></div>
+        <small id="st-upd-msg">Récupère la dernière version depuis GitHub, sans réinstaller l'application${wu.label ? " · actuelle : " + esc(wu.label) : ""}.</small></div>
+      <div class="f"><label for="st-upd-auto">Télécharger automatiquement au lancement</label><div class="r"><input id="st-upd-auto" type="checkbox" ${wu.auto ? "checked" : ""}></div></div>
+      <div class="f"><label for="st-upd-br">Branche GitHub</label><div class="r"><input id="st-upd-br" type="text" value="${esc(wu.branch || "main")}" spellcheck="false" autocapitalize="off"></div></div>
+
       <div class="sec-t">Profil</div>
       <div class="f"><label for="st-name">Ton prénom</label><div class="r"><input id="st-name" type="text" value="${esc(E.settings.get("name", "Nassime"))}" maxlength="30"></div></div>
 
@@ -38,6 +48,17 @@
     s.querySelectorAll("[data-replace]").forEach((b) => (b.onclick = () => { N.vault.del(b.dataset.replace); open(); }));
     s.querySelectorAll("[data-forget]").forEach((b) => (b.onclick = async () => { if (await U.confirm("Effacer ?", "La clé sera supprimée de ce téléphone.", "EFFACER", true)) { N.vault.del(b.dataset.forget); if (b.dataset.forget === "pc_token") N.pc.clear(); E.emit("settings", "pcPaired"); open(); } }));
     s.querySelectorAll("[data-voices]").forEach((b) => (b.onclick = () => pickVoice(b.dataset.voices, b.dataset.p)));
+    $("#st-scan").onclick = () => { U.closeSheet(true); E.pairScan.open(); };
+    $("#st-upd").onclick = async () => {
+      const b = $("#st-upd"), m = $("#st-upd-msg");
+      N.setWebUpdate($("#st-upd-br").value.trim() || "main", $("#st-upd-auto").checked);
+      b.disabled = true; m.textContent = "Recherche de la dernière version…";
+      const r = await N.webUpdate(true);
+      b.disabled = false;
+      if (r.state === "applied") m.textContent = "Mise à jour installée, rechargement…";
+      else m.textContent = r.msg || r.error || "Terminé.";
+    };
+    $("#st-upd-auto").onchange = () => N.setWebUpdate($("#st-upd-br").value.trim() || "main", $("#st-upd-auto").checked);
     $("#st-fp-btn").onclick = verifyFp;
     $("#st-save").onclick = save;
     $("#st-import").onclick = () => { U.closeSheet(true); E.importer.paste(); };

@@ -23,6 +23,30 @@
     return fresh.length;
   }
 
+  // Après un import réussi : préférences, tâches, message, relance de la recherche du PC
+  function finish(r, blob, ceo) {
+    Object.entries(r.settings || {}).forEach(([k, v]) => E.settings.set(k, v));
+    const nt = applyExtras(r);
+    if (ceo) E.store.set("ceo.done", blob.slice(0, 40));                           // ne redemande plus pour CE paquet (le sel est unique)
+    U.closeSheet();
+    U.toast("Importé : " + (r.imported || []).map((n) => NAMES[n] || n).join(", ") + (nt ? ` · ${nt} tâche(s)` : ""), "ok", 7000);
+    E.emit("settings", "pcAddrs"); E.emit("settings", "pcPaired"); E.emit("settings", "name");
+    E.agenda.refresh(true); E.views.renderDay();
+    E.link.probeNow();
+  }
+
+  // Lien d'appairage du QR du PC (enos://pair?d=PAQUET&c=CODE) : le code est dans le lien, donc rien à saisir
+  I.applyLink = async (text) => {
+    const m = /^enos:\/\/pair\?(.+)$/.exec(String(text || "").trim());
+    if (!m) return { ok: false, error: "Ce QR code n'est pas un appairage E.N.O.S." };
+    const q = new URLSearchParams(m[1]);
+    const blob = q.get("d") || "", code = q.get("c") || "";
+    if (blob.length < 50 || code.length < 10) return { ok: false, error: "QR incomplet." };
+    const r = await apply(blob, code);
+    if (r.ok) finish(r, blob, false);
+    return r;
+  };
+
   // ceo=true : paquet intégré à l'application (exporter_donnees_ceo.py) -> phrase secrète libre au lieu du code à 10 caractères
   function ask(blob, ceo) {
     const s = U.sheet({ title: ceo ? "Données CEO" : "Importer depuis le PC", html: `
@@ -37,14 +61,7 @@
       go.disabled = true; msg.textContent = "Déchiffrement…";
       const r = await apply(blob, inp.value);
       if (!r.ok) { msg.textContent = r.error || "Échec."; go.disabled = false; return; }
-      Object.entries(r.settings || {}).forEach(([k, v]) => E.settings.set(k, v));
-      const nt = applyExtras(r);
-      if (ceo) E.store.set("ceo.done", blob.slice(0, 40));                           // ne redemande plus pour CE paquet (le sel est unique)
-      U.closeSheet();
-      U.toast("Importé : " + (r.imported || []).map((n) => NAMES[n] || n).join(", ") + (nt ? ` · ${nt} tâche(s)` : ""), "ok", 7000);
-      E.emit("settings", "pcAddrs"); E.emit("settings", "pcPaired"); E.emit("settings", "name");
-      E.agenda.refresh(true); E.views.renderDay();
-      E.link.probeNow();
+      finish(r, blob, ceo);
     };
     go.onclick = run;
     inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); run(); } };
@@ -67,6 +84,6 @@
   // Secours : coller le fichier (page du PC › « Copier le fichier »)
   I.paste = async () => {
     const s = U.sheet({ title: "Coller le fichier d'import", html: `<div class="f"><label for="imp-blob">Fichier copié depuis la page du PC</label><div class="r"><input id="imp-blob" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Colle ici"></div></div><div class="row"><button class="btn pri" id="imp-next">SUIVANT</button></div>` });
-    s.querySelector("#imp-next").onclick = () => { const b = s.querySelector("#imp-blob").value.trim(); if (b.length < 50) return U.toast("Fichier trop court.", "warn"); U.closeSheet(true); ask(b); };
+    s.querySelector("#imp-next").onclick = async () => { const b = s.querySelector("#imp-blob").value.trim(); if (/^enos:\/\/pair\?/.test(b)) { const r = await I.applyLink(b); if (!r.ok) U.toast(r.error || "Échec.", "warn"); return; } if (b.length < 50) return U.toast("Fichier trop court.", "warn"); U.closeSheet(true); ask(b); };
   };
 })();

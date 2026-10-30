@@ -226,6 +226,22 @@ final class LocalBridge {
         if (ok() && html != null && html.length() <= 1500000) act.openPreview(html, title);
     }
 
+    /** Mise à jour instantanée du web de l'application depuis GitHub (sans réinstaller l'APK). */
+    @JavascriptInterface
+    public void webUpdate(long id, boolean apply) {
+        if (ok()) act.webUpdate(id, apply);
+    }
+
+    @JavascriptInterface
+    public String webUpdateInfo() {
+        return ok() ? act.webUpdateInfo() : "{}";
+    }
+
+    @JavascriptInterface
+    public void setWebUpdate(String branch, boolean auto) {
+        if (ok()) act.setWebUpdate(branch, auto);
+    }
+
     @JavascriptInterface
     public void checkCloudUpdate(boolean manual) {
         if (ok()) act.checkCloudUpdate(manual);

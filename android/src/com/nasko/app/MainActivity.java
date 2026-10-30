@@ -30,6 +30,7 @@ import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -68,6 +69,8 @@ public class MainActivity extends Activity {
     private String lastFp = "";
     private PermissionRequest pendingPerm;
     private Updater updater;
+    private WebUpdater webUpd;
+    private boolean webChecked = false;
     private Downloader downloader;
     private ValueCallback<Uri[]> fileCb;          // sélecteur de fichiers (galerie) demandé par la page
     private static final int REQ_FILE = 11;
@@ -94,6 +97,8 @@ public class MainActivity extends Activity {
         pcLink = new PcLink(prefs, vault);
         migrateToken();
         updater = new Updater(this, prefs);
+        webUpd = new WebUpdater(this, prefs, updater.installedCode());
+        webUpd.promoteIfStaged();                    // lot web téléchargé au lancement précédent : activé avant d'afficher la page
         downloader = new Downloader(this, updater);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // la visu F6 ne doit pas s'éteindre
         root = new FrameLayout(this);
@@ -330,7 +335,8 @@ public class MainActivity extends Activity {
         PermissionRequest r = pendingPerm;
         pendingPerm = null;
         if (r == null) return;
-        if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) r.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+        String want = code == 8 ? PermissionRequest.RESOURCE_VIDEO_CAPTURE : PermissionRequest.RESOURCE_AUDIO_CAPTURE;
+        if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) r.grant(new String[]{want});
         else r.deny();
     }
 
@@ -369,6 +375,31 @@ public class MainActivity extends Activity {
     }
 
     String versionName() { return updater.installedName(); }
+
+    /** Mise à jour instantanée de la partie web depuis GitHub (voir WebUpdater). apply : activer et recharger tout de suite. Résultat JSON via emit(id). */
+    void webUpdate(final long id, final boolean apply) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String r = webUpd.run(apply);
+                emit(id, "webupd", r);
+                if (id == 0 && r.contains("\"ready\"")) ui.post(new Runnable() { @Override public void run() { if (onLocalApp && web != null) web.evaluateJavascript("ENOS.ui&&ENOS.ui.toast('Mise à jour prête : Réglages › METTRE À JOUR','ok')", null); } });
+                if (r.contains("\"applied\"")) ui.post(new Runnable() { @Override public void run() { if (web != null) web.loadUrl(LOCAL_APP); } });
+            }
+        }).start();
+    }
+
+    String webUpdateInfo() {
+        return "{\"label\":\"" + esc(webUpd.label()) + "\",\"branch\":\"" + esc(webUpd.branch()) + "\",\"auto\":" + webUpd.auto() + "}";
+    }
+
+    void setWebUpdate(String branch, boolean auto) {
+        SharedPreferences.Editor e = prefs.edit().putBoolean("web_auto", auto);
+        if (branch != null && branch.matches("[A-Za-z0-9._/-]{1,80}")) e.putString("web_branch", branch);
+        e.apply();
+    }
+
+    private String esc(String s) { return s == null ? "" : s.replace("\\", "\\\\").replace("\"", "\\\""); }
 
     /** Application locale (HTML/JS embarques) : ecran de demarrage par defaut. */
     private void showLocalApp() {
@@ -591,7 +622,17 @@ public class MainActivity extends Activity {
         }
 
         @Override
+        public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+            return "GET".equals(r.getMethod()) ? webUpd.intercept(r.getUrl().toString()) : null;
+        }
+
+        @Override
         public void onPageFinished(WebView v, String url) {
+            // une fois par lancement : télécharge en silence la mise à jour web (activée au prochain lancement ou via le bouton)
+            if (!webChecked && onLocalApp && webUpd.auto()) {
+                webChecked = true;
+                webUpdate(0, false);
+            }
             // une fois par lancement, quand le PC répond : cherche une mise à jour de l'application
             if (!updateChecked && !onAsset && url != null && !server().isEmpty() && hostOf(url).equals(hostOf(server()))) {
                 updateChecked = true;
@@ -652,6 +693,14 @@ public class MainActivity extends Activity {
         @Override
         public void onPermissionRequest(final PermissionRequest r) {
             runOnUiThread(() -> {
+                boolean video = false;
+                for (String x : r.getResources()) if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)) video = true;
+                if (video) {                                    // scan du QR d'appairage : caméra réservée à l'application locale
+                    if (!onLocalApp) r.deny();
+                    else if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) r.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                    else { pendingPerm = r; requestPermissions(new String[]{Manifest.permission.CAMERA}, 8); }
+                    return;
+                }
                 boolean mine = hostOf(r.getOrigin().toString()).equals(hostOf(server()));
                 boolean audio = false;
                 for (String x : r.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)) audio = true;

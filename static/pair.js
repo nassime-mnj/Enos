@@ -34,17 +34,18 @@
     try {
       const r = await api("/api/pair/start", "POST");
       body(`<div class="pr-grid">
-          <div class="pr-qr">${r.qr ? `<img alt="QR code d'appairage" src="${r.qr}">` : `<div class="pr-url">${esc(r.url)}</div>`}</div>
+          <div class="pr-qr">${r.qr ? `<img alt="QR code d'appairage" src="${r.qr}">` : `<div class="pr-url">Module QR absent : copie le lien ci-dessous.</div>`}</div>
           <div class="pr-steps">
-            <ol><li>Sur le téléphone, <b>ouvre l'appareil photo</b> et scanne ce QR code.</li>
-              <li>Appuie sur <b>« OUVRIR DANS E.N.O.S. »</b>.</li>
-              <li>Tape ce code dans l'application :</li></ol>
-            <div class="pr-code" id="pr-code">${esc(r.code)}</div>
+            <ol><li>Sur le téléphone, ouvre <b>E.N.O.S.</b> › <b>⚙ Réglages</b> › <b>SCANNER LE QR DU PC</b>.</li>
+              <li>Vise ce QR code : tes clés et réglages sont importés <b>d'un coup</b>, sans rien taper.</li></ol>
             <div class="pr-state" id="pr-state"><i></i><span>En attente du scan…</span></div>
+            <details class="pr-alt"><summary>Le scan ne marche pas ?</summary><p>Copie ce lien, envoie-le-toi (messagerie), puis colle-le dans Réglages › IMPORTER DEPUIS LE PC.</p>
+              <button class="pr-b" id="pr-copy">COPIER LE LIEN</button></details>
           </div></div>
         ${r.notes.length ? `<ul class="pr-notes">${r.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
-        <div class="pr-foot">Même Wi-Fi requis. Le paquet est chiffré ; le code reste sur cet écran. Lien actif ${Math.round(r.expires / 60)} min.
+        <div class="pr-foot">Pas besoin du même Wi-Fi pour appairer. Pour joindre ensuite le PC en 5G, installe Tailscale sur le PC et le téléphone. QR actif ${Math.round(r.expires / 60)} min.
           <button class="pr-b" id="pr-redo">NOUVEAU CODE</button><button class="pr-b" id="pr-cancel">ANNULER</button></div>`);
+      $("pr-copy").onclick = () => { navigator.clipboard && navigator.clipboard.writeText(r.link).then(() => { $("pr-copy").textContent = "Copié ✓"; }); };
       $("pr-cancel").onclick = close;
       $("pr-redo").onclick = () => { stop(); root.remove(); root = null; open(); };
       poll();
@@ -62,12 +63,11 @@
       try { s = await api("/api/pair/status"); } catch (e) { return; }
       const st = $("pr-state");
       if (!st) return;
-      if (s.state === "opened") { st.className = "pr-state go"; st.querySelector("span").textContent = "Page ouverte : tape le code dans l'application…"; }
-      else if (s.state === "paired") {
+      if (s.state === "paired") {
         st.className = "pr-state ok"; st.querySelector("span").textContent = `Appairé ✓  (${s.name || "téléphone"}) · l'onglet PC du téléphone est débloqué`;
-        $("pr-code").classList.add("done"); stop();
+        stop();
         setTimeout(() => { if (root) close(true); }, 4500);
-      } else if (s.state === "expired" || s.state === "cancelled") { st.className = "pr-state bad"; st.querySelector("span").textContent = "Lien expiré : clique sur NOUVEAU CODE."; stop(); }
+      } else if (s.state === "expired" || s.state === "cancelled") { st.className = "pr-state bad"; st.querySelector("span").textContent = "QR expiré : clique sur NOUVEAU CODE."; stop(); }
     }, 1500);
   }
   const stop = () => { clearInterval(timer); timer = 0; };

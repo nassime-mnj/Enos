@@ -96,6 +96,10 @@
   // ------------------------------------------------------------------ divers
   N.deviceId = () => (N.available ? B.deviceId() : "dev-browser");
   N.version = () => (N.available ? B.version() : "dev");
+  // Mise à jour instantanée du web de l'application depuis GitHub (sans réinstaller l'APK) : {state: uptodate|applied|ready|needs_apk|error, n, msg}
+  N.webUpdate = (apply) => oneShot("webupd", (id) => B.webUpdate(id, !!apply));
+  N.webUpdateInfo = () => (N.available && B.webUpdateInfo ? parse(B.webUpdateInfo(), {}) : { label: "", branch: "main", auto: true });
+  N.setWebUpdate = (branch, auto) => { if (N.available && B.setWebUpdate) B.setWebUpdate(String(branch || ""), !!auto); };
   // Super Enos : true = l'entraînement continue en arrière-plan (service de premier plan Android + verrou de réveil), false = relâche
   N.keepAlive = (on, text) => { try { if (N.available && B.keepAlive) B.keepAlive(!!on, text || ""); } catch (e) { /* ancienne coque sans service : l'entraînement s'arrête avec l'écran */ } };
   N.openPcUi = () => { if (N.available) B.openPcUi(); };

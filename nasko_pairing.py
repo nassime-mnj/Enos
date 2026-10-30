@@ -1,14 +1,13 @@
-"""APPAIRAGE DU TÉLÉPHONE EN UN SCAN : le bouton « APPAIRER LE TÉLÉPHONE » du PC affiche un QR code + un code à 10 caractères.
+"""APPAIRAGE DU TÉLÉPHONE EN UN SCAN : le bouton « APPAIRER LE TÉLÉPHONE » du PC affiche un QR code que l'application scanne (Réglages › SCANNER LE QR DU PC).
 
-  PC  : fabrique un paquet CHIFFRÉ (clés Groq/ElevenLabs, liens .ics, adresse + jeton + empreinte du certificat du PC, identifiant d'appareil du téléphone),
-        l'approuve d'avance comme « appareil de confiance » (donc Eto Dev, sans étape manuelle) et sert une page éphémère sur le Wi-Fi.
-  Tél : le QR ouvre la page › « OUVRIR DANS E.N.O.S. » › l'application demande le code affiché sur le PC › elle déchiffre et range tout dans son coffre.
-Le QR ne contient que l'adresse de la page ; le code n'est jamais transmis ; le paquet est AES-256-GCM (clé PBKDF2 300 000 tours). Lien actif 10 min.
+  PC  : fabrique un paquet CHIFFRÉ (clés Groq/ElevenLabs, liens .ics, adresses Wi-Fi + Tailscale, jeton, empreinte du certificat du PC, identifiant d'appareil),
+        l'approuve d'avance comme « appareil de confiance » (donc Eto Dev, sans étape manuelle) et le place dans le QR (lien enos://pair?d=…&c=…).
+  Tél : l'application scanne le QR, déchiffre en Java et range tout dans son coffre : aucune saisie d'adresse, aucun code à taper, AUCUN réseau commun requis.
+Le QR n'existe que sur l'écran du PC, 10 minutes ; le paquet est AES-256-GCM (clé PBKDF2 300 000 tours). Pour joindre ensuite le PC hors du Wi-Fi (5G),
+les deux appareils utilisent Tailscale : l'adresse 100.x du PC est dans le paquet et le téléphone essaie toutes les adresses dans l'ordre.
 Si l'appairage n'aboutit pas (annulé / expiré), l'approbation d'avance est retirée.
 """
 import base64
-import html
-import http.server
 import json
 import logging
 import os
@@ -107,6 +106,8 @@ def build_bundle(device_id=""):
     port = int(cfg.get("https_port", 8443) or 8443)
     ts = tailscale_ip()
     addrs = [f"{lan_ip()}:{port}"] + ([f"{ts}:{port}"] if ts else [])
+    if not ts:
+        notes.append("Tailscale non détecté sur ce PC : le téléphone ne pourra le joindre qu'en Wi-Fi. Installe Tailscale (PC + téléphone) pour l'accès en 5G")
     if not cfg.get("allow_network_access"):
         notes.append("⚠ « Accès téléphone » désactivé sur le PC : active-le pour que le téléphone puisse s'y connecter")
     vault["pc_token"] = sec.pairing_token()
@@ -124,22 +125,6 @@ def encrypt(bundle, code):
     key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(norm.encode())
     ct = AESGCM(key).encrypt(iv, json.dumps(bundle, ensure_ascii=False).encode("utf-8"), None)
     return base64.urlsafe_b64encode(b"EK1" + salt + iv + ct).decode().rstrip("=")
-
-
-PAGE = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>E.N.O.S. · appairage</title><style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:#050506;color:#ececef;font:17px/1.45 system-ui,sans-serif;padding:20px;box-sizing:border-box}
-.c{max-width:440px;width:100%;background:linear-gradient(165deg,#151518,#0e0e10);border:1px solid #27272c;border-radius:18px;padding:26px}
-h1{margin:0 0 6px;font:400 15px monospace;letter-spacing:3px;color:#e0243c}p{color:#9a9aa4;margin:8px 0 18px}
-a.b{display:block;text-align:center;padding:16px;border-radius:14px;background:linear-gradient(120deg,#8c1328,#d71f3a);color:#fff;font-weight:700;letter-spacing:2px;text-decoration:none}
-details{margin-top:18px;color:#9a9aa4}textarea{width:100%;height:90px;margin-top:10px;background:#0a0a0c;color:#ececef;border:1px solid #27272c;border-radius:10px;font:12px monospace;box-sizing:border-box}
-button{margin-top:8px;padding:10px 14px;border-radius:10px;border:1px solid #27272c;background:#18181b;color:#ececef;font-weight:700}
-</style></head><body><div class="c"><h1>E.N.O.S</h1><b>Appairage prêt</b>
-<p>Appuie sur le bouton : l'application s'ouvre et te demande le <b>code affiché sur l'écran du PC</b>.</p>
-<a class="b" href="intent://import?d=__B__#Intent;scheme=enos;package=com.nasko.app;end">OUVRIR DANS E.N.O.S.</a>
-<details><summary>Le bouton ne fait rien ?</summary><p>Copie le fichier, ouvre E.N.O.S. › ⚙ Réglages › IMPORTER DEPUIS LE PC, colle-le.</p>
-<textarea id="t" readonly onclick="this.select()">__B__</textarea><button onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('t').value);this.textContent='Copié ✓'">COPIER LE FICHIER</button></details>
-</div></body></html>"""
 
 
 # ------------------------------------------------------------------ session
@@ -161,45 +146,21 @@ def start(port=0, ip=""):
     raw = "".join(secrets.choice(ALPHABET) for _ in range(10))
     code = raw[:5] + "-" + raw[5:]
     blob = encrypt(bundle, raw)
-    token = secrets.token_urlsafe(10)
     t0 = time.time()
     nasko_team.approve(device_id, "Téléphone (appairage)")                 # approuvé d'avance : plus d'étape manuelle ; retiré si l'appairage n'aboutit pas
-
-    class H(http.server.BaseHTTPRequestHandler):
-        def log_message(self, *args):
-            pass
-
-        def do_GET(self):
-            if self.path != f"/{token}/":
-                self.send_error(404)
-                return
-            body = PAGE.replace("__B__", html.escape(blob, quote=True)).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(body)
-            with _lock:
-                if _S.get("active") and not _S.get("opened"):
-                    _S["opened"] = time.time()
-
-    srv = http.server.ThreadingHTTPServer(("0.0.0.0", port), H)
-    host = ip or lan_ip()
-    url = f"http://{host}:{srv.server_address[1]}/{token}/"
-    threading.Thread(target=srv.serve_forever, daemon=True, name="pairing-http").start()
+    link = f"enos://pair?d={blob}&c={raw}"
     qr = ""
     try:
         import segno
-        qr = segno.make(url, error="m").svg_data_uri(scale=8, border=2, dark="#000000", light="#ffffff")       # n'encode que l'adresse de la page : aucun secret
+        qr = segno.make(link, error="l", micro=False).svg_data_uri(scale=6, border=3, dark="#000000", light="#ffffff")
     except ImportError:
         pass
     with _lock:
         _R.update(state="idle", name="")
         _S.clear()
-        _S.update(active=True, srv=srv, device=device_id, t0=t0, opened=0.0, expires=t0 + LIFETIME, url=url, notes=notes, code=code)
+        _S.update(active=True, srv=None, device=device_id, t0=t0, opened=0.0, expires=t0 + LIFETIME, notes=notes, code=code)
     threading.Thread(target=_reaper, args=(device_id,), daemon=True, name="pairing-reaper").start()
-    return {"url": url, "code": code, "qr": qr, "notes": notes, "expires": LIFETIME}
+    return {"link": link, "code": code, "qr": qr, "notes": notes, "expires": LIFETIME}
 
 
 _R = {"state": "idle", "name": ""}                        # résultat de la dernière session (lu par l'interface après la fermeture du lien)
