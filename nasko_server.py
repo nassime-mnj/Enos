@@ -72,6 +72,7 @@ import nasko_pet
 import nasko_jeux
 import nasko_chessedit
 import nasko_voicemod
+import nasko_memtrim
 import nasko_babel
 import nasko_brb
 import nasko_afk
@@ -5398,6 +5399,7 @@ def mirror_config(b: MirrorCfg):
             vals[k] = v.strip()
     nasko_core.update_config(vals)
     if vals.get("mirror_auto"):
+        nasko_memtrim.start(load_config().get("memtrim", True))     # rend à Windows la RAM inutilisée (surtout sous OBS) : aucune fonction retirée
         nasko_mirror.autostart(nasko_cloud.devices)
     return nasko_mirror.status()
 

@@ -42,8 +42,12 @@
             <p class="muted">Le plateau à 4 joueurs : chaque armée attaque depuis un bord. <b>Roi capturé = éliminé</b> (pas d'échec ni de mat). Choisis <b>qui affronte qui</b>, qui est <b>allié</b>, et laisse la <b>tempête</b> rétrécir le terrain jusqu'au dernier survivant.</p>
             <div class="ro-modes" id="ro-modes"><button data-p="0"><b>1v1v1v1</b><small>chacun pour soi</small></button><button data-p="1"><b>2v2</b><small>opposés alliés</small></button><button data-p="2"><b>2v2</b><small>voisins alliés</small></button></div>
             <div class="ro-presets" id="ro-presets">${PRESETS.map((p, i) => `<button data-p="${i}">${esc(p[0])}</button>`).join("")}</div></div>
-          <div class="ro-seats" id="ro-seats">${[0, 1, 2, 3].map((s) => `<div class="ro-seat" data-s="${s}" style="--pc:${COLORS[s]}"><div class="ro-sav"></div><b>${SEAT[s]}</b>
+          <div class="ro-seats" id="ro-seats">${[0, 1, 2, 3].map((s) => `<div class="ro-seat" data-s="${s}" style="--pc:${COLORS[s]}"><div class="ro-sav"></div><b>${SEAT[s]}</b><small class="ro-sinfo"></small>
             <label>Joueur<select data-f="who"></select></label><label class="ro-nmf">Nom<input data-f="name" type="text" maxlength="14" placeholder="ex. Karim (au téléphone)"></label><label>Équipe<select data-f="team"></select></label><label>Attaque →<select data-f="target"></select></label></div>`).join("")}</div>
+          <div class="card ro-duo" id="ro-duo" hidden><h3>⚔ 2 CONTRE 2 · qui affronte qui ?</h3>
+            <div class="seg ro-dm" id="ro-dm"><button data-dm="opp">Partenaires en face</button><button data-dm="nei">Partenaires côte à côte</button><i class="seg-ind"></i></div>
+            <div class="ro-duo-teams"><div class="ro-duo-t" style="--tc:#ff3b4f"><b>ÉQUIPE A</b><select data-ds="a0"></select><select data-ds="a1"></select></div><span class="ro-vs">VS</span><div class="ro-duo-t" style="--tc:#1acfd6"><b>ÉQUIPE B</b><select data-ds="b0"></select><select data-ds="b1"></select></div></div>
+            <div class="row"><button class="btn" id="ro-duo-swap">⇄ ÉCHANGER LES ÉQUIPES</button><button class="btn" id="ro-duo-mix">🎲 MÉLANGER</button></div></div>
           <p class="muted ro-teams" id="ro-teams"></p>
           <p class="muted ro-hint">🎙 <b>Un ami au téléphone ?</b> Mets son siège en « Joueur humain » (avec son prénom) : quand c'est son tour, l'appli te redonne la main avec <b>ses pièces</b> et tu joues le coup qu'il te dicte. Un bouton ↶ permet d'annuler si tu t'es trompé.</p>
           <div class="card ro-opts"><label>Tempête<select id="ro-storm"><option value="off">Aucune</option><option value="slow">Lente</option><option value="normal">Normale</option><option value="fast">Rapide</option></select></label>
@@ -62,7 +66,7 @@
           <button class="back" id="ro-back">◂ MENU</button>
           <div class="ro-hud"><span id="ro-turn"></span><span id="ro-stormhud"></span></div>
           <div class="ro-arena" id="ro-arena">
-            ${[0, 1, 2, 3].map((s) => `<div class="ro-ban" data-s="${s}" style="--pc:${COLORS[s]}"><div class="ro-hd"><span class="ro-dot"></span><b class="nm"></b><span class="ro-t"></span><span class="ro-pts">✦ 0</span><span class="ro-ko" hidden>💀</span></div><div class="ro-chat"></div><div class="ro-cap"></div></div>`).join("")}
+            ${[0, 1, 2, 3].map((s) => `<div class="ro-ban" data-s="${s}" style="--pc:${COLORS[s]}"><div class="ro-hd"><span class="ro-dot"></span><span class="ro-ttl"></span><b class="nm"></b><small class="ro-elo"></small><span class="ro-t"></span><span class="ro-pts">✦ 0</span><span class="ro-ko" hidden>💀</span></div><div class="ro-chat"></div><div class="ro-q" hidden></div><div class="ro-cap"></div></div>`).join("")}
             <div class="ro-boardwrap"><div class="ro-board" id="ro-board"><div class="ro-sqs"></div><div class="ro-pcs"></div><div class="ro-fx"></div></div></div>
           </div>
           <div class="ro-ticker" id="ro-ticker">&nbsp;</div>
@@ -87,11 +91,47 @@
           tgt.value = String(c.target);
           const who = c.who, av = box.querySelector(".ro-sav");
           av.innerHTML = who === "human" ? `<div class="bot-av ph" style="--c:${COLORS[s]}">${esc(seatName(s).slice(0, 3).toUpperCase())}</div>` : E.botChat.avatar(who);
+          box.querySelector(".ro-sinfo").innerHTML = who === "human" ? "Joueur" : `${E.botChat.badge(titleOf(who))}${esc(eloLabel(who))}`;
         });
+        drawDuo();
         const groups = {}; cfg.seats.forEach((c, s) => (groups[c.team] = groups[c.team] || []).push(SEAT[s]));
         $("#ro-teams").innerHTML = Object.entries(groups).map(([t, l]) => `<b>${TEAMLET[t]}</b> ${l.join(" + ")}`).join(" &nbsp;vs&nbsp; ");
         $("#ro-storm").value = cfg.storm; $("#ro-speed").value = cfg.speed; $("#ro-learned").checked = !!cfg.learned;
       }
+      // ---- Elo / titre affichés (départ : AI.ELO ; Naskurieux, Naskolit et le Jester évoluent pendant la partie)
+      const titleOf = (id, elo) => (E.botChat ? E.botChat.titleOf(elo == null ? AI.ELO[id] || 0 : elo, AI.TITLE[id]) : "");
+      const eloLabel = (id) => (id === "jester" ? " · roue 1-3200" : id === "naskurieux" ? " · 1 Elo (+200 par erreur adverse)" : " · " + AI.ELO[id] + " Elo");
+      // ---- 2 contre 2 : choisir qui est partenaire de qui (siège -> équipe) selon l'organisation « en face » ou « côte à côte »
+      const DUO = { opp: { a: [0, 2], b: [1, 3] }, nei: { a: [0, 1], b: [2, 3] } };
+      const duoMode = () => { const t = cfg.seats.map((c) => c.team); if (new Set(t).size !== 2 || t.filter((x) => x === t[0]).length !== 2) return ""; return t[0] === t[2] ? "opp" : t[0] === t[1] ? "nei" : ""; };
+      function drawDuo() {
+        const m = duoMode(), box = $("#ro-duo");
+        box.hidden = !m;
+        if (!m) return;
+        const lay = DUO[m], opts = (v) => `<option value="human">Joueur humain</option>` + PERSONAS.map((p) => `<option value="${p}">${esc(pname(p))} · ${AI.ELO[p]} Elo</option>`).join("");
+        box.querySelectorAll("[data-ds]").forEach((sel) => { const [g, i] = [sel.dataset.ds[0], +sel.dataset.ds[1]], seat = lay[g][i]; sel.innerHTML = opts(); sel.value = cfg.seats[seat].who; sel.title = SEAT[seat]; });
+        box.querySelectorAll("#ro-dm button").forEach((b) => b.classList.toggle("on", b.dataset.dm === m));
+      }
+      function setDuo(mode, keep) {                                               // réorganise les sièges : l'équipe A garde ses joueurs, la B les siens
+        const m0 = duoMode() || "opp", old = DUO[m0], who = { a: old.a.map((s) => cfg.seats[s].who), b: old.b.map((s) => cfg.seats[s].who) };
+        if (keep) { who.a = keep.a; who.b = keep.b; }
+        const lay = DUO[mode];
+        ["a", "b"].forEach((g, gi) => lay[g].forEach((s, i) => { cfg.seats[s].who = who[g][i]; cfg.seats[s].team = gi; cfg.seats[s].name = ""; }));
+        cfg.seats.forEach((c, s) => { c.target = [1, 2, 3].map((d) => (s + d) % 4).find((i) => cfg.seats[i].team !== c.team); });
+        save(); fillSeats();
+      }
+      el.querySelector("#ro-duo").addEventListener("change", (e) => {
+        const sel = e.target.closest("[data-ds]");
+        if (!sel) return;
+        const m = duoMode(), seat = DUO[m][sel.dataset.ds[0]][+sel.dataset.ds[1]];
+        cfg.seats[seat].who = sel.value; save(); fillSeats();
+      });
+      el.querySelector("#ro-duo").addEventListener("click", (e) => {
+        const dm = e.target.closest("[data-dm]"), m = duoMode();
+        if (dm && m && dm.dataset.dm !== m) return setDuo(dm.dataset.dm);
+        if (e.target.closest("#ro-duo-swap") && m) { const l = DUO[m]; return setDuo(m, { a: l.b.map((s) => cfg.seats[s].who), b: l.a.map((s) => cfg.seats[s].who) }); }
+        if (e.target.closest("#ro-duo-mix") && m) { const pool = PERSONAS.slice().sort(() => Math.random() - 0.5).slice(0, 4); return setDuo(m, { a: pool.slice(0, 2), b: pool.slice(2) }); }
+      });
       const seatName = (i) => { const c = cfg.seats[i]; return c.who === "human" ? (c.name || (cfg.seats.filter((x) => x.who === "human").length > 1 ? "Joueur " + SEAT[i] : pname("human"))) : pname(c.who); };
       const save = () => E.settings.set("royale.cfg", cfg);
       // il faut au moins deux équipes ; la cible d'un siège est toujours un ennemi
@@ -196,8 +236,9 @@
         const L = learned();
         return cfg.seats.map((c, s) => {
           const human = c.who === "human", foes = [0, 1, 2, 3].map((i) => i !== s && cfg.seats[i].team !== c.team);
-          return { s, human, id: c.who, name: seatName(s), target: c.target, team: c.team,
-            ai: human ? null : AI.make({ persona: c.who, w: cfg.learned && L[c.who] ? L[c.who].w : null, target: c.target, foes }) };
+          const ai = human ? null : AI.make({ persona: c.who, w: cfg.learned && L[c.who] ? L[c.who].w : null, target: c.target, foes, royale: true });
+          if (ai && (ai.eloGrow || ai.eloDrowsy)) AI.setElo(ai, AI.ELO[c.who]);
+          return { s, human, id: c.who, name: seatName(s), target: c.target, team: c.team, ai, elo: human ? null : AI.ELO[c.who], title: human ? "" : titleOf(c.who) };
         });
       }
       function launch() {
@@ -205,11 +246,13 @@
         const seats = seatsFromCfg(), teams = seats.map((x) => x.team);
         const firstHuman = seats.find((x) => x.human);
         G = { st: C4.newGame({ teams, storm: STORMS[cfg.storm] }), seats, view: firstHuman ? firstHuman.s : 0, sel: -1, legal: new Set(), legalMoves: [], paused: false, over: false, token: (G ? G.token : 0) + 1, speed: cfg.speed, sqEl: {}, pc: new Map(), hist: [], warned: [false, false, false, false] };
+        G.lostMinor = [0, 0, 0, 0]; G.q = [0, 1, 2, 3].map(() => ({ brilliant: 0, best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 })); G.busy = false; document.documentElement.classList.remove("ghor");
         $("#ro-setup").hidden = true; $("#ro-game").hidden = false; $("#ro-end").hidden = true;
         el.querySelectorAll(".ro-ban").forEach((b) => { const s = +b.dataset.s, pos = (s - G.view + 4) % 4; b.dataset.pos = pos; b.classList.remove("ko"); b.querySelector(".nm").textContent = G.seats[s].name; b.querySelector(".ro-t").textContent = teamTag(s); });
         $("#ro-arena").dataset.view = G.view;
         buildBoard();
         mountChats();
+        for (let s = 0; s < 4; s++) renderBan(s);
         $("#ro-pause").textContent = "⏸ PAUSE"; $("#ro-spd").textContent = "VITESSE : " + ({ slow: "LENTE", normal: "NORMALE", fast: "RAPIDE", turbo: "TURBO" }[G.speed]);
         $("#ro-undo").hidden = !G.seats.some((x) => x.human);
         drawSquares(); hud(); ticker("La bataille commence !");
@@ -241,7 +284,7 @@
           const st = G.st, o = st.turn, seat = G.seats[o];
           if (C4.over(st) || st.ply >= MAX_PLIES) return finish();
           hud();
-          if (G.paused) { await sleep(120); continue; }
+          if (G.paused || G.busy) { await sleep(120); continue; }
           if (seat.human) { G.legalMoves = C4.moves(st, o); await sleep(80); continue; }          // en attente d'un clic (voir onTap)
           const d = SPEEDS[G.speed];
           if (d) await sleep(d + Math.random() * d * 0.25);
@@ -254,7 +297,10 @@
       }
       function apply(m, animate) {
         G.hist.push(C4.clone(G.st)); if (G.hist.length > 500) G.hist.shift();
-        const st = G.st, o = st.turn, r = C4.play(st, m);
+        const st = G.st, o = st.turn;
+        let J = null;
+        if (G.speed !== "turbo") { try { J = AI.judgeMove(st, o, m, G.neutral || (G.neutral = AI.neutral())); } catch (e) { J = null; } }     // jugé AVANT le coup (comparé aux autres coups légaux)
+        const r = C4.play(st, m);
         if (!r.ok) return;
         const from = r.from, to = r.to;
         // pièce prise
@@ -274,13 +320,81 @@
         if (r.storm) { quake(); ticker("🌪 La tempête dévore le bord du plateau !"); E.vibrate([40, 40, 80]); for (const s of Object.keys(G.chat)) say(+s, "r_storm", {}); }
         if (G.over === false) { E.chessSound && E.chessSound.play(r.captured ? "capture" : "move"); }
         // commentaires
+        if (J) judged(o, J, r);
         events(r, o);
+        if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].id === "ghorghor" && [C4.KN, C4.B].includes(r.captured.type) && ++G.lostMinor[r.captured.owner] === 3) ghorTransform(r.captured.owner);
         const info = AI.afterMove(G.seats[o].ai || { moves: 0 }, { captured: !!r.captured });
         if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].ai) AI.afterMove(G.seats[r.captured.owner].ai, { lost: true });
-        if (info && info.elo != null) { ticker(`🎡 La roue donne ${info.elo} Elo au Jester !`); say(o, info.elo < 800 ? "wheel_low" : info.elo < 2400 ? "wheel_mid" : "wheel_high", { elo: info.elo }); }
+        if (info && info.elo != null) { renderBan(o); ticker(`🎡 La roue donne ${info.elo} Elo au Jester !`); say(o, info.elo < 800 ? "wheel_low" : info.elo < 2400 ? "wheel_mid" : "wheel_high", { elo: info.elo }); }
         G.sel = -1; G.legal = new Set();
         if (E.botChat) E.botChat.tick();
         drawSquares(); hud();
+      }
+      // ------------------------------------------------------------------ jugement des coups, Elo vivant, titres, transformation de GhorGhor
+      const QCOL = { brilliant: "#1acfd6", best: "#8be04d", excellent: "#8be04d", good: "#9bb0a0", inaccuracy: "#f5b042", mistake: "#ff8a3d", blunder: "#ff3b4f" };
+      function renderBan(s) {
+        const b = el.querySelector(`.ro-ban[data-s="${s}"]`), seat = G.seats[s];
+        if (!b) return;
+        b.querySelector(".nm").textContent = seat.name;
+        b.querySelector(".ro-ttl").innerHTML = E.botChat && seat.title ? E.botChat.badge(seat.title) : "";
+        b.querySelector(".ro-elo").textContent = seat.human ? "" : String(seat.ai && seat.ai.elo ? seat.ai.elo : seat.elo);
+      }
+      function judged(o, J, r) {
+        const q = G.q[o], seat = G.seats[o], label = AI.QUALITY[J.key];
+        q[J.key]++;
+        const chip = el.querySelector(`.ro-ban[data-s="${o}"] .ro-q`);
+        if (chip && J.key !== "good") { chip.hidden = false; chip.style.setProperty("--qc", QCOL[J.key]); chip.textContent = (J.key === "brilliant" ? "✦ " : "") + label.toUpperCase() + (J.key === "brilliant" ? " !!" : J.key === "blunder" ? " ??" : ""); clearTimeout(chip._t); chip._t = setTimeout(() => { chip.hidden = true; }, 2600); }
+        const bad = ["inaccuracy", "mistake", "blunder"].includes(J.key), great = J.key === "best" || J.key === "brilliant";
+        if (J.key === "brilliant") { ticker(`✦ ${seat.name} joue un coup BRILLANT !!`); E.chessSound && E.chessSound.play("brilliant"); E.vibrate([30, 40, 60]); }
+        else if (J.key === "blunder") ticker(`💥 Gaffe de ${seat.name} !`);
+        // réactions des personnages : le joueur lui-même, puis ses adversaires
+        say(o, J.key === "brilliant" ? "bot_brilliant" : J.key === "blunder" ? "bot_blunder" : J.key === "mistake" ? "bot_mistake" : great || J.key === "excellent" ? "super" : "good", { san: "ce coup" });
+        for (let e = 0; e < 4; e++) {
+          if (e === o || !G.st.alive[e] || C4.allied(G.st, o, e)) continue;
+          if (J.key === "brilliant") say(e, "h_brilliant", {}); else if (J.key === "blunder") say(e, "h_blunder", {}); else if (J.key === "mistake") say(e, "h_mistake", {});
+        }
+        // Elo vivant : Naskurieux +200 par erreur adverse (ou meilleur coup à lui), Naskolit −100 par imprécision (ou meilleur coup adverse)
+        for (let s = 0; s < 4; s++) {
+          const ai = G.seats[s].ai;
+          if (!ai || !G.st.alive[s]) continue;
+          const mine = s === o, foe = !mine && !C4.allied(G.st, o, s);
+          let d = 0;
+          if (ai.eloGrow) d = (foe && bad) || (mine && great) ? 200 : 0;
+          else if (ai.eloDrowsy) d = (mine && bad) || (foe && great) ? -100 : 0;
+          if (d) { AI.setElo(ai, ai.elo + d); renderBan(s); if (d > 0) { ticker(`📈 ${G.seats[s].name} passe à ${ai.elo} Elo`); say(s, "elo_up", { elo: ai.elo }); } }
+        }
+      }
+      function glitchFx(ms) {
+        const app = document.getElementById("app");
+        if (!app || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !E.settings.get("anim", true)) return sleep(Math.min(ms, 600));
+        const ov = document.createElement("div"); ov.className = "glitch-ov"; document.body.appendChild(ov);
+        return new Promise((res) => {
+          const t0 = Date.now(), j = (x) => (Math.random() - 0.5) * x;
+          const iv = setInterval(() => {
+            if (Date.now() - t0 > ms) { clearInterval(iv); app.style.transform = ""; app.style.filter = ""; ov.remove(); return res(); }
+            app.style.transform = `translate(${j(18)}px,${j(8)}px) skewX(${j(9)}deg)`;
+            app.style.filter = `hue-rotate(${Math.round(j(200))}deg) contrast(${(1 + Math.random() * 0.9).toFixed(2)}) saturate(${(1 + Math.random() * 2).toFixed(2)})`;
+            ov.innerHTML = Array.from({ length: 6 }, () => `<i style="top:${(Math.random() * 100).toFixed(1)}%;height:${(1 + Math.random() * 9).toFixed(1)}%;left:${j(40).toFixed(0)}px;background:${["#ff0033aa", "#00ffeeaa", "#ffffff88"][Math.floor(Math.random() * 3)]}"></i>`).join("");
+          }, 55);
+        });
+      }
+      /** GhorGhor perd sa 3e pièce mineure : écran qui glitche, il devient « GhorGhor le vrai » (GM 3200 Elo) pour le reste de la bataille. */
+      async function ghorTransform(s) {
+        const tok = G.token, seat = G.seats[s], old = G.chat && G.chat[s];
+        G.busy = true;
+        ticker(`👁 ${seat.name} vacille… quelque chose se réveille`);
+        if (old) old.say("transform");
+        await sleep(2000);
+        if (!G || tok !== G.token) return;
+        E.vibrate([60, 40, 60, 40, 140]);
+        await glitchFx(1700);
+        if (!G || tok !== G.token) return;
+        const c = cfg.seats[s], foes = [0, 1, 2, 3].map((i) => i !== s && G.seats[i].team !== seat.team);
+        Object.assign(seat, { id: "ghorreal", name: "GhorGhor le vrai", elo: 3200, title: "GM", ai: AI.make({ persona: "ghorreal", target: seat.target, foes, royale: true }) });
+        document.documentElement.classList.add("ghor");
+        if (E.botChat && old) { const n = E.botChat.replace(old, "ghorreal", "awake"); G.chat[s] = n; setTimeout(() => { if (G && tok === G.token && n) n.say("greet", { elo: 3200 }); }, 500); }
+        renderBan(s); ticker("👁 GHORGHOR LE VRAI est réveillé : GM · 3200 Elo");
+        G.busy = false;
       }
       function events(r, o) {
         const nm = (s) => G.seats[s].name, TY = ["", "pion", "cavalier", "fou", "tour", "dame", "roi"];
@@ -315,7 +429,7 @@
 
       // ------------------------------------------------------------------ clic d'un joueur humain
       $("#ro-board").addEventListener("click", (e) => {
-        if (!G || G.over || G.paused) return;
+        if (!G || G.over || G.paused || G.busy) return;
         const st = G.st, o = st.turn, seat = G.seats[o];
         if (!seat.human) return;
         const r = $("#ro-board").getBoundingClientRect();
@@ -354,7 +468,7 @@
       }
       function back() {
         if (G) { G.token++; G.over = true; }
-        E.botChat && E.botChat.unmountAll();
+        E.botChat && E.botChat.unmountAll(); document.documentElement.classList.remove("ghor");
         $("#ro-game").hidden = true; $("#ro-setup").hidden = false; $("#ro-end").hidden = true; palmares(); fillSeats();
       }
       // coup dicté (ex. « h2 h4 », « h2-h4 », « h2xh4 ») : joue pour le siège au trait
@@ -468,7 +582,7 @@
         A.toast("Entraînement terminé : coche « Bots entraînés » pour les utiliser.", "ok", 5000);
       };
 
-      el._api = { rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back };
+      el._api = { rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back, apply: (m) => apply(m, false), ghorTransform, judged, renderBan, setDuo, duoMode };
       fillSeats(); palmares();
     },
   });

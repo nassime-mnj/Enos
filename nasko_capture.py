@@ -32,6 +32,14 @@ MAX_REQUEST_S = 180.0              # une requête audio/image ne dépasse jamais
 
 
 # ----------------------------------------------------------------------------- sources réelles (Windows, import paresseux)
+def _lower_priority():
+    try:
+        import nasko_memtrim
+        nasko_memtrim.lower_thread_priority()       # la capture cède le CPU au jeu et à OBS
+    except Exception:                                # noqa: BLE001
+        pass
+
+
 def _cv2():
     import cv2
     return cv2
@@ -411,6 +419,7 @@ class Capture:
 
     # ---- threads
     def _video_loop(self):
+        _lower_priority()
         src = self._screen
         nxt = self.now()
         while not self._stop.is_set():
@@ -436,6 +445,7 @@ class Capture:
                 self._stop.wait(delay)
 
     def _audio_loop(self, kind, src):
+        _lower_priority()
         rate = int(getattr(src, "rate", 16000) or 16000)
         self._rate[kind] = rate
         block = max(160, rate // 10)
@@ -577,7 +587,7 @@ class Capture:
             cmd += ["-af", "alimiter=limit=0.89", "-c:a", "aac", "-b:a", "160k", "-ar", "48000"]
         cmd += ["-t", f"{dur:.3f}", "-movflags", "+faststart", os.path.abspath(path)]
         flags = 0x08000000 if os.name == "nt" else 0
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=flags)
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=flags | (0x00004000 if os.name == "nt" else 0))     # BELOW_NORMAL : l'export du clip ne vole pas le CPU au jeu
         errbuf = []
         threading.Thread(target=lambda: errbuf.append(proc.stderr.read()), daemon=True).start()
         px = py = None
