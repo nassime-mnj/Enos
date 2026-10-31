@@ -6,9 +6,11 @@
 .ce-drift{position:absolute;inset:0}
 .ce-cam{position:absolute;transform-origin:50% 50%;will-change:transform}
 .ce-board,.ce-pcs,.ce-fxl{position:absolute;left:0;top:0}
-.ce-board{filter:grayscale(1) contrast(1.4) brightness(.8);box-shadow:0 0 60px #000}
+.ce-board{box-shadow:0 0 60px #000}
+.ce-look-mono .ce-board{filter:grayscale(1) contrast(1.4) brightness(.8)}
 .ce-board i{position:absolute;width:12.5%;height:12.5%}
-.ce-pcs{filter:grayscale(1) contrast(1.35) brightness(1.05);pointer-events:none}
+.ce-pcs{pointer-events:none;filter:drop-shadow(0 8px 10px #0009)}
+.ce-look-mono .ce-pcs{filter:grayscale(1) contrast(1.35) brightness(1.05)}
 .ce-pcs img{position:absolute;left:0;top:0;will-change:transform;transition:transform .3s cubic-bezier(.2,.9,.2,1)}
 .ce-fxl{pointer-events:none}
 .ce-ghost{position:absolute;opacity:0;animation:ceGhost .55s ease-out both;mix-blend-mode:screen}
@@ -21,7 +23,7 @@
 .ce-bang{position:absolute;font-weight:900;color:#00f2fe;text-shadow:0 0 10px #00f2fe,0 0 26px #00f2fe;animation:ceBang 1.2s cubic-bezier(.2,1.6,.3,1) both}
 .ce-bang.red{color:#ff0044;text-shadow:0 0 10px #ff0044,0 0 26px #ff0044}
 @keyframes ceBang{0%{opacity:0;transform:scale(.2) rotate(-25deg)}20%{opacity:1;transform:scale(1.25) rotate(6deg)}100%{opacity:0;transform:scale(1) translateY(-14px)}}
-.ce-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 28%,rgba(0,0,0,.55) 62%,#000 100%)}
+.ce-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 28%,color-mix(in srgb,var(--vigc,#000) 55%,transparent) 62%,var(--vigc,#000) 100%)}
 .ce-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 .ce-rew .ce-board,.ce-rew .ce-pcs{filter:grayscale(.6) contrast(1.4) sepia(.6) hue-rotate(160deg)}
 .ce-ff{position:absolute;top:22%;right:6%;font:900 22px/1 var(--ui,system-ui);letter-spacing:3px;color:#fff;text-shadow:0 0 12px #00f2fe;animation:ceBlink .5s steps(2) infinite}
@@ -56,3 +58,26 @@
 .ce-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:6px}
 .ce-stat{font-size:12.5px;line-height:1.5;color:var(--muted)}
 .ce-stat b{color:var(--text)}
+
+/* --- looks (etalonnages) inspires des plans de reference */
+.ce-look-noir{background:#0a0000}.ce-look-noir .ce-board{filter:saturate(1.25) contrast(1.15)}.ce-look-noir .ce-pcs{filter:contrast(1.1) saturate(.7) drop-shadow(0 12px 16px #000c)}
+.ce-look-galaxy{background:radial-gradient(circle at 50% 38%,#34314f,#08070f 75%)}
+.ce-look-galaxy .ce-board{background:radial-gradient(circle at 25% 30%,#8a45e0,transparent 55%),radial-gradient(circle at 78% 72%,#2f63e8,transparent 55%),#2b1560;box-shadow:0 0 70px rgba(120,80,255,.35)}
+.ce-look-galaxy .ce-pcs{filter:drop-shadow(0 10px 12px #0008)}
+.ce-look-steel{background:#2a2a2a}.ce-look-steel .ce-board{box-shadow:0 0 40px #0006}.ce-look-steel .ce-pcs{filter:drop-shadow(0 7px 6px #0007)}
+.ce-look-aura{background:#010a09}.ce-look-aura .ce-board{filter:saturate(1.3) brightness(1.08)}.ce-look-aura .ce-pcs{filter:grayscale(1) brightness(1.15) drop-shadow(0 0 9px #34f5d8)}
+.ce-look-aura .ce-bang{width:1.9em;height:1.9em;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7ffbea,#0fb9a4);color:#fff;text-shadow:none;box-shadow:0 0 18px #34f5d8;font-size:.55em!important;line-height:1}
+.ce-dof{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);-webkit-mask-image:radial-gradient(circle at 50% 46%,transparent 22%,#000 70%);mask-image:radial-gradient(circle at 50% 46%,transparent 22%,#000 70%)}
+.ce-dof.on{opacity:1}
+.ce-hero{position:absolute;z-index:4;object-fit:contain;pointer-events:none;filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 22px 20px #000b);animation:ceHeroIn 1.2s cubic-bezier(.2,1.3,.3,1) both}
+@keyframes ceHeroIn{0%{opacity:0;transform:translateY(-34vh) rotate(calc(var(--rz) - 60deg)) scale(1.9)}28%{opacity:1;transform:translateY(0) rotate(var(--rz)) scale(1)}38%{transform:translateY(-3vh) rotate(var(--rz)) scale(1.04)}48%{transform:translateY(0) rotate(var(--rz)) scale(1)}82%{opacity:1}100%{opacity:0;transform:translateY(2vh) rotate(var(--rz)) scale(.96)}}
+.ce-neon{position:absolute;z-index:5;pointer-events:none;font-family:"Segoe UI",system-ui,sans-serif;font-weight:800;letter-spacing:2px;color:#fff;white-space:nowrap;text-shadow:0 0 6px #fff9,0 0 16px var(--nc);animation:ceNeon 1.7s both}
+.ce-neon b{color:var(--nc);text-shadow:0 0 8px var(--nc),0 0 22px var(--nc),0 0 40px var(--nc)}
+.ce-neon svg{display:block;width:1.2em;height:2em;margin:.2em 0 0 .6em;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 8px var(--nc));animation:ceArrow .7s ease-in-out infinite alternate}
+@keyframes ceNeon{0%{opacity:0;transform:translateX(-22px)}8%{opacity:1}12%{opacity:.35}16%{opacity:1;transform:none}86%{opacity:1}100%{opacity:0}}
+@keyframes ceArrow{to{transform:translateY(8px)}}
+.ce-elec{position:absolute;pointer-events:none;overflow:visible}
+.ce-elec polyline{fill:none;stroke:#bffcff;stroke-width:3.2;stroke-linejoin:round;filter:drop-shadow(0 0 5px #19f4ff) drop-shadow(0 0 12px #19f4ff);animation:ceFlick .75s steps(3) both}
+@keyframes ceFlick{0%{opacity:0}15%{opacity:1}35%{opacity:.2}55%{opacity:1}100%{opacity:0}}
+.ce-note{position:absolute;pointer-events:none;color:#c8fffa;text-shadow:0 0 8px #19f4ff;animation:ceNote 1.4s ease-out both}
+@keyframes ceNote{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(40deg)}}

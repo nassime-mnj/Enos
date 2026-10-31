@@ -9,6 +9,15 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pieceUrl = (p) => `${E.assetBase || ""}img/chess/${p === p.toUpperCase() ? "w" : "b"}${p.toLowerCase()}.png`;
   const fenMap = (fen) => { const m = {}; fen.split(" ")[0].split("/").forEach((r, y) => { let x = 0; for (const c of r) { if (/\d/.test(c)) x += +c; else m[String.fromCharCode(97 + x++) + (8 - y)] = c; } }); return m; };
+  // LOOKS : etalonnage des plans (rouge noir, galaxie, acier neon, aura turquoise, noir et blanc) ; chacun recolore l'echiquier, la vignette et les particules
+  const LOOKS = {
+    mono: { name: "Noir & blanc", l: "#c9c9c9", d: "#3a3a3a", hi: "#2bff88", dust: "#fff", vig: "#000" },
+    noir: { name: "Rouge noir", l: "#b3121c", d: "#2c070b", hi: "#ff2438", dust: "#ff9aa4", vig: "#1c0000" },
+    galaxy: { name: "Galaxie", l: "rgba(238,230,255,.93)", d: "rgba(104,56,176,.62)", hi: "#2fe8cc", dust: "#fff", vig: "#05040c" },
+    steel: { name: "Acier neon", l: "#a8a8a8", d: "#6a6a6a", hi: "#ff3b52", dust: "#fff", vig: "#161616" },
+    aura: { name: "Aura turquoise", l: "#14605a", d: "#082624", hi: "#34f5d8", dust: "#aefcf2", vig: "#010d0c" },
+  };
+  const esc2 = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
   class Stage {
@@ -24,15 +33,15 @@
           <feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/><feOffset in="b" dx="0" dy="0" result="bo" class="ce-abb"/>
           <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/></filter></svg>
         <div class="ce-fxwrap"><div class="ce-shake"><div class="ce-persp"><div class="ce-drift"><div class="ce-cam"><div class="ce-board"></div><div class="ce-pcs"></div><div class="ce-fxl"></div></div></div></div></div></div>
-        <canvas class="ce-fg"></canvas><div class="ce-vig"></div><div class="ce-flash"></div><div class="ce-ff" hidden>▶▶ ×8</div>
+        <canvas class="ce-fg"></canvas><div class="ce-dof"></div><div class="ce-vig"></div><div class="ce-flash"></div><div class="ce-ff" hidden>▶▶ ×8</div>
         <div class="ce-cut" hidden></div><div class="ce-cap" hidden></div>
         <div class="ce-hud"><button class="ce-x" aria-label="Fermer">✕</button><span class="ce-title"></span><button class="ce-pp" aria-label="Lecture / pause">⏸</button></div><div class="ce-prog"><i></i></div>`;
       const q = (s) => host.querySelector(s);
       this.bg = q(".ce-bg"); this.fg = q(".ce-fg"); this.wrap = q(".ce-fxwrap"); this.shk = q(".ce-shake"); this.drift = q(".ce-drift"); this.cam = q(".ce-cam"); this.board = q(".ce-board"); this.pcs = q(".ce-pcs"); this.fxl = q(".ce-fxl");
-      this.flash = q(".ce-flash"); this.cut = q(".ce-cut"); this.cap = q(".ce-cap"); this.ffEl = q(".ce-ff"); this.prog = q(".ce-prog i"); this.abr = q(".ce-abr"); this.abb = q(".ce-abb");
+      this.flash = q(".ce-flash"); this.cut = q(".ce-cut"); this.cap = q(".ce-cap"); this.ffEl = q(".ce-ff"); this.prog = q(".ce-prog i"); this.dofEl = q(".ce-dof"); this.abr = q(".ce-abr"); this.abb = q(".ce-abb");
       q(".ce-title").textContent = this.o.title || ""; q(".ce-x").onclick = () => this.o.onClose && this.o.onClose(); q(".ce-pp").onclick = () => this.o.onToggle && this.o.onToggle();
       this.ppBtn = q(".ce-pp");
-      this.resize(); this.buildBoard(); this.initParticles(); this.setFen(START);
+      this.resize(); this.buildBoard(); this.setLook(this.o.look || "mono"); this.initParticles(); this.setFen(START);
       this.camTo({ rx: 28, rz: 0, s: 0.92 }, 0);
       this.raf = requestAnimationFrame((t) => this.loop(t)); this.last = performance.now();
       this._rs = () => this.resize(); window.addEventListener("resize", this._rs);
@@ -49,10 +58,10 @@
     }
     xy(sq) { let c = sq.charCodeAt(0) - 97, r = 8 - +sq[1]; if (this.flip) { c = 7 - c; r = 7 - r; } return { x: c * this.cell, y: r * this.cell, c, r }; }
     buildBoard() {
-      this.board.innerHTML = ""; this.sq = {};
+      this.board.innerHTML = ""; this.sq = {}; this.sqList = [];
       for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
         const d = document.createElement("i"); d.style.cssText = `left:${c * 12.5}%;top:${r * 12.5}%;background:${(r + c) % 2 ? "#3a3a3a" : "#c9c9c9"}`;
-        this.board.appendChild(d); this.sq[this.flip ? String.fromCharCode(97 + 7 - c) + (r + 1) : String.fromCharCode(97 + c) + (8 - r)] = d;
+        this.board.appendChild(d); this.sqList.push({ el: d, par: (r + c) % 2 }); this.sq[this.flip ? String.fromCharCode(97 + 7 - c) + (r + 1) : String.fromCharCode(97 + c) + (8 - r)] = d;
       }
     }
     place(el, sq) { const p = this.xy(sq); el._sq = sq; el.style.width = el.style.height = this.cell + "px"; el.style.transform = `translate(${p.x}px,${p.y}px)`; }
@@ -104,16 +113,20 @@
     /** ev : événement ; power 0..1 (force de l'impact) */
     hit(ev, power) {
       const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.kind === "drop";
-      const s = 1.3 + power * 0.7 + (ev.kind === "drop" ? 0.25 : 0), rx = rnd(38, 54) + power * 4, rz = rnd(-8, 8);
+      const macro = ev.shot === "macro", s = macro ? rnd(3.1, 3.9) : 1.3 + power * 0.7 + (ev.kind === "drop" ? 0.25 : 0), rx = macro ? rnd(50, 62) : rnd(38, 54) + power * 4, rz = macro ? rnd(-16, 16) : rnd(-8, 8);
       this.camTo({ rx, rz, s }, ev.kind === "drop" ? 1100 : 850, p.c, p.r);
       this.warp = Math.max(this.warp, 0.5 + power * 0.8);
+      if (macro) this.dof(1400);
+      if (ev.shot === "hero") this.later(() => this.hero(ev), 360);
+      if (ev.text) this.later(() => this.neon(ev.text, ev.tone, ev.to), 480);
       // halo radial + case d'arrivée allumée
       const halo = document.createElement("div"); halo.className = "ce-halo"; halo.style.cssText = `left:${p.x - this.cell}px;top:${p.y - this.cell}px;width:${this.cell * 3}px;height:${this.cell * 3}px;background:radial-gradient(circle,${tone} 0%,${tone}88 28%,transparent 68%)`;
       this.fxl.appendChild(halo); this.later(() => halo.remove(), 1000);
       if (this.lit) this.lit.remove();
-      this.lit = document.createElement("div"); this.lit.className = "ce-lit"; this.lit.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;box-shadow:0 0 ${this.cell * 0.6}px ${tone},inset 0 0 ${this.cell * 0.4}px ${tone};border-color:${tone}`;
+      this.lit = document.createElement("div"); this.lit.className = "ce-lit"; this.lit.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;box-shadow:0 0 ${this.cell * 0.6}px ${tone},inset 0 0 ${this.cell * 0.4}px ${tone};border-color:${tone};background:${this.look === "mono" ? "transparent" : `color-mix(in srgb,${LOOKS[this.look].hi} 50%,transparent)`}`;
       this.fxl.appendChild(this.lit);
       if (ev.fx === "BRILLIANT_SHOCKWAVE" || ev.key === "brilliant") {
+        this.electric(p);
         for (let i = 0; i < 2; i++) { const r = document.createElement("div"); r.className = "ce-ring"; r.style.cssText = `left:${p.x + this.cell / 2}px;top:${p.y + this.cell / 2}px;border-color:${TONE.cyan};box-shadow:0 0 18px ${TONE.cyan};animation-delay:${i * 140}ms`; this.fxl.appendChild(r); this.later(() => r.remove(), 1200); }
         const b = document.createElement("div"); b.className = "ce-bang"; b.textContent = "!!"; b.style.cssText = `left:${p.x + this.cell * 0.55}px;top:${p.y - this.cell * 0.55}px;font-size:${this.cell * 0.9}px`; this.fxl.appendChild(b); this.later(() => b.remove(), 1300);
       } else if (ev.fx === "BLUNDER_RED" || ev.check || ev.key === "blunder") {
@@ -132,6 +145,56 @@
       for (let i = 0; i < n; i++) { const a = rnd(0, 6.283), v = rnd(60, 360); this.burst.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: rnd(0.5, 1.1), max: 1.1, c: Math.random() < 0.3 ? "#fff" : tone, s: rnd(1.5, 3.6) }); }
     }
     // ---------------------------------------------------------------- cutscenes / texte
+    setLook(id) {
+      const L = LOOKS[id] || LOOKS.mono; this.look = LOOKS[id] ? id : "mono";
+      Object.keys(LOOKS).forEach((k) => this.host.classList.toggle("ce-look-" + k, k === this.look));
+      (this.sqList || []).forEach((o) => { o.el.style.background = o.par ? L.d : L.l; });
+      this.dustColor = L.dust; this.host.style.setProperty("--vigc", L.vig);
+    }
+    dof(ms) { this.dofEl.classList.add("on"); this.later(() => this.dofEl.classList.remove("on"), ms); }       // flou de profondeur sur les bords du plan serre
+    rectOf(sq) { const r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(); return { l: q.left - r.left, t: q.top - r.top, w: q.width, h: q.height }; }
+    /** la piece du coup, en grand et detouree, retombe sur la case (plan « heros ») */
+    hero(ev) {
+      const q = this.rectOf(ev.to), size = q.w * 2.7, img = document.createElement("img");
+      img.className = "ce-hero"; img.src = `${E.assetBase || ""}img/chess/${ev.color}${ev.promo || ev.piece}.png`;
+      img.style.cssText = `left:${q.l + q.w / 2 - size / 2}px;top:${q.t + q.h / 2 - size / 2}px;width:${size}px;height:${size}px;--rz:${rnd(-26, 26).toFixed(1)}deg`;
+      this.host.querySelector(".ce-dof").before(img); this.later(() => img.remove(), 1250);
+    }
+    /** texte neon (« IT'S OVER... ») avec fleche, pose a cote de la case */
+    neon(text, tone, sq) {
+      const q = this.rectOf(sq), col = TONE[tone] || TONE.red, words = String(text).split(" "), last = words.pop(), el = document.createElement("div");
+      el.className = "ce-neon";
+      el.style.cssText = `left:${Math.max(8, Math.min(q.l + q.w + 6, this.W - 150))}px;top:${q.t + q.h * 0.1}px;--nc:${col};font-size:${Math.max(17, q.h * 0.4)}px`;
+      el.innerHTML = `${words.length ? `<span>${esc2(words.join(" "))}</span> ` : ""}<b>${esc2(last)}</b><svg viewBox="0 0 24 40"><path d="M12 2v28M3 22l9 12 9-12"/></svg>`;
+      this.host.querySelector(".ce-dof").before(el); el.style.left = Math.max(8, Math.min(parseFloat(el.style.left), this.W - el.offsetWidth - 8)) + "px"; this.later(() => el.remove(), 1700);
+    }
+    /** arcs electriques + notes de musique autour du coup brillant */
+    electric(p) {
+      const c = this.cell, cx = p.x + c / 2, cy = p.y + c / 2, ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("class", "ce-elec"); svg.setAttribute("viewBox", `${-c * 3} ${-c * 3} ${c * 6} ${c * 6}`); svg.style.cssText = `left:${cx - c * 3}px;top:${cy - c * 3}px;width:${c * 6}px;height:${c * 6}px`;
+      for (let k = 0; k < 4; k++) {
+        const pts = []; let a = rnd(0, 6.283);
+        for (let i = 0; i < 10; i++) { a += rnd(-0.35, 0.55); const r = c * (0.45 + i * 0.2) + rnd(-c * 0.12, c * 0.12); pts.push(`${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`); }
+        const pl = document.createElementNS(ns, "polyline"); pl.setAttribute("points", pts.join(" ")); pl.style.animationDelay = k * 60 + "ms"; svg.appendChild(pl);
+      }
+      this.fxl.appendChild(svg); this.later(() => svg.remove(), 800);
+      for (let i = 0; i < 6; i++) {
+        const n = document.createElement("span"); n.className = "ce-note"; n.textContent = ["♪", "♫", "♬"][i % 3];
+        n.style.cssText = `left:${cx}px;top:${cy}px;font-size:${c * 0.5}px;--dx:${rnd(-c * 2.4, c * 2.4).toFixed(0)}px;--dy:${rnd(-c * 2.6, -c * 0.4).toFixed(0)}px;animation-delay:${i * 70}ms`;
+        this.fxl.appendChild(n); this.later(() => n.remove(), 1500);
+      }
+    }
+    drawOrbs(ctx, dt) {                                                               // grosses bulles de lumiere floues (galaxie / aura)
+      if (this.look !== "galaxy" && this.look !== "aura") return;
+      if (!this.orbs) this.orbs = Array.from({ length: 7 }, () => ({ x: rnd(0, 1), y: rnd(0, 1), r: rnd(0.012, 0.035), vx: rnd(-0.01, 0.01), vy: rnd(-0.02, -0.004), ph: rnd(0, 6) }));
+      for (const o of this.orbs) {
+        o.x += o.vx * dt; o.y += o.vy * dt; o.ph += dt; if (o.y < -0.05) { o.y = 1.05; o.x = rnd(0, 1); }
+        const R = o.r * this.W, x = o.x * this.W, y = o.y * this.H, g = ctx.createRadialGradient(x, y, 0, x, y, R);
+        g.addColorStop(0, this.look === "aura" ? "rgba(120,255,235,.85)" : "rgba(255,255,255,.9)"); g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(o.ph * 1.5); ctx.fillStyle = g; ctx.fillRect(x - R, y - R, R * 2, R * 2);
+      }
+      ctx.globalAlpha = 1;
+    }
     cutscene(c, tone) {
       const col = tone === "red" ? "#ff3a52" : TONE.gold, img = `${E.assetBase || ""}img/chess/${c.color}${c.piece}.png`;
       this.cut.hidden = false;
@@ -172,7 +235,7 @@
         const pr = p.r; p.r += (p.v + this.warp * 0.9 * p.v * 6) * dt * mul;
         if (p.r > 1.05) { p.r = rnd(0.01, 0.12); p.a = rnd(0, 6.283); }
         const x = cx + Math.cos(p.a) * p.r * R, y = cy + Math.sin(p.a) * p.r * R;
-        ctx.globalAlpha = Math.min(1, p.al * (0.4 + p.r)); ctx.strokeStyle = ctx.fillStyle = "#fff";
+        ctx.globalAlpha = Math.min(1, p.al * (0.4 + p.r)); ctx.strokeStyle = ctx.fillStyle = this.dustColor || "#fff";
         if (this.warp > 0.25) { ctx.lineWidth = p.s * (0.6 + p.r); ctx.beginPath(); ctx.moveTo(cx + Math.cos(p.a) * pr * R, cy + Math.sin(p.a) * pr * R); ctx.lineTo(x, y); ctx.stroke(); }
         else { ctx.beginPath(); ctx.arc(x, y, p.s * (0.5 + p.r), 0, 6.283); ctx.fill(); }
       }
@@ -183,7 +246,7 @@
       const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
       const b = this.bg.getContext("2d"), f = this.fg.getContext("2d");
       b.clearRect(0, 0, this.W, this.H); f.clearRect(0, 0, this.W, this.H);
-      this.drawDust(b, this.dustB, dt, 1); this.drawDust(f, this.dustF, dt, 1.6);
+      this.drawOrbs(b, dt); this.drawDust(b, this.dustB, dt, 1); this.drawDust(f, this.dustF, dt, 1.6);
       f.globalCompositeOperation = "lighter";
       this.burst = this.burst.filter((p) => (p.life -= dt) > 0);
       for (const p of this.burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy = p.vy * 0.97 + 120 * dt; f.globalAlpha = Math.max(0, p.life / p.max); f.fillStyle = p.c; f.shadowColor = p.c; f.shadowBlur = 8; f.fillRect(p.x, p.y, p.s, p.s); }
@@ -200,5 +263,5 @@
     destroy() { this.alive = false; cancelAnimationFrame(this.raf); this.timers.forEach(clearTimeout); window.removeEventListener("resize", this._rs); this.host.classList.remove("ce-stage"); this.host.innerHTML = ""; }
   }
 
-  E.editFx = { Stage, TONE, fenMap, START };
+  E.editFx = { Stage, TONE, LOOKS, fenMap, START };
 })();

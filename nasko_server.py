@@ -71,6 +71,7 @@ import nasko_update_signal
 import nasko_pet
 import nasko_jeux
 import nasko_chessedit
+import nasko_voicemod
 import nasko_babel
 import nasko_brb
 import nasko_afk
@@ -1250,7 +1251,7 @@ def ping():
 _VENDOR = {"codemirror.bundle.js": "codemirror.bundle.js", "wavesurfer.min.js": "wavesurfer.min.js", "wavesurfer.regions.min.js": "wavesurfer.regions.min.js"}
 _STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "purge_launch.js": "text/javascript", "purge.js": "text/javascript", "scan_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
                  "imgproc.js": "text/javascript", "imgproc.css": "text/css", "anim.js": "text/javascript", "anim.css": "text/css",
-                 "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css",
+                 "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css", "voicemod.js": "text/javascript", "voicemod.css": "text/css",
                  "tabs.js": "text/javascript", "tabs.css": "text/css", "env.js": "text/javascript", "env.css": "text/css", "audio.js": "text/javascript", "audio.css": "text/css", "compress.js": "text/javascript", "compress.css": "text/css", "pdfed.js": "text/javascript", "pdfed.css": "text/css", "studio.js": "text/javascript", "studio.css": "text/css", "syllabus.js": "text/javascript", "syllabus.css": "text/css", "quick.js": "text/javascript", "background.js": "text/javascript", "background.css": "text/css", "quick.css": "text/css", "quicklib.js": "text/javascript", "talk.js": "text/javascript", "talk.css": "text/css", "colis.js": "text/javascript", "colis.css": "text/css", "search.js": "text/javascript", "search.css": "text/css",
                  "youtube.js": "text/javascript", "youtube.css": "text/css", "cleaner.js": "text/javascript", "cleaner.css": "text/css", "organizer.js": "text/javascript", "organizer.css": "text/css",
                  "notify.js": "text/javascript", "pet.js": "text/javascript", "devmanager.js": "text/javascript", "devmanager.css": "text/css", "mobile.js": "text/javascript", "mobile.css": "text/css", "defi.js": "text/javascript", "defi.css": "text/css", "train.js": "text/javascript", "train.css": "text/css",
@@ -4344,6 +4345,129 @@ def chessedit_lancer(b: ChessEditLancer):
         return nasko_chessedit.launch(b.manifest, b.audio_b64, b.audio_name, b.render, b.seek)
     except nasko_chessedit.ChessEditError as e:
         raise HTTPException(400, str(e))
+
+
+# ----------------------------------------------------------------------------- VOICE CHANGER : voix sortante du micro modifiée en temps réel (câble audio virtuel)
+class VmStart(BaseModel):
+    input: int
+    output: int
+    monitor: int = -1
+    monitor_gain: float = 0.8
+    preset: str = ""
+    params: dict = {}
+
+
+class VmParams(BaseModel):
+    preset: str = ""
+    params: dict = {}
+    bypass: bool | None = None
+    monitor_gain: float | None = None
+
+
+class VmPreview(BaseModel):
+    input: int
+    output: int
+    seconds: float = 4.0
+
+
+class VmUser(BaseModel):
+    name: str
+    params: dict
+
+
+class VmId(BaseModel):
+    id: str
+
+
+class VmPrefs(BaseModel):
+    favs: list | None = None
+    input: int | None = None
+    output: int | None = None
+    monitor: int | None = None
+    monitor_gain: float | None = None
+    preset: str | None = None
+
+
+def _vm_apply(preset, params, bypass=None):
+    if preset.startswith("user:"):
+        up = nasko_voicemod.user_params(preset)
+        if up is None:
+            raise HTTPException(404, "Voix personnelle introuvable.")
+        nasko_voicemod.ENGINE.set_params(params={**up, **(params or {})}, bypass=bypass)
+        nasko_voicemod.ENGINE.preset = preset
+    else:
+        nasko_voicemod.ENGINE.set_params(preset=preset, params=params, bypass=bypass)
+
+
+@app.get("/api/voicemod/catalog", dependencies=_LOCAL)
+def vm_catalog():
+    return nasko_voicemod.catalog()
+
+
+@app.get("/api/voicemod/devices", dependencies=_LOCAL)
+def vm_devices():
+    return nasko_voicemod.Engine.devices()
+
+
+@app.get("/api/voicemod/state", dependencies=_LOCAL)
+def vm_state():
+    return nasko_voicemod.ENGINE.state()
+
+
+@app.post("/api/voicemod/start", dependencies=_LOCAL)
+def vm_start(b: VmStart):
+    try:
+        _vm_apply(b.preset, b.params)
+        nasko_voicemod.ENGINE.start(b.input, b.output, b.monitor, b.monitor_gain)
+        nasko_voicemod.remember(input=b.input, output=b.output, monitor=b.monitor, monitor_gain=b.monitor_gain, preset=b.preset or None)
+    except nasko_voicemod.VoiceModError as e:
+        raise HTTPException(400, str(e))
+    return nasko_voicemod.ENGINE.state()
+
+
+@app.post("/api/voicemod/stop", dependencies=_LOCAL)
+def vm_stop():
+    nasko_voicemod.ENGINE.stop()
+    return nasko_voicemod.ENGINE.state()
+
+
+@app.post("/api/voicemod/params", dependencies=_LOCAL)
+def vm_params(b: VmParams):
+    if b.preset or b.params or b.bypass is not None:
+        _vm_apply(b.preset, b.params, b.bypass)
+    if b.monitor_gain is not None:
+        nasko_voicemod.ENGINE.mon_gain = max(0.0, min(2.0, float(b.monitor_gain)))
+    if b.preset:
+        nasko_voicemod.remember(preset=b.preset)
+    return nasko_voicemod.ENGINE.state()
+
+
+@app.post("/api/voicemod/preview", dependencies=_LOCAL)
+def vm_preview(b: VmPreview):
+    try:
+        nasko_voicemod.ENGINE.preview(b.input, b.output, max(1.0, min(10.0, b.seconds)))
+    except nasko_voicemod.VoiceModError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.post("/api/voicemod/user", dependencies=_LOCAL)
+def vm_user(b: VmUser):
+    try:
+        return {"user": nasko_voicemod.save_user(b.name, b.params)}
+    except nasko_voicemod.VoiceModError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/voicemod/user/delete", dependencies=_LOCAL)
+def vm_user_delete(b: VmId):
+    return {"user": nasko_voicemod.delete_user(b.id)}
+
+
+@app.post("/api/voicemod/prefs", dependencies=_LOCAL)
+def vm_prefs(b: VmPrefs):
+    nasko_voicemod.remember(**{k: v for k, v in b.model_dump().items() if v is not None})
+    return {"ok": True}
 
 
 # ----------------------------------------------------------------------------- GAMING : Auto-Clipper, Babel Voice, Anti-Tilt, BRB

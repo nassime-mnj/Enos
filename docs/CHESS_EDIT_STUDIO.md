@@ -39,3 +39,7 @@ Rouge = DROP (coup au choix dans la liste, sinon le plus dramatique) · violet =
 * Analyse limitée aux 6 premières minutes de la musique ; la détection du drop suppose un vrai creux/montée avant l'explosion (sinon `confidence` basse : passer en mode manuel).
 * La musique n'est pas mémorisée entre deux sessions (les marqueurs manuels le sont, par partie).
 * Après modification de `bot_chat.js` / `m_defis.js` : `python build_learn_data.py --sync` (fait). La copie PC (arène) n'a pas le studio : boutons 🎬 masqués là-bas.
+
+## Looks et plans (inspirés des références)
+Sélecteur « Style visuel » (AUTO par défaut) : **Rouge noir** (plans serrés, vignette rouge), **Galaxie** (nébuleuse + étoiles + orbes), **Acier néon** (gris plat, cases rouges), **Aura turquoise** (teal monochrome, particules, bulle « !! », arcs électriques et notes), **Noir & blanc**.
+Plans : `macro` (zoom ×3-4, inclinaison ±16°, flou de profondeur sur les bords) pour mat / gaffe / prise de Dame ou Tour ; `hero` (la pièce détourée, en grand, retombe en rebondissant) pour le DROP, la promotion et le brillant ; texte néon + flèche (« IT'S OVER... », « BIG MISTAKE », « QUEEN DOWN », « CHECK ! »). En AUTO le look change selon l'action : acier (intro / accéléré) → rouge noir (mat, gaffe, boss) → galaxie (après le drop) → aura (brillant). Les champs `overlay_text` et `shot` sont aussi dans le manifeste ; la scène Godot ne les utilise pas encore.

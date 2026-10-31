@@ -120,7 +120,7 @@ with sync_playwright() as pw:
     info = pg.evaluate("""() => { const c = document.querySelector('.ce-cam'), p = document.querySelector('.ce-persp'), b = document.querySelector('.ce-board');
         return { persp: getComputedStyle(p).perspective, board: getComputedStyle(b).filter, pieces: document.querySelectorAll('.ce-pcs img').length, vig: !!document.querySelector('.ce-vig') }; }""")
     check(info["persp"] == "900px", "perspective 900px")
-    check("grayscale" in info["board"], "échiquier noir & blanc contrasté")
+    check(pg.evaluate("document.querySelector('.ce-stage').className.includes('ce-look-')"), "look (étalonnage) appliqué à la scène")
     check(info["pieces"] == 32 or info["pieces"] > 0, "pièces dessinées (%d)" % info["pieces"])
     # on saute le temps : audio -> juste avant puis après le drop
     pg.evaluate("document.querySelectorAll('audio').length")

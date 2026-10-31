@@ -31,6 +31,7 @@
           <label class="fld" style="margin-top:10px">Coup du DROP (par défaut : le plus dramatique)</label><select id="ce-drop" class="sel"></select>
           <p class="ce-stat" id="ce-sum" style="margin-top:8px"></p></div>
         <div class="card"><h3>4 · Rendu</h3>
+          <label class="fld">Style visuel</label><select id="ce-look" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · change selon l'action (acier, rouge noir, galaxie, aura)</option><option value="mono">Noir &amp; blanc</option><option value="noir">Rouge noir</option><option value="galaxy">Galaxie</option><option value="steel">Acier néon</option><option value="aura">Aura turquoise</option></select>
           <div class="row" style="margin-top:0"><button class="btn pri" id="ce-play">▶ APERÇU 3D (TEMPS RÉEL)</button></div>
           <div class="row"><button class="btn" id="ce-json">EXPORTER LE MANIFESTE GODOT</button><button class="btn" id="ce-pc">RENDRE SUR LE PC</button></div>
           <p class="ce-stat" id="ce-pcs" style="margin-top:8px">Rendu PC : scène Godot (Glow HDR, particules GPU, aberration chromatique), enregistrable en .mp4 60 FPS.</p></div>`;
@@ -140,7 +141,8 @@
         const app = document.getElementById("app") || document.body, host = document.createElement("div"), au = new Audio(S.url), evs = S.tl.events, dur = S.audio.duration;
         app.appendChild(host);
         let idx = 0, raf = 0, alive = true, ffT = 0;
-        const stage = new E.editFx.Stage(host, { flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
+        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.kind === "ff" ? "steel" : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" ? "noir" : e.key === "brilliant" ? "aura" : e.t >= (S.audio.mainDropTimestamp || 1e9) ? "galaxy" : "steel");
+        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "steel" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
         function fire(e) {
           const power = e.kind === "drop" ? 1 : Math.max(0.3, Math.min(1, (e.drama || 0) / 80));
           if (e.kind === "ff") {
@@ -148,7 +150,7 @@
             stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 260);
             return;
           }
-          stage.ff(false); stage.move(e); stage.hit(e, power);
+          stage.ff(false); stage.setLook(lookFor({ ...e, mate: /#/.test(e.san) })); stage.move(e); stage.hit(e, power);
           if (e.cut) setTimeout(() => alive && stage.cutscene(e.cut, e.tone), Math.max(0, ((e.cutT != null ? e.cutT : e.t) - e.t) * 1000) + 200);
           (e.lines || []).slice(0, 2).forEach((l, i) => setTimeout(() => alive && stage.say(l.bot, l.text), 350 + i * 2600 + (e.cut ? 900 : 0)));
         }

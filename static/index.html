@@ -193,6 +193,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <link rel="stylesheet" href="/static/env.css">
 <link rel="stylesheet" href="/static/sync.css">
 <link rel="stylesheet" href="/static/chill.css">
+<link rel="stylesheet" href="/static/voicemod.css">
 <link rel="stylesheet" href="/static/tabs.css">
 <link rel="stylesheet" href="/static/security.css">
 <link rel="stylesheet" href="/static/themes.css">
@@ -269,6 +270,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       <button class="btn local-only dev-ok" id="b-sys">20. SYSTÈME<small>Profils de performance · Turbo Boost · capteurs CPU / GPU / RAM</small></button>
       <button class="btn local-only dev-ok" id="b-dc">17. DEEP SYSTEM CLEANER<small>Scan du disque · gros fichiers · niveau de risque · suppression</small></button>
       <button class="btn local-only dev-ok" id="b-og">19. ORGANISATEUR<small>Dossiers &amp; fichiers · glisser-déposer · renommer · ranger · annuler</small></button>
+      <button class="btn local-only friends-ok dev-ok" id="b-vm">26. VOICE CHANGER<small>54 voix · réglages en direct · ta voix modifiée dans Discord, OBS, les jeux (câble virtuel)</small></button>
       <button class="btn local-only friends-ok" id="b-qt">24. OUTILS RAPIDES<small>JSON / XML · dépenses partagées · notes de frais (tickets → Excel)</small></button>
       <button class="btn dev-ok" id="b-subs">25. ABONNEMENTS<small>Détecte tes abonnements dans tes e-mails · coût mensuel · résiliation guidée</small></button>
       <button class="btn local-only friends-ok" id="b-syl">23. SYLLABUS SCANNER<small>Plan de cours (PDF) → examens, rendus et cours dans l'agenda</small></button>
@@ -795,6 +797,44 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
   <div class="sy-toast" id="sy-toast" role="status"></div>
 </section>
 <audio id="ch-audio" preload="metadata"></audio>
+<section id="vm" role="dialog" aria-label="Voice Changer" hidden>
+  <div class="vm-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="vm-in">
+    <div class="vm-top">
+      <div class="vm-brand"><span class="vm-logo"><svg viewBox="0 0 24 24"><path d="M4 9v6"/><path d="M8 5v14"/><path d="M12 8v8"/><path d="M16 3v18"/><path d="M20 9v6"/></svg></span><div><h2>VOICE CHANGER</h2><small>54 voix · réglages en direct · micro → câble audio virtuel</small></div></div>
+      <div class="vm-top-r"><span class="vm-chip" id="vm-chip">ARRÊT</span><button class="vm-x" id="vm-close" type="button">✕ FERMER</button></div>
+    </div>
+    <div class="vm-grid">
+      <div class="vm-left">
+        <div class="vm-glass vm-hero">
+          <button class="vm-power" id="vm-power" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"/></svg><span>ACTIVER</span></button>
+          <div class="vm-viz"><canvas id="vm-cv"></canvas><div class="vm-now"><b id="vm-now-n">Choisis une voix</b><small id="vm-now-t"></small></div></div>
+          <div class="vm-meters">
+            <div class="vm-m"><label>MICRO</label><div class="bar"><i id="vm-lin"></i></div></div>
+            <div class="vm-m"><label>SORTIE</label><div class="bar"><i id="vm-lout"></i></div></div>
+            <button class="vm-byp" id="vm-byp" type="button">VOIX NORMALE · BYPASS</button>
+            <div class="vm-stat" id="vm-stat">Prêt.</div>
+          </div>
+        </div>
+        <div class="vm-tools"><input class="vm-q" id="vm-q" type="search" placeholder="🔍 Rechercher une voix…" autocomplete="off" spellcheck="false"><div class="vm-cats" id="vm-cats"></div></div>
+        <div class="vm-cards" id="vm-cards"></div>
+      </div>
+      <aside class="vm-right">
+        <div class="vm-glass vm-box"><h3>ENTRÉES / SORTIES</h3>
+          <label class="vm-fld"><span>MICROPHONE</span><select class="vm-sel" id="vm-in"></select></label>
+          <label class="vm-fld"><span>SORTIE VERS LES APPLICATIONS (câble virtuel)</span><select class="vm-sel" id="vm-out"></select></label>
+          <div class="vm-cable" id="vm-cable"></div>
+          <label class="vm-fld" style="margin-top:10px"><span>JE M'ENTENDS (casque)</span><select class="vm-sel" id="vm-mon"></select></label>
+          <label class="vm-fld"><span>VOLUME DE RETOUR</span><input type="range" id="vm-mg" min="0" max="150" value="80" style="width:100%"></label>
+          <div class="vm-row"><button class="vm-btn" id="vm-rescan" type="button">⟳ RECHERCHER</button><button class="vm-btn" id="vm-prev" type="button">🎙 APERÇU 4 s</button></div>
+          <div class="vm-err" id="vm-err"></div></div>
+        <div class="vm-glass vm-box"><h3>RÉGLAGES DE LA VOIX</h3><div id="vm-acc"></div>
+          <div class="vm-row"><button class="vm-btn" id="vm-reset" type="button">↺ TOUT REMETTRE À ZÉRO</button></div>
+          <div class="vm-save" style="margin-top:10px"><input id="vm-name" maxlength="28" placeholder="Nom de ma voix…" autocomplete="off"><button class="vm-btn pri" id="vm-saveb" type="button">ENREGISTRER</button></div></div>
+      </aside>
+    </div>
+  </div>
+</section>
 <section id="ch" role="dialog" aria-label="Mode chill" hidden>
   <div class="ch-bg" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="ch-in">
@@ -827,6 +867,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <script src="/static/colis.js"></script>
 <script src="/static/sync.js"></script>
 <script src="/static/chill.js"></script>
+<script src="/static/voicemod.js"></script>
 <section id="se" class="local-only" role="dialog" aria-label="Sécurité" hidden>
   <div class="se-top"><h2>SÉCURITÉ<small>Zero-trust · aucune saisie de mot de passe au quotidien</small></h2><span id="se-state"></span><button class="btn sm" id="se-close">✕ FERMER</button></div>
   <div id="se-wrap">
