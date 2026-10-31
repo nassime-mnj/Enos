@@ -355,6 +355,8 @@ class AutoClipper:
         return events
 
     def _watch_loop(self):
+        import nasko_capture as _nc
+        _nc._lower_priority()
         while not self._stop.wait(0.25):
             try:
                 self.poll()
@@ -379,6 +381,8 @@ class AutoClipper:
 
     # ---- rendu (un seul à la fois)
     def _render_loop(self):
+        import nasko_capture as _nc
+        _nc._lower_priority()
         while not self._stop.is_set():
             try:
                 job = self._q.get(timeout=0.25)

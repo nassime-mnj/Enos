@@ -502,7 +502,7 @@
     initThemes(); initProfile(); initDevices(); initWarehouse(); initChat();
     tabs($("rg-tabs"), $("rg"), (t) => { if (t === "ed") drawDevice(); });
     tabs($("hb-tabs"), $("hb"), hubTab);
-    $("b-rg").onclick = openSettings; $("rg-close").onclick = () => ($("rg").hidden = true);
+    $("b-rg").onclick = openSettings; if ($("b-rg-top")) $("b-rg-top").onclick = openSettings; $("rg-close").onclick = () => ($("rg").hidden = true);
     $("b-hb").onclick = () => openHub("wh"); $("hb-close").onclick = closeHub;
     $("b-gitsync").onclick = () => { openHub("gt"); gitSync(); };
     $("b-assist").onclick = async () => { try { await post("/api/assistant/call"); } catch (e) { alert("Assistant : " + e.message); } };

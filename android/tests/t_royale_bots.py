@@ -1,0 +1,87 @@
+"""Battle Royale x4 : comportements des bots (jugement des coups, Elo/titre affichés, Elo vivant de Naskurieux/Naskolit, transformation de GhorGhor) + 2v2 au choix."""
+from mobile_common import *
+
+errs = []
+with sync_playwright() as pw:
+    b, ctx = launch(pw)
+    pg = open_app(ctx, errs)
+    pg.set_default_timeout(60000)
+    ev = pg.evaluate
+    open_tool(pg, "royale")
+    A = "document.querySelector('#tool-royale .suite-body')._api"
+
+    # ---------------------------------------------------------------- 2v2 : choisir qui est contre qui
+    pg.click("#ro-modes button[data-p='1']")
+    check(not ev("document.getElementById('ro-duo').hidden"), "panneau « 2 contre 2 » affiché")
+    check(ev(A + ".duoMode()") == "opp", "partenaires en face par défaut")
+    ev("""() => { const c = %s.cfg(); c.seats.forEach((s, i) => { s.who = ['nasko', 'lelex', 'ghorghor', 'penoire'][i]; }); }""" % A)
+    ev(A + ".setDuo('opp')")
+    pg.select_option('[data-ds="a0"]', "eto"); pg.select_option('[data-ds="b1"]', "naskolit")
+    w = ev(A + ".cfg().seats.map(s => s.who)")
+    check(w[0] == "eto" and w[3] == "naskolit", "équipe A : eto en premier, équipe B : naskolit en second -> %s" % w)
+    pg.click("#ro-duo-swap")
+    w2 = ev(A + ".cfg().seats.map(s => s.who)")
+    check(w2[1] == "eto" and w2[0] == w[1] and w2[2] == w[3], "ÉCHANGER LES ÉQUIPES : %s" % w2)
+    pg.click('#ro-dm button[data-dm="nei"]')
+    check(ev(A + ".duoMode()") == "nei" and ev(A + ".cfg().seats.map(s => s.team)") == [0, 0, 1, 1], "côte à côte : équipes %s" % ev(A + ".cfg().seats.map(s => s.team)"))
+    pg.click("#ro-duo-mix")
+    check(len(set(ev(A + ".cfg().seats.map(s => s.who)"))) == 4, "MÉLANGER : 4 personnages différents")
+    pg.click("#ro-modes button[data-p='0']")
+    check(ev("document.getElementById('ro-duo').hidden"), "panneau 2v2 masqué en 1v1v1v1")
+
+    # ---------------------------------------------------------------- Elo + titres, jugement
+    ev("""() => { const c = %s.cfg(); c.seats.forEach((s, i) => { s.who = ['naskurieux', 'ghorghor', 'naskolit', 'eto'][i]; }); c.storm = 'off'; c.speed = 'fast'; }""" % A)
+    ev(A + ".launch()")
+    pg.wait_for_selector(".ro-ban .ro-elo:not(:empty)")
+    elo = ev("Array.from(document.querySelectorAll('.ro-ban')).map(b => [b.querySelector('.nm').textContent, b.querySelector('.ro-elo').textContent, b.querySelector('.ro-ttl').textContent])")
+    print(elo)
+    d = {e[0]: e for e in elo}
+    check(d["Naskurieux"][1] == "1" and d["Naskurieux"][2] == "GM", "Naskurieux : 1 Elo, titre GM")
+    check(d["Naskolit"][1] == "3200" and d["Naskolit"][2] == "GM", "Naskolit : 3200 Elo, titre GM")
+    check(d["GhorGhor"][1] == "1400" and d["GhorGhor"][2] == "", "GhorGhor : 1400 Elo, pas de titre")
+    check(d["ETO Brillant"][1] == "3200" and d["ETO Brillant"][2] == "GM", "ETO : 3200, GM")
+    pg.wait_for_function(A + ".g.st.ply >= 24", timeout=90000)
+    q = ev("(" + A + ".g.q).map(x => Object.entries(x).filter(e => e[1]).map(e => e[0] + ':' + e[1]).join(' '))")
+    print(q)
+    tot = ev("(" + A + ".g.q).reduce((a, x) => a + Object.values(x).reduce((b, v) => b + v, 0), 0)")
+    kinds = ev("new Set((" + A + ".g.q).flatMap(x => Object.entries(x).filter(e => e[1]).map(e => e[0]))).size")
+    check(tot >= 20 and kinds >= 3, "coups jugés : %d, %d catégories différentes" % (tot, kinds))
+    check(pg.locator(".ro-q:not([hidden])").count() >= 0, "pastille de jugement dans les bannières")
+
+    # ---------------------------------------------------------------- Elo vivant
+    ev(A + ".g.paused = true")
+    sk = ev("(" + A + ".g.seats.findIndex(s => s.id === 'naskurieux'))")
+    sl = ev("(" + A + ".g.seats.findIndex(s => s.id === 'naskolit'))")
+    foe = ev("[0,1,2,3].find(i => i !== %d && i !== %d)" % (sk, sl))
+    e0 = ev(A + ".g.seats[%d].ai.elo" % sk)
+    ev(A + ".judged(%d, {key: 'mistake', gap: 200}, {})" % foe)
+    e1 = ev(A + ".g.seats[%d].ai.elo" % sk)
+    check(e1 == e0 + 200, "erreur adverse : Naskurieux %d -> %d Elo" % (e0, e1))
+    check(pg.inner_text('.ro-ban[data-s="%d"] .ro-elo' % sk).startswith(str(e1)), "la bannière affiche le nouvel Elo")
+    k0 = ev(A + ".g.seats[%d].ai.elo" % sl)
+    ev(A + ".judged(%d, {key: 'inaccuracy', gap: 100}, {})" % sl)
+    k1 = ev(A + ".g.seats[%d].ai.elo" % sl)
+    check(k1 == k0 - 100, "imprécision : Naskolit %d -> %d Elo" % (k0, k1))
+    ev(A + ".judged(%d, {key: 'brilliant', gap: 0}, {})" % foe)
+    check(pg.locator('.ro-ban[data-s="%d"] .ro-q:not([hidden])' % foe).count() == 1, "pastille BRILLANT !! affichée")
+    check("BRILLANT" in pg.inner_text('.ro-ban[data-s="%d"] .ro-q' % foe), "texte : " + pg.inner_text('.ro-ban[data-s="%d"] .ro-q' % foe))
+
+    # ---------------------------------------------------------------- transformation de GhorGhor
+    gh = ev("(" + A + ".g.seats.findIndex(s => s.id === 'ghorghor'))")
+    ev(A + ".g.paused = false")
+    ev("() => { %s.ghorTransform(%d); }" % (A, gh))
+    check(ev(A + ".g.busy"), "la bataille est suspendue pendant la transformation")
+    pg.wait_for_function(A + ".g.seats[%d].id === 'ghorreal'" % gh, timeout=20000)
+    check(ev(A + ".g.seats[%d].name" % gh) == "GhorGhor le vrai" and ev(A + ".g.seats[%d].ai.elo" % gh) == 3200, "GhorGhor est devenu « GhorGhor le vrai », 3200 Elo")
+    row = ev("(b => [b.querySelector('.nm').textContent, b.querySelector('.ro-elo').textContent, b.querySelector('.ro-ttl').textContent])(document.querySelector('.ro-ban[data-s=\"%d\"]'))" % gh)
+    check(row == ["GhorGhor le vrai", "3200", "GM"], "bannière : %s" % row)
+    check(ev("document.documentElement.classList.contains('ghor')"), "l'ambiance de l'application s'assombrit")
+    check(not ev(A + ".g.busy") and ev(A + ".g.seats[%d].ai.persona" % gh) == "ghorreal", "la partie reprend avec l'IA du vrai GhorGhor")
+    pg.wait_for_function(A + ".g.st.ply >= 30", timeout=60000)
+    check(True, "la bataille continue après la transformation")
+    ev(A + ".back()")
+    check(not ev("document.documentElement.classList.contains('ghor')"), "ambiance rétablie en quittant")
+    check(not errs, "aucune erreur JS : %s" % errs[:3])
+    b.close()
+print("ECHECS :", BAD if BAD else "aucun")
+raise SystemExit(1 if BAD else 0)

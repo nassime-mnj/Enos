@@ -96,7 +96,7 @@
   const fmt = (t, I, d) => t.replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.userName && E.userName()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{elo\}/g, (d && d.elo) || "").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
 
   /** Le personnage « tape » (3 points), puis la réplique apparaît dans la bulle et l'historique. */
-  async function speak(I, text) {
+  async function speak(I, text, kind) {
     if (!I.alive || !text) return;
     const bub = I.host.querySelector(".bot-bubble"), t = I.host.querySelector(".bot-t"), av = I.host.querySelector(".bot-av");
     if (!bub) return;
@@ -107,6 +107,7 @@
     bub.classList.remove("pop"); void bub.offsetWidth; bub.classList.add("pop");
     log(I, "b", text);
     I.gap = 0; lastSpoke = ply;
+    if (E.botChat && E.botChat.onSay) { try { E.botChat.onSay(I.id, text, kind || "", ply); } catch (e) { /* enregistrement facultatif */ } }
   }
 
   /** kind : voir js/bot_lines.js. d : {san, open}. Renvoie true si le personnage va parler. */
@@ -121,10 +122,10 @@
     const local = fmt(pick(list), I, d);
     if (llmOn() && LLM_KINDS.has(kind) && !END.has(kind) && I.llm < 10 && !I.opts.shared && Math.random() < 0.5) {
       I.llm++;
-      ask(I, `Événement : ${LABEL[kind]}${d && d.san ? " (coup " + d.san + ")" : ""}. Réagis en UNE phrase courte.`).then((t) => speak(I, t || local), () => speak(I, local));
+      ask(I, `Événement : ${LABEL[kind]}${d && d.san ? " (coup " + d.san + ")" : ""}. Réagis en UNE phrase courte.`).then((t) => speak(I, t || local, kind), () => speak(I, local, kind));
       return true;
     }
-    speak(I, local);
+    speak(I, local, kind);
     return true;
   }
   const LABEL = { bot_brilliant: "tu viens de jouer un coup brillant", bot_blunder: "tu viens de faire une énorme gaffe", h_brilliant: "ton adversaire vient de jouer un coup brillant", h_blunder: "ton adversaire vient de faire une énorme gaffe" };

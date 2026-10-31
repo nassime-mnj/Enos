@@ -1,0 +1,129 @@
+/* VOICE CHANGER : direction artistique « studio d'enregistrement néon » — verre fumé, aurores colorées, halos qui réagissent au son.
+   Les teintes dérivent de la couleur d'accent de l'application (--h) ; rouge E.N.O.S. -> magenta, cyan et ambre en complémentaires. */
+#vm{--a:hsl(var(--h,356) 100% 58%);--a2:hsl(calc(var(--h,356) + 150) 100% 62%);--a3:hsl(calc(var(--h,356) + 40) 100% 60%);--ink:#f3eefc;--mute:#9b94b4;--glass:rgba(18,14,30,.62);--line:rgba(255,255,255,.09);
+  position:fixed;inset:0;z-index:90;background:#06050b;color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif;overflow:hidden;animation:vmIn .35s cubic-bezier(.2,.9,.2,1)}
+html[data-theme] section#vm{background:#06050b!important;color:var(--ink)!important}
+@keyframes vmIn{from{opacity:0;transform:scale(1.02)}}
+#vm *{box-sizing:border-box}
+.vm-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.vm-bg i{position:absolute;width:62vmax;height:62vmax;border-radius:50%;filter:blur(90px);opacity:.34;animation:vmDrift 22s ease-in-out infinite alternate}
+.vm-bg i:nth-child(1){background:var(--a);left:-18vmax;top:-26vmax}
+.vm-bg i:nth-child(2){background:var(--a2);right:-24vmax;top:10vmax;animation-delay:-7s}
+.vm-bg i:nth-child(3){background:var(--a3);left:20vmax;bottom:-40vmax;animation-delay:-13s;opacity:.22}
+@keyframes vmDrift{to{transform:translate(8vmax,6vmax) scale(1.18)}}
+.vm-in{position:relative;height:100%;display:flex;flex-direction:column;padding:14px 22px 18px;gap:14px;max-width:1500px;margin:0 auto}
+.vm-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vm-brand{display:flex;align-items:center;gap:14px}
+.vm-logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(140deg,var(--a),var(--a2));box-shadow:0 0 28px color-mix(in srgb,var(--a) 55%,transparent),inset 0 0 0 1px rgba(255,255,255,.35)}
+.vm-logo svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round}
+.vm-logo svg path{animation:vmBar 1.1s ease-in-out infinite alternate;transform-origin:center}
+.vm-logo svg path:nth-child(2){animation-delay:-.3s}.vm-logo svg path:nth-child(3){animation-delay:-.6s}.vm-logo svg path:nth-child(4){animation-delay:-.15s}.vm-logo svg path:nth-child(5){animation-delay:-.45s}
+@keyframes vmBar{from{transform:scaleY(.35)}to{transform:scaleY(1)}}
+.vm-brand h2{margin:0;font:800 21px "Segoe UI",system-ui;letter-spacing:6px;background:linear-gradient(90deg,#fff,var(--a2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.vm-brand small{color:var(--mute);letter-spacing:1px}
+.vm-top-r{display:flex;align-items:center;gap:10px}
+.vm-chip{padding:6px 14px;border-radius:99px;font:800 11px "Segoe UI";letter-spacing:2.5px;border:1px solid var(--line);background:var(--glass);color:var(--mute)}
+.vm-chip.on{color:#07110c;background:linear-gradient(90deg,#3dffa2,#2fe6ff);border-color:transparent;box-shadow:0 0 22px rgba(61,255,162,.55);animation:vmPulse 1.6s ease-in-out infinite}
+.vm-chip.byp{color:#1a1204;background:linear-gradient(90deg,#ffd25a,#ff9e3d);border-color:transparent}
+@keyframes vmPulse{50%{box-shadow:0 0 34px rgba(61,255,162,.9)}}
+.vm-x{height:38px;padding:0 16px;border-radius:11px;border:1px solid var(--line);background:var(--glass);color:var(--ink);font:700 12px "Segoe UI";letter-spacing:2px;cursor:pointer;transition:.2s}
+.vm-x:hover{border-color:var(--a);box-shadow:0 0 18px color-mix(in srgb,var(--a) 45%,transparent)}
+.vm-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px}
+.vm-left{display:flex;flex-direction:column;gap:12px;min-height:0}
+.vm-glass{background:var(--glass);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+/* --- héros : bouton marche/arrêt, visualiseur, niveaux */
+.vm-hero{display:grid;grid-template-columns:170px minmax(0,1fr) 150px;gap:16px;align-items:center;padding:16px 18px}
+.vm-power{position:relative;width:150px;height:150px;border-radius:50%;border:0;cursor:pointer;color:#fff;background:radial-gradient(circle at 35% 30%,#2b2540,#0d0a18);box-shadow:inset 0 0 0 2px rgba(255,255,255,.1),0 12px 34px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:.3s;justify-self:center}
+.vm-power::before{content:"";position:absolute;inset:-7px;border-radius:50%;background:conic-gradient(from 0deg,transparent,var(--a),var(--a2),transparent 70%);-webkit-mask:radial-gradient(circle,transparent 66%,#000 68%);mask:radial-gradient(circle,transparent 66%,#000 68%);opacity:.35;transition:.3s}
+.vm-power svg{width:44px;height:44px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.vm-power span{font:800 11px "Segoe UI";letter-spacing:3px}
+.vm-power:hover::before{opacity:.8}
+.vm-power.on{background:radial-gradient(circle at 35% 30%,#1c4a3a,#07140f);color:#8dffd0;box-shadow:inset 0 0 0 2px rgba(61,255,162,.55),0 0 46px rgba(61,255,162,.35)}
+.vm-power.on::before{opacity:1;background:conic-gradient(from 0deg,transparent,#3dffa2,#2fe6ff,transparent 70%);animation:vmSpin 2.6s linear infinite}
+.vm-power.busy{opacity:.6;pointer-events:none}
+@keyframes vmSpin{to{transform:rotate(360deg)}}
+.vm-viz{position:relative;height:150px;border-radius:16px;overflow:hidden;background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.12));border:1px solid var(--line)}
+.vm-viz canvas{position:absolute;inset:0;width:100%;height:100%}
+.vm-now{position:absolute;left:14px;top:10px;pointer-events:none}
+.vm-now b{display:block;font:800 22px "Segoe UI";letter-spacing:1px;text-shadow:0 0 18px color-mix(in srgb,var(--a) 70%,transparent)}
+.vm-now small{color:var(--mute)}
+.vm-meters{display:flex;flex-direction:column;gap:11px}
+.vm-m label{display:flex;justify-content:space-between;font:700 10px "Segoe UI";letter-spacing:2px;color:var(--mute);margin-bottom:4px}
+.vm-m .bar{height:9px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden}
+.vm-m .bar i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,#3dffa2,#ffd25a 70%,#ff4a5e);transition:width .08s linear}
+.vm-stat{font-size:11.5px;color:var(--mute);line-height:1.5}
+.vm-stat b{color:var(--ink)}
+.vm-byp{height:32px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);font:700 10.5px "Segoe UI";letter-spacing:1.6px;cursor:pointer;transition:.2s}
+.vm-byp.on{border-color:#ffd25a;color:#ffd25a;box-shadow:0 0 16px rgba(255,210,90,.4)}
+/* --- recherche + catégories */
+.vm-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.vm-q{flex:0 0 230px;height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--glass);color:var(--ink);font:600 13px "Segoe UI";outline:0}
+.vm-q:focus{border-color:var(--a);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 25%,transparent)}
+.vm-cats{display:flex;gap:7px;flex-wrap:wrap}
+.vm-cat{height:36px;padding:0 13px;border-radius:99px;border:1px solid var(--line);background:var(--glass);color:var(--mute);font:700 11px "Segoe UI";letter-spacing:1.3px;cursor:pointer;transition:.2s;white-space:nowrap}
+.vm-cat b{margin-left:6px;font-weight:700;opacity:.6}
+.vm-cat:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
+.vm-cat.on{color:#fff;border-color:transparent;background:linear-gradient(90deg,var(--a),var(--a2));box-shadow:0 6px 22px color-mix(in srgb,var(--a) 40%,transparent)}
+/* --- cartes de voix */
+.vm-cards{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px;align-content:start;grid-auto-rows:max-content;padding:4px 6px 14px 2px;scrollbar-width:thin;scrollbar-color:var(--a) transparent}
+.vm-card{position:relative;display:flex;flex-direction:column;gap:5px;padding:14px 14px 12px;text-align:left;border-radius:18px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015));color:var(--ink);cursor:pointer;transition:transform .22s cubic-bezier(.2,.9,.2,1),border-color .2s,box-shadow .25s;overflow:hidden;animation:vmCard .5s backwards}
+@keyframes vmCard{from{opacity:0;transform:translateY(14px) scale(.97)}}
+.vm-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at var(--mx,30%) -20%,color-mix(in srgb,var(--cc,var(--a)) 45%,transparent),transparent 62%);opacity:0;transition:.3s}
+.vm-card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--cc,var(--a)) 70%,transparent)}
+.vm-card:hover::before{opacity:.9}
+.vm-card.on{border-color:var(--cc,var(--a));box-shadow:0 0 0 1px var(--cc,var(--a)),0 14px 38px color-mix(in srgb,var(--cc,var(--a)) 42%,transparent)}
+.vm-card.on::before{opacity:1}
+.vm-card .em{position:relative;font-size:34px;line-height:1;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.vm-card .nm{position:relative;font:800 14.5px "Segoe UI";letter-spacing:.4px}
+.vm-card .tg{position:relative;font-size:11.5px;color:var(--mute);min-height:30px}
+.vm-card .pt{position:relative;display:flex;align-items:center;gap:7px;margin-top:3px;font:700 9.5px "Segoe UI";letter-spacing:1.6px;color:var(--mute)}
+.vm-card .pt u{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.09);position:relative;text-decoration:none}
+.vm-card .pt u i{position:absolute;top:-2px;width:8px;height:8px;border-radius:50%;background:var(--cc,var(--a));box-shadow:0 0 10px var(--cc,var(--a));transform:translateX(-50%)}
+.vm-card .st{position:absolute;right:10px;top:9px;z-index:2;width:26px;height:26px;border-radius:8px;border:0;background:rgba(0,0,0,.35);color:rgba(255,255,255,.45);cursor:pointer;font-size:14px;line-height:1}
+.vm-card .st.on,.vm-card .st:hover{color:#ffd25a}
+.vm-card.on .eqb{display:flex}
+.eqb{display:none;position:absolute;right:12px;bottom:12px;gap:2px;align-items:flex-end;height:16px}
+.eqb u{width:3px;background:var(--cc,var(--a));border-radius:2px;animation:vmEq .7s ease-in-out infinite alternate}
+.eqb u:nth-child(2){animation-delay:-.25s}.eqb u:nth-child(3){animation-delay:-.5s}.eqb u:nth-child(4){animation-delay:-.1s}
+@keyframes vmEq{from{height:3px}to{height:16px}}
+.vm-empty{grid-column:1/-1;text-align:center;color:var(--mute);padding:40px 10px}
+/* --- colonne de réglages */
+.vm-right{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--a) transparent}
+.vm-box{padding:14px 16px}
+.vm-box h3{margin:0 0 10px;font:800 11px "Segoe UI";letter-spacing:3px;color:var(--mute);display:flex;align-items:center;gap:8px}
+.vm-box h3::before{content:"";width:18px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--a),var(--a2))}
+.vm-fld{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}
+.vm-fld>span{font:700 10px "Segoe UI";letter-spacing:1.8px;color:var(--mute)}
+.vm-sel{height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--ink);font:600 12.5px "Segoe UI";padding:0 10px;outline:0;width:100%}
+.vm-sel:focus{border-color:var(--a)}
+.vm-cable{padding:11px 13px;border-radius:13px;font-size:12px;line-height:1.5;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.vm-cable.ok{border-color:rgba(61,255,162,.5);background:rgba(61,255,162,.07)}
+.vm-cable.no{border-color:rgba(255,210,90,.5);background:rgba(255,210,90,.07)}
+.vm-cable b{color:#fff}
+.vm-cable ol{margin:6px 0 8px 18px;padding:0;color:var(--mute)}
+.vm-btn{height:38px;padding:0 14px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font:800 11px "Segoe UI";letter-spacing:1.8px;cursor:pointer;transition:.2s}
+.vm-btn:hover{border-color:var(--a);box-shadow:0 0 16px color-mix(in srgb,var(--a) 40%,transparent)}
+.vm-btn.pri{background:linear-gradient(90deg,var(--a),var(--a2));border-color:transparent;color:#fff}
+.vm-btn:disabled{opacity:.4;pointer-events:none}
+.vm-row{display:flex;gap:8px;flex-wrap:wrap}
+.vm-row .vm-btn{flex:1}
+.vm-acc{border-radius:14px;border:1px solid var(--line);margin-bottom:8px;overflow:hidden;background:rgba(0,0,0,.18)}
+.vm-acc>button{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;width:100%;padding:11px 14px;cursor:pointer;font:800 11px "Segoe UI";letter-spacing:2.4px;color:var(--ink)}
+.vm-acc>button::after{content:"▾";transition:.2s;color:var(--mute)}
+.vm-acc.open>button::after{transform:rotate(180deg)}
+.vm-acc>div{display:none;padding:2px 14px 12px}
+.vm-acc.open>div{display:block}
+.vm-sl{margin-bottom:10px}
+.vm-sl label{display:flex;justify-content:space-between;font:600 11.5px "Segoe UI";color:var(--mute);margin-bottom:2px}
+.vm-sl label b{color:var(--ink);font-variant-numeric:tabular-nums}
+.vm-sl.chg label b{color:var(--a2)}
+.vm-sl input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;outline:0;margin:0}
+.vm-sl input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:5px;background:linear-gradient(90deg,var(--a),var(--a2)) 0/var(--p,0%) 100% no-repeat,rgba(255,255,255,.1)}
+.vm-sl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;margin-top:-5.5px;box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 55%,transparent),0 2px 8px rgba(0,0,0,.6);transition:transform .15s}
+.vm-sl input[type=range]:active::-webkit-slider-thumb{transform:scale(1.25)}
+.vm-save{display:flex;gap:8px}
+.vm-save input{flex:1;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--ink);padding:0 10px;font:600 12.5px "Segoe UI";outline:0;min-width:0}
+.vm-err{color:#ff7a8a;font-size:12px;margin-top:6px;min-height:16px}
+.vm-del{position:absolute;right:10px;bottom:9px;z-index:2;border:0;background:rgba(0,0,0,.4);color:#ff7a8a;border-radius:8px;width:26px;height:24px;cursor:pointer}
+@media (max-width:1100px){.vm-grid{grid-template-columns:1fr;overflow:auto}.vm-hero{grid-template-columns:1fr}.vm-right{overflow:visible}.vm-cards{overflow:visible}.vm-in{overflow:auto}}
+@media (prefers-reduced-motion:reduce){#vm *,#vm *::before{animation:none!important}}

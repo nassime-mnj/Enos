@@ -26,14 +26,19 @@
     jester: { noise: 0.4, mul: {}, wheel: true },                                      // la roue tire son niveau tous les 10 coups
     eto: { noise: 0.1, mul: { threat: 1.5, cap: 1.2, adv: 1.2 } },                      // aime les tactiques
     enos: { noise: 0.02, mul: { hang: 1.3, king: 1.3, foe: 1.1 } },                     // froid et précis
+    ghorreal: { noise: 0.03, mul: { cap: 1.4, hunt: 1.6, threat: 1.3, king: 1.2, foe: 1.2 } },   // GhorGhor « le vrai » (GM 3200) : froid, chasseur
   };
+  // Elo de départ affiché de chaque personnage (comme dans les Défis 1v1) ; titre imposé pour Naskurieux et Naskolit (GM)
+  AI.ELO = { nasko: 1300, lelex: 1150, ghorghor: 1400, ghorreal: 3200, penoire: 2500, naskurieux: 1, naskolit: 3200, jester: 1600, eto: 3200, enos: 3200 };
+  AI.TITLE = { naskurieux: "GM", naskolit: "GM" };
+  AI.noiseOfElo = (elo) => Math.max(0.02, Math.min(1.3, 1.3 - (elo / 3200) * 1.28));
   const clampW = (v) => Math.max(0.05, Math.min(3.5, v));
   /** Crée un joueur IA. opts : {persona, w (poids appris), target, foes (tableau de 4 booléens), noise} */
   AI.make = (opts) => {
     const per = PERSONA[opts.persona] || PERSONA.nasko;
     const w = {};
     for (const k of KEYS) w[k] = clampW((opts.w && opts.w[k] != null ? opts.w[k] : BASE[k] * (per.mul[k] || 1)));
-    return { persona: opts.persona, w, noise: opts.noise != null ? opts.noise : per.noise, base: per.noise, target: opts.target == null ? -1 : opts.target, foes: opts.foes || null, grow: !!per.grow, drowsy: !!per.drowsy, wheel: !!per.wheel, moves: 0, skill: 1 };
+    return { persona: opts.persona, w, noise: opts.noise != null ? opts.noise : per.noise, base: per.noise, target: opts.target == null ? -1 : opts.target, foes: opts.foes || null, grow: !opts.royale && !!per.grow, drowsy: !opts.royale && !!per.drowsy, wheel: !!per.wheel, elo: AI.ELO[opts.persona] || 1200, eloGrow: !!opts.royale && !!per.grow, eloDrowsy: !!opts.royale && !!per.drowsy, moves: 0, skill: 1 };
   };
   AI.PERSONA = PERSONA; AI.KEYS = KEYS; AI.BASE = BASE;
   AI.defaultWeights = (persona) => { const per = PERSONA[persona] || PERSONA.nasko, w = {}; for (const k of KEYS) w[k] = clampW(BASE[k] * (per.mul[k] || 1)); return w; };
@@ -97,6 +102,53 @@
     C4.unmake(st, u);
     return sc;
   }
+
+  /** Fixe l'Elo d'un bot « dynamique » (Naskurieux, Naskolit, Jester) : le niveau de jeu (bruit) suit l'Elo. */
+  AI.setElo = (ai, elo) => { ai.elo = Math.max(1, Math.min(3200, Math.round(elo))); ai.noise = AI.noiseOfElo(ai.elo); return ai.elo; };
+
+  // ------------------------------------------------------------------ jugement des coups (Brillant, Meilleur, Excellent, Bon, Imprécision, Erreur, Gaffe)
+  // Chaque coup est comparé aux AUTRES coups légaux avec une évaluation neutre (sans bruit ni personnalité) : l'écart au meilleur coup donne le jugement.
+  // « Brillant » = sacrifice (pièce lourde laissée à une pièce plus faible ou sans défense) qui reste aussi bon que le meilleur coup.
+  AI.neutral = () => AI.make({ persona: "enos", noise: 0, w: BASE });
+  AI.QUALITY = { brilliant: "Brillant", best: "Meilleur coup", excellent: "Excellent", good: "Bon", inaccuracy: "Imprécision", mistake: "Erreur", blunder: "Gaffe" };
+  AI.isSacrifice = (st, o, m) => {
+    const f = m & 255, t = (m >> 8) & 255, pt = typeOf(st.b[f]);
+    if (MATV[pt] < 300) return false;
+    const u = C4.make(st, m);
+    let res = false;
+    for (let e = 0; e < 4 && !res; e++) {
+      if (e === o || !st.alive[e] || C4.allied(st, o, e)) continue;
+      const val = new Int16Array(SQ);
+      if (C4.attackedBy(st, e, val)[t] && val[t] < MATV[pt] - 10) res = true;                     // attaquée par moins fort qu'elle
+    }
+    if (!res) {                                                                                      // ou attaquée et sans aucun défenseur
+      let att = false, def = false;
+      for (let e = 0; e < 4; e++) { if (!st.alive[e] || e === o) continue; if (C4.allied(st, o, e)) { if (C4.attackedBy(st, e)[t]) def = true; } else if (C4.attackedBy(st, e)[t]) att = true; }
+      res = att && !def;
+    }
+    C4.unmake(st, u);
+    return res;
+  };
+  /** Juge le coup m (à appeler AVANT de le jouer). Renvoie {key, gap, best} ; null si une seule possibilité. */
+  AI.judgeMove = (st, o, m, neutral) => {
+    const list = C4.moves(st, o);
+    if (list.length < 2) return null;
+    neutral = neutral || AI.neutral();
+    const enemies = [], team = [];
+    for (let i = 0; i < 4; i++) { if (!st.alive[i]) continue; if (C4.allied(st, o, i)) team.push(i); else enemies.push(i); }
+    const hunters = [];
+    for (let i = 0; i < SQ; i++) { const v = st.b[i]; if (v && ownerOf(v) === o && [Q, R, KN].includes(typeOf(v))) hunters.push(i); }
+    const ctx = { enemies, team, hunters, mateTest: false };
+    const scored = list.map((q) => [q, scoreMove(st, o, q, neutral, ctx)]).sort((a, b) => b[1] - a[1]);
+    const best = scored[0][1], mine = (scored.find((x) => x[0] === m) || [0, -Infinity])[1], gap = best - mine;
+    let sac = false;
+    if (gap <= 10 && AI.isSacrifice(st, o, m)) {                                  // brillant = sacrifice qui bat CLAIREMENT tous les coups sans sacrifice
+      const safe = scored.find((x) => x[0] !== m && !AI.isSacrifice(st, o, x[0]));
+      sac = !safe || mine >= safe[1] + 60;
+    }
+    const key = sac ? "brilliant" : gap <= 3 ? "best" : gap <= 12 ? "excellent" : gap <= 30 ? "good" : gap <= 60 ? "inaccuracy" : gap <= 120 ? "mistake" : "blunder";
+    return { key, gap: Math.round(gap), best: Math.round(best) };
+  };
 
   /** Choisit un coup pour `o` avec l'IA `ai`. Renvoie le coup (entier) ou -1 s'il n'y en a aucun. */
   AI.choose = (st, o, ai) => {
