@@ -93,3 +93,7 @@
 @keyframes greyIn{from{filter:none;transform:scale(1.2)}to{transform:none}}
 .ro-cap img.c4{filter:grayscale(1) opacity(.5)}
 .ro-chk{margin-left:8px;padding:1px 8px;border-radius:8px;background:#a52727;color:#fff;font:800 12px var(--ui);letter-spacing:1px;animation:blink .8s infinite}
+.ro-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.ro-modes button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;border-radius:14px;border:1px solid var(--red);background:linear-gradient(160deg,#1a0a0e,#101012);color:var(--text)}
+.ro-modes button b{font:900 18px var(--ui);letter-spacing:1px}.ro-modes button small{font:600 10.5px var(--ui);color:var(--muted)}
+.ro-modes button.on,.ro-presets button.on{box-shadow:0 0 0 2px var(--red2) inset;color:#fff}

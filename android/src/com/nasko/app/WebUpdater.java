@@ -136,12 +136,14 @@ final class WebUpdater {
      * activés au prochain lancement. Retourne {"state": "uptodate" | "ready" | "applied" | "needs_apk" | "error", "n": nb de fichiers, "msg": …}.
      */
     synchronized String run(boolean apply) {
+        String step = "début";
         try {
             // un lot déjà téléchargé et en attente (auto au lancement précédent) : on l'active simplement
             if (stage.isDirectory() && new File(stage, "state.json").isFile()) {
                 if (apply) { promote(); return res("applied", 0, "Mise à jour appliquée."); }
             }
             String br = branch();
+            step = "lecture du dernier commit";
             String commit = httpText("https://api.github.com/repos/" + REPO + "/commits/" + br, "application/vnd.github.sha").trim();
             if (!commit.matches("[0-9a-f]{40}")) return res("error", 0, "Réponse GitHub inattendue.");
             if (commit.equals(prefs.getString("web_commit", "")) && overlay != null && !overlay.isEmpty() && !stage.isDirectory()) return res("uptodate", 0, "Déjà à jour.");
@@ -151,10 +153,12 @@ final class WebUpdater {
             try { need = Long.parseLong(httpText(raw(commit, "android/web_min_apk.txt"), null).trim()); } catch (Exception ignored) { }
             if (need > apkCode) return res("needs_apk", 0, "Cette version demande une nouvelle APK (v" + need + "). Installe-la une fois, puis les suivantes passeront ici.");
 
+            step = "liste des fichiers";
             JSONObject tree = new JSONObject(httpText("https://api.github.com/repos/" + REPO + "/git/trees/" + commit + ":" + DIR + "?recursive=1", null));
             if (tree.optBoolean("truncated")) return res("error", 0, "Liste de fichiers trop grande.");
             JSONArray arr = tree.getJSONArray("tree");
 
+            step = "empreintes des fichiers de l'APK";
             Map<String, String> have = effective();
             Map<String, String> todo = new HashMap<>();
             for (int i = 0; i < arr.length(); i++) {
@@ -173,6 +177,7 @@ final class WebUpdater {
             deleteTree(stage);
             stage.mkdirs();
             copyTree(live, stage);
+            step = "téléchargement (" + todo.size() + " fichiers)";
             for (Map.Entry<String, String> e : todo.entrySet()) {
                 byte[] b = httpBytes(raw(commit, DIR + "/" + e.getKey()));
                 if (!gitSha(b).equals(e.getValue())) { deleteTree(stage); return res("error", 0, "Empreinte incorrecte : " + e.getKey()); }
@@ -186,10 +191,11 @@ final class WebUpdater {
             File pend = new File(stage, ".pending");
             write(pend, (commit + "\n" + todo.size()).getBytes("UTF-8"));
             saveState(stage, ov);
+            step = "activation";
             if (apply) { promote(); return res("applied", todo.size(), todo.size() + " fichier(s) mis à jour."); }
             return res("ready", todo.size(), todo.size() + " fichier(s) prêts, activés au prochain lancement.");
         } catch (Exception e) {
-            return res("error", 0, e.getMessage() == null ? e.toString() : e.getMessage());
+            return res("error", 0, e.getClass().getSimpleName() + " : " + (e.getMessage() == null ? "sans détail" : e.getMessage()) + " (étape : " + step + ")");
         }
     }
 

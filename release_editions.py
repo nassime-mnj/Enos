@@ -34,7 +34,7 @@ PY_MODULES = {                                    # modules Python propres à un
     "mirror": ["nasko_mirror"],
     "gaming": ["nasko_clipper", "nasko_capture", "nasko_babel", "nasko_tilt", "nasko_brb", "nasko_afk"],
 }
-DIRS = {"leisure": ["godot_chess", "godot_games", "openings"], "depot": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
+DIRS = {"leisure": ["godot_chess", "godot_games", "godot_chess_edit", "openings"], "depot": ["static/vendor/monaco", "static/vendor/xterm"]}   # dossiers entiers
 # Le dossier de travail WSL par défaut nomme l'utilisateur Linux du CEO : hors édition CEO il est remplacé par un nom neutre (chaque utilisateur règle le sien dans « ESPACE WSL »).
 OWNER_HOME = re.compile(r"(home(?:\\+|/))nasko\b")
 OWNER_REPLACEMENT = r"\1utilisateur"

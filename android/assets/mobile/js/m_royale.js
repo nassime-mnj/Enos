@@ -22,12 +22,14 @@
   ];
   const WLAB = { cap: "les prises", foe: "affaiblir l'adversaire", hang: "protéger ses pièces", threat: "les menaces", king: "la sécurité du roi", adv: "l'avance", center: "le centre", hunt: "la chasse au roi", storm: "fuir la tempête" };
   const pname = (id) => (id === "human" ? (E.userName ? E.userName() : "Toi") : E.botChat && E.botChat.bots[id] ? E.botChat.bots[id].name : id);
+  let PENDING = () => {};
   const learned = () => E.settings.get("royale.learned", {});
   const stat = () => E.settings.get("royale.stats", { games: 0, wins: {} });
 
   E.suite.register({
     id: "royale", group: "chess", title: "Battle Royale ×4", sub: "4 bots ou joueurs · alliances · tempête",
     icon: '<path d="M12 2l2.6 6.2 6.4.5-4.9 4.2 1.5 6.3L12 15.8 6.4 19.2 7.9 13 3 8.7l6.4-.5z"/>',
+    onShow() { PENDING(); },
     build(el, A) {
       const $ = (s) => el.querySelector(s);
       let cfg = E.settings.get("royale.cfg", null) || { seats: [{ who: "human", name: "", target: 1, team: 0 }, { who: "penoire", name: "", target: 2, team: 1 }, { who: "nasko", name: "", target: 3, team: 2 }, { who: "lelex", name: "", target: 0, team: 3 }], storm: "normal", speed: "normal", learned: false };
@@ -38,6 +40,7 @@
         <div id="ro-setup">
           <div class="card ro-hero"><h3>⚔ Battle Royale ×4</h3>
             <p class="muted">Le plateau à 4 joueurs : chaque armée attaque depuis un bord. <b>Roi capturé = éliminé</b> (pas d'échec ni de mat). Choisis <b>qui affronte qui</b>, qui est <b>allié</b>, et laisse la <b>tempête</b> rétrécir le terrain jusqu'au dernier survivant.</p>
+            <div class="ro-modes" id="ro-modes"><button data-p="0"><b>1v1v1v1</b><small>chacun pour soi</small></button><button data-p="1"><b>2v2</b><small>opposés alliés</small></button><button data-p="2"><b>2v2</b><small>voisins alliés</small></button></div>
             <div class="ro-presets" id="ro-presets">${PRESETS.map((p, i) => `<button data-p="${i}">${esc(p[0])}</button>`).join("")}</div></div>
           <div class="ro-seats" id="ro-seats">${[0, 1, 2, 3].map((s) => `<div class="ro-seat" data-s="${s}" style="--pc:${COLORS[s]}"><div class="ro-sav"></div><b>${SEAT[s]}</b>
             <label>Joueur<select data-f="who"></select></label><label class="ro-nmf">Nom<input data-f="name" type="text" maxlength="14" placeholder="ex. Karim (au téléphone)"></label><label>Équipe<select data-f="team"></select></label><label>Attaque →<select data-f="target"></select></label></div>`).join("")}</div>
@@ -108,15 +111,17 @@
       $("#ro-storm").onchange = (e) => { cfg.storm = e.target.value; save(); };
       $("#ro-speed").onchange = (e) => { cfg.speed = e.target.value; save(); };
       $("#ro-learned").onchange = (e) => { cfg.learned = e.target.checked; save(); };
-      $("#ro-presets").onclick = (e) => {
-        const b = e.target.closest("button[data-p]");
-        if (!b) return;
-        const teams = PRESETS[+b.dataset.p][1];
+      function applyPreset(i) {
+        const teams = PRESETS[i][1];
         cfg.seats.forEach((c, s) => { c.team = teams[s]; });
         normalise(); fillSeats();
-        cfg.seats.forEach((c, s) => { c.target = [1, 2, 3].map((d) => (s + d) % 4).find((i) => cfg.seats[i].team !== c.team); });
+        cfg.seats.forEach((c, s) => { c.target = [1, 2, 3].map((d) => (s + d) % 4).find((j) => cfg.seats[j].team !== c.team); });
         save(); fillSeats(); E.vibrate(8);
-      };
+        el.querySelectorAll("#ro-modes button, #ro-presets button").forEach((b) => b.classList.toggle("on", +b.dataset.p === i));
+      }
+      $("#ro-modes").onclick = $("#ro-presets").onclick = (e) => { const b = e.target.closest("button[data-p]"); if (b) applyPreset(+b.dataset.p); };
+      PENDING = () => { const p = E.settings.get("royale.pending", null); if (p != null) { E.settings.set("royale.pending", null); applyPreset(+p); } };
+      PENDING();
 
       function palmares() {
         const st = stat(), rows = Object.entries(st.wins).sort((a, b) => b[1] - a[1]);
@@ -467,4 +472,6 @@
       fillSeats(); palmares();
     },
   });
+  /** Ouvre le Battle Royale ×4 avec un préréglage (0 = 1v1v1v1, 1 = 2v2 opposés, 2 = 2v2 voisins) : appelé par les modes de l'Arène. */
+  E.royale = { open(i) { E.settings.set("royale.pending", i); if (E.suite && E.suite.open && !document.getElementById("tabs")) E.suite.open("royale"); else { location.hash = "#royale"; location.reload(); } } };
 })();

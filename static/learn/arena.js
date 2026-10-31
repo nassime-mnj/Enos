@@ -35,6 +35,8 @@
     lobby.id = "ar-lobby";
     const opts = (v) => Object.entries(FIGHTERS).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${esc(n)}</option>`).join("");
     lobby.innerHTML = `
+      <section class="ar-sec"><h3>⚔ ARÈNE ×4<span>le plateau d'échecs à 4 joueurs : 4 bots, tempête, alliances</span></h3><div class="ar-others">
+        <button class="btn pri" data-x4="0">1v1v1v1 · CHACUN POUR SOI</button><button class="btn pri" data-x4="1">2v2 · OPPOSÉS ALLIÉS</button><button class="btn" data-x4="2">2v2 · VOISINS ALLIÉS</button></div></section>
       <section class="ar-sec"><h3>AFFRONTE UN BOT</h3><div class="ar-cards">${ROSTER.map((r) => `
         <article class="ar-card" data-id="${r.id}">
           <div class="ar-pt">${portrait(r.fighter || r.id)}</div>
@@ -63,6 +65,7 @@
     lobby.querySelector("#ar-cw").onchange = lobby.querySelector("#ar-cb").onchange = slots;
     lobby.querySelector("#ar-swap").onclick = () => { const w = lobby.querySelector("#ar-cw"), b = lobby.querySelector("#ar-cb"), t = w.value; w.value = b.value; b.value = t; slots(); };
     lobby.querySelector(".ar-presets").onclick = (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; const p = PRESETS[+b.dataset.p]; lobby.querySelector("#ar-cw").value = p[0]; lobby.querySelector("#ar-cb").value = p[1]; slots(); };
+    lobby.querySelectorAll("[data-x4]").forEach((b) => (b.onclick = () => E.royale ? E.royale.open(+b.dataset.x4) : (location.hash = "#royale", location.reload())));
     lobby.querySelector("#ar-fight").onclick = () => { const [cw, cb] = slots(); E.settings.set("defi.combat", [cw, cb]); api.launch("combat", { color: "w", cw, cb }); };
     lobby.querySelector(".ar-cards").onclick = (e) => {
       const b = e.target.closest("button[data-c]"), card = e.target.closest(".ar-card");

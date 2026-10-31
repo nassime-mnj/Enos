@@ -24,6 +24,8 @@
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
     { id: "jester", t: "🃏 Le Jester", s: "Une roue tire son Elo au sort (1-3200) tous les 10 coups", human: true },
+    { id: "x4a", t: "⚔ Arène 1v1v1v1", s: "Chess ×4 · 4 bots, chacun pour soi", human: false, x4: 0 },
+    { id: "x4b", t: "⚔ Arène 2v2", s: "Chess ×4 · 2 équipes de 2 bots", human: false, x4: 1 },
     { id: "combat", t: "⚔ Combat de bots", s: "Nasko vs Pénoire, Lelex vs ETO… tu choisis", human: false, duel: true },
     { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
     { id: "ebs", t: "✦ ETO Brillant vs Stockfish", s: "Combat spectateur · enregistré", human: false, duel: true },
@@ -102,13 +104,14 @@
       function paintHist() {
         const h = hist().slice().reverse();
         $("#df-hn").textContent = h.length ? h.length + " partie" + (h.length > 1 ? "s" : "") : "";
-        $("#df-hist").innerHTML = h.length ? h.map((x, i) => `<div class="it"><span class="n">${esc(x.title)}<small>${esc(x.result)} · ${x.plies} coups · ✦ ${x.brill} brillant${x.brill > 1 ? "s" : ""}${x.acc != null ? " · précision " + x.acc + " %" : ""} · ${new Date(x.t).toLocaleDateString("fr-FR")}</small></span>${x.mv ? `<button class="mini" data-rev="${h.length - 1 - i}">▶ REVOIR</button>` : ""}<button class="mini" data-pgn="${h.length - 1 - i}">PGN</button></div>`).join("") : '<p class="muted">Aucune partie pour l\'instant.</p>';
+        $("#df-hist").innerHTML = h.length ? h.map((x, i) => `<div class="it"><span class="n">${esc(x.title)}<small>${esc(x.result)} · ${x.plies} coups · ✦ ${x.brill} brillant${x.brill > 1 ? "s" : ""}${x.acc != null ? " · précision " + x.acc + " %" : ""} · ${new Date(x.t).toLocaleDateString("fr-FR")}</small></span>${x.mv ? `<button class="mini" data-rev="${h.length - 1 - i}">▶ REVOIR</button>` : ""}${x.mv && E.chessEdit ? `<button class="mini" data-edit="${h.length - 1 - i}">🎬</button>` : ""}<button class="mini" data-pgn="${h.length - 1 - i}">PGN</button></div>`).join("") : '<p class="muted">Aucune partie pour l\'instant.</p>';
       }
       $("#df-hist").onclick = (e) => {
         const r = e.target.closest("[data-rev]"); if (r) return replay(hist()[+r.dataset.rev]);
+        const ed = e.target.closest("[data-edit]"); if (ed && E.chessEdit) return E.chessEdit.open(hist()[+ed.dataset.edit]);
         const b = e.target.closest("[data-pgn]"); if (b) A.copy(hist()[+b.dataset.pgn].pgn || "");
       };
-      el.querySelectorAll(".df-mode").forEach((b) => (b.onclick = () => setup(b.dataset.m)));
+      el.querySelectorAll(".df-mode").forEach((b) => (b.onclick = () => { const m = MODES.find((x) => x.id === b.dataset.m); if (m && m.x4 !== undefined && E.royale) return E.royale.open(m.x4); setup(b.dataset.m); }));
 
       function setup(id) {
         const m = MODES.find((x) => x.id === id);
@@ -172,7 +175,8 @@
         if (g) g.token++;
         const me = m.human ? (pl[0].human ? "w" : "b") : null;
         g = { id, mode: m, pl: { w: pl[0], b: pl[1] }, me, token: (g ? g.token : 0) + 1, ch: new Chess(), fen: START, evalW: 0, bestUci: "", moves: [], snaps: [], over: "", busy: false, paused: false, sel: "", hint: null, last: null,
-          brill: { w: 0, b: 0 }, inBook: true, seen: L.startSeen(START), talk: {}, fr: {}, wn: {}, lostMinor: { w: 0, b: 0 }, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0 };
+          brill: { w: 0, b: 0 }, inBook: true, seen: L.startSeen(START), talk: {}, fr: {}, wn: {}, lostMinor: { w: 0, b: 0 }, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0, chat: [] };
+        if (E.botChat) E.botChat.onSay = (bot, text, kind) => { if (g && g.chat && g.chat.length < 80) g.chat.push([g.moves.length, bot, text.slice(0, 160), kind]); };   // répliques gardées pour CHESS EDIT STUDIO
         g.ch.header("Event", m.t.replace(/[^\p{L}\p{N} .]/gu, "").trim(), "White", pl[0].name, "Black", pl[1].name, "Date", new Date().toISOString().slice(0, 10).replace(/-/g, "."));
         $("#df-home").hidden = true; $("#df-game").hidden = false;
         document.documentElement.classList.remove("ghor");
@@ -573,12 +577,12 @@
         if (g.moves.length >= 2) {
           const list = hist(); list.push({ t: Date.now(), title: g.mode.t.replace(/[^\p{L}\p{N} .'-]/gu, "").trim() + " · " + g.pl.w.name + " – " + g.pl.b.name, result, plies: g.moves.length, brill: g.brill.w + g.brill.b, acc: g.me ? (g.me === "w" ? accW : accB) : null, pgn: g.ch.pgn(),
             id: g.id, pw: g.pl.w.name, pb: g.pl.b.name, pk: [g.pl.w.kind || "", g.pl.b.kind || ""], bw: g.brill.w, bb: g.brill.b, me: g.me, accW, accB,
-            mv: g.moves.map((m) => [m.uci, m.san, m.q.key, m.q.loss | 0, m.ew === undefined ? null : m.ew, m.bestSan || ""]) });   // enregistrement complet : [uci, san, jugement, perte, éval Blancs, meilleur coup]
+            ch: g.chat || [], mv: g.moves.map((m) => [m.uci, m.san, m.q.key, m.q.loss | 0, m.ew === undefined ? null : m.ew, m.bestSan || ""]) });   // enregistrement complet : [uci, san, jugement, perte, éval Blancs, meilleur coup]
           E.settings.set("defi.hist", list.slice(-40));
         }
         const row = (c) => `<div class="df-sum"><b>${esc(sideName(c))}</b><span>précision ${(c === "w" ? accW : accB) == null ? "—" : (c === "w" ? accW : accB) + " %"}</span><span style="color:#1acfd6">✦ ${g.brill[c]} brillant${g.brill[c] > 1 ? "s" : ""}</span></div>`;
         E.vibrate(40);
-        if (g.moves.length >= 2) E.ui.sheet({ title: result, html: `${row("w")}${row("b")}<p class="muted" style="margin-top:10px;font-size:13px">${rev.critical.length ? "Moments clés : " + rev.critical.map((c) => `coup ${Math.ceil(c.n / 2)} (${c.san} ${c.label.toLowerCase()})`).join(", ") + "." : "Aucune gaffe majeure."}</p>`, options: [{ label: "COPIER LE PGN", fn: () => A.copy(g.ch.pgn()) }, { label: "REJOUER", fn: () => launch(g.id, g.o) }, { label: "FERMER" }] });
+        if (g.moves.length >= 2) E.ui.sheet({ title: result, html: `${row("w")}${row("b")}<p class="muted" style="margin-top:10px;font-size:13px">${rev.critical.length ? "Moments clés : " + rev.critical.map((c) => `coup ${Math.ceil(c.n / 2)} (${c.san} ${c.label.toLowerCase()})`).join(", ") + "." : "Aucune gaffe majeure."}</p>`, options: [{ label: "COPIER LE PGN", fn: () => A.copy(g.ch.pgn()) }, ...(E.chessEdit ? [{ label: "🎬 CHESS EDIT STUDIO", fn: () => { const r = hist()[hist().length - 1]; if (r) E.chessEdit.open(r); } }] : []), { label: "REJOUER", fn: () => launch(g.id, g.o) }, { label: "FERMER" }] });
       }
 
       // ------------------------------------------------------------------ replay d'une partie enregistrée (même plateau, mêmes jugements)

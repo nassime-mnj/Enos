@@ -1,0 +1,25 @@
+; CHESS EDIT STUDIO (pont PC) : rejoue en 3D une partie d'échecs calée sur une musique (edit_timeline_manifest.json), rendu .mp4 possible (Movie Maker).
+config_version=5
+
+[application]
+config/name="ENOS Chess Edit Studio"
+run/main_scene="res://edit.tscn"
+run/max_fps=60
+config/features=PackedStringArray("4.7", "Forward Plus")
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0, 0, 0, 1)
+
+[display]
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/window_width_override=540
+window/size/window_height_override=960
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+renderer/rendering_method="forward_plus"
+viewport/hdr_2d=true
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+anti_aliasing/quality/msaa_3d=2
+textures/canvas_textures/default_texture_filter=2

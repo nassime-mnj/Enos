@@ -70,6 +70,7 @@ import nasko_ota
 import nasko_update_signal
 import nasko_pet
 import nasko_jeux
+import nasko_chessedit
 import nasko_babel
 import nasko_brb
 import nasko_afk
@@ -4320,6 +4321,28 @@ def jeux_lancer(b: JeuLancer):
     try:
         return nasko_jeux.launch(b.game)
     except nasko_jeux.JeuxError as e:
+        raise HTTPException(400, str(e))
+
+
+# ----------------------------------------------------------------------------- CHESS EDIT STUDIO : manifeste + musique -> scène Godot (aperçu ou rendu .mp4 60 FPS)
+class ChessEditLancer(BaseModel):
+    manifest: dict
+    audio_b64: str = ""
+    audio_name: str = ""
+    render: bool = False
+    seek: float = 0.0
+
+
+@app.get("/api/chessedit/status", dependencies=_LOCAL)
+def chessedit_status():
+    return nasko_chessedit.status()
+
+
+@app.post("/api/chessedit/lancer", dependencies=_LOCAL)
+def chessedit_lancer(b: ChessEditLancer):
+    try:
+        return nasko_chessedit.launch(b.manifest, b.audio_b64, b.audio_name, b.render, b.seek)
+    except nasko_chessedit.ChessEditError as e:
         raise HTTPException(400, str(e))
 
 

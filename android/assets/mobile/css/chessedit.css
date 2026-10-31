@@ -1,0 +1,58 @@
+/* CHESS EDIT STUDIO : studio (module) + scène plein écran 3D. La scène vit DANS #app (z-index 56 < scrim 70 / feuille 80). */
+.ce-stage{position:fixed;inset:0;z-index:56;background:#000;overflow:hidden;color:#fff;font-family:var(--ui,system-ui)}
+.ce-stage canvas{position:absolute;inset:0;pointer-events:none}
+.ce-fxwrap,.ce-shake{position:absolute;inset:0}
+.ce-persp{position:absolute;inset:0;perspective:900px;perspective-origin:50% 45%}
+.ce-drift{position:absolute;inset:0}
+.ce-cam{position:absolute;transform-origin:50% 50%;will-change:transform}
+.ce-board,.ce-pcs,.ce-fxl{position:absolute;left:0;top:0}
+.ce-board{filter:grayscale(1) contrast(1.4) brightness(.8);box-shadow:0 0 60px #000}
+.ce-board i{position:absolute;width:12.5%;height:12.5%}
+.ce-pcs{filter:grayscale(1) contrast(1.35) brightness(1.05);pointer-events:none}
+.ce-pcs img{position:absolute;left:0;top:0;will-change:transform;transition:transform .3s cubic-bezier(.2,.9,.2,1)}
+.ce-fxl{pointer-events:none}
+.ce-ghost{position:absolute;opacity:0;animation:ceGhost .55s ease-out both;mix-blend-mode:screen}
+@keyframes ceGhost{0%{opacity:.75;transform:scale(1.08)}100%{opacity:0;transform:scale(.9)}}
+.ce-halo{position:absolute;border-radius:50%;mix-blend-mode:screen;animation:ceHalo .95s ease-out both}
+@keyframes ceHalo{0%{opacity:1;transform:scale(.3)}60%{opacity:.8}100%{opacity:0;transform:scale(1.7)}}
+.ce-lit{position:absolute;border:2px solid;opacity:.9;mix-blend-mode:screen}
+.ce-ring{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border:3px solid;border-radius:50%;animation:ceRing 1s cubic-bezier(.1,.7,.2,1) both}
+@keyframes ceRing{0%{opacity:1;transform:scale(.2)}100%{opacity:0;transform:scale(9)}}
+.ce-bang{position:absolute;font-weight:900;color:#00f2fe;text-shadow:0 0 10px #00f2fe,0 0 26px #00f2fe;animation:ceBang 1.2s cubic-bezier(.2,1.6,.3,1) both}
+.ce-bang.red{color:#ff0044;text-shadow:0 0 10px #ff0044,0 0 26px #ff0044}
+@keyframes ceBang{0%{opacity:0;transform:scale(.2) rotate(-25deg)}20%{opacity:1;transform:scale(1.25) rotate(6deg)}100%{opacity:0;transform:scale(1) translateY(-14px)}}
+.ce-vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 46%,transparent 28%,rgba(0,0,0,.55) 62%,#000 100%)}
+.ce-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.ce-rew .ce-board,.ce-rew .ce-pcs{filter:grayscale(.6) contrast(1.4) sepia(.6) hue-rotate(160deg)}
+.ce-ff{position:absolute;top:22%;right:6%;font:900 22px/1 var(--ui,system-ui);letter-spacing:3px;color:#fff;text-shadow:0 0 12px #00f2fe;animation:ceBlink .5s steps(2) infinite}
+@keyframes ceBlink{50%{opacity:.35}}
+.ce-cut{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(0,0,0,.35),rgba(0,0,0,.88));pointer-events:none}
+.ce-cut img{position:relative;width:42vmin;height:42vmin;object-fit:contain}
+.ce-rays{position:absolute;width:150vmax;height:150vmax;left:50%;top:50%;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(rgba(255,210,74,.35) 0 6deg,transparent 6deg 18deg);animation:ceSpin 1.6s linear infinite;-webkit-mask:radial-gradient(circle,#000 6%,transparent 52%);mask:radial-gradient(circle,#000 6%,transparent 52%)}
+.ce-arrows{position:absolute;left:50%;top:50%;width:0;height:0;animation:ceSpin 1.2s linear infinite reverse}
+.ce-arrows b{position:absolute;left:-.5em;top:-.5em;font-size:7vmin;color:#ffd24a;text-shadow:0 0 12px #ffd24a;line-height:1;transform-origin:50% 50%;margin:0}
+@keyframes ceSpin{to{transform:rotate(360deg)}}
+.ce-big{position:absolute;bottom:27%;left:0;right:0;text-align:center;font:900 clamp(30px,10vw,64px)/1 var(--ui,system-ui);letter-spacing:6px;text-transform:uppercase;animation:ceTxt .8s ease-out both}
+@keyframes ceTxt{0%{letter-spacing:34px;opacity:0}40%{opacity:1}100%{letter-spacing:4px}}
+.ce-cap{position:absolute;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(4px);animation:ceIn .25s ease-out}
+.ce-cap img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #fff}
+.ce-cap small{display:block;font:700 11px var(--ui,system-ui);letter-spacing:2px;color:#00f2fe;text-transform:uppercase}
+.ce-cap span{font:700 17px/1.25 var(--ui,system-ui);text-shadow:1px 0 #f03,-1px 0 #0ff}
+.ce-cap.jit{animation:ceJit .08s steps(2) infinite}.ce-cap.out{opacity:0;transition:opacity .35s}
+@keyframes ceJit{0%{transform:translate(2px,-1px)}100%{transform:translate(-2px,1px)}}
+@keyframes ceIn{from{opacity:0;transform:translateY(10px)}}
+.ce-hud{position:absolute;left:0;right:0;top:0;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0;display:flex;align-items:center;gap:10px}
+.ce-hud button{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.55);color:#fff;font-size:16px}
+.ce-title{flex:1;font:700 12px var(--ui,system-ui);letter-spacing:2px;text-transform:uppercase;opacity:.8;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ce-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.15)}
+.ce-prog i{display:block;height:100%;background:linear-gradient(90deg,#00f2fe,#ff0044);transform-origin:0 50%;transform:scaleX(0)}
+
+/* studio (module) */
+.ce-wave{position:relative;width:100%;height:120px;border-radius:10px;background:#0a0a0c;border:1px solid var(--line);touch-action:none;overflow:hidden}
+.ce-wave canvas{width:100%;height:100%;display:block}
+.ce-legend{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.ce-legend button{height:34px;padding:0 10px;border-radius:9px;border:1px solid var(--line);background:var(--surf2);font:700 11px var(--ui);letter-spacing:1px;color:var(--text)}
+.ce-legend button.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset;color:var(--c)}
+.ce-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:6px}
+.ce-stat{font-size:12.5px;line-height:1.5;color:var(--muted)}
+.ce-stat b{color:var(--text)}

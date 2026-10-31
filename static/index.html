@@ -37,6 +37,9 @@ body.speaking::before{animation-duration:2.6s}   /* le fond « respire » plus v
 @media (prefers-reduced-motion:reduce){body::before{animation:none}}
 header{position:relative;text-align:center;padding:10px 10px 6px;border-bottom:1px solid var(--dim);
  background:repeating-linear-gradient(0deg,hsl(var(--h) calc(86% * var(--sat)) 2.7% / 0.77) 0 2px,#000000a8 2px 4px);overflow:hidden}
+body:has(section[role=dialog]:not([hidden])) #b-rg-top{display:none}
+#b-rg-top.rg-gear{position:fixed;top:10px;right:14px;z-index:40;padding:6px 12px;border:1px solid var(--neon);background:#000000c0;color:var(--neon);font:700 12px Consolas,monospace;letter-spacing:2px;cursor:pointer;box-shadow:0 0 10px var(--dim)}
+#b-rg-top.rg-gear:hover{background:var(--neon);color:#000}
 header::after{content:"";position:absolute;left:0;right:0;height:18px;background:linear-gradient(#0000,hsl(calc(var(--h) - 1) calc(81% * var(--sat)) 8.2%),#0000);animation:scan 4s linear infinite;pointer-events:none}
 @keyframes scan{from{top:-20px}to{top:100%}}
 pre#ascii{margin:0;display:inline-block;font:700 clamp(8px,1.55vw,17px)/1.05 Consolas,monospace;color:var(--mid);
@@ -214,6 +217,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 </head>
 <body>
 <header>
+  <button id="b-rg-top" class="rg-gear" type="button" title="Réglages" aria-label="Réglages">⚙ RÉGLAGES</button>
   <div id="avatar"><pre id="ascii"></pre></div>
   <div id="eto-avatar" class="eto-only" aria-hidden="true"></div>
   <div id="tag">[ AI CORE // ONLINE ]</div>
