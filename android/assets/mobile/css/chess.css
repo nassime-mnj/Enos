@@ -246,9 +246,9 @@
 /* ---- réveil de GhorGhor : glitch + ambiance sombre */
 .glitch-ov{position:fixed;inset:0;z-index:90;pointer-events:none;mix-blend-mode:difference;overflow:hidden}
 .glitch-ov i{position:absolute;left:0;right:0}
-html.ghor #app{transition:filter 1.4s,background 1.4s;filter:brightness(.6) contrast(1.15) saturate(.7)}
+html.ghor #app{transition:filter 1.4s,background 1.4s;filter:brightness(.9) contrast(1.06) saturate(.88)}
 html.ghor{--red:#ff1a3c;--red2:#ff4d63;--halo:#a0001a66}
-html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#00000038 2px 3px),radial-gradient(ellipse at center,transparent 40%,#000c 100%);animation:ghorFlick 5s infinite}
+html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#00000014 2px 3px),radial-gradient(ellipse at center,transparent 55%,#00000066 100%);animation:ghorFlick 5s infinite}
 @keyframes ghorFlick{0%,91%,100%{opacity:1}93%{opacity:.45}95%{opacity:.9}97%{opacity:.35}}
 .bot-av.awake{animation:awake 1.4s ease-out;box-shadow:0 0 22px #ff1a3caa}
 @keyframes awake{0%{filter:brightness(4) contrast(2);transform:scale(1.25)}40%{filter:hue-rotate(90deg) brightness(1.6)}100%{filter:none;transform:none}}

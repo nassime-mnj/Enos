@@ -7,7 +7,7 @@
   const ROSTER = [
     { id: "nasko", name: "Nasko", elo: 1300, text: "Joue comme La_Loi_De_Fortes : Scandinave, Gambit Alien, une gaffe de temps en temps. Ironique, il commente tout." },
     { id: "lelex", name: "Lelex", elo: 1150, text: "Joue comme Lepoissonsteve80. Phrases courtes, « XDDD », « vrm mdrr ». Tombe dans les mêmes pièges que lui." },
-    { id: "ghorghor", name: "GhorGhor", elo: 1400, text: "Style Lelex, 1400 Elo. S'il perd plus de 2 pièces mineures, l'écran glitche : GhorGhor le vrai (GM 3200) se réveille." },
+    { id: "ghorghor", name: "GhorGhor", elo: 1400, text: "Style Lelex, 1400 Elo. S'il perd plus de 2 pièces mineures (une seule face à ETO, E.N.O.S. ou Stockfish), l'écran glitche : GhorGhor le vrai (GM 3200) se réveille." },
     { id: "penoire", name: "Nasko (pénoire)", elo: 2500, text: "2500 Elo, chasseur de coups brillants comme ETO. Sûr de lui, il a toujours un mot pour toi à la fin." },
     { id: "naskurieux", name: "Naskurieux", elo: 1, title: "GM", text: "Agent GM à 1 Elo : +200 Elo à chaque erreur de son adversaire et à chaque meilleur coup qu'il joue lui-même." },
     { id: "naskolit", name: "Naskolit", elo: 3200, title: "GM", text: "Il dort, mais il est GM à 3200 Elo. Il perd 100 Elo à chaque imprécision et chaque fois que tu trouves le meilleur coup. Il ne dit pas un mot." },

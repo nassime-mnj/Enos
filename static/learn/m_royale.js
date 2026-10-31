@@ -322,7 +322,7 @@
         // commentaires
         if (J) judged(o, J, r);
         events(r, o);
-        if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].id === "ghorghor" && [C4.KN, C4.B].includes(r.captured.type) && ++G.lostMinor[r.captured.owner] === 3) ghorTransform(r.captured.owner);
+        if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].id === "ghorghor" && [C4.KN, C4.B].includes(r.captured.type) && ++G.lostMinor[r.captured.owner] === minorNeed(r.captured.owner)) ghorTransform(r.captured.owner);
         const info = AI.afterMove(G.seats[o].ai || { moves: 0 }, { captured: !!r.captured });
         if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].ai) AI.afterMove(G.seats[r.captured.owner].ai, { lost: true });
         if (info && info.elo != null) { renderBan(o); ticker(`🎡 La roue donne ${info.elo} Elo au Jester !`); say(o, info.elo < 800 ? "wheel_low" : info.elo < 2400 ? "wheel_mid" : "wheel_high", { elo: info.elo }); }
@@ -364,6 +364,8 @@
           if (d) { AI.setElo(ai, ai.elo + d); renderBan(s); if (d > 0) { ticker(`📈 ${G.seats[s].name} passe à ${ai.elo} Elo`); say(s, "elo_up", { elo: ai.elo }); } }
         }
       }
+      // GhorGhor se réveille après 3 pièces mineures perdues, mais une seule si un de ses ennemis est ETO ou E.N.O.S.
+      const minorNeed = (s) => (G.seats.some((x, i) => i !== s && !C4.allied(G.st, s, i) && (x.id === "eto" || x.id === "enos")) ? 1 : 3);
       function glitchFx(ms) {
         const app = document.getElementById("app");
         if (!app || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !E.settings.get("anim", true)) return sleep(Math.min(ms, 600));
@@ -582,7 +584,7 @@
         A.toast("Entraînement terminé : coche « Bots entraînés » pour les utiliser.", "ok", 5000);
       };
 
-      el._api = { rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back, apply: (m) => apply(m, false), ghorTransform, judged, renderBan, setDuo, duoMode };
+      el._api = { rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back, apply: (m) => apply(m, false), ghorTransform, minorNeed: (s) => minorNeed(s), judged, renderBan, setDuo, duoMode };
       fillSeats(); palmares();
     },
   });

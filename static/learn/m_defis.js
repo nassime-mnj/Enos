@@ -127,7 +127,7 @@
         else if (id === "naskurieux") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">L'agent <b>Naskurieux</b> est <b>Grand Maître</b>… mais il démarre à <b>1 Elo</b>. À chaque <b>imprécision, erreur ou gaffe</b> de ton adversaire il gagne <b style="color:#1acfd6">+200 Elo</b>, et autant <b>chaque fois qu'il joue lui-même le meilleur coup</b>. Il joue de mieux en mieux : ne lui fais aucun cadeau.</p>` + colorSeg;
         else if (id === "naskolit") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>Naskolit</b> dort… et pourtant il est <b>Grand Maître à 3200 Elo</b>. Mais il <b>perd 100 Elo</b> à chaque imprécision (ou pire) qu'il commet, et à chaque fois que <b>tu trouves le meilleur coup</b>. Il ne dit pas un mot.</p>` + colorSeg;
         else if (id === "jester") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Le <b>Jester</b> lance une <b>roue</b> avant son premier coup puis tous les <b>10 coups</b> : elle lui attribue un Elo au hasard entre <b>1 et 3200</b>, et il joue à ce niveau jusqu'au prochain tour de roue.</p>` + colorSeg;
-        else if (id === "ghorghor") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>GhorGhor</b> joue comme Lelex, niveau <b>1400</b>. Mais s'il perd <b>plus de 2 pièces mineures</b> (cavaliers, fous)… quelque chose se réveille.</p>` + colorSeg;
+        else if (id === "ghorghor") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>GhorGhor</b> joue comme Lelex, niveau <b>1400</b>. Mais s'il perd <b>plus de 2 pièces mineures</b> (cavaliers, fous)… quelque chose se réveille. Face à un <b>gros morceau</b> (ETO, E.N.O.S., Stockfish), <b>une seule</b> suffit.</p>` + colorSeg;
         else if (id === "combat") {
           const opt = (v) => Object.entries(FIGHT_NAMES).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${n}</option>`).join(""), last = E.settings.get("defi.combat", ["nasko", "penoire"]);
           body = `<p class="muted" style="margin-bottom:10px;line-height:1.5">Spectacle : choisis les deux combattants, ils se parlent pendant la partie (chat), s'affrontent à fond et la partie est <b>enregistrée</b> pour le replay.</p>
@@ -389,7 +389,7 @@
           if (cancel && tok === g.token) { rewind(1); return; }
         }
         if (g.ch.game_over()) return finish(overText());
-        for (const col of ["w", "b"]) { if (g.pl[col].transform && !g.pl[col].done && g.lostMinor[col] >= 3) { await ghorTransform(col, tok); if (tok !== g.token) return; } }   // plus de 2 pièces mineures perdues : GhorGhor se réveille
+        for (const col of ["w", "b"]) { if (g.pl[col].transform && !g.pl[col].done && g.lostMinor[col] >= minorNeed(col)) { await ghorTransform(col, tok); if (tok !== g.token) return; } }   // plus de 2 pièces mineures perdues : GhorGhor se réveille
         if (!g.mode.human) await sleep(g.delay);
         next(tok);
       }
@@ -422,7 +422,7 @@
         const say = (I, kind) => !!I && I.say(kind, { ...d, elo: g.pl[I === g.talk.w ? "w" : "b"].elo });
         // ce que l'ADVERSAIRE du joueur qui vient de jouer répond : Elo gagné (Naskurieux) et pièces mineures perdues (GhorGhor) priment sur la réaction habituelle
         if (mv.eloDown) { /* Naskolit ne parle pas : rien à dire */ }
-        const ml = mv.minorLost, oOverride = mv.eloUp ? "elo_up" : ml && g.talk[ml.col] && g.pl[ml.col].transform && ml.n < 3 ? "minor_lost" : "";
+        const ml = mv.minorLost, oOverride = mv.eloUp ? "elo_up" : ml && g.talk[ml.col] && g.pl[ml.col].transform && ml.n < minorNeed(ml.col) ? "minor_lost" : "";
         if (mv.q.opening) { if (g.openName !== mv.q.opening) g.openName = mv.q.opening; d.open = g.openName; if (!g.openSaid && g.moves.length >= 3) { g.openSaid = true; say(T, "open_announce") || say(O, "open_announce"); } }
         if (mv.bookExit) { if (g.moves.length <= 10) say(O, "open_refused") || say(T, "open_end"); else say(T, "open_end") || say(O, "open_end"); }
         else if (k === "brilliant") { say(T, "bot_brilliant"); say(O, oOverride || "h_brilliant"); }
@@ -484,6 +484,9 @@
           o.type = "sawtooth"; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(32, t + 1.6); g2.gain.setValueAtTime(0.35, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 1.7); o.connect(g2); g2.connect(ac.destination); o.start(t); o.stop(t + 1.7);
         } catch (e) { /* audio indisponible */ }
       }
+      // GhorGhor se réveille après 3 pièces mineures perdues… mais une seule face à un gros morceau (ETO, E.N.O.S., Stockfish)
+      const bigFoe = (p) => !!p && (p.talk === "eto" || p.talk === "enos" || p.kind === "eto" || !!p.pure);
+      const minorNeed = (col) => (bigFoe(g.pl[col === "w" ? "b" : "w"]) ? 1 : 3);
       function glitchFx(ms) {
         const app = document.getElementById("app");
         if (!app || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !E.settings.get("anim", true)) return sleep(Math.min(ms, 600));
