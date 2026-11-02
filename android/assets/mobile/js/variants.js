@@ -1,7 +1,7 @@
 "use strict";
 // VARIANTES D'ÉCHECS « inventions maison » — moteur de règles + petite IA (aucune dépendance : navigateur ET Node pour les tests).
 //   elixir : CLASH ROYALE. Plateau de départ = les deux rois seuls. On POSE des pièces (dans ses 2 premières rangées) en payant de l'ÉLIXIR ;
-//            chaque coup joué rapporte +1 élixir ; poser ne consomme PAS le coup (on peut poser puis jouer, ou économiser en bougeant).
+//            chacun commence à 0 élixir (les rois doivent d'abord jouer) ; chaque coup joué rapporte +1 élixir ; poser ne consomme PAS le coup (on peut poser puis jouer, ou économiser en bougeant).
 //   dk     : DEUX ROIS. Pas de dame : deux rois par camp. Si l'un des deux est maté, la partie est finie (un seul roi menacé et aucun coup qui sauve tout = mat).
 //   ptq    : PROTÈGE LA DAME. Le roi n'est plus sacré (il peut être pris, il ne craint pas l'échec) : c'est la dame qu'on protège ; dame matée = défaite.
 // Règles communes : pas de roque. Prise en passant et promotion existent (en ptq, pas de promotion en dame : une 2ᵉ dame serait une 2ᵉ cible).
@@ -19,7 +19,7 @@
     ptq: { id: "ptq", name: "Protège la Dame", tag: "roi sacrifiable", royal: "q", start: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", promo: "rbn", desc: "Le roi est un simple soldat. Si la dame est mate, tout s'arrête." },
   };
   V.COST = { p: 1, n: 3, b: 3, r: 5, q: 8 };                        // élixir
-  V.ELIXIR_START = 5; V.ELIXIR_MAX = 10;
+  V.ELIXIR_START = 0; V.ELIXIR_MAX = 10;
   const VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
   const isW = (p) => p === p.toUpperCase();
 

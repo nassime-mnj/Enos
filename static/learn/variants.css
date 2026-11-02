@@ -25,3 +25,20 @@
 .va-end.win{border-color:#34d16b}.va-end.lose{border-color:#ff4d63}
 .va-end h3{margin:0 0 4px;font:900 22px var(--ui)}.va-end p{margin:0 0 12px;color:var(--muted)}
 #app-variants{max-width:640px;margin:0 auto}
+.elx{width:16px;height:16px;vertical-align:-3px;margin-right:2px}
+.va-xn{display:inline-flex;align-items:center;justify-content:flex-end}
+.va-tray button b{display:inline-flex;align-items:center;justify-content:center}
+.va-tray .elx{width:13px;height:13px;max-width:none;aspect-ratio:auto;vertical-align:0}
+/* ---- ambiance Clash Royale (mode Élixir) : arène vue du dessus, herbe, arbres, tours */
+.va-stage{position:relative;padding:0}
+.va-deco{display:none}
+.va-stage.clash{padding:26px 22px;border-radius:18px;background:linear-gradient(rgba(20,50,10,.28),rgba(20,50,10,.38)),var(--bg) center/cover;box-shadow:0 0 0 3px #3a2a14,0 8px 26px rgba(0,0,0,.55);overflow:hidden}
+.va-stage.clash .va-deco{display:block;position:absolute;font-style:normal;line-height:1;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));pointer-events:none;z-index:2}
+.va-k1{top:2px;left:calc(50% - 44px);font-size:26px}.va-k2{top:2px;left:calc(50% + 14px);font-size:26px}
+.va-t1{top:30%;left:-2px;font-size:34px}.va-t2{top:62%;left:-4px;font-size:30px}.va-t3{top:34%;right:-2px;font-size:34px}.va-t4{top:68%;right:-4px;font-size:30px}
+.va-stage.clash .cboard{border:5px solid #d9cfa3;border-radius:6px;box-shadow:0 0 0 3px #7a6a3a,0 6px 16px rgba(0,0,0,.5)}
+.va-stage.clash .cboard .sq.l{background:#bfe07a}.va-stage.clash .cboard .sq.d{background:#9fcb55}
+.va-stage.clash .cboard .sq .rk,.va-stage.clash .cboard .sq .fl{color:#4d6f1f}
+.va-stage.clash .cboard::after{content:"";position:absolute;left:0;right:0;top:calc(50% - 7px);height:14px;z-index:3;pointer-events:none;background:linear-gradient(rgba(70,170,230,.0),rgba(70,170,230,.35),rgba(70,170,230,.0))}   /* la rivière, entre les deux camps */
+@media (prefers-reduced-motion:no-preference){.va-stage.clash .va-deco{animation:vaSway 4s ease-in-out infinite alternate}.va-t2,.va-t4{animation-delay:-2s!important}}
+@keyframes vaSway{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}

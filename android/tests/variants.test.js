@@ -49,16 +49,17 @@ t("protège la dame : pas de promotion en dame", () => {
   const pr = V.legal(s).filter((m) => m.promo).map((m) => m.promo).sort().join("");
   assert.strictEqual(pr, "bnr");
 });
-t("élixir : départ = deux rois, 5 élixir chacun", () => {
+t("élixir : départ = deux rois, 0 élixir chacun", () => {
   const s = V.newGame("elixir");
   assert.deepStrictEqual(s.b.filter(Boolean).sort(), ["K", "k"]);
-  assert.deepStrictEqual(s.elixir, { w: 5, b: 5 });
+  assert.deepStrictEqual(s.elixir, { w: 0, b: 0 });
+  assert.strictEqual(V.drops(s).length, 0, "rien à poser avant d'avoir joué");
 });
 t("élixir : coûts reine > tour > fou/cavalier > pion", () => {
   const c = V.COST; assert.ok(c.q > c.r && c.r > c.b && c.b >= c.n && c.n > c.p && c.p >= 1);
 });
 t("élixir : on pose dans ses deux premières rangées seulement", () => {
-  const s = V.newGame("elixir");
+  const s = V.newGame("elixir"); s.elixir.w = s.elixir.b = 10;
   const sq = V.dropSquares(s, "r").map((i) => i >> 3);
   assert.ok(sq.length && sq.every((r) => r <= 1));
   const b = V.clone(s); b.side = "b";
@@ -66,7 +67,7 @@ t("élixir : on pose dans ses deux premières rangées seulement", () => {
   assert.ok(!V.canDrop(s, "r", I("e4")));
 });
 t("élixir : un pion ne se pose que sur la 2e rangée", () => {
-  const s = V.newGame("elixir");
+  const s = V.newGame("elixir"); s.elixir.w = 3;
   assert.ok(V.canDrop(s, "p", I("a2")) && !V.canDrop(s, "p", I("a1")));
 });
 t("élixir : poser coûte de l'élixir mais ne passe pas le tour", () => {
@@ -80,11 +81,11 @@ t("élixir : pas assez d'élixir = refusé", () => {
 });
 t("élixir : chaque coup joué rapporte +1 (plafond 10)", () => {
   const s = V.newGame("elixir"); const m = V.legal(s)[0]; V.play(s, m);
-  assert.strictEqual(s.elixir.w, 6); assert.strictEqual(s.elixir.b, 5); assert.strictEqual(s.side, "b");
+  assert.strictEqual(s.elixir.w, 1); assert.strictEqual(s.elixir.b, 0); assert.strictEqual(s.side, "b");
   s.elixir.b = 10; V.play(s, V.legal(s)[0]); assert.strictEqual(s.elixir.b, 10);
 });
 t("élixir : poser puis jouer dans le même tour", () => {
-  const s = V.newGame("elixir"); V.drop(s, "p", I("e2")); V.drop(s, "p", I("d2"));
+  const s = V.newGame("elixir"); s.elixir.w = 5; V.drop(s, "p", I("e2")); V.drop(s, "p", I("d2"));
   assert.strictEqual(s.elixir.w, 3); assert.strictEqual(s.side, "w");
   const m = V.legal(s).find((x) => x.f === I("e2")); assert.ok(m); V.play(s, m); assert.strictEqual(s.elixir.w, 4);
 });
@@ -130,7 +131,7 @@ t("IA niveau 3 : trouve un mat en 1", () => {
   const a = V.think(s, 3); assert.strictEqual(V.sqName(a.move.t), "a8");
 });
 t("IA élixir : pose des pièces au début", () => {
-  const s = V.newGame("elixir"); const a = V.think(s, 3, () => 0.5);
+  const s = V.newGame("elixir"); s.elixir.w = 8; const a = V.think(s, 3, () => 0.5);
   assert.ok(a.drops.length >= 1, "ne pose rien");
 });
 t("parties complètes IA vs IA terminent (<= 400 demi-coups)", () => {

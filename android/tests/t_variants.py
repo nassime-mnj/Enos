@@ -17,7 +17,10 @@ with sync_playwright() as pw:
     pg.wait_for_selector("#va-board .pce", state="attached")
     check(pg.locator("#va-board .pce").count() == 2, "élixir : seulement les deux rois (%d pièces)" % pg.locator("#va-board .pce").count())
     check(pg.locator("#va-tray button").count() == 5 and pg.is_visible("#va-tray"), "menu des 5 pièces visible")
-    check(ev(A + ".g.s.elixir.w") == 5, "5 élixir au départ")
+    check(ev(A + ".g.s.elixir.w") == 0 and ev(A + ".g.s.elixir.b") == 0, "0 élixir au départ pour les deux")
+    check(pg.locator("#va-tray button:not([disabled])").count() == 0, "menu entièrement grisé avant le premier coup")
+    check(pg.locator("#va-stage.clash").count() == 1 and pg.locator("#va-mus").is_visible(), "décor Clash + bouton musique")
+    ev(A + ".g.s.elixir.w = 5; " + A + ".render()")
     check(pg.locator("#va-tray button[data-t=q]").is_disabled() and not pg.locator("#va-tray button[data-t=r]").is_disabled(), "dame (8) grisée, tour (5) disponible")
     pg.click("#va-tray button[data-t=r]")
     check(pg.locator("#va-board .sq.tgt").count() > 0, "cases de pose affichées (%d)" % pg.locator("#va-board .sq.tgt").count())
@@ -43,7 +46,7 @@ with sync_playwright() as pw:
     ev(A + ".g.s.elixir.w = 0")
     pg.click("#va-board [data-sq='e1']"); pg.click("#va-board [data-sq='e2']")
     pg.wait_for_function(A + ".g.s.side === 'w' && " + A + ".g.s.ply >= 2", timeout=20000)
-    check(pg.locator("#va-board .pce").count() >= 3, "le bot a réagi (pose et/ou coup) : %d pièces" % pg.locator("#va-board .pce").count())
+    check(ev(A + ".g.s.ply") >= 2 and ev(A + ".g.s.elixir.b") == 1, "le bot (0 élixir) a joué un coup de roi et gagné 1 élixir")
     pg.click("#va-back")
 
     # --- deux rois

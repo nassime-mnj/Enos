@@ -57,6 +57,7 @@ try:
         pg.wait_for_selector("#app-variants #va-modes", timeout=15000)
         pg.select_option("#va-opp", "0"); pg.click("#va-go")
         pg.wait_for_selector("#va-tray button[data-t=r]", timeout=5000)
+        pg.evaluate("() => { const a = document.querySelector('#app-variants')._api; a.g.s.elixir.w = 5; a.render(); }")
         pg.click("#va-tray button[data-t=r]"); pg.click('#va-board [data-sq="a1"]')
         check(pg.evaluate("document.querySelector('#app-variants')._api.g.s.elixir.w") == 0, "VARIANTES : élixir, tour posée sur PC")
         check(not errs, "aucune erreur JavaScript : %s" % errs[:2])

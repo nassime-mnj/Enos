@@ -6,8 +6,11 @@
   const stat = () => E.settings.get("variants.stats", {});
   const bump = (mode, k) => { const s = stat(); s[mode] = s[mode] || { w: 0, l: 0, d: 0 }; s[mode][k]++; E.settings.set("variants.stats", s); };
   const ICON = { elixir: "💧", dk: "♚♚", ptq: "♛" };
+  const DROP = '<img class="elx" src="img/elixir.png" alt="💧">';                      // l'icône d'élixir (goutte violette)
+  const MUSIC = "audio/clash_battle.mp3";
+  const SHOUTS = ["Déploiement !", "Hee hee hee ! 😈", "Pour la gloire !", "Attention, ça arrive !", "Qui a commandé ça ?", "Tadaaa !", "Ils ne s'y attendaient pas 👀"];
   const RULES = {
-    elixir: ["Départ : <b>seulement les deux rois</b>.", "Pose une pièce dans <b>tes 2 premières rangées</b> en payant de l'<b>élixir</b> 💧.", "Chaque <b>coup joué</b> rapporte <b>+1 élixir</b> (max 10). <b>Poser ne coûte pas le coup</b> : tu poses, puis tu joues.", "Pion 1 · Cavalier 3 · Fou 3 · Tour 5 · <b>Dame 8</b>. Économise en bougeant une pièce."],
+    elixir: ["Départ : <b>seulement les deux rois</b> et <b>0 élixir</b> : les rois doivent d'abord faire un coup.", "Pose une pièce dans <b>tes 2 premières rangées</b> en payant de l'<b>élixir</b> " + DROP + ".", "Chaque <b>coup joué</b> rapporte <b>+1 élixir</b> (max 10). <b>Poser ne coûte pas le coup</b> : tu poses, puis tu joues.", "Pion 1 · Cavalier 3 · Fou 3 · Tour 5 · <b>Dame 8</b>. Économise en bougeant une pièce."],
     dk: ["<b>Pas de dame</b> : deux rois par camp.", "<b>Si l'un des deux rois est maté, la partie est finie.</b>", "Tu dois toujours mettre tes deux rois à l'abri de l'échec.", "Pas de roque."],
     ptq: ["Le <b>roi est sacrifiable</b> : il peut être pris, il ne craint pas l'échec.", "<b>Si la dame est matée, la partie est finie.</b> Toute l'armée doit la protéger.", "Pas de promotion en dame (ce serait une 2ᵉ cible). Pas de roque."],
   };
@@ -35,11 +38,11 @@
         <div id="va-game" hidden>
           <button class="back" id="va-back">◂ MENU</button>
           <div class="va-bar va-top"><b id="va-topn"></b><span class="va-elx" id="va-topx"></span></div>
-          <div id="va-board"></div>
+          <div class="va-stage" id="va-stage"><i class="va-deco va-k1">🏰</i><i class="va-deco va-k2">🏰</i><i class="va-deco va-t1">🌳</i><i class="va-deco va-t2">🌲</i><i class="va-deco va-t3">🌳</i><i class="va-deco va-t4">🌲</i><div id="va-board"></div></div>
           <div class="va-bar va-bot"><b id="va-botn"></b><span class="va-elx" id="va-botx"></span></div>
           <div class="va-msg" id="va-msg">&nbsp;</div>
           <div class="va-tray" id="va-tray" hidden></div>
-          <div class="row"><button class="btn" id="va-undo">↶ ANNULER</button><button class="btn" id="va-new">↻ REJOUER</button></div>
+          <div class="row"><button class="btn" id="va-undo">↶ ANNULER</button><button class="btn" id="va-new">↻ REJOUER</button><button class="btn" id="va-mus" hidden>🔊</button></div>
           <div class="va-end" id="va-end" hidden></div>
         </div>`;
 
@@ -67,14 +70,29 @@
         sel = -1; tray = ""; busy = false;
         $("#va-setup").hidden = true; $("#va-game").hidden = false; $("#va-end").hidden = true;
         $("#va-undo").style.display = "";
+        $("#va-stage").classList.toggle("clash", cfg.mode === "elixir"); $("#va-stage").style.setProperty("--bg", "url(img/clash_arena.jpg)");
+        music(cfg.mode === "elixir");
         render(); if (!isHuman()) botTurn();
       }
+      // OST Clash Royale (usage privé) : boucle pendant une partie Élixir, coupée au retour au menu / quand l'écran quitte le module
+      let au = null, watch = 0;
+      const musicOn = () => E.settings.get("variants.music", true);
+      function music(on) {
+        clearInterval(watch);
+        const btn = $("#va-mus"); btn.hidden = !on;
+        if (!on) { if (au) au.pause(); return; }
+        if (!au) { au = new Audio(MUSIC); au.loop = true; au.volume = 0.55; au.preload = "auto"; }
+        btn.textContent = musicOn() ? "🔊" : "🔇";
+        if (musicOn()) { au.currentTime = au.currentTime || 0; au.play().catch(() => {}); }
+        watch = setInterval(() => { if (el.offsetParent === null || document.hidden) au.pause(); else if (musicOn() && au.paused && G && !G.over) au.play().catch(() => {}); }, 800);
+      }
+      $("#va-mus").onclick = () => { const v = !musicOn(); E.settings.set("variants.music", v); $("#va-mus").textContent = v ? "🔊" : "🔇"; if (au) { if (v) au.play().catch(() => {}); else au.pause(); } };
       const snap = () => G.hist.push({ s: V.clone(G.s), last: G.last, mv: G.mv.slice() });
 
       function elixirBar(side) {
         if (cfg.mode !== "elixir") return "";
         const x = G.s.elixir[side];
-        return `<span class="va-pips">${Array.from({ length: V.ELIXIR_MAX }, (_, i) => `<i class="${i < x ? "on" : ""}"></i>`).join("")}</span><b class="va-xn">💧 ${x}</b>`;
+        return `<span class="va-pips">${Array.from({ length: V.ELIXIR_MAX }, (_, i) => `<i class="${i < x ? "on" : ""}"></i>`).join("")}</span><b class="va-xn">${DROP}${x}</b>`;
       }
       function render() {
         const s = G.s, flip = G.me === "b", map = V.map(s);
@@ -95,7 +113,7 @@
         tr.hidden = cfg.mode !== "elixir" || G.over || !human;
         if (!tr.hidden) {
           const W = s.side === "w", x = s.elixir[s.side];
-          tr.innerHTML = ["p", "n", "b", "r", "q"].map((t) => `<button data-t="${t}" class="${tray === t ? "on" : ""}" ${x < V.COST[t] ? "disabled" : ""}><img src="img/chess/${W ? "w" : "b"}${t}.png" alt=""><b>💧${V.COST[t]}</b></button>`).join("");
+          tr.innerHTML = ["p", "n", "b", "r", "q"].map((t) => `<button data-t="${t}" class="${tray === t ? "on" : ""}" ${x < V.COST[t] ? "disabled" : ""}><img src="img/chess/${W ? "w" : "b"}${t}.png" alt=""><b>${DROP}${V.COST[t]}</b></button>`).join("");
           tr.querySelectorAll("button").forEach((b) => (b.onclick = () => { tray = tray === b.dataset.t ? "" : b.dataset.t; sel = -1; render(); }));
         }
         const m = $("#va-msg");
@@ -111,7 +129,7 @@
         if (!isHuman() || busy) return;
         const s = G.s, i = V.sqIdx(name), p = s.b[i];
         if (tray) {
-          if (V.canDrop(s, tray, i)) { snap(); V.drop(s, tray, i); G.mv.push("💧" + tray.toUpperCase() + name); tray = ""; sel = -1; render(); return; }
+          if (V.canDrop(s, tray, i)) { snap(); V.drop(s, tray, i); G.mv.push("💧" + tray.toUpperCase() + name); tray = ""; sel = -1; render(); E.board.burst($("#va-board"), name, "great"); $("#va-msg").textContent = SHOUTS[Math.floor(Math.random() * SHOUTS.length)]; return; }
           if (!p) return;
           tray = "";
         }
@@ -150,7 +168,7 @@
           if (!a.move) { finish(V.status(G.s)); return; }
           // le bot pose ses pièces (on les voit apparaître), puis joue
           a.drops.forEach((d) => { V.drop(G.s, d.type, d.sq); G.mv.push("💧" + d.type.toUpperCase() + V.sqName(d.sq)); });
-          if (a.drops.length) { render(); setTimeout(() => { if (my === token && G && !G.over) botMove(a.move); }, 650); } else botMove(a.move);
+          if (a.drops.length) { render(); a.drops.forEach((d) => E.board.burst($("#va-board"), V.sqName(d.sq), "great")); setTimeout(() => { if (my === token && G && !G.over) botMove(a.move); }, 650); } else botMove(a.move);
         }, 420);
       }
       function botMove(m) {
@@ -188,7 +206,7 @@
         $("#va-end").hidden = true; $("#va-undo").style.display = "";
         render(); if (!isHuman()) botTurn();
       }
-      function back() { token++; G = null; $("#va-game").hidden = true; $("#va-setup").hidden = false; paintSetup(); }
+      function back() { token++; music(false); G = null; $("#va-game").hidden = true; $("#va-setup").hidden = false; paintSetup(); }
 
       $("#va-go").onclick = launch; $("#va-new").onclick = launch; $("#va-back").onclick = back; $("#va-undo").onclick = undo;
       paintSetup();
