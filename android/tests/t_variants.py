@@ -8,7 +8,7 @@ with sync_playwright() as pw:
     ev = pg.evaluate
     open_tool(pg, "variants")
     A = "document.querySelector('#tool-variants .suite-body')._api"
-    check(pg.locator("#va-modes button").count() == 3, "3 variantes proposées")
+    check(pg.locator("#va-modes button").count() == 4, "4 variantes proposées")
     pg.wait_for_timeout(450)
     # --- élixir : 2 joueurs
     pg.click('#va-modes button[data-m="elixir"]')
@@ -63,6 +63,28 @@ with sync_playwright() as pw:
       set('g8','k'); set('h8','b'); set('a1','Q'); set('b1','B'); set('a2','P'); set('e1','K'); g.s.side = 'w'; %s.render(); }""" % (A, A))
     ev("""() => { const g = %s.g, V = ENOS.variants; const st = V.status(g.s); window.__st = st; }""" % A)
     check(ev("window.__st.over && window.__st.result === 'b'"), "dame matée : fin de partie, victoire des Noirs")
+    pg.click("#va-back")
+
+    # --- 2v2 élixir : 4 joueurs au même téléphone
+    pg.click('#va-modes button[data-m="duo"]'); pg.select_option("#va-opp", "0"); pg.click("#va-go")
+    pg.wait_for_selector("#va-seats .va-seat", state="attached")
+    check(pg.locator(".va-seat").count() == 4 and pg.locator("#va-board .pce").count() == 4, "2v2 : 4 rois et 4 barres d'élixir")
+    check(pg.locator(".va-seat.turn > b:not(.va-xn)").inner_text().startswith("Blanc A"), "Blanc A commence")
+    pg.click('#va-board [data-sq="c1"]'); pg.click('#va-board [data-sq="c2"]'); pg.wait_for_timeout(400)
+    check(ev(A + ".g.s.seat") == 1 and ev(A + ".g.s.elixir[0]") == 1 and ev(A + ".g.s.elixir[1]") == 0, "après Blanc A : trait à Noir A, élixir 1/0")
+    # Noir A ne peut pas bouger le roi de Noir B
+    pg.click('#va-board [data-sq="f8"]')
+    check(pg.locator("#va-board .sq.tgt").count() == 0, "on ne sélectionne pas le roi de l'autre joueur")
+    ev(A + ".g.s.elixir[1] = 5; " + A + ".render()")
+    pg.click("#va-tray button[data-t=r]"); pg.click('#va-board [data-sq="a8"]')
+    check(ev(A + ".g.s.o[56]") == 1 and ev(A + ".g.s.elixir[1]") == 0, "Noir A pose une tour (à lui) en payant son élixir")
+    pg.click("#va-back")
+    # --- 2v2 contre des bots : les bots jouent entre mes tours
+    pg.select_option("#va-opp", "1"); pg.select_option("#va-side", "w"); pg.click("#va-go")
+    pg.wait_for_selector("#va-seats .va-seat", state="attached")
+    pg.click('#va-board [data-sq="c1"]'); pg.click('#va-board [data-sq="c2"]')
+    pg.wait_for_function(A + ".g.s.seat === 0 && " + A + ".g.s.ply >= 4", timeout=30000)
+    check(ev(A + ".g.s.ply") == 4, "les 3 bots (adversaires + équipier) ont joué puis c'est de nouveau à moi")
     pg.click("#va-back")
 
     # --- parties de bots en accéléré : chaque variante termine proprement

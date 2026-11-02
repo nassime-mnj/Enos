@@ -5,13 +5,15 @@
   const LV = { 1: "Débutant", 2: "Moyen", 3: "Fort" };
   const stat = () => E.settings.get("variants.stats", {});
   const bump = (mode, k) => { const s = stat(); s[mode] = s[mode] || { w: 0, l: 0, d: 0 }; s[mode][k]++; E.settings.set("variants.stats", s); };
-  const ICON = { elixir: "💧", dk: "♚♚", ptq: "♛" };
+  const ICON = { elixir: "💧", dk: "♚♚", duo: "⚔", ptq: "♛" };
+  const SEATS = ["Blanc A", "Noir A", "Blanc B", "Noir B"], SEATCOL = ["#ff3b4f", "#1acfd6", "#ffc34a", "#8be04d"];
   const DROP = '<img class="elx" src="img/elixir.png" alt="💧">';                      // l'icône d'élixir (goutte violette)
   const MUSIC = "audio/clash_battle.mp3";
   const SHOUTS = ["Déploiement !", "Hee hee hee ! 😈", "Pour la gloire !", "Attention, ça arrive !", "Qui a commandé ça ?", "Tadaaa !", "Ils ne s'y attendaient pas 👀"];
   const RULES = {
     elixir: ["Départ : <b>seulement les deux rois</b> et <b>0 élixir</b> : les rois doivent d'abord faire un coup.", "Pose une pièce dans <b>tes 2 premières rangées</b> en payant de l'<b>élixir</b> " + DROP + ".", "Chaque <b>coup joué</b> rapporte <b>+1 élixir</b> (max 10). <b>Poser ne coûte pas le coup</b> : tu poses, puis tu joues.", "Pion 1 · Cavalier 3 · Fou 3 · Tour 5 · <b>Dame 8</b>. Économise en bougeant une pièce."],
     dk: ["<b>Pas de dame</b> : deux rois par camp.", "<b>Si l'un des deux rois est maté, la partie est finie.</b>", "Tu dois toujours mettre tes deux rois à l'abri de l'échec.", "Pas de roque."],
+    duo: ["<b>4 rois</b> sur un plateau normal : <b>2 blancs contre 2 noirs</b>. Ton équipier joue la même couleur que toi.", "<b>Chacun sa barre d'élixir</b> (départ 0, +1 par coup joué par <b>toi</b>) et <b>chacun ses pièces</b> : celles que tu poses sont à toi, tu ne bouges pas celles de ton équipier.", "Ordre de jeu : Blanc A → Noir A → Blanc B → Noir B.", "<b>Un roi maté sort</b> avec ses pièces : l'équipe passe à 2 contre 1. Plus de roi dans une équipe = défaite. Pas de roque."],
     ptq: ["Le <b>roi est sacrifiable</b> : il peut être pris, il ne craint pas l'échec.", "<b>Si la dame est matée, la partie est finie.</b> Toute l'armée doit la protéger.", "Pas de promotion en dame (ce serait une 2ᵉ cible). Pas de roque."],
   };
 
@@ -30,19 +32,20 @@
             <div class="va-modes" id="va-modes">${Object.values(V.MODES).map((m) => `<button data-m="${m.id}"><span class="va-ic">${ICON[m.id]}</span><b>${esc(m.name)}</b><small>${esc(m.tag)}</small></button>`).join("")}</div>
             <ul class="va-rules" id="va-rules"></ul></div>
           <div class="card va-opts">
-            <label>Adversaire<select id="va-opp"><option value="1">Bot débutant</option><option value="2">Bot moyen</option><option value="3">Bot fort</option><option value="0">2 joueurs (même téléphone)</option></select></label>
+            <label>Adversaire<select id="va-opp"><option value="1">Bot débutant</option><option value="2">Bot moyen</option><option value="3">Bot fort</option><option value="0">Joueurs humains (même téléphone)</option></select></label>
             <label>Ma couleur<select id="va-side"><option value="w">Blancs</option><option value="b">Noirs</option><option value="r">Au hasard</option></select></label></div>
           <div class="row"><button class="btn pri" id="va-go">▶ JOUER</button></div>
           <div class="card"><h3>Bilan</h3><div id="va-stats" class="muted"></div></div>
         </div>
         <div id="va-game" hidden>
           <button class="back" id="va-back">◂ MENU</button>
+          <div class="va-seats" id="va-seats" hidden></div>
           <div class="va-bar va-top"><b id="va-topn"></b><span class="va-elx" id="va-topx"></span></div>
           <div class="va-stage" id="va-stage"><i class="va-deco va-k1">🏰</i><i class="va-deco va-k2">🏰</i><i class="va-deco va-t1">🌳</i><i class="va-deco va-t2">🌲</i><i class="va-deco va-t3">🌳</i><i class="va-deco va-t4">🌲</i><div id="va-board"></div></div>
           <div class="va-bar va-bot"><b id="va-botn"></b><span class="va-elx" id="va-botx"></span></div>
           <div class="va-msg" id="va-msg">&nbsp;</div>
           <div class="va-tray" id="va-tray" hidden></div>
-          <div class="row"><button class="btn" id="va-undo">↶ ANNULER</button><button class="btn" id="va-new">↻ REJOUER</button><button class="btn" id="va-mus" hidden>🔊</button></div>
+          <div class="row"><button class="btn" id="va-undo">↶ ANNULER</button><button class="btn" id="va-new">↻ REJOUER</button><button class="btn" id="va-pass" hidden>⏭ PASSER</button><button class="btn" id="va-mus" hidden>🔊</button></div>
           <div class="va-end" id="va-end" hidden></div>
         </div>`;
 
@@ -59,19 +62,22 @@
       $("#va-side").onchange = (e) => { cfg.side = e.target.value; save(); };
 
       // ------------------------------------------------------------------ partie
+      const D = () => cfg.mode === "duo", XL = () => cfg.mode === "elixir" || cfg.mode === "duo";
       const botSide = () => (cfg.opp ? (G.me === "w" ? "b" : "w") : "");
-      const isHuman = () => G && !G.over && G.s.side !== botSide();
+      const humanAt = (seat) => !cfg.opp || seat === G.meSeat;           // duo : seul mon siège est humain (sinon tous, au même téléphone)
+      const isHuman = () => G && !G.over && (D() ? humanAt(G.s.seat) : G.s.side !== botSide());
       const nameOf = (side) => (!cfg.opp ? (side === "w" ? "Blancs" : "Noirs") : side === G.me ? "Toi" : "Bot " + LV[cfg.opp].toLowerCase());
+      const seatName = (q) => SEATS[q] + (cfg.opp ? (q === G.meSeat ? " · toi" : V.teamOf(q) === V.teamOf(G.meSeat) ? " · équipier" : " · bot") : "");
 
       function launch() {
         token++;
         const me = cfg.side === "r" ? (Math.random() < 0.5 ? "w" : "b") : cfg.side;
-        G = { s: V.newGame(cfg.mode), me: cfg.opp ? me : "w", hist: [], over: false, last: null, anim: "", mv: [] };
+        G = { s: V.newGame(cfg.mode), me: cfg.opp ? me : "w", meSeat: me === "b" ? 1 : 0, hist: [], over: false, last: null, anim: "", mv: [] };
         sel = -1; tray = ""; busy = false;
         $("#va-setup").hidden = true; $("#va-game").hidden = false; $("#va-end").hidden = true;
         $("#va-undo").style.display = "";
-        $("#va-stage").classList.toggle("clash", cfg.mode === "elixir"); $("#va-stage").style.setProperty("--bg", "url(img/clash_arena.png)");
-        music(cfg.mode === "elixir");
+        $("#va-stage").classList.toggle("clash", XL()); $("#va-stage").style.setProperty("--bg", "url(img/clash_arena.png)");
+        music(XL());
         render(); if (!isHuman()) botTurn();
       }
       // OST Clash Royale (usage privé) : boucle pendant une partie Élixir, coupée au retour au menu / quand l'écran quitte le module
@@ -89,8 +95,18 @@
       $("#va-mus").onclick = () => { const v = !musicOn(); E.settings.set("variants.music", v); $("#va-mus").textContent = v ? "🔊" : "🔇"; if (au) { if (v) au.play().catch(() => {}); else au.pause(); } };
       const snap = () => G.hist.push({ s: V.clone(G.s), last: G.last, mv: G.mv.slice() });
 
+      const settle = () => (D() ? V.settle(G.s) : V.status(G.s));
+      function announce(out) {                                          // rois matés qui sortent (2v2)
+        (out || []).forEach((o) => {
+          G.mv.push("☠ " + SEATS[o.seat]);
+          E.board.burst($("#va-board"), V.sqName(o.sq), "mate");
+          const left = [0, 1, 2, 3].filter((q) => G.s.alive[q] && V.teamOf(q) === V.teamOf(o.seat)).length, foe = [0, 1, 2, 3].filter((q) => G.s.alive[q] && V.teamOf(q) !== V.teamOf(o.seat)).length;
+          const txt = "☠ " + SEATS[o.seat] + " est maté et sort ! " + (V.teamOf(o.seat) ? "Noirs" : "Blancs") + " : " + left + " contre " + foe;
+          G.note = txt; E.ui.toast(txt, "warn", 3200);
+        });
+      }
       function elixirBar(side) {
-        if (cfg.mode !== "elixir") return "";
+        if (!XL()) return "";
         const x = G.s.elixir[side];
         return `<span class="va-pips">${Array.from({ length: V.ELIXIR_MAX }, (_, i) => `<i class="${i < x ? "on" : ""}"></i>`).join("")}</span><b class="va-xn">${DROP}${x}</b>`;
       }
@@ -100,28 +116,39 @@
         let targets = [];
         if (human && sel >= 0) targets = V.legalFrom(s, sel).map((m) => V.sqName(m.t));
         else if (human && tray) targets = V.dropSquares(s, tray).map(V.sqName);
-        const chk = V.inCheck(s) ? V.royals(s, s.side) : [];
-        const mateSq = G.over && G.res && G.res.why === "mate" ? V.royals(s, s.side).filter((i) => V.attacked(s.b, i, s.side === "w" ? "b" : "w"))[0] : -1;
+        const own = (i) => !s.o || s.o[i] === s.seat;
+        const chk = V.inCheck(s) ? V.royals(s, s.side).filter(own) : [];
+        const mateSq = !D() && G.over && G.res && G.res.why === "mate" ? V.royals(s, s.side).filter((i) => V.attacked(s.b, i, s.side === "w" ? "b" : "w"))[0] : -1;
         E.board.render($("#va-board"), map, { flip, last: G.last, sel: sel >= 0 ? V.sqName(sel) : "", targets, check: !G.over && chk.length ? V.sqName(chk.find((i) => V.attacked(s.b, i, s.side === "w" ? "b" : "w")) ?? chk[0]) : "", end: mateSq >= 0 ? { sq: V.sqName(mateSq), id: G.hist.length + 1 } : null, anim: G.anim, onTap });
         G.anim = "";
         const top = flip ? "w" : "b", bot = flip ? "b" : "w";
-        $("#va-topn").textContent = nameOf(top); $("#va-botn").textContent = nameOf(bot);
-        $("#va-topx").innerHTML = elixirBar(top); $("#va-botx").innerHTML = elixirBar(bot);
-        el.querySelectorAll(".va-bar").forEach((b) => b.classList.remove("turn")); (s.side === top ? $(".va-top") : $(".va-bot")).classList.toggle("turn", !G.over);
+        el.querySelectorAll(".va-bar").forEach((b) => (b.hidden = D()));
+        const sp = $("#va-seats"); sp.hidden = !D();
+        if (D()) {                                                       // 2v2 : une ligne par joueur, avec sa barre d'élixir ; chaque pièce porte la teinte de son propriétaire
+          const nodes = $("#va-board")._cb.nodes;
+          nodes.forEach((n, sq) => { n.dataset.o = s.o[V.sqIdx(sq)]; });
+          sp.innerHTML = [0, 1, 2, 3].map((q) => `<div class="va-seat ${s.alive[q] ? "" : "dead"} ${s.seat === q && !G.over ? "turn" : ""} t${V.teamOf(q)}" style="--sc:${SEATCOL[q]}"><i class="va-sd"></i><b>${esc(seatName(q))}</b>${s.alive[q] ? elixirBar(q) : "<span class=\"va-ko\">☠ sorti</span>"}</div>`).join("");
+        } else {
+          $("#va-topn").textContent = nameOf(top); $("#va-botn").textContent = nameOf(bot);
+          $("#va-topx").innerHTML = elixirBar(top); $("#va-botx").innerHTML = elixirBar(bot);
+          el.querySelectorAll(".va-bar").forEach((b) => b.classList.remove("turn")); (s.side === top ? $(".va-top") : $(".va-bot")).classList.toggle("turn", !G.over);
+        }
         // pièces à poser (élixir)
         const tr = $("#va-tray");
-        tr.hidden = cfg.mode !== "elixir" || G.over || !human;
+        tr.hidden = !XL() || G.over || !human;
         if (!tr.hidden) {
-          const W = s.side === "w", x = s.elixir[s.side];
+          const W = s.side === "w", x = s.elixir[V.ek(s)];
           tr.innerHTML = ["p", "n", "b", "r", "q"].map((t) => `<button data-t="${t}" class="${tray === t ? "on" : ""}" ${x < V.COST[t] ? "disabled" : ""}><img src="img/chess/${W ? "w" : "b"}${t}.png" alt=""><b>${DROP}${V.COST[t]}</b></button>`).join("");
           tr.querySelectorAll("button").forEach((b) => (b.onclick = () => { tray = tray === b.dataset.t ? "" : b.dataset.t; sel = -1; render(); }));
         }
         const m = $("#va-msg");
         if (G.over) m.textContent = "";
-        else if (!human) m.textContent = cfg.opp ? "Le bot réfléchit…" : "";
+        else if (!human) m.textContent = cfg.opp ? (D() ? SEATS[s.seat] + " réfléchit…" : "Le bot réfléchit…") : "";
+        else if (D() && !cfg.opp) m.textContent = (chk.length ? "⚠ Roi en échec ! " : "") + "À toi : " + SEATS[s.seat] + ".";
         else if (chk.length) m.textContent = cfg.mode === "ptq" ? "⚠ Ta dame est en échec !" : cfg.mode === "dk" ? "⚠ Un de tes rois est en échec !" : "⚠ Ton roi est en échec !";
         else if (tray) m.textContent = "Touche une case de tes 2 premières rangées pour poser.";
-        else m.textContent = cfg.opp ? "À toi de jouer." : (s.side === "w" ? "Aux Blancs." : "Aux Noirs.");
+        else m.textContent = cfg.opp ? (D() && G.note ? G.note : "À toi de jouer.") : (s.side === "w" ? "Aux Blancs." : "Aux Noirs.");
+        const pb = $("#va-pass"); pb.hidden = !(D() && human && !chk.length && !V.legal(s).length);
         $("#va-undo").disabled = !G.hist.length || busy;
       }
 
@@ -144,7 +171,7 @@
             await playMove(m); return;
           }
         }
-        if (p && (p === p.toUpperCase()) === (s.side === "w")) { sel = sel === i ? -1 : i; render(); } else { sel = -1; render(); }
+        if (p && (p === p.toUpperCase()) === (s.side === "w") && (!s.o || s.o[i] === s.seat)) { sel = sel === i ? -1 : i; render(); } else { sel = -1; render(); }
       }
 
       async function playMove(m) {
@@ -152,9 +179,9 @@
         const uci = V.sqName(m.f) + V.sqName(m.t) + (m.promo || "");
         G.mv.push(V.moveText(m)); G.last = [V.sqName(m.f), V.sqName(m.t)]; G.anim = uci;
         V.play(G.s, m); sel = -1; tray = "";
-        const st = V.status(G.s);
+        const st = settle();
+        render(); announce(st.out);
         if (st.over) return finish(st);
-        render();
         if (!isHuman()) botTurn();
       }
 
@@ -165,7 +192,7 @@
           if (my !== token || !G || G.over) return;
           const a = V.think(G.s, cfg.opp);
           busy = false;
-          if (!a.move) { finish(V.status(G.s)); return; }
+          if (!a.move) { if (D()) { V.pass(G.s); const st = settle(); render(); announce(st.out); if (st.over) finish(st); else if (!isHuman()) botTurn(); return; } finish(V.status(G.s)); return; }
           // le bot pose ses pièces (on les voit apparaître), puis joue
           a.drops.forEach((d) => { V.drop(G.s, d.type, d.sq); G.mv.push("💧" + d.type.toUpperCase() + V.sqName(d.sq)); });
           if (a.drops.length) { render(); a.drops.forEach((d) => E.board.burst($("#va-board"), V.sqName(d.sq), "great")); setTimeout(() => { if (my === token && G && !G.over) botMove(a.move); }, 650); } else botMove(a.move);
@@ -174,9 +201,10 @@
       function botMove(m) {
         G.mv.push(V.moveText(m)); G.last = [V.sqName(m.f), V.sqName(m.t)]; G.anim = V.sqName(m.f) + V.sqName(m.t) + (m.promo || "");
         V.play(G.s, m);
-        const st = V.status(G.s);
+        const st = settle();
+        render(); announce(st.out);
         if (st.over) return finish(st);
-        render();
+        if (!isHuman()) botTurn();
       }
 
       function finish(st) {
@@ -188,7 +216,7 @@
         else if (!cfg.opp) { t = (win === "w" ? "Les Blancs" : "Les Noirs") + " gagnent"; k = ""; }
         else if (win === G.me) { t = "Victoire !"; k = "w"; }
         else { t = "Défaite…"; k = "l"; }
-        const why = { mate: cfg.mode === "ptq" ? "Dame matée." : cfg.mode === "dk" ? "Un roi est maté." : "Échec et mat.", pat: "Pat : plus aucun coup possible.", 50: "Règle des 50 coups.", long: "Partie trop longue." }[st.why];
+        const why = { mate: D() ? "Les deux rois de l'équipe adverse sont sortis." : cfg.mode === "ptq" ? "Dame matée." : cfg.mode === "dk" ? "Un roi est maté." : "Échec et mat.", pat: "Pat : plus aucun coup possible.", 50: "Règle des 50 coups.", long: "Partie trop longue." }[st.why];
         if (k) bump(cfg.mode, k);
         const e = $("#va-end"); e.hidden = false;
         e.className = "va-end " + (k === "w" ? "win" : k === "l" ? "lose" : "");
@@ -201,14 +229,15 @@
         if (!G || !G.hist.length || busy) return;
         token++;
         // contre un bot : on revient à la dernière position où c'est à nous de jouer
-        let h; do { h = G.hist.pop(); } while (cfg.opp && G.hist.length && h.s.side === botSide());
-        G.s = h.s; G.last = h.last; G.mv = h.mv; G.over = false; G.res = null; G.anim = ""; sel = -1; tray = "";
+        let h; do { h = G.hist.pop(); } while (cfg.opp && G.hist.length && (D() ? !humanAt(h.s.seat) : h.s.side === botSide()));
+        G.note = ""; G.s = h.s; G.last = h.last; G.mv = h.mv; G.over = false; G.res = null; G.anim = ""; sel = -1; tray = "";
         $("#va-end").hidden = true; $("#va-undo").style.display = "";
         render(); if (!isHuman()) botTurn();
       }
       function back() { token++; music(false); G = null; $("#va-game").hidden = true; $("#va-setup").hidden = false; paintSetup(); }
 
       $("#va-go").onclick = launch; $("#va-new").onclick = launch; $("#va-back").onclick = back; $("#va-undo").onclick = undo;
+      $("#va-pass").onclick = () => { if (!G || !isHuman()) return; snap(); V.pass(G.s); G.mv.push("⏭ " + SEATS[G.s.seat]); const st = settle(); render(); announce(st.out); if (st.over) finish(st); else if (!isHuman()) botTurn(); };
       paintSetup();
       el._api = { launch, cfg: () => cfg, get g() { return G; }, tap: onTap, undo, back, render };
     },

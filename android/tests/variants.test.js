@@ -141,4 +141,67 @@ t("parties complètes IA vs IA terminent (<= 400 demi-coups)", () => {
     assert.ok(V.status(s).over || n >= 450, mode);
   }
 });
+
+// ---------- 2v2 Élixir (plateau normal, 4 rois)
+const mkDuo = (rows, seat, owners, el) => {
+  const s = V.newGame("duo"); s.b.fill(""); s.o.fill(-1);
+  rows.split("/").forEach((row, r) => { let f = 0; for (const ch of row) { if (/\d/.test(ch)) f += +ch; else { s.b[f + 8 * (7 - r)] = ch; f++; } } });
+  Object.entries(owners).forEach(([sq, o]) => { s.o[I(sq)] = o; });
+  s.seat = seat; s.side = V.sideOfSeat(seat); if (el !== undefined) for (const k of [0, 1, 2, 3]) s.elixir[k] = el; return s;
+};
+t("2v2 : 4 rois (c1 f1 c8 f8), 0 élixir chacun, ordre B1 N1 B2 N2", () => {
+  const s = V.newGame("duo");
+  assert.deepStrictEqual([s.b[I("c1")], s.b[I("f1")], s.b[I("c8")], s.b[I("f8")]], ["K", "K", "k", "k"]);
+  assert.deepStrictEqual(s.elixir, { 0: 0, 1: 0, 2: 0, 3: 0 });
+  const order = []; for (let i = 0; i < 5; i++) { order.push(s.seat); V.play(s, V.legal(s)[0]); }
+  assert.deepStrictEqual(order, [0, 1, 2, 3, 0]);
+});
+t("2v2 : chacun sa barre d'élixir (+1 pour celui qui joue seulement)", () => {
+  const s = V.newGame("duo"); V.play(s, V.legal(s)[0]);
+  assert.deepStrictEqual(s.elixir, { 0: 1, 1: 0, 2: 0, 3: 0 });
+});
+t("2v2 : on ne joue que ses propres pièces, les alliés ne se prennent pas", () => {
+  const s = mkDuo("2k2k2/8/8/8/8/8/8/2K1RK2", 0, { c1: 0, e1: 2, f1: 2, c8: 1, f8: 3 });
+  assert.ok(V.legal(s).every((m) => s.o[m.f] === 0), "seul le roi c1 bouge");
+  assert.ok(!V.legal(s).some((m) => m.t === I("e1")), "ne prend pas la tour alliée");
+  const s2 = mkDuo("2k2k2/8/8/8/8/8/8/2K1RK2", 2, { c1: 0, e1: 2, f1: 2, c8: 1, f8: 3 });
+  assert.ok(V.legal(s2).some((m) => m.p === "R"), "le propriétaire de la tour peut la jouer");
+});
+t("2v2 : poser sur ses rangées avec SON élixir, la pièce lui appartient", () => {
+  const s = V.newGame("duo"); s.elixir[0] = 5;
+  assert.ok(V.drop(s, "r", I("a1")) && s.o[I("a1")] === 0 && s.elixir[0] === 0 && s.seat === 0);
+  s.seat = 2; s.side = "w"; assert.ok(!V.canDrop(s, "p", I("a2")), "le siège 2 n'a pas d'élixir");
+});
+t("2v2 : un roi maté sort (pièces retirées), la partie continue en 2v1", () => {
+  // roi blanc A en a1 maté par tour noire en h1 + ... : roi a1, tour noire b8 (b-file) et dame noire h2 ; roi blanc B en f1 libre
+  const s = mkDuo("rr2k3/8/8/8/8/8/6q1/K4K2", 0, { a1: 0, f1: 2, e8: 1, a8: 1, b8: 1, g2: 1 }, 0);
+  assert.ok(V.inCheck(s));
+  const r = V.settle(s);
+  assert.ok(!r.over && r.out.length === 1 && r.out[0].seat === 0, JSON.stringify(r));
+  assert.ok(!s.alive[0] && s.alive[2] && s.b[I("a1")] === "", "roi A retiré");
+  assert.strictEqual(s.seat, 1, "au suivant de jouer");
+});
+t("2v2 : une équipe sans roi a perdu", () => {
+  const s = mkDuo("4k3/8/8/8/8/8/8/K7", 0, { a1: 0, e8: 1 });
+  s.alive[2] = false; s.alive[3] = false; s.alive[1] = false;
+  const r = V.settle(s); assert.ok(r.over && r.result === "w", JSON.stringify(r));
+});
+t("2v2 : un joueur sans coup ni échec passe son tour", () => {
+  const s = mkDuo("7k/5Q2/8/8/8/8/8/K7", 1, { h8: 1, f7: 0, a1: 0 }, 0);
+  s.b[I("g6")] = "K"; s.o[I("g6")] = 0; s.b[I("f7")] = ""; s.o[I("f7")] = -1; s.b[I("f7")] = "Q"; s.o[I("f7")] = 0;
+  const r = V.settle(s); assert.ok(r.out.length === 0 && s.alive[1], "pas éliminé");
+});
+t("2v2 IA : parties de bots (niveaux 1-2) jouent des coups légaux et finissent", () => {
+  for (const lvl of [1, 2]) {
+    const s = V.newGame("duo"); let n = 0, over = false;
+    while (n < 500) {
+      const r = V.settle(s); if (r.over) { over = true; break; }
+      const a = V.think(s, lvl); a.drops.forEach((d) => assert.ok(V.drop(s, d.type, d.sq)));
+      if (!a.move) { V.pass(s); n++; continue; }
+      assert.ok(V.legal(s).some((m) => m.f === a.move.f && m.t === a.move.t && m.promo === a.move.promo));
+      V.play(s, a.move); n++;
+    }
+    assert.ok(over || n >= 500);
+  }
+});
 console.log(n + " tests OK");
