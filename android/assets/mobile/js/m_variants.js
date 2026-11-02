@@ -70,7 +70,7 @@
         sel = -1; tray = ""; busy = false;
         $("#va-setup").hidden = true; $("#va-game").hidden = false; $("#va-end").hidden = true;
         $("#va-undo").style.display = "";
-        $("#va-stage").classList.toggle("clash", cfg.mode === "elixir"); $("#va-stage").style.setProperty("--bg", "url(img/clash_arena.jpg)");
+        $("#va-stage").classList.toggle("clash", cfg.mode === "elixir"); $("#va-stage").style.setProperty("--bg", "url(img/clash_arena.png)");
         music(cfg.mode === "elixir");
         render(); if (!isHuman()) botTurn();
       }
