@@ -265,3 +265,21 @@ html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-event
 .wh-ptr{position:absolute;left:50%;top:-14px;z-index:2;width:0;height:0;margin-left:-11px;border:11px solid transparent;border-top:24px solid #fff;border-bottom:0;filter:drop-shadow(0 2px 4px #000)}
 .wh-res{min-height:34px;font:800 26px var(--ui);letter-spacing:1px;color:#ffd24a}.wh-res b{font-size:34px}
 @media (prefers-reduced-motion:reduce){.bot-av.mute{animation:none}}
+
+/* ---- Animations de cases : sélection (case + pièce soulevée), cibles qui pulsent, onde au clic, éclat à l'arrivée */
+.sq.sel::before{animation:selGlow .9s ease-in-out infinite alternate}
+@keyframes selGlow{from{background:rgba(255,230,51,.45)}to{background:rgba(255,196,0,.8)}}
+.sq.sel{box-shadow:inset 0 0 0 3px rgba(255,214,10,.95),inset 0 0 16px rgba(255,214,10,.75)}
+.sq.tgt::after{animation:tgtPulse 1.1s ease-in-out infinite}
+@keyframes tgtPulse{0%,100%{transform:scale(.85);background:rgba(0,0,0,.14)}50%{transform:scale(1.25);background:rgba(0,0,0,.3)}}
+.sq.cap::after{animation:capPulse 1s ease-in-out infinite}
+@keyframes capPulse{0%,100%{transform:scale(.94);opacity:.8}50%{transform:scale(1.05);opacity:1}}
+.pce.lift{scale:1.17;z-index:4;filter:drop-shadow(0 6px 5px rgba(0,0,0,.45)) drop-shadow(0 0 9px rgba(255,214,10,.95));animation:pceBob .75s ease-in-out infinite alternate}
+@keyframes pceBob{from{translate:0 -2%}to{translate:0 -7%}}
+.fx-tap::before,.fx-land::before{content:"";position:absolute;inset:0;pointer-events:none}
+.fx-tap::before{background:rgba(255,255,255,.6);animation:fxTapSq .5s ease-out forwards}
+.fx-land::before{background:radial-gradient(circle,rgba(160,255,120,.85),rgba(160,255,120,0) 70%);animation:fxTapSq .7s ease-out forwards}
+@keyframes fxTapSq{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.15)}}
+.fx-tap{--rc:#ffd60a}.fx-tap .fx-ring{border-width:3px;animation-duration:.55s}
+.fx-land{--rc:#7dff9a}.fx-land .fx-ring{border-width:2px;animation-duration:.6s}
+@media (prefers-reduced-motion:reduce){.sq.sel::before,.sq.tgt::after,.sq.cap::after,.pce.lift{animation:none}.fx-tap::before,.fx-land::before{animation-duration:.01s}}

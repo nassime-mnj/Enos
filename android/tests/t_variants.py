@@ -87,6 +87,39 @@ with sync_playwright() as pw:
     check(ev(A + ".g.s.ply") == 4, "les 3 bots (adversaires + équipier) ont joué puis c'est de nouveau à moi")
     pg.click("#va-back")
 
+    # --- animations de cases : sélection (case + pièce soulevée) et onde au clic
+    pg.click('#va-modes button[data-m="ptq"]'); pg.select_option("#va-opp", "0"); pg.click("#va-go")
+    pg.wait_for_selector("#va-board .pce", state="attached"); pg.wait_for_timeout(500)
+    pg.click('#va-board [data-sq="e2"]'); pg.wait_for_timeout(120)
+    check(pg.locator("#va-board .sq.sel").count() == 1 and pg.locator("#va-board .pce.lift").count() == 1, "pièce sélectionnée : case animée + pièce soulevée")
+    check(pg.locator("#va-board .fx-tap").count() >= 1, "onde de clic sur la case touchée")
+    check(pg.locator("#va-board .sq.tgt").count() == 2, "2 cibles qui pulsent (e3, e4)")
+    pg.click('#va-board [data-sq="e4"]'); pg.wait_for_timeout(150)
+    check(pg.locator("#va-board .fx-land").count() >= 1, "éclat sur la case d'arrivée")
+    pg.click("#va-back")
+
+    # --- spectateur 2v2 : 4 bots, stratégies, analyse en direct, jugement
+    pg.click('#va-modes button[data-m="duo"]'); pg.select_option("#va-opp", "-1"); pg.select_option("#va-speed", "fast"); pg.click("#va-go")
+    pg.wait_for_selector("#va-seats .va-seat", state="attached")
+    pg.wait_for_function(A + ".g.s.ply >= 6", timeout=90000)
+    check(pg.locator("#va-plans .va-pl").count() == 4, "plans/stratégies affichés pour les 4 bots")
+    check(not pg.is_visible("#va-tray") and not pg.is_visible("#va-undo"), "spectateur : pas de menu de pose ni d'annulation")
+    pg.wait_for_function(A + ".analysis() && " + A + ".analysis().depth >= 2", timeout=30000)
+    an = ev(A + ".analysis().list.length")
+    check(an >= 1 and "profondeur" in pg.inner_text("#va-evm"), "évaluation en direct : %d coups examinés, %s" % (an, pg.inner_text("#va-evm")))
+    check(pg.locator("#va-cands .va-cd").count() >= 1 and pg.locator("#va-log .va-lg").count() >= 4, "candidats + journal des coups")
+    pg.click("#va-pause"); pg.wait_for_timeout(300); p1 = ev(A + ".g.s.ply"); pg.wait_for_timeout(2500)
+    check(ev(A + ".g.s.ply") <= p1 + 1, "pause : la partie s'arrête")
+    pg.click("#va-pause"); pg.wait_for_function(A + ".g.s.ply > %d" % (p1 + 1), timeout=60000)
+    check(True, "reprise après pause")
+    pg.click("#va-back")
+
+    # --- spectateur 1v1 en turbo : finit (ou atteint la limite) sans erreur
+    pg.click('#va-modes button[data-m="dk"]'); pg.select_option("#va-opp", "-1"); pg.select_option("#va-lvW", "1"); pg.select_option("#va-lvB", "1"); pg.select_option("#va-speed", "turbo"); pg.click("#va-go")
+    pg.wait_for_function(A + ".g.s.ply >= 30", timeout=90000)
+    check(True, "spectateur turbo Deux Rois : %d demi-coups" % ev(A + ".g.s.ply"))
+    pg.click("#va-back")
+
     # --- parties de bots en accéléré : chaque variante termine proprement
     for mode in ["elixir", "dk", "ptq"]:
         r = ev("""(mode) => { const V = ENOS.variants, s = V.newGame(mode); let n = 0; while (!V.status(s).over && n < 500) { const a = V.think(s, 1); a.drops.forEach(d => V.drop(s, d.type, d.sq)); if (!a.move) break; V.play(s, a.move); n++; } return [n, V.status(s)]; }""", mode)

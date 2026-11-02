@@ -204,4 +204,57 @@ t("2v2 IA : parties de bots (niveaux 1-2) jouent des coups légaux et finissent"
     assert.ok(over || n >= 500);
   }
 });
+
+// ---------- analyse, jugement, équipes, stratégies
+t("jugement : un coup qui laisse la dame en prise est une gaffe, le meilleur est « meilleur coup »", () => {
+  const s = mk("elixir", "4k3/8/8/8/8/1p6/8/Q3K3", "w");
+  const an = V.analyse(s, 3);
+  const hang = an.list.find((x) => x.m.p === "Q" && x.m.t === I("a2"));
+  assert.ok(hang, "Da2 existe (pion noir b3 la prend)");
+  const jBest = V.judge(s, an, an.list[0].m); assert.strictEqual(jBest.key, "best");
+  const j = V.judge(s, an, hang.m); assert.strictEqual(j.key, "blunder", JSON.stringify(j));
+});
+t("jugement : analyse de profondeur 3, tous les coups légaux notés", () => {
+  const s = V.newGame("dk"), an = V.analyse(s, 3);
+  assert.strictEqual(an.list.length, V.legal(s).length); assert.strictEqual(an.depth, 3);
+});
+t("jugement : sacrifice = pièce lourde donnée à un pion ; une prise équivalente n'en est pas un", () => {
+  const s = mk("elixir", "4k3/8/2p5/8/8/8/8/3QK3", "w");
+  const m = V.legal(s).find((x) => x.p === "Q" && x.t === I("d5"));
+  assert.ok(V.isSacrifice(s, m), "Dd5 attaquée par le pion c6");
+  const s2 = mk("elixir", "4k3/8/8/3q4/8/8/8/3QK3", "w");
+  assert.ok(!V.isSacrifice(s2, V.legal(s2).find((x) => x.p === "Q" && x.t === I("d5"))), "Dxd5 = échange de dames");
+});
+t("ALLIÉS : un roi qui entre dans la ligne de la tour de son équipier n'est PAS une gaffe", () => {
+  const s = mkDuo("2k2k2/8/8/3R4/8/8/8/2K2K2", 0, { c1: 0, f1: 2, d5: 2, c8: 1, f8: 3 }, 0);
+  const an = V.analyse(s, 3), kd = an.list.find((x) => x.m.t === I("d1")), kb = an.list.find((x) => x.m.t === I("b1"));
+  assert.ok(kd && kb, "d1 est légal : la tour d5 est alliée");
+  assert.ok(Math.abs(kd.cp - kb.cp) < 120, "d1 ~ b1 (" + kd.cp + " / " + kb.cp + ")");
+  const j = V.judge(s, an, kd.m); assert.ok(!["mistake", "blunder"].includes(j.key), "jugé " + j.key);
+  // et la même tour NOIRE ferait de d1 un coup illégal
+  const e = mkDuo("2k2k2/8/8/3r4/8/8/8/2K2K2", 0, { c1: 0, f1: 2, d5: 1, c8: 1, f8: 3 }, 0);
+  assert.ok(!V.legal(e).some((x) => x.t === I("d1")), "d1 interdit si la tour est ennemie");
+});
+t("ALLIÉS : une dame alliée « en face » de la mienne ne la met pas en danger (même couleur, pas d'attaque)", () => {
+  const s = mkDuo("2k2k2/8/8/8/3Q4/8/8/2K2K2", 2, { c1: 0, f1: 2, d4: 0, c8: 1, f8: 3 }, 0);
+  s.b[I("d7")] = "Q"; s.o[I("d7")] = 2;
+  assert.ok(!V.inCheck(s, "w"), "pas d'échec");
+  const an = V.analyse(s, 2); assert.ok(an.evalW > -300);
+});
+t("stratégies : cible d'équipe = ennemi le plus faible ; plan lisible", () => {
+  const s = V.newGame("duo"); s.elixir[1] = 9; s.elixir[3] = 0;
+  assert.strictEqual(V.pickTarget(s, 0), 3);
+  assert.ok(/Cible/.test(V.planText(s, 0, "focus", 3)) && /Économise/.test(V.planText(s, 0, "eco", -1)));
+  assert.strictEqual(V.adaptStrat("bal", -300), "tank"); assert.strictEqual(V.adaptStrat("bal", 400), "rush"); assert.strictEqual(V.adaptStrat("eco", 400), "eco");
+});
+t("stratégies : chaque stratégie joue des coups légaux (élixir et duo)", () => {
+  for (const mode of ["elixir", "duo"]) for (const st of Object.keys(V.STRATS)) {
+    const s = V.newGame(mode);
+    for (let i = 0; i < 10 && !(s.o ? V.settle(s) : V.status(s)).over; i++) { const a = V.think(s, 1, Math.random, { strat: st, target: mode === "duo" ? V.pickTarget(s, s.seat) : -1 }); a.drops.forEach((d) => assert.ok(V.drop(s, d.type, d.sq))); if (!a.move) { V.pass(s); continue; } assert.ok(V.legal(s).some((m) => m.f === a.move.f && m.t === a.move.t)); V.play(s, a.move); }
+  }
+});
+t("stratégie économe : n'achète pas de petites pièces tant que l'élixir n'est pas plein", () => {
+  const s = V.newGame("elixir"); s.elixir.w = 4;
+  for (let k = 0; k < 8; k++) { const a = V.think(s, 3, Math.random, { strat: "eco" }); assert.strictEqual(a.drops.length, 0, "a dépensé " + JSON.stringify(a.drops)); }
+});
 console.log(n + " tests OK");

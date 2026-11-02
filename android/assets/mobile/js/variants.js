@@ -272,8 +272,9 @@
   }
 
   /** Choisit l'action de l'IA pour le camp au trait. Retourne {drops: [{type, sq}], move} — les poses d'abord (elles ne passent pas le tour), puis un coup. */
-  V.think = (s0, level, rnd) => {
+  V.think = (s0, level, rnd, opts) => {
     rnd = rnd || Math.random;
+    const strat = (opts && opts.strat) || "bal", tgt = opts && opts.target != null ? opts.target : -1;
     const L = LEVEL[level] || LEVEL[2], s = clone(s0), W = s.side === "w", sg = W ? 1 : -1;
     const plan = [];
     if (s.mode === "elixir" || s.o) {
@@ -285,13 +286,14 @@
           const c = clone(s); V.drop(c, d.type, d.sq);
           const risk = dropRisk(s, d.type, d.sq);
           const centre = PST_CENTER(d.sq) * (d.type === "p" ? 0.5 : 1.2);
-          const sc = evaluate(c) * sg - base - risk * 1.1 + centre + (d.type === "p" && (d.sq & 7) >= 2 && (d.sq & 7) <= 5 ? 6 : 0) + rnd() * L.noise * 0.2;
+          const sc = dropBias(s, strat, tgt, d) + evaluate(c) * sg - base - risk * 1.1 + centre + (d.type === "p" && (d.sq & 7) >= 2 && (d.sq & 7) <= 5 ? 6 : 0) + rnd() * L.noise * 0.2;
           if (V.inCheck(c, W ? "b" : "w")) { /* pose qui donne échec : petit bonus */ }
           if (!best || sc > best.sc) best = { d, sc, c };
         }
         // on dépense seulement si c'est rentable ; à plein d'élixir, on dépense à tout prix (rien ne se gagne de plus)
         const full = s.elixir[ek(s)] >= V.ELIXIR_MAX - 1, forced = !V.legal(s).length && V.inCheck(s);
-        if (!best || (!forced && (rnd() > L.drop || (best.sc < 20 && !full) || (best.sc < -10)))) break;
+        const eager = strat === "rush" ? 12 : 20, thrifty = strat === "eco" && !full && best && best.d.type !== "q" && best.d.type !== "r";   // rush : dépense vite ; économe : n'achète que les grosses pièces
+        if (!best || (!forced && (thrifty || rnd() > L.drop || (best.sc < eager && !full) || (best.sc < -10)))) break;
         plan.push(best.d); V.drop(s, best.d.type, best.d.sq);
         if (forced && V.legal(s).length) break;
       }
@@ -302,12 +304,122 @@
     const dl = Date.now() + (L.depth >= 3 ? 1400 : 700);
     for (const m of order(s, mv)) {
       const c = clone(s); apply(c, m);
-      let v = search(c, L.depth - 1, -Infinity, Infinity, 1, dl) * sg + (rnd() - 0.5) * 2 * L.noise;
+      let v = search(c, L.depth - 1, -Infinity, Infinity, 1, dl) * sg + (rnd() - 0.5) * 2 * L.noise + moveBias(s, strat, tgt, m);
       if (!pick || v > pick.v) pick = { m, v };
     }
     return { drops: plan, move: pick.m };
   };
 
+  // ================================================================== STRATÉGIES (biais ajoutés au jugement de base) + analyse en temps réel + jugement des coups
+  V.STRATS = {
+    bal: { name: "Équilibré", icon: "⚖", sub: "un peu de tout" },
+    rush: { name: "Rush", icon: "🔥", sub: "pose vite, attaque le roi" },
+    eco: { name: "Économe", icon: "💎", sub: "garde son élixir pour les grosses pièces" },
+    tank: { name: "Muraille", icon: "🛡", sub: "défend d'abord, contre-attaque ensuite" },
+    focus: { name: "Chasse au roi", icon: "🎯", sub: "toute l'équipe sur un même roi" },
+  };
+  const distSq = (a, b) => Math.max(Math.abs((a & 7) - (b & 7)), Math.abs((a >> 3) - (b >> 3)));
+  function foeRoyals(s, side, tgtSeat) {                              // cases des rois ennemis à viser (en duo, la cible choisie par l'équipe si elle existe)
+    const foe = side === "w" ? "b" : "w", all = V.royals(s, foe);
+    if (s.o && tgtSeat >= 0) { const t = all.filter((i) => s.o[i] === tgtSeat); if (t.length) return t; }
+    return all;
+  }
+  function moveBias(s, strat, tgt, m) {                               // en centipions, du point de vue du joueur au trait
+    if (strat === "bal" || strat === "eco") return 0;
+    const side = s.side, t = m.p.toLowerCase();
+    if (strat === "tank") {
+      const home = side === "w" ? m.t >> 3 : 7 - (m.t >> 3), was = side === "w" ? m.f >> 3 : 7 - (m.f >> 3);
+      if (isRoyal(s, m.p) && s.mode !== "ptq") return (home - was) * -10 - (home > 1 ? 15 : 0);
+      return (home <= 3 ? 6 : 0) - (t === "q" && home > 4 && s.ply < 30 ? 25 : 0);
+    }
+    const ks = foeRoyals(s, side, strat === "focus" ? tgt : -1);
+    if (!ks.length || isRoyal(s, m.p)) return 0;
+    let d0 = 99, d1 = 99; for (const k of ks) { d0 = Math.min(d0, distSq(m.f, k)); d1 = Math.min(d1, distSq(m.t, k)); }
+    const k = strat === "focus" ? 7 : 5;
+    let b = (d0 - d1) * k;
+    if (strat === "rush" && m.cap) b += 10;
+    const c = clone(s); apply(c, m);
+    for (const kk of ks) if (attacksSq(c, m.t, kk)) { b += strat === "focus" ? 35 : 22; break; }    // un coup qui menace le roi visé
+    return b;
+  }
+  function dropBias(s, strat, tgt, d) {
+    const home = s.side === "w" ? d.sq >> 3 : 7 - (d.sq >> 3), t = d.type;
+    if (strat === "rush") return (t === "n" || t === "b" ? 22 : t === "q" ? 14 : 0) + home * 4;
+    if (strat === "eco") return t === "q" ? 40 : t === "r" ? 18 : -20;
+    if (strat === "tank") { const own = V.royals(s, s.side).filter((i) => !s.o || s.o[i] === s.seat)[0]; return own !== undefined ? Math.max(0, 6 - distSq(d.sq, own)) * 4 + (t === "p" ? 12 : 0) : 0; }
+    if (strat === "focus") { const ks = foeRoyals(s, s.side, tgt); let dm = 99; for (const k of ks) dm = Math.min(dm, distSq(d.sq, k)); return (t === "n" || t === "q" || t === "r" ? (8 - dm) * 3 : 0); }
+    return 0;
+  }
+  /** Équipe (duo) : le roi ennemi à viser = celui du joueur le plus faible (peu de matériel, peu d'élixir). -1 hors duo. */
+  V.pickTarget = (s, seat) => {
+    if (!s.o) return -1;
+    let best = -1, bv = Infinity;
+    for (let q = 0; q < 4; q++) {
+      if (!s.alive[q] || V.teamOf(q) === V.teamOf(seat)) continue;
+      let m = s.elixir[q] * 70; for (let i = 0; i < 64; i++) if (s.o[i] === q) m += VAL[s.b[i].toLowerCase()] || 0;
+      const k = V.royals(s, V.sideOfSeat(q)).find((i) => s.o[i] === q);
+      if (k !== undefined) { const side = V.sideOfSeat(q); m += (side === "w" ? k >> 3 : 7 - (k >> 3)) * 14; }   // un roi qui s'est avancé est plus fragile
+      if (m < bv) { bv = m; best = q; }
+    }
+    return best;
+  };
+  /** Adaptation en cours de partie : en difficulté → muraille ; nettement devant → rush ; sinon la stratégie de base. evTeam = avantage de l'équipe en cp. */
+  V.adaptStrat = (base, evTeam) => (evTeam <= -220 ? "tank" : evTeam >= 260 && base !== "eco" ? "rush" : base);
+  V.planText = (s, seat, strat, tgt) => {
+    const info = V.STRATS[strat] || V.STRATS.bal, x = s.elixir[s.o ? seat : V.sideOfSeat(seat)];
+    if (strat === "eco") return x >= V.COST.q ? "💎 Dame prête : il l'achète !" : "💎 Économise : " + x + "/" + V.COST.q + " pour la dame";
+    if (strat === "rush") return "🔥 Rush : pose tout de suite, avance sur le roi";
+    if (strat === "tank") return "🛡 Muraille : protège son roi avant d'attaquer";
+    if (strat === "focus") return tgt >= 0 ? "🎯 Cible : " + ["Blanc A", "Noir A", "Blanc B", "Noir B"][tgt] : "🎯 Chasse au roi adverse";
+    return info.icon + " " + info.name;
+  };
+
+  // ---- analyse : tous les coups légaux notés (point de vue du joueur au trait), profondeur 2 puis 3. Job découpé : step(ms) à appeler par tranches pour ne pas figer l'écran.
+  V.analyseJob = (s, maxDepth) => {
+    maxDepth = maxDepth || 3;
+    const sg = s.side === "w" ? 1 : -1, moves = order(s, V.legal(s)), job = { depth: 2, i: 0, cur: [], done: !moves.length, result: null, t0: Date.now() };
+    const fin = () => {
+      const list = job.cur.slice().sort((a, b) => b.cp - a.cp);
+      job.result = { list, depth: job.depth, evalW: list.length ? list[0].cp * sg : evaluate(s), side: s.side, mate: list.length && Math.abs(list[0].raw) > MATE - 1000 ? Math.ceil((MATE - Math.abs(list[0].raw)) / 2) : 0 };
+    };
+    if (!moves.length) job.result = { list: [], depth: 0, evalW: evaluate(s), side: s.side, mate: 0 };
+    job.step = (ms) => {
+      const t = Date.now();
+      while (!job.done && Date.now() - t < ms) {
+        const m = moves[job.i], c = clone(s); apply(c, m);
+        const raw = search(c, job.depth - 1, -Infinity, Infinity, 1, 0) * sg;
+        job.cur.push({ m, cp: Math.max(-1500, Math.min(1500, raw)), raw });
+        if (++job.i >= moves.length) { fin(); if (job.depth >= maxDepth || Date.now() - job.t0 > 2200) job.done = true; else { job.depth++; job.i = 0; job.cur = []; } }
+      }
+      return job.done;
+    };
+    return job;
+  };
+  V.analyse = (s, maxDepth) => { const j = V.analyseJob(s, maxDepth || 2); while (!j.step(1000)); return j.result; };
+
+  // un coup qui laisse une pièce lourde à une pièce plus faible, ou attaquée sans défenseur (les alliés comptent comme défenseurs : même couleur) — sans prendre de l'équivalent
+  V.isSacrifice = (s, m) => {
+    const t = m.p.toLowerCase(), val = VAL[t]; if (val < 300) return false;
+    if (m.cap && (VAL[m.cap.toLowerCase()] || 0) >= val - 60) return false;
+    const c = clone(s); apply(c, m);
+    const me = isW(m.p) ? "w" : "b", foe = me === "w" ? "b" : "w";
+    if (!attacked(c.b, m.t, foe)) return false;
+    for (let i = 0; i < 64; i++) { const p = c.b[i]; if (!p || isW(p) === (me === "w") || !attacksSq(c, i, m.t)) continue; if ((VAL[p.toLowerCase()] || 150) < val - 60) return true; }
+    return !attacked(c.b, m.t, me);
+  };
+  V.QUALITY = { brilliant: "Brillant", best: "Meilleur coup", excellent: "Excellent", good: "Bon", inaccuracy: "Imprécision", mistake: "Erreur", blunder: "Gaffe" };
+  /** Juge le coup m d'après l'analyse an de la position AVANT le coup. {key, gap, best, mine} ; null si pas assez de choix. */
+  V.judge = (s, an, m) => {
+    if (!an || an.list.length < 2) return null;
+    const e = an.list.find((x) => x.m.f === m.f && x.m.t === m.t && x.m.promo === m.promo); if (!e) return null;
+    const best = an.list[0].cp, gap = best - e.cp;
+    let key = gap <= 6 ? "best" : gap <= 30 ? "excellent" : gap <= 70 ? "good" : gap <= 130 ? "inaccuracy" : gap <= 260 ? "mistake" : "blunder";
+    if (gap <= 18 && e.cp > -300 && V.isSacrifice(s, m)) {
+      const safe = an.list.find((x) => !(x.m.f === m.f && x.m.t === m.t) && !V.isSacrifice(s, x.m));
+      if (!safe || e.cp >= safe.cp + 40) key = "brilliant";
+    }
+    return { key, gap: Math.round(gap), best: Math.round(best), mine: Math.round(e.cp) };
+  };
   V.pass = (s) => { if (s.o) advance(s); else s.side = s.side === "w" ? "b" : "w"; };   // aucun coup possible (duo)
   V.perft = (s, d) => { if (d === 0) return 1; let n = 0; for (const m of V.legal(s)) { const c = clone(s); apply(c, m); n += V.perft(c, d - 1); } return n; };
   V.play = (s, m) => apply(s, m);
