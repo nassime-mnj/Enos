@@ -129,3 +129,11 @@ Le plateau d'échecs **à 4 joueurs** (croix 14×14, 4 armées de 16 pièces fac
 - **Ami au téléphone** : un siège « Joueur humain » avec son prénom ; quand c'est son tour l'application te rend la main avec ses pièces (tap, ou coup dicté en texte `h13 h11`, image du plateau à lui envoyer, ↶ annuler). Voir `docs/DISCORD_AMI.md` (le bot Discord est reporté : un bot ne peut pas entrer dans un groupe privé).
 - Effets : tremblement de l'écran sur les grosses prises, 💥 / 👑, tampon « ÉLIMINÉ », podium. Tests : `t_royale.py`, `chess4.test.js`, `tests/ui_arena_smoke.py` (PC).
 
+
+## Variantes d'échecs (Modules › Échecs & apprentissage › « Variantes d'échecs »)
+Trois règles inventées, moteur maison `js/variants.js` (testé : `node android/tests/variants.test.js`, Playwright `t_variants.py`), UI `js/m_variants.js` + `css/variants.css`, plateau = `board.js`.
+- **Élixir** (Clash Royale) : départ = les 2 rois seuls, 5 💧 chacun (max 10). Pose dans ses 2 premières rangées (pion : 2ᵉ rangée seulement). Pion 1 · Cavalier 3 · Fou 3 · Tour 5 · Dame 8. Chaque coup joué = +1 💧 ; poser ne consomme pas le coup. En échec, seule une pose qui sauve le roi est légale (donc pas de mat si une pose peut parer).
+- **Deux Rois** : 2 rois par camp, pas de dame ; échec = au moins un roi attaqué, mat = aucun coup qui les met tous à l'abri.
+- **Protège la Dame** : seule la dame est « royale » (roi capturable, pas d'échec pour lui) ; pas de promotion en dame.
+- Communs : pas de roque ; nulle par pat / 50 coups / 400 demi-coups. IA 3 niveaux (profondeur 1-3, bruit), l'IA élixir pose d'abord (valeur d'un 💧 ≈ 70 cp, risque de prise gratuite), puis joue. Bilan par variante dans `variants.stats`.
+- Pas encore : version PC (Arène), pas de Stockfish pour ces règles.
