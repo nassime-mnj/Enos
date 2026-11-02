@@ -18,6 +18,8 @@
   if (adv) adv.addEventListener("click", () => open("#advisor"));
   const arena = document.getElementById("b-arena");
   if (arena) arena.addEventListener("click", () => open("#arena"));
+  const variants = document.getElementById("b-variants");
+  if (variants) variants.addEventListener("click", () => open("#variants"));
   const royale = document.getElementById("b-royale");
   if (royale) royale.addEventListener("click", () => open("#royale"));
   // DÉFI › BOTS et DÉFI › CHESS › mode « BOTS · ARÈNE » : même Arène que le bouton du panneau

@@ -24,3 +24,4 @@
 .va-end{margin-top:12px;padding:16px;border-radius:14px;background:#101014;border:1px solid #2a2a30;text-align:center}
 .va-end.win{border-color:#34d16b}.va-end.lose{border-color:#ff4d63}
 .va-end h3{margin:0 0 4px;font:900 22px var(--ui)}.va-end p{margin:0 0 12px;color:var(--muted)}
+#app-variants{max-width:640px;margin:0 auto}

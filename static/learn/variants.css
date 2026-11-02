@@ -1,0 +1,27 @@
+/* Variantes d'échecs : Élixir, Deux rois, Protège la dame (js/m_variants.js) */
+.va-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 8px}
+.va-modes button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;border-radius:14px;border:1px solid var(--line,#2a2a30);background:linear-gradient(160deg,#14141a,#101012);color:var(--text)}
+.va-modes button.on{border-color:var(--cyan,#1acfd6);box-shadow:0 0 0 1px var(--cyan,#1acfd6) inset,0 0 18px rgba(26,207,214,.18)}
+.va-modes button b{font:900 14.5px var(--ui);letter-spacing:.5px;text-align:center}.va-modes button small{font:600 10.5px var(--ui);color:var(--muted)}
+.va-ic{font-size:24px;line-height:1.2}
+.va-rules{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.5;color:var(--text)}.va-rules li{margin:3px 0}
+.va-opts{display:grid;gap:10px}.va-opts label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
+#va-board{margin:6px 0}
+.va-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:10px;background:#101014;border:1px solid transparent;min-height:34px}
+.va-bar.turn{border-color:var(--cyan,#1acfd6);background:#0c1a1c}
+.va-bar>b{font:800 14px var(--ui)}
+.va-elx{display:flex;align-items:center;gap:8px}
+.va-pips{display:flex;gap:2px}.va-pips i{width:11px;height:15px;border-radius:3px 3px 6px 6px;background:#23232b;border:1px solid #33333d}
+.va-pips i.on{background:linear-gradient(#c970ff,#8a2be2);border-color:#d79bff;box-shadow:0 0 6px rgba(190,100,255,.55)}
+.va-xn{font:800 13px var(--ui);color:#d79bff;min-width:38px;text-align:right}
+.va-msg{text-align:center;font-weight:700;margin:8px 0;min-height:22px}
+.va-tray{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0}
+.va-tray button{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px 5px;border-radius:12px;border:1px solid #2c2c36;background:#111116;color:var(--text)}
+.va-tray button img{width:100%;max-width:48px;aspect-ratio:1/1;pointer-events:none}
+.va-tray button b{font:800 12px var(--ui);color:#d79bff}
+.va-tray button.on{border-color:#d79bff;background:#1d1228;box-shadow:0 0 12px rgba(190,100,255,.4)}
+.va-tray button:disabled{opacity:.35}
+.va-end{margin-top:12px;padding:16px;border-radius:14px;background:#101014;border:1px solid #2a2a30;text-align:center}
+.va-end.win{border-color:#34d16b}.va-end.lose{border-color:#ff4d63}
+.va-end h3{margin:0 0 4px;font:900 22px var(--ui)}.va-end p{margin:0 0 12px;color:var(--muted)}
+#app-variants{max-width:640px;margin:0 auto}

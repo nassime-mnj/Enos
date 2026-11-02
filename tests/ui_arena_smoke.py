@@ -52,6 +52,13 @@ try:
         pg.wait_for_function("document.querySelector('#app-royale')._api.g.st.ply >= 6", timeout=30000)
         cols = pg.evaluate("(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); return [r('.ro-ban[data-pos=\"1\"]').left, r('#ro-board').left, r('.ro-ban[data-pos=\"3\"]').left]; })()")
         check(cols[0] < cols[1] < cols[2], "ROYALE ×4 : bannières gauche | plateau | droite sur PC : %s" % [round(c) for c in cols])
+        # onglet VARIANTES : élixir, pose d'une pièce
+        pg.goto("http://127.0.0.1:8803/?r=2#variants")
+        pg.wait_for_selector("#app-variants #va-modes", timeout=15000)
+        pg.select_option("#va-opp", "0"); pg.click("#va-go")
+        pg.wait_for_selector("#va-tray button[data-t=r]", timeout=5000)
+        pg.click("#va-tray button[data-t=r]"); pg.click('#va-board [data-sq="a1"]')
+        check(pg.evaluate("document.querySelector('#app-variants')._api.g.s.elixir.w") == 0, "VARIANTES : élixir, tour posée sur PC")
         check(not errs, "aucune erreur JavaScript : %s" % errs[:2])
         b.close()
 finally:
