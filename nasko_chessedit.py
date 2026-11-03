@@ -87,7 +87,29 @@ def synth_chime(path):
     _write_wav(path, [(math.sin(2 * math.pi * 880 * i / SR) * 0.5 + math.sin(2 * math.pi * 1320 * i / SR) * 0.35) * math.exp(-i / SR * 5.5) * 0.8 for i in range(n)])
 
 
-def synth_impulse(path, seconds=2.6, decay=3.2):
+def synth_boom(path):
+    """Impact grave de la fiche de stats : sinus 88 -> 28 Hz + souffle bref (comme chess_edit_sfx.js)."""
+    n, ph, out = int(SR * 0.7), 0.0, []
+    rnd = random.Random(2)
+    for i in range(n):
+        t = i / SR
+        ph += 2 * math.pi * (28 + 60 * math.exp(-t * 14)) / SR
+        out.append((math.sin(ph) * math.exp(-t * 5.5) * 1.1 + ((rnd.random() * 2 - 1) * (1 - t / 0.08) * 0.6 if t < 0.08 else 0.0)) * 0.9)
+    _write_wav(path, out)
+
+
+def synth_whoosh(path):
+    """« Whoosh » de sortie de la fiche : bruit filtré qui monte puis retombe."""
+    n, lp, out = int(SR * 0.45), 0.0, []
+    rnd = random.Random(4)
+    for i in range(n):
+        t = i / n
+        lp += ((rnd.random() * 2 - 1) - lp) * (0.04 + t * 0.5)
+        out.append(lp * math.sin(math.pi * t) * 1.6)
+    _write_wav(path, out)
+
+
+def synth_impulse(path, seconds=3.4, decay=2.6):
     """Réponse impulsionnelle stéréo (bruit qui s'éteint et s'assombrit) pour le filtre afir."""
     n, rnd, chans = int(SR * seconds), random.Random(7), []
     for _c in range(2):
@@ -135,6 +157,12 @@ def sfx_sources(workdir, ids):
         elif i == "brilliant":
             out[i] = os.path.join(workdir, "sfx_brilliant.wav")
             synth_chime(out[i])
+        elif i == "boom":
+            out[i] = os.path.join(workdir, "sfx_boom.wav")
+            synth_boom(out[i])
+        elif i == "whoosh":
+            out[i] = os.path.join(workdir, "sfx_whoosh.wav")
+            synth_whoosh(out[i])
         elif i in snd:
             out[i] = os.path.join(workdir, "sfx_" + i + ".mp3")
             with open(out[i], "wb") as f:
@@ -162,6 +190,21 @@ def onset(path, thr=0.1):
     return 0.0
 
 
+def duration_of(path):
+    """Durée (s) d'un fichier audio, lue avec ffmpeg ; 3 s si inconnue."""
+    ff = ffmpeg_exe()
+    if not ff:
+        return 3.0
+    try:
+        err = subprocess.run([ff, "-i", path], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30).stderr
+        m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", err)
+        if m:
+            return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return 3.0
+
+
 def mix_graph(manifest, srcs, has_music):
     """Construit le graphe FFmpeg (texte) et la liste d'entrées. Retourne (inputs, graph, nb_pistes)."""
     items = [x for x in (manifest.get("sfx") or []) if x.get("id") in srcs]
@@ -173,14 +216,16 @@ def mix_graph(manifest, srcs, has_music):
         inputs.append(srcs[i])
     uses = {i: [x for x in items if x["id"] == i] for i in ids}
     ons = {i: onset(srcs[i]) / (VOICE_RATE if i in VOICE_IDS else 1.0) for i in ids}
-    g, tracks, voices = [], [], []
+    g, tracks, voices, boosts = [], [], [], []
     off = float((manifest.get("audio") or {}).get("start_offset") or 0)
     if has_music:
+        # la musique BAISSE (à 20 %) pendant chaque voix de Levy (et sa queue de reverb) : la voix passe devant
+        duck = "".join(f",volume=0.2:enable='between(t,{max(0.0, float(u['t']) - 0.1):.2f},{float(u['t']) + duration_of(srcs[i]) / VOICE_RATE + 1.2:.2f})'" for i in ids if i in VOICE_IDS for u in uses[i])
         if off >= 0:
-            g.append(f"[0:a]aresample={SR},atrim=start={off:.3f},asetpts=PTS-STARTPTS,volume=0.85[mus]")
+            g.append(f"[0:a]aresample={SR},atrim=start={off:.3f},asetpts=PTS-STARTPTS,volume=0.85{duck}[mus]")
         else:
             ms = int(-off * 1000)
-            g.append(f"[0:a]aresample={SR},adelay={ms}|{ms},volume=0.85[mus]")
+            g.append(f"[0:a]aresample={SR},adelay={ms}|{ms},volume=0.85{duck}[mus]")
         tracks.append("[mus]")
     n = 0
     for i in ids:
@@ -197,7 +242,14 @@ def mix_graph(manifest, srcs, has_music):
             gain = float(u.get("gain", 1))
             n += 1
             if u.get("bus") == "voice":
-                g.append(f"{lab}aresample={SR},asetrate={int(SR * VOICE_RATE)},aresample={SR},{trim}highpass=f=170,adelay={ms}|{ms},volume={gain:.3f}[v{n}]")
+                wet = float(u.get("wet", 1))
+                if wet > 1:                                                                  # reverb supplémentaire (The Rook) : une copie part seulement dans la reverb
+                    g.append(f"{lab}aresample={SR},asetrate={int(SR * VOICE_RATE)},aresample={SR},{trim}highpass=f=170,adelay={ms}|{ms},volume={gain:.3f},asplit=2[v{n}][vb{n}]")
+                    boosts.append(f"[vb{n}]volume={wet - 1:.2f}")
+                    g.append(boosts[-1] + f"[vbx{n}]")
+                    boosts[-1] = f"[vbx{n}]"
+                else:
+                    g.append(f"{lab}aresample={SR},asetrate={int(SR * VOICE_RATE)},aresample={SR},{trim}highpass=f=170,adelay={ms}|{ms},volume={gain:.3f}[v{n}]")
                 voices.append(f"[v{n}]")
             else:
                 g.append(f"{lab}aresample={SR},{trim}adelay={ms}|{ms},volume={gain * 0.9:.3f}[x{n}]")
@@ -205,9 +257,10 @@ def mix_graph(manifest, srcs, has_music):
     if voices:
         g.append("".join(voices) + (f"amix=inputs={len(voices)}:normalize=0," if len(voices) > 1 else "") + "asplit=3[vd][vw][ve]")
         ir = base + len(inputs)
-        g.append("[vd]volume=0.9[vdry]")
-        g.append(f"[vw][{ir}:a]afir=dry=0:wet=1,volume=0.5[vwet]")
-        g.append("[ve]aecho=0.8:0.88:310|620|930:0.38|0.26|0.18,lowpass=f=3600,volume=0.55[vecho]")
+        g.append("[vd]volume=0.85[vdry]")
+        g.append("[vw]" + "".join(boosts) + (f"amix=inputs={1 + len(boosts)}:normalize=0," if boosts else "") + "anull[vwin]")
+        g.append(f"[vwin][{ir}:a]afir=dry=0:wet=1,volume=1.0[vwet]")                      # REVERB à convolution, plus forte que la voix sèche
+        g.append("[ve]aecho=0.8:0.85:420:0.16,lowpass=f=3600,volume=0.3[vecho]")           # écho discret : une seule répétition
         tracks += ["[vdry]", "[vwet]", "[vecho]"]
     return inputs, ";".join(g), tracks
 

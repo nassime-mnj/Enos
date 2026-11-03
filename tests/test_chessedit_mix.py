@@ -28,21 +28,24 @@ class MixTest(unittest.TestCase):
         self.d = tempfile.mkdtemp()
         self.manifest = {"version": 2, "pacing": {"duration": 9.0}, "audio": {"start_offset": 0},
                          "sfx": [{"t": 0.5, "id": "move", "gain": 0.8, "bus": "sfx"}, {"t": 1.0, "id": "capture", "gain": 1, "bus": "sfx"}, {"t": 1.5, "id": "check", "gain": 1, "bus": "sfx"},
-                                 {"t": 2.0, "id": "brilliant", "gain": 0.9, "bus": "sfx"}, {"t": 2.2, "id": "the_queen", "gain": 1, "bus": "voice"},
-                                 {"t": 5.5, "id": "this_is_the_way", "gain": 1, "bus": "voice"}, {"t": 8.0, "id": "mate", "gain": 1, "bus": "sfx"}, {"t": 8.2, "id": "move", "gain": 0.8, "bus": "sfx"}]}
+                                 {"t": 2.0, "id": "brilliant", "gain": 0.9, "bus": "sfx"}, {"t": 2.2, "id": "the_queen", "gain": 1, "bus": "voice", "wet": 1},
+                                 {"t": 5.5, "id": "the_rook", "gain": 3.2, "bus": "voice", "wet": 2.2}, {"t": 8.0, "id": "mate", "gain": 1, "bus": "sfx"}, {"t": 8.2, "id": "move", "gain": 0.8, "bus": "sfx"}]}
 
     def tearDown(self):
         shutil.rmtree(self.d, ignore_errors=True)
 
     def test_sources_et_graphe(self):
-        src = ce.sfx_sources(self.d, {"move", "capture", "check", "brilliant", "mate", "the_queen", "this_is_the_way"})
-        self.assertEqual(set(src), {"move", "capture", "check", "brilliant", "mate", "the_queen", "this_is_the_way"}, "tous les sons trouvés")
+        src = ce.sfx_sources(self.d, {"move", "capture", "check", "brilliant", "mate", "the_queen", "the_rook", "boom", "whoosh"})
+        self.assertEqual(set(src), {"move", "capture", "check", "brilliant", "mate", "the_queen", "the_rook", "boom", "whoosh"}, "tous les sons trouvés (dont impact et whoosh des fiches)")
         ins, graph, tracks = ce.mix_graph(self.manifest, src, False)
         self.assertIn("afir", graph)
         self.assertIn("aecho", graph)
         self.assertIn("asetrate=%d" % int(ce.SR * ce.VOICE_RATE), graph)
-        self.assertEqual(len(ins), 7)
+        self.assertEqual(len(ins), 7)            # les 7 sons réellement utilisés par le manifeste
         self.assertTrue(any("vwet" in t for t in tracks) and any("vecho" in t for t in tracks))
+        self.assertIn("vb", graph, "reverb supplémentaire pour The Rook (wet 2.2)")
+        ins2, graph2, _ = ce.mix_graph(self.manifest, src, True)
+        self.assertIn("enable='between(t,", graph2, "la musique baisse pendant les voix")
 
     def test_mixage_sans_musique(self):
         out = ce.build_mix(self.manifest, self.d, "")

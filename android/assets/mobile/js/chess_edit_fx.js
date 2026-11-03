@@ -297,7 +297,8 @@
         const path = document.createElementNS(ns, "path"); path.setAttribute("d", `M${sx.toFixed(1)},${sy.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`); path.setAttribute("class", "ce-thp"); path.setAttribute("pathLength", "1"); path.style.strokeWidth = c * 0.13; path.style.animationDelay = i * 160 + "ms";
         const head = document.createElementNS(ns, "polygon"); head.setAttribute("class", "ce-thh"); head.setAttribute("points", `0,${-hs * 0.55} ${hs},0 0,${hs * 0.55}`); head.setAttribute("transform", `translate(${ex.toFixed(1)},${ey.toFixed(1)}) rotate(${(ang * 180 / Math.PI).toFixed(1)})`); head.style.animationDelay = 350 + i * 160 + "ms";
         svg.append(path, head);
-        const w = document.createElement("div"); w.className = "ce-warn"; w.textContent = "!"; w.style.cssText = `left:${b.x + c * 0.58}px;top:${b.y - c * 0.12}px;width:${c * 0.5}px;height:${c * 0.44}px;font-size:${c * 0.3}px;animation-delay:${450 + i * 160}ms`;
+        const w = document.createElement("div"); w.className = "ce-warn"; w.innerHTML = '<svg viewBox="0 0 100 90"><path d="M50 7 L95 83 H5 Z" fill="#ffcb1f" stroke="#1a1200" stroke-width="8" stroke-linejoin="round"/><rect x="44.5" y="31" width="11" height="29" rx="5.5" fill="#1a1200"/><circle cx="50" cy="71" r="6.5" fill="#1a1200"/></svg>';
+        w.style.cssText = `left:${b.x + c * 0.5}px;top:${b.y - c * 0.2}px;width:${c * 0.56}px;height:${c * 0.5}px;animation-delay:${450 + i * 160}ms`;
         this.fxl.appendChild(w); els.push(w);
       });
       this.fxl.appendChild(svg);
@@ -331,9 +332,13 @@
       const ic = await this.outlineOf(url);
       if (!this.alive) return;
       el.hidden = false; el.classList.remove("out");
-      el.innerHTML = `<div class="ce-sc"><div class="ce-sc-ic"><img src="${ic}" alt=""><em>${esc2(st.name.toUpperCase())}</em></div><div class="ce-sc-bars">${rows.map(([n, v], i) => `<div class="r${v === top ? " top" : ""}" style="--d:${i * 170}ms"><span>${n}</span><i><u style="--v:${v}%"></u></i><b>${v}</b></div>`).join("")}</div></div>`;
+      this.shake = Math.max(this.shake, 24); this.chroma = Math.max(this.chroma, 12); this.flashFx("#ffffff"); this.warp = Math.max(this.warp, 0.5);          // IMPACT : la fiche claque
+      this.camTo({ rx: 16, rz: 0, s: 0.86 }, 140); this.later(() => this.camTo({ rx: 18, rz: 0, s: 1.0 }, 700), 160);
+      if (E.vibrate) E.vibrate([40, 20, 70]);
+      el.innerHTML = `<div class="ce-sc slam"><div class="ce-sc-ic"><img src="${ic}" alt=""><em>${esc2(st.name.toUpperCase())}</em></div><div class="ce-sc-bars">${rows.map(([n, v], i) => `<div class="r${v === top ? " top" : ""}" style="--d:${260 + i * 90}ms"><span>${n}</span><i><u style="--v:${v}%"></u></i><b>${v}</b></div>`).join("")}</div></div>`;
       this.host.classList.add("ce-dim"); const p = this.xy(st.sq), pu = document.createElement("div"); pu.className = "ce-pulse"; pu.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px`; this.fxl.appendChild(pu);
-      this.later(() => { el.classList.add("out"); this.host.classList.remove("ce-dim"); pu.remove(); }, ms - 450); this.later(() => { el.hidden = true; el.innerHTML = ""; }, ms);
+      this.later(() => { this.flashFx("#c9a6ff"); }, 900);                                                        // le plus fort des 4 stats claque à son tour
+      this.later(() => { el.classList.add("out"); this.host.classList.remove("ce-dim"); pu.remove(); }, ms - 380); this.later(() => { el.hidden = true; el.innerHTML = ""; }, ms);
     }
     /** la pièce prise MEURT : elle devient une ombre noire qui se délite en cendres et monte en fumée, braises qui s'élèvent (strong : plus long, plus de fumée) */
     dissolve(el, sq, strong) {
