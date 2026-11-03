@@ -198,7 +198,7 @@
           paused = !paused; stage.setPlaying(!paused);
           if (paused) { sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au && au.currentTime > 0) au.play(); }
         }
-        const duck = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.4; }, ms); setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 250); };
+        const duck = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.18; }, Math.max(0, ms - 80)); setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 300); };
         sfx.onVoice = duck;
         function fire(e) {
           if (e.kind === "intro") { stage.intro(e.intro, e.dur); return; }

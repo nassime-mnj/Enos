@@ -169,10 +169,16 @@ with sync_playwright() as pw:
     check(v["ffs"] and max(v["ffs"]) <= 300 and min(c[0] for c in v["crit"]) >= 1000, "accéléré DOUX (%d coups à ≤ 0,3 s) et ralentis (≥ 1 s) sur les moments clés" % len(v["ffs"]))
     check(all(abs(i - d) < 1e-6 or i - 0 > 0 for i, d in zip(v["impacts"], v["impacts"])) and all(i > 0.05 for i in v["impacts"]), "son calé sur l'impact (après le départ du coup)")
     ids = [x["id"] for x in v["voices"]]
-    check(ids and set(ids) <= {"the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"} and "this_is_the_way" in ids, "voix de Levy sur les coups clés : %s" % ids)
-    byply = {x["ply"]: x["id"] for x in v["voices"]}
-    check(byply.get(31) == "the_queen" and byply.get(25) == "the_rook" and byply.get(19) == "the_knight", "la voix = la pièce SACRIFIÉE : dame (31), tour (25), cavalier (19) -> %s" % byply)
-    check(not any(x["id"] in ("the_queen", "the_rook", "the_bishop", "the_knight") and x["ply"] in (32, 26) for x in v["voices"]), "pas de voix sur les simples prises / reprises")
+    check(ids and set(ids) <= {"the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"}, "voix de Levy sur le coup brillant : %s" % ids)
+    vv = pg.evaluate("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, {}), ev = tl.events.filter((e) => e.from); const v = tl.sfx.filter((x) => x.bus === 'voice');
+        return { voices: v.map((x) => [x.ply, x.id, x.wet]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.n, e.piece]), nonBrillVoice: v.filter((x) => { const e = ev.find((y) => y.n === x.ply); return !e || e.key !== 'brilliant'; }).length,
+          dupPly: v.length - new Set(v.map((x) => x.ply)).size, rookCount: v.filter((x) => x.id === 'the_rook').length, stats: ev.filter((e) => e.stats).length, boom: tl.sfx.filter((x) => x.id === 'boom').length, errVoices: ev.filter((e) => ['mistake', 'blunder', 'inaccuracy'].includes(e.key) && v.some((x) => x.ply === e.n)).length }; }""", rec)
+    check(vv["nonBrillVoice"] == 0 and vv["errVoices"] == 0, "voix de Levy UNIQUEMENT sur les coups brillants (jamais sur une erreur, une gaffe ni un mat) : %s" % vv["voices"])
+    check(vv["dupPly"] == 0 and len(vv["voices"]) <= len(vv["brill"]) and (vv["rookCount"] <= len([b for b in vv["brill"] if b[1] == "r"])), "une seule voix par coup brillant (%d voix pour %d brillant(s), %d The Rook)" % (len(vv["voices"]), len(vv["brill"]), vv["rookCount"]))
+    rk = pg.evaluate("""(rec) => { const r = JSON.parse(JSON.stringify(rec)); r.mv[24][2] = 'mistake'; r.mv[25][2] = 'blunder'; r.mv[18][2] = 'brilliant'; r.mv[30][2] = 'good'; const M = ENOS.editMap, pl = M.gamePlies(r), tl = M.buildViral(pl, r, null, {}), ev = tl.events.filter((e) => e.from);
+        return { voices: tl.sfx.filter((x) => x.bus === 'voice').map((x) => [x.ply, x.id]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.n, e.piece]), rooks: ev.filter((e) => e.piece === 'r').map((e) => [e.n, e.key]) }; }""", rec)
+    check(rk["voices"] == [[19, "the_knight"]] and rk["brill"] == [[19, "n"]], "3 coups de tour dont erreurs/gaffes et un seul brillant (cavalier) : UNE seule voix, celle du brillant : %s" % rk["voices"])
+    check(vv["stats"] <= 2 and vv["boom"] == vv["stats"], "fiches Power/Speed/Defense/Trick : %d au maximum 2 par edit, chacune avec son impact sonore" % vv["stats"])
     check(all(v["voices"][i + 1]["t"] - v["voices"][i]["t"] >= 2.4 for i in range(len(v["voices"]) - 1)), "jamais deux voix à moins de 2,4 s")
     check(v["base"] >= v["n"], "un bruitage de base par coup (%d sons)" % v["base"])
     check(v["mfv"] == 2 and v["mfsfx"] == len(v["voices"]) + v["base"] and v["mfintro"] and v["mfev"] == v["n"] and v["mfbadge"] >= 2, "manifeste v2 : sfx, intro, badges (%d sons)" % v["mfsfx"])
@@ -207,7 +213,7 @@ with sync_playwright() as pw:
           evs: ev.filter((e) => e.ev != null).length, impact: br && (br.impact - br.t - br.pre), firstOpenT: ev[0].t, mfstats: mf.events.filter((e) => e.stats).length, mfthr: mf.events.filter((e) => e.threats.length).length, opening: mf.pacing.opening,
           fork: M.threatsFrom('4k3/8/8/8/8/8/8/R3K2q b - - 0 1', 'h1').length, pst: M.pieceStats('rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 1', 'f3', false) }; }""", [rec])
     check(v3["title"] and v3["title"][0][0] == "Italian Game" and v3["title"][0][1] > v3["firstOpenT"] - 0.1, "titre d'ouverture « Italian Game » au début de l'ouverture : %s" % v3["title"])
-    check(v3["pre"] >= 2.4 and v3["stats"] and set(v3["stats"]) == {"power", "speed", "defense", "trick"} and v3["statsName"], "coup brillant : la pièce maîtresse présente ses stats %s (%s) AVANT le coup (%.1f s)" % (v3["stats"], v3["statsName"], v3["pre"]))
+    check(v3["pre"] >= 2.0 and v3["stats"] and set(v3["stats"]) == {"power", "speed", "defense", "trick"} and v3["statsName"], "coup brillant : la pièce maîtresse présente ses stats %s (%s) AVANT le coup (%.1f s)" % (v3["stats"], v3["statsName"], v3["pre"]))
     check(v3["threats"] >= 1 and v3["mfthr"] == v3["threats"] and v3["mfstats"] >= 1 and v3["opening"] == "Italian Game", "menaces calculées (%d coups) + stats + ouverture dans le manifeste" % v3["threats"])
     check(v3["evs"] == 33 and v3["impact"] > 0.5, "évaluation de chaque coup pour la barre (%d) ; l'impact suit le pré-roll" % v3["evs"])
     check(v3["pst"] and v3["pst"]["name"] == "Cavalier" and all(5 <= x <= 100 for x in v3["pst"]["vals"].values()), "fiche de pièce : %s" % v3["pst"])

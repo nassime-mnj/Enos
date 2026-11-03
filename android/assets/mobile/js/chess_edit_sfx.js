@@ -7,7 +7,7 @@
 (() => {
   const E = window.ENOS;
   const VOICES = ["the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"];
-  const FX = { slowed: 0.93, highpass: 170, wet: 0.7, echo: 0.36, echoTime: 0.31, echoFeedback: 0.38, lowpass: 3600, irSeconds: 2.6, irDecay: 3.2 };
+  const FX = { slowed: 0.93, highpass: 170, dry: 0.85, wet: 1.3, echo: 0.2, echoTime: 0.42, echoFeedback: 0.16, lowpass: 3600, irSeconds: 3.4, irDecay: 2.6 };         // reverb PUISSANTE (plus fort que le sec), écho discret : une seule répétition audible
 
   /** réponse impulsionnelle stéréo synthétique : bruit qui s'éteint, de plus en plus sourd (réverbération de grande salle) */
   function impulse(ctx, seconds, decay) {
@@ -38,6 +38,17 @@
     return b;
   }
 
+  function boomBuffer(ctx) {                                                            // impact grave de la fiche de stats : sinus 55 → 28 Hz + souffle
+    const sr = ctx.sampleRate, len = Math.floor(sr * 0.7), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0); let ph = 0;
+    for (let i = 0; i < len; i++) { const t = i / sr, f = 28 + 60 * Math.exp(-t * 14); ph += (2 * Math.PI * f) / sr; d[i] = (Math.sin(ph) * Math.exp(-t * 5.5) * 1.1 + (t < 0.08 ? (Math.random() * 2 - 1) * (1 - t / 0.08) * 0.6 : 0)) * 0.9; }
+    return b;
+  }
+  function whooshBuffer(ctx) {                                                          // « whoosh » de sortie : bruit filtré qui monte
+    const sr = ctx.sampleRate, len = Math.floor(sr * 0.45), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0); let lp = 0;
+    for (let i = 0; i < len; i++) { const t = i / len, k = 0.04 + t * 0.5; lp += ((Math.random() * 2 - 1) - lp) * k; d[i] = lp * Math.sin(Math.PI * t) * 1.6; }
+    return b;
+  }
+
   class Player {
     constructor() {
       const S = E.chessSound; this.ctx = S && S.ac ? S.ac() : new (window.AudioContext || window.webkitAudioContext)();
@@ -46,15 +57,15 @@
       this.sfx = a.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(this.master);
       // voix : passe-haut -> (sec) + (reverb à convolution) + (écho à retours filtré)
       this.vin = a.createGain(); const hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = FX.highpass; this.vin.connect(hp);
-      const dry = a.createGain(); dry.gain.value = 0.9; hp.connect(dry); dry.connect(this.master);
-      const conv = a.createConvolver(); conv.buffer = impulse(a, FX.irSeconds, FX.irDecay); const wet = a.createGain(); wet.gain.value = FX.wet; hp.connect(conv); conv.connect(wet); wet.connect(this.master);
+      const dry = a.createGain(); dry.gain.value = FX.dry; hp.connect(dry); dry.connect(this.master);
+      const conv = a.createConvolver(); conv.buffer = impulse(a, FX.irSeconds, FX.irDecay); const wet = a.createGain(); wet.gain.value = FX.wet; hp.connect(conv); conv.connect(wet); wet.connect(this.master); this.conv = conv;
       const dl = a.createDelay(1); dl.delayTime.value = FX.echoTime; const fb = a.createGain(); fb.gain.value = FX.echoFeedback; const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = FX.lowpass;
       const eg = a.createGain(); eg.gain.value = FX.echo; hp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(lp); lp.connect(eg); eg.connect(this.master);
       this.onVoice = null;
     }
     async load() {
       const a = this.ctx, S = E.chessSound, base = E.assetBase || "";
-      this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a);
+      this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
       for (const k of ["move", "check", "promote", "mate"]) { try { this.bufs[k] = S && S.buffer ? await S.buffer(k) : null; } catch (e) { this.bufs[k] = null; } }
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
@@ -74,7 +85,7 @@
       while (this.i < this.queue.length && this.queue[this.i].t <= vt + 0.35) {
         const s = this.queue[this.i++], when = this.t0 + s.t;
         if (when < a.currentTime - 0.03) continue;                                        // trop tard (onglet gelé) : on saute
-        this.play(s.id, Math.max(when, a.currentTime), s.gain, s.bus);
+        this.play(s.id, Math.max(when, a.currentTime), s.gain, s.bus, s.wet);
       }
     }
     /** délai avant le premier vrai son du buffer (les mp3 de coups ont 0,1 à 0,4 s de silence au début) : le départ est avancé pour que l'IMPACT tombe pile sur `when` */
@@ -87,10 +98,14 @@
       }
       return this.ons[id];
     }
-    play(id, when, gain, bus) {
+    play(id, when, gain, bus, wet) {
       const b = this.bufs[id]; if (!b) return;
       const a = this.ctx, src = a.createBufferSource(), g = a.createGain(), rate = bus === "voice" ? FX.slowed : 1; src.buffer = b; g.gain.value = gain == null ? 1 : gain;
-      if (bus === "voice") { src.playbackRate.value = rate; src.connect(g); g.connect(this.vin); if (this.onVoice) this.onVoice(when, b.duration / rate); }
+      if (bus === "voice") {
+        src.playbackRate.value = rate; src.connect(g); g.connect(this.vin);
+        if (wet > 1 && this.conv) { const x = a.createGain(); x.gain.value = wet - 1; g.connect(x); x.connect(this.conv); }                  // reverb SUPPLÉMENTAIRE (The Rook : la voix la plus importante)
+        if (this.onVoice) this.onVoice(when, b.duration / rate + 1.2);
+      }
       else { src.connect(g); g.connect(this.sfx); }
       const at = when - this.onsetOf(id) / rate;
       if (at >= a.currentTime) src.start(at); else src.start(a.currentTime, Math.min(b.duration - 0.001, (a.currentTime - at) * rate));

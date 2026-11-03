@@ -244,16 +244,20 @@
     plies.forEach((p, i) => {
       const l = L[i];
       let pl;
-      if (l >= 3) pl = { phase: "hero", anim: p.mate ? 1700 : 1500, freeze: p.mate ? 2.6 : p.key === "brilliant" ? 2.4 : p.key === "blunder" || p.loss > 300 ? 1.9 : 1.7, gap: 0.5, pre: p.key === "brilliant" || p.sacrifice || p.boss ? 3.0 : 0 };
+      if (l >= 3) pl = { phase: "hero", anim: p.mate ? 1700 : 1500, freeze: p.mate ? 2.6 : p.key === "brilliant" ? 2.4 : p.key === "blunder" || p.loss > 300 ? 1.9 : 1.7, gap: 0.5, pre: p.key === "brilliant" || p.sacrifice || p.boss ? 2.2 : 0 };
       else if (l === 2) pl = { phase: "crit", anim: 1100, freeze: p.check ? 1.2 : 1.5, gap: 0.4, pre: p.sacrifice ? 2.4 : 0 };
       else if (i < nOpen) pl = { phase: "open", anim: 520, freeze: 0, gap: 0.6 - 0.2 * (i / Math.max(1, nOpen - 1)) };
       else if (l === 1) pl = { phase: "mid", anim: 520, freeze: 0, gap: 0.45 };
       else pl = { phase: "ff", anim: 260, freeze: 0, gap: 0.18 };
       pl.pre = pl.pre || 0;
-      if (pl.pre > 0) { if (statSeen.has(p.pid)) pl.pre = 0; else statSeen.add(p.pid); }                                        // la fiche d'une pièce n'apparaît QU'UNE FOIS (même pièce = pas de nouvelle fiche)
       pl.base = { gap: pl.gap };
       plan.push(pl);
     });
+    {                                                                                                 // fiches Power/Speed/Defense/Trick : DEUX au maximum par edit (les plus dramatiques), jamais deux fois la même pièce
+      const cand = plan.map((pl, i) => ({ i, pl, d: plies[i].drama })).filter((x) => x.pl.pre > 0).sort((a, b) => b.d - a.d), keep = new Set(), seen = new Set();
+      cand.forEach((c) => { if (keep.size >= 2 || seen.has(plies[c.i].pid)) return; seen.add(plies[c.i].pid); keep.add(c.i); });
+      plan.forEach((pl, i) => { if (pl.pre > 0 && !keep.has(i)) pl.pre = 0; });
+    }
     plan.forEach((pl, i) => { if (pl.phase !== "hero" && pl.phase !== "crit" && i + 1 < n && L[i + 1] >= 3 && i >= nOpen) { pl.phase = "tension"; pl.anim = 760; pl.gap = 0.55; pl.base.gap = 0.55; } });   // le calme avant le coup clé
     const dt = (q) => q.pre + q.anim / 1000 + q.freeze + q.gap, t0 = opts.intro ? opts.introDur : 0.4, fixed = () => t0 + (opts.idle || 0) + opts.outroDur;
     const total = () => fixed() + plan.reduce((a, q) => a + dt(q), 0);
@@ -311,19 +315,13 @@
       sfx.push({ t: e.impact, id, gain: e.kind === "ff" ? 0.38 : e.lvl >= 2 ? 1 : 0.8, bus: "sfx", ply: e.n });
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
     });
-    if (opts.voices) {
-      const cand = [];
-      ev.forEach((e) => {
-        let id = "", pr = 0;
-        if (e.mate) { id = "this_is_the_way"; pr = 10; }
-        else if (e.key === "brilliant") { id = VOICE[e.piece] || "this_is_the_way"; pr = e.sacrifice ? 10 : 9; }                  // coup BRILLANT : « The Queen / The Rook / The Knight / The Bishop » selon la pièce
-        else if (e.sacrifice && VOICE[e.piece] && e.key !== "blunder") { id = VOICE[e.piece]; pr = 7; }                          // pièce SACRIFIÉE : sa voix
-        else if (e.kind === "drop") { id = "this_is_the_way"; pr = 5; }
-        if (id) cand.push({ e, id, pr });
-      });
-      const cap = Math.max(4, Math.round(ev.length / 6)), chosen = [];
-      cand.sort((a, b) => b.pr - a.pr || a.e.t - b.e.t).forEach((c) => { if (chosen.length < cap && chosen.every((x) => Math.abs(x.e.impact - c.e.impact) >= 2.4)) chosen.push(c); });
-      chosen.forEach((c) => sfx.push({ t: +(c.e.impact + 0.04).toFixed(3), id: c.id, gain: c.id === "the_rook" ? 2.3 : 1, bus: "voice", ply: c.e.n }));
+    ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
+      if (e.stats && e.pre > 0) { sfx.push({ t: +e.t.toFixed(3), id: "boom", gain: 1.1, bus: "sfx", ply: e.n }); sfx.push({ t: +(e.t + e.pre - 0.3).toFixed(3), id: "whoosh", gain: 0.7, bus: "sfx", ply: e.n }); }
+    });
+    if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS (jamais sur une erreur, une gaffe, un mat…), une seule par coup
+      const chosen = [];
+      ev.filter((e) => e.key === "brilliant").forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
+      chosen.forEach((e) => { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", ply: e.n }); });
     }
     sfx.sort((a, b) => a.t - b.t);
     const all = [];
