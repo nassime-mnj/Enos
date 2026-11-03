@@ -170,6 +170,9 @@ with sync_playwright() as pw:
     check(all(abs(i - d) < 1e-6 or i - 0 > 0 for i, d in zip(v["impacts"], v["impacts"])) and all(i > 0.05 for i in v["impacts"]), "son calé sur l'impact (après le départ du coup)")
     ids = [x["id"] for x in v["voices"]]
     check(ids and set(ids) <= {"the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"} and "this_is_the_way" in ids, "voix de Levy sur les coups clés : %s" % ids)
+    byply = {x["ply"]: x["id"] for x in v["voices"]}
+    check(byply.get(31) == "the_queen" and byply.get(25) == "the_rook" and byply.get(19) == "the_knight", "la voix = la pièce SACRIFIÉE : dame (31), tour (25), cavalier (19) -> %s" % byply)
+    check(not any(x["id"] in ("the_queen", "the_rook", "the_bishop", "the_knight") and x["ply"] in (32, 26) for x in v["voices"]), "pas de voix sur les simples prises / reprises")
     check(all(v["voices"][i + 1]["t"] - v["voices"][i]["t"] >= 2.4 for i in range(len(v["voices"]) - 1)), "jamais deux voix à moins de 2,4 s")
     check(v["base"] >= v["n"], "un bruitage de base par coup (%d sons)" % v["base"])
     check(v["mfv"] == 2 and v["mfsfx"] == len(v["voices"]) + v["base"] and v["mfintro"] and v["mfev"] == v["n"] and v["mfbadge"] >= 2, "manifeste v2 : sfx, intro, badges (%d sons)" % v["mfsfx"])

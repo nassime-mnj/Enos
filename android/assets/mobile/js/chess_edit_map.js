@@ -236,12 +236,8 @@
       ev.forEach((e) => {
         let id = "", pr = 0;
         if (e.mate) { id = "this_is_the_way"; pr = 10; }
-        else if (e.kind === "drop" && e.key === "brilliant") { id = VOICE[e.piece] || "this_is_the_way"; pr = 9; }
-        else if (e.key === "brilliant") { id = VOICE[e.piece] || "this_is_the_way"; pr = 8; }
-        else if (e.promo === "q") { id = "the_queen"; pr = 8; }
-        else if (e.captured === "q") { id = "the_queen"; pr = 7; }
-        else if (e.sacrifice && e.lvl >= 2 && VOICE[e.piece]) { id = VOICE[e.piece]; pr = 6; }
-        else if (e.lvl >= 2 && (e.check || e.captured === "r" || e.captured === "b" || e.captured === "n") && VOICE[e.piece]) { id = VOICE[e.piece]; pr = 4; }
+        else if (e.sacrifice && VOICE[e.piece] && e.key !== "blunder") { id = VOICE[e.piece]; pr = e.key === "brilliant" ? 9 : 7; }     // « The Queen » = il SACRIFIE la dame ; idem tour, fou, cavalier
+        else if (e.key === "brilliant") { id = "this_is_the_way"; pr = 8; }
         else if (e.kind === "drop") { id = "this_is_the_way"; pr = 5; }
         if (id) cand.push({ e, id, pr });
       });
