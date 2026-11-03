@@ -7,6 +7,7 @@
   let ctx = null;
   const bufs = {};
 
+  S.ac = () => (ctx ??= new (window.AudioContext || window.webkitAudioContext)());        // contexte partagé (Chess Edit Studio y programme ses sons à la frame près)
   const ac = () => (ctx ??= new (window.AudioContext || window.webkitAudioContext)());
   const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
   const load = (k) => (bufs[k] ??= ac().decodeAudioData(bytes((window.ENOS_CHESS_SND || {})[k] || "")).catch(() => null));
@@ -20,6 +21,8 @@
     const src = a.createBufferSource(), f = a.createBiquadFilter(), ng = a.createGain();
     f.type = "bandpass"; f.frequency.value = 1800; ng.gain.value = 0.5; src.buffer = n; src.connect(f); f.connect(ng); ng.connect(a.destination); src.start(t);
   }
+
+  S.buffer = (kind) => load(kind);                                                      // AudioBuffer décodé d'un son embarqué (move | check | promote | mate | brilliant) ou null
 
   /** kind : move | capture | check | promote | mate | brilliant */
   S.play = async (kind) => {

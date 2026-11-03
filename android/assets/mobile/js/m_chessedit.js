@@ -14,15 +14,17 @@
     icon: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16M17 4v16M2 9h5M2 15h5M17 9h5M17 15h5"/>',
     build(el, A) {
       const $ = (s) => el.querySelector(s), esc = E.esc;
-      const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
+      const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", pace: E.settings.get("chessedit.pace", "viral"), marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
       const hist = () => E.settings.get("defi.hist", []).filter((x) => x.mv && x.mv.length >= 2);
       const mkey = () => "chessedit.marks." + (S.rec ? S.rec.t : 0);
 
       el.innerHTML = `
         <div class="card"><h3>1 · La partie</h3><select id="ce-game" class="sel"></select><p class="ce-stat" id="ce-gs" style="margin-top:8px"></p></div>
-        <div class="card"><h3>2 · La musique</h3>
+        <div class="card"><h3>2 · Rythme et musique</h3>
+          <label class="fld">Rythme du montage</label><select id="ce-pace" class="sel" style="margin-bottom:8px"><option value="viral">🔥 VIRAL · toute la partie : ouverture fluide, accéléré, ralentis + arrêts sur image</option><option value="music">♫ Calé sur la musique (ancien mode : seulement les coups clés)</option></select>
+          <div class="ce-opts" id="ce-vopts"><label><input type="checkbox" id="ce-intro" checked> Intro « VS »</label><label><input type="checkbox" id="ce-voice" checked> Voix de Levy + reverb/écho</label></div>
           <div class="row" style="margin-top:0"><button class="btn" id="ce-pick">CHOISIR UN .MP3 / .WAV</button></div>
-          <p class="ce-stat" id="ce-as" style="margin-top:8px">Aucune musique.</p>
+          <p class="ce-stat" id="ce-as" style="margin-top:8px">Aucune musique (facultative en mode viral : les bruitages et les voix suffisent).</p>
           <div class="seg" id="ce-mode" style="margin-top:10px"><button data-m="ia" class="on">MODE IA</button><button data-m="manual">MODE MANUEL</button><i class="seg-ind"></i></div></div>
         <div class="card"><h3>3 · Timeline</h3>
           <div class="ce-wave"><canvas id="ce-cv"></canvas></div>
@@ -31,7 +33,8 @@
           <label class="fld" style="margin-top:10px">Coup du DROP (par défaut : le plus dramatique)</label><select id="ce-drop" class="sel"></select>
           <p class="ce-stat" id="ce-sum" style="margin-top:8px"></p></div>
         <div class="card"><h3>4 · Rendu</h3>
-          <label class="fld">Style visuel</label><select id="ce-look" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · change selon l'action (acier, rouge noir, galaxie, aura)</option><option value="mono">Noir &amp; blanc</option><option value="noir">Rouge noir</option><option value="galaxy">Galaxie</option><option value="steel">Acier néon</option><option value="aura">Aura turquoise</option></select>
+          <label class="fld">Direction artistique</label><select id="ce-look" class="sel" style="margin-bottom:8px"><option value="auto">🎲 AUTO · varie à chaque edit (sang, brume, projecteur, néon…)</option><option value="blood">Sang · rouge et noir, braises</option><option value="fog">Brume · gris, fumée, projecteur</option><option value="spot">Projecteur · très sombre, un seul spot</option><option value="neon">Néon violet</option><option value="galaxy">Galaxie</option><option value="aura">Aura turquoise</option></select>
+          <label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
           <div class="row" style="margin-top:0"><button class="btn pri" id="ce-play">▶ APERÇU 3D (TEMPS RÉEL)</button></div>
           <div class="row"><button class="btn" id="ce-json">EXPORTER LE MANIFESTE GODOT</button><button class="btn" id="ce-pc">RENDRE SUR LE PC</button></div>
           <p class="ce-stat" id="ce-pcs" style="margin-top:8px">Rendu PC : scène Godot (Glow HDR, particules GPU, aberration chromatique), enregistrable en .mp4 60 FPS.</p></div>`;
@@ -42,8 +45,17 @@
         sel.innerHTML = h.length ? h.map((x, i) => `<option value="${i}">${esc(x.title)} · ${x.plies} coups · ${new Date(x.t).toLocaleDateString("fr-FR")}</option>`).reverse().join("") : '<option value="">Aucune partie enregistrée (joue un Défi / un Combat)</option>';
         if (h.length) setRec(S.rec && h.find((x) => x.t === S.rec.t) || h[h.length - 1]);
       }
+      async function openingOf(rec) {                                                                  // nom de l'ouverture (livre Lichess) : le plus profond reconnu dans les 16 premiers coups
+        try {
+          const K = E.brain, L = E.learnLib; if (!K || !L || !(await K.loadBook())) return "";
+          const path = (rec.mv || []).slice(0, 16).map((m) => m[1]); let name = "";
+          for (let i = 1; i <= path.length; i++) { const nm = L.nameAt(L.root, path.slice(0, i)); if (nm && nm[1]) name = nm[1]; }
+          return name.split(":")[0].trim();
+        } catch (e) { return ""; }
+      }
       function setRec(rec) {
-        S.rec = rec; S.plies = M().gamePlies(rec);
+        S.rec = rec; S.plies = M().gamePlies(rec); S.opening = "";
+        openingOf(rec).then((n) => { if (S.rec === rec && n) { S.opening = n; refresh(); } });
         const i = hist().findIndex((x) => x.t === rec.t); if (i >= 0) $("#ce-game").value = String(i);
         S.marks = E.settings.get(mkey(), []); S.dropPly = 0; S.sel = -1;
         const top = S.plies.slice().sort((a, b) => b.drama - a.drama).slice(0, 8);
@@ -82,18 +94,23 @@
       }
       function rebuild() {
         S.tl = null;
+        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio, opening: S.opening || "" }); return; }
         if (!S.rec || !S.audio) return;
         if (S.mode === "manual" && !S.marks.some((m) => m.type === "drop")) return;
         S.tl = M().build(S.plies, slots(), S.audio);
       }
       function summary() {
         const el2 = $("#ce-sum");
+        if (S.pace === "viral" && S.tl) {
+          const st = S.tl.stats, v = S.tl.sfx.filter((x) => x.bus === "voice").length;
+          return (el2.innerHTML = `<b>${S.plies.length}</b> coups, <b>aucun sauté</b> : ouverture posée (${st.open} premiers coups), <b>${st.ff}</b> en accéléré doux, <b>${S.tl.key.length}</b> moments clés en ralenti / arrêt sur image (${st.freeze} s de pauses).<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés à la frame · <b>${v}</b> voix de Levy.${S.audio ? `<br>🎵 La musique démarre <b>dès le début</b> ; le montage s'adapte : le coup n°${st.hero} tombe sur le DROP (${st.drop.toFixed(1)} s)${st.idle > 0.5 ? `, avec un plan d'ambiance de ${st.idle.toFixed(1)} s avant le 1ᵉʳ coup` : S.tl.align && S.tl.align.shrink ? ", temps morts resserrés pour y arriver" : ""}.` : ""}`);
+        }
         if (!S.audio) return (el2.textContent = "Choisis une musique pour voir la timeline.");
         if (!S.tl) return (el2.textContent = "Mode manuel : pose un marqueur rouge DROP sur la forme d'onde (touche pour ajouter, glisse pour déplacer).");
         const k = S.tl.key.length, ff = S.tl.events.length - k, ex = S.tl.events.filter((e) => e.cut).length;
         el2.innerHTML = `<b>${k}</b> coups clés calés sur la musique, <b>${ff}</b> coups passifs en accéléré ×8, ${S.plies.length - k - ff} sautés · ${ex} cutscene${ex > 1 ? "s" : ""}.<br>Drop : ${S.tl.key.filter((e) => e.kind === "drop").map((e) => `coup ${e.n} (${esc(e.san)}) à ${fmtT(e.t)}`).join("") || "—"}`;
       }
-      function refresh() { audioStat(); rebuild(); summary(); drawWave(); $("#ce-ai2m").hidden = S.mode !== "ia"; $("#ce-del").hidden = S.mode !== "manual"; $("#ce-leg").hidden = S.mode !== "manual"; el.querySelectorAll("#ce-leg button").forEach((b) => b.classList.toggle("on", b.dataset.t === S.type)); }
+      function refresh() { audioStat(); rebuild(); summary(); drawWave(); $("#ce-mode").hidden = S.pace === "viral"; $("#ce-vopts").hidden = S.pace !== "viral"; $("#ce-ai2m").hidden = true; $("#ce-del").hidden = true; $("#ce-leg").hidden = true; if (S.pace !== "viral") { $("#ce-ai2m").hidden = S.mode !== "ia"; $("#ce-del").hidden = S.mode !== "manual"; $("#ce-leg").hidden = S.mode !== "manual"; el.querySelectorAll("#ce-leg button").forEach((b) => b.classList.toggle("on", b.dataset.t === S.type)); } }
 
       const cv = $("#ce-cv");
       function drawWave(head) {
@@ -137,12 +154,13 @@
 
       // ------------------------------------------------------------ aperçu temps réel
       function preview() {
+        if (S.tl && S.tl.viral) return previewViral();
         if (!S.tl) return A.toast(S.audio ? "Mode manuel : pose d'abord un marqueur DROP." : "Choisis une musique.", "warn");
         const app = document.getElementById("app") || document.body, host = document.createElement("div"), au = new Audio(S.url), evs = S.tl.events, dur = S.audio.duration;
         app.appendChild(host);
         let idx = 0, raf = 0, alive = true, ffT = 0;
-        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.kind === "ff" ? "steel" : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" ? "noir" : e.key === "brilliant" ? "aura" : e.t >= (S.audio.mainDropTimestamp || 1e9) ? "galaxy" : "steel");
-        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "steel" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
+        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = (e) => (e.mate || e.key === "blunder" ? "blood" : e.key === "brilliant" && ["neon", "galaxy"].includes(dirId) ? "aura" : E.editFx.DIRECTIONS[dirId].look);
+        const stage = new E.editFx.Stage(host, { look: E.editFx.DIRECTIONS[dirId].look, direction: dirId, quality: $("#ce-qual").value, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
         function fire(e) {
           const power = e.kind === "drop" ? 1 : Math.max(0.3, Math.min(1, (e.drama || 0) / 80));
           if (e.kind === "ff") {
@@ -167,14 +185,109 @@
         stage.setPlaying(true);
         au.play().then(() => { raf = requestAnimationFrame(tick); }).catch(() => { A.toast("Lecture audio refusée.", "err"); stop(); });
       }
+      // ------------------------------------------------------------ aperçu « viral » : horloge = horloge audio (sons programmés à la frame près)
+      async function previewViral() {
+        const tl = S.tl, evs = tl.events, dur = tl.duration, app = document.getElementById("app") || document.body, host = document.createElement("div");
+        app.appendChild(host);
+        const sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null;
+        let alive = true, raf = 0, idx = 0, paused = false, ffOn = false, T0 = 0;
+        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = (e) => (e.mate || e.key === "blunder" ? "blood" : e.key === "brilliant" && ["neon", "galaxy"].includes(dirId) ? "aura" : E.editFx.DIRECTIONS[dirId].look);
+        const stage = new E.editFx.Stage(host, { look: E.editFx.DIRECTIONS[dirId].look, direction: dirId, quality: $("#ce-qual").value, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
+        stage.later(() => {}, 0);
+        function toggle() {
+          paused = !paused; stage.setPlaying(!paused);
+          if (paused) { sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au && au.currentTime > 0) au.play(); }
+        }
+        const duck = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.4; }, ms); setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 250); };
+        sfx.onVoice = duck;
+        function fire(e) {
+          if (e.kind === "intro") { stage.intro(e.intro, e.dur); return; }
+          if (e.kind === "idle") { stage.idle(e.dur); return; }
+          if (e.kind === "title") { stage.openingTitle(e.text, e.dur); return; }
+          if (e.kind === "outro") {
+            stage.ff(false); stage.outro(e, e.dur);
+            if (au) { const v0 = au.volume, t0 = performance.now(); const fade = () => { if (!alive) return; const k = Math.min(1, (performance.now() - t0) / (e.dur * 1000)); au.volume = Math.max(0, v0 * (1 - k)); if (k < 1) requestAnimationFrame(fade); }; fade(); }      // la musique s'éteint avec le résultat
+            return;
+          }
+          if (e.kind === "ff") {
+            if (e.ffRun && !ffOn) { ffOn = true; stage.ff(true); }
+            stage.move(e, true); if (e.ev != null) stage.setEval(e.ev); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
+            return;
+          }
+          if (ffOn) { ffOn = false; stage.ff(false); }
+          stage.setLook(lookFor(e));
+          const startMove = () => {
+            const slow = e.dur > 600, p = stage.xy(e.to), q = stage.xy(e.from), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80)), cm = stage.dir.cam;
+            const rr = (a, b2) => a + Math.random() * (b2 - a), sg = Math.random() < 0.5 ? -1 : 1;
+            if (slow) stage.slowmo(true);
+            stage.move({ ...e, dur: e.dur });
+            stage.focusSpot(e.to);
+            if (e.lvl >= 2) {                                                                          // caméra : 4 mouvements possibles (jamais d'étirement : inclinaison douce, zoom limité)
+              const style = ["track", "orbit", "crane", "pushpull"][Math.floor(Math.random() * 4)], d = Math.round(e.dur * 0.9);
+              if (style === "track") stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll * 0.6, s: cm.s[0] }, d, p.c, p.r);
+              else if (style === "orbit") { stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: -sg * cm.roll, s: cm.s[0] }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll, s: cm.s[0] + 0.1 }, d, p.c, p.r), 40); }
+              else if (style === "crane") { stage.camTo({ rx: cm.rx[0] * 0.5, rz: 0, s: cm.s[0] }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: cm.rx[1], rz: sg * cm.roll * 0.5, s: cm.s[0] + 0.12 }, d, p.c, p.r), 40); }
+              else { stage.camTo({ rx: cm.rx[0], rz: 0, s: 0.88 }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll * 0.4, s: cm.s[1] }, d, p.c, p.r), 40); }
+              if (stage.dir.bars && (e.lvl >= 3 || e.kind === "drop")) stage.bars(true);
+            } else stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: rr(-cm.roll, cm.roll) * 0.5, s: cm.s[0] }, 900);
+            const wait = Math.max(0, (e.impact - e.t - (e.pre || 0)) * 1000);
+            stage.later(() => {
+              if (slow) stage.slowmo(false);
+              if (e.lvl >= 2) stage.hit(e, power); else stage.soft(e);
+              if (e.ev != null) stage.setEval(e.ev);
+              if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
+              if (e.threats && e.threats.length && e.lvl >= 2) stage.later(() => stage.threats(e.threats, Math.round((e.freeze || 1) * 1000) + 500), 350);        // menaces : flèches orange + ⚠ sur les pièces visées
+              if (e.invert) stage.brilliantFx(e);
+              if (e.captured && e.lvl >= 2) stage.shockwave(0.6);
+              if (e.key === "blunder" || e.mate) { stage.cracks(e.to); stage.glitch(e.mate ? 520 : 340); if (e.mate) stage.shockwave(1); }
+              if (e.freeze) stage.freeze(e.freeze, e);
+              if (e.lvl >= 3 || e.kind === "drop") stage.later(() => stage.bars(false), Math.round((e.freeze || 1) * 1000) + 600);
+              if (e.cut) stage.later(() => stage.cutscene(e.cut, e.tone), 120);
+              if (e.mate) stage.later(() => stage.dissolveKing(e.color === "w" ? "b" : "w"), 900);                         // le roi maté part en cendres
+              (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
+            }, wait);
+          };
+          if (e.pre > 0 && e.stats) { stage.statCard(e.stats, e.pre * 1000); stage.later(startMove, e.pre * 1000); }                // la pièce maîtresse présente ses stats AVANT le coup
+          else startMove();
+        }
+        function tick() {
+          if (!alive) return;
+          if (!paused) {
+            const vt = sfx.ctx.currentTime - T0;
+            sfx.pump(vt);
+            while (idx < evs.length && evs[idx].t <= vt) fire(evs[idx++]);
+            stage.setProgress(vt / dur);
+            if (vt > dur + 0.5) return stop();
+          }
+          raf = requestAnimationFrame(tick);
+        }
+        function stop() { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); sfx.close(); stage.destroy(); host.remove(); S.stage = null; }
+        S.stage = { stop };
+        try {
+          await sfx.ctx.resume(); await sfx.load();
+        } catch (e) { A.toast("Audio indisponible : " + e.message, "err"); }
+        if (!alive) return;
+        if (tl.sfx.some((x) => x.bus === "voice") && sfx.voicesOk < 5) A.toast("Voix de Levy : " + sfx.voicesOk + "/5 chargées (" + (sfx.err || "") + ")", "warn");
+        stage.setPlaying(true);
+        const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
+        if (au) {                                                                                  // musique : sa position à t=0 est tl.musicStart (négatif = elle démarre plus tard)
+          au.volume = 0.85; const ms = tl.musicStart || 0;
+          if (ms >= 0) { au.currentTime = ms; setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }
+          else setTimeout(() => { if (alive) { au.currentTime = 0; au.play().catch(() => {}); } }, (LEAD - ms) * 1000);
+        }
+        raf = requestAnimationFrame(tick);
+      }
       $("#ce-play").onclick = preview;
+      $("#ce-pace").value = S.pace; $("#ce-pace").onchange = (e) => { S.pace = e.target.value; E.settings.set("chessedit.pace", S.pace); refresh(); };
+      $("#ce-voice").onchange = $("#ce-intro").onchange = () => refresh();
+      window.__cePrevViral = previewViral;
 
       // ------------------------------------------------------------ pont PC (Godot)
       function manifest() { return M().manifest(S.rec, S.tl, S.audio, { audioName: S.file ? S.file.name : "", audioPath: S.file ? S.file.name : "" }); }
       $("#ce-json").onclick = async () => {
         if (!S.tl) return A.toast("Rien à exporter : choisis une musique (et un DROP en manuel).", "warn");
         await A.save("edit_timeline_manifest.json", "application/json", new TextEncoder().encode(JSON.stringify(manifest(), null, 1)), "downloads");
-        A.toast("Copie aussi la musique « " + S.file.name + " » dans le même dossier que le manifeste.", "ok");
+        A.toast(S.file ? "Copie aussi la musique « " + S.file.name + " » dans le même dossier que le manifeste." : "Manifeste exporté (sans musique : voix et bruitages seulement).", "ok");
       };
       $("#ce-pc").onclick = async () => {
         if (!S.tl) return A.toast("Rien à rendre : choisis une musique (et un DROP en manuel).", "warn");
@@ -182,8 +295,8 @@
         const st = $("#ce-pcs");
         st.textContent = "Envoi au PC…";
         try {
-          const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(S.file); });
-          const r = await E.link.api("/api/chessedit/lancer", { method: "POST", body: { manifest: manifest(), audio_b64: b64, audio_name: S.file.name, render: false } });
+          const b64 = S.file ? await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(S.file); }) : "";
+          const r = await E.link.api("/api/chessedit/lancer", { method: "POST", body: { manifest: manifest(), audio_b64: b64, audio_name: S.file ? S.file.name : "", render: false } });
           const j = r.json ? r.json() : r;
           if (r.status && r.status >= 400) throw new Error((j && j.detail) || "refusé (" + r.status + ")");
           st.textContent = "Scène Godot lancée sur le PC (" + ((j && j.dossier) || "") + ").";

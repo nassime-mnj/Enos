@@ -51,6 +51,8 @@
       pulse("fx-flash", 900);
     } else if (kind === "great") { ring(0); ring(160); }
     else if (kind === "capture") ring(0);
+    else if (kind === "tap") { ring(0); ring(110); }                                         // clic sur une case : onde + éclat
+    else if (kind === "land") { ring(0); ring(120); ring(240); }                             // arrivée d'un coup
     else if (kind === "blunder") { ring(0); pulse("fx-shake", 450); }
     else if (kind === "mate") { ring(0); ring(220); ring(440); pulse("fx-mate", 1400); }
     setTimeout(() => c.remove(), 1500);
@@ -132,6 +134,7 @@
       el.addEventListener("click", (e) => {
         if (!el._cb.onTap) return;
         const r = el.getBoundingClientRect(), x = Math.min(7, Math.max(0, Math.floor((e.clientX - r.left) / r.width * 8))), y = Math.min(7, Math.max(0, Math.floor((e.clientY - r.top) / r.height * 8)));
+        B.burst(el, el._cb.flip ? "abcdefgh"[7 - x] + (y + 1) : "abcdefgh"[x] + (8 - y), "tap");
         el._cb.onTap(el._cb.flip ? "abcdefgh"[7 - x] + (y + 1) : "abcdefgh"[x] + (8 - y));
       });
     }
@@ -167,6 +170,7 @@
         const gone = nodes.get(to) || (n.dataset.p.toLowerCase() === "p" && from[0] !== to[0] ? nodes.get(to[0] + from[1]) : null);
         if (gone) { const gs = [...nodes].find(([, v]) => v === gone)[0]; nodes.delete(gs); gone.classList.add("cap-out"); setTimeout(() => gone.remove(), 260); B.burst(el, to, "capture"); }
         nodes.delete(from); nodes.set(to, n); n.classList.remove("nt"); n.style.zIndex = 5; place(n, to, flip);
+        B.burst(el, to, "land");
         setTimeout(() => { n.style.zIndex = ""; }, 260);
         if (n.dataset.p.toLowerCase() === "k" && Math.abs(from.charCodeAt(0) - to.charCodeAt(0)) === 2) {     // roque : la tour glisse aussi
           const rk = from[1], king = to[0] === "g", rf = (king ? "h" : "a") + rk, rt = (king ? "f" : "d") + rk, rn = nodes.get(rf);
@@ -180,6 +184,7 @@
       else if (want !== n.dataset.p) { n.dataset.p = want; n.src = PIECE_URL(want); }       // promotion
     }
     for (const sq of Object.keys(map)) if (!nodes.has(sq)) mk(sq, map[sq], true);
+    for (const [sq, n] of nodes) n.classList.toggle("lift", !!opts.sel && opts.sel === sq);                // pièce sélectionnée : elle se soulève
 
     paintArrows(st, opts.arrows, flip);
 

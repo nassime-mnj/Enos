@@ -46,6 +46,10 @@ jobs:
             echo "ENOS_KEYSTORE_PASS=$KS_PASS" >> "$GITHUB_ENV"
             echo "mode=release" >> "$GITHUB_OUTPUT"; echo "tag=mobile-latest" >> "$GITHUB_OUTPUT"
           else
+            # TEST : clé FIXE (publique, valable pour le seul identifiant com.nasko.app.test) -> chaque APK test se met à jour PAR-DESSUS la précédente (sinon Android refuse : « signature différente »)
+            base64 -d android/test_signing/enos-test.jks.b64 > "$RUNNER_TEMP/enos-test.jks"
+            echo "ENOS_KEYSTORE=$RUNNER_TEMP/enos-test.jks" >> "$GITHUB_ENV"
+            echo "ENOS_KEYSTORE_PASS=enos-test-key" >> "$GITHUB_ENV"
             echo "mode=test" >> "$GITHUB_OUTPUT"; echo "tag=mobile-test" >> "$GITHUB_OUTPUT"
           fi
       - name: Construire l'APK

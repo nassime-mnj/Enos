@@ -15,7 +15,20 @@
     noir: { name: "Rouge noir", l: "#b3121c", d: "#2c070b", hi: "#ff2438", dust: "#ff9aa4", vig: "#1c0000" },
     galaxy: { name: "Galaxie", l: "rgba(238,230,255,.93)", d: "rgba(104,56,176,.62)", hi: "#2fe8cc", dust: "#fff", vig: "#05040c" },
     steel: { name: "Acier neon", l: "#a8a8a8", d: "#6a6a6a", hi: "#ff3b52", dust: "#fff", vig: "#161616" },
+    blood: { name: "Sang", l: "#8f1217", d: "#1b0406", hi: "#ff2a2a", dust: "#ff8a6a", vig: "#2a0000" },
+    fog: { name: "Brume", l: "#8d9097", d: "#26282c", hi: "#ffffff", dust: "#d5d9df", vig: "#040405" },
+    spot: { name: "Projecteur", l: "#b8b8bd", d: "#222226", hi: "#ffd9a0", dust: "#fff2d8", vig: "#000000" },
+    neon: { name: "Néon violet", l: "#f1e6ff", d: "#6b2fd1", hi: "#ff5cf0", dust: "#d9a8ff", vig: "#0a0216" },
     aura: { name: "Aura turquoise", l: "#14605a", d: "#082624", hi: "#34f5d8", dust: "#aefcf2", vig: "#010d0c" },
+  };
+  // DIRECTIONS ARTISTIQUES : chaque edit en reçoit une (au hasard ou au choix) -> ambiance, brouillard, projecteur, grain, braises, comportement de la caméra et intro différents
+  const DIRECTIONS = {
+    blood: { name: "Sang", look: "blood", fog: 0.25, fogColor: "#7a0000", spot: 0.35, grain: 0.22, embers: true, cam: { rx: [14, 24], roll: 7, sway: 2.4, s: [1.05, 1.4] }, intro: "slash", bars: true },
+    fog: { name: "Brume", look: "fog", fog: 0.6, fogColor: "#a3a8b0", spot: 0.55, grain: 0.3, embers: false, cam: { rx: [10, 20], roll: 4, sway: 1.8, s: [1.0, 1.3] }, intro: "spot", bars: false },
+    spot: { name: "Projecteur", look: "spot", fog: 0.3, fogColor: "#6a6a70", spot: 0.9, grain: 0.2, embers: false, cam: { rx: [12, 22], roll: 5, sway: 1.4, s: [1.1, 1.5] }, intro: "spot", bars: true },
+    neon: { name: "Néon violet", look: "neon", fog: 0.12, fogColor: "#5b1fb5", spot: 0.2, grain: 0.12, embers: false, cam: { rx: [14, 26], roll: 8, sway: 3, s: [1.05, 1.45] }, intro: "versus", bars: false },
+    galaxy: { name: "Galaxie", look: "galaxy", fog: 0.15, fogColor: "#3a2a7a", spot: 0.1, grain: 0.1, embers: false, cam: { rx: [16, 28], roll: 9, sway: 3.4, s: [1.0, 1.4] }, intro: "versus", bars: false },
+    aura: { name: "Aura", look: "aura", fog: 0.2, fogColor: "#0a5a50", spot: 0.3, grain: 0.14, embers: false, cam: { rx: [12, 22], roll: 6, sway: 2.4, s: [1.05, 1.4] }, intro: "spot", bars: true },
   };
   const esc2 = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -24,25 +37,29 @@
     /** host : élément plein écran (dans #app). opts : {flip, title, onClose, onToggle}. */
     constructor(host, opts) {
       this.o = opts || {}; this.host = host; this.flip = !!this.o.flip; this.timers = []; this.alive = true;
-      this.shake = 0; this.chroma = 0; this.warp = 0; this.burst = []; this.t0 = performance.now(); this.pieces = {}; this.ghosts = 0; this.rz = 0;
-      host.classList.add("ce-stage");
+      this.shake = 0; this.chroma = 0; this.warp = 0; this.ts = 1; this.smoke = []; this.mb = { x: 0, y: 0, k: 0, t0: 0, ms: 1 }; this.outl = {}; this.burst = []; this.t0 = performance.now(); this.pieces = {}; this.ghosts = 0; this.rz = 0;
+      host.classList.add("ce-stage", "ce-hdr");
       host.innerHTML = `<canvas class="ce-bg"></canvas>
         <svg width="0" height="0" style="position:absolute"><filter id="ce-ab" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
           <feColorMatrix in="SourceGraphic" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/><feOffset in="r" dx="0" dy="0" result="ro" class="ce-abr"/>
           <feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
           <feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/><feOffset in="b" dx="0" dy="0" result="bo" class="ce-abb"/>
-          <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/></filter></svg>
+          <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/></filter>
+          <filter id="ce-mb" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur class="ce-mbg" stdDeviation="0 0"/></filter>
+          <filter id="ce-pm" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur class="ce-pmg" stdDeviation="0 0"/></filter>
+          <filter id="ce-sh" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.010 0.014" numOctaves="1" seed="3" result="n"/><feDisplacementMap class="ce-shd" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
         <div class="ce-fxwrap"><div class="ce-shake"><div class="ce-persp"><div class="ce-drift"><div class="ce-cam"><div class="ce-board"></div><div class="ce-pcs"></div><div class="ce-fxl"></div></div></div></div></div></div>
         <canvas class="ce-fg"></canvas><div class="ce-dof"></div><div class="ce-vig"></div><div class="ce-flash"></div><div class="ce-ff" hidden>▶▶ ×8</div>
-        <div class="ce-cut" hidden></div><div class="ce-cap" hidden></div>
+        <div class="ce-cut" hidden></div><div class="ce-cap" hidden></div><div class="ce-fog"><i></i><i></i><i></i></div><div class="ce-spot"></div><div class="ce-light"></div><div class="ce-grain"></div><div class="ce-bars"><i></i><i></i></div><div class="ce-label" hidden></div><div class="ce-eval" hidden><i class="ce-ef"></i><b class="ce-en">0.0</b></div><div class="ce-open" hidden></div><div class="ce-stat" hidden></div><div class="ce-intro" hidden></div><div class="ce-result" hidden></div>
         <div class="ce-hud"><button class="ce-x" aria-label="Fermer">✕</button><span class="ce-title"></span><button class="ce-pp" aria-label="Lecture / pause">⏸</button></div><div class="ce-prog"><i></i></div>`;
       const q = (s) => host.querySelector(s);
-      this.bg = q(".ce-bg"); this.fg = q(".ce-fg"); this.wrap = q(".ce-fxwrap"); this.shk = q(".ce-shake"); this.drift = q(".ce-drift"); this.cam = q(".ce-cam"); this.board = q(".ce-board"); this.pcs = q(".ce-pcs"); this.fxl = q(".ce-fxl");
-      this.flash = q(".ce-flash"); this.cut = q(".ce-cut"); this.cap = q(".ce-cap"); this.ffEl = q(".ce-ff"); this.prog = q(".ce-prog i"); this.dofEl = q(".ce-dof"); this.abr = q(".ce-abr"); this.abb = q(".ce-abb");
+      this.bg = q(".ce-bg"); this.fg = q(".ce-fg"); this.wrap = q(".ce-fxwrap"); this.shk = q(".ce-shake"); this.drift = q(".ce-drift"); this.persp = q(".ce-persp"); this.cam = q(".ce-cam"); this.board = q(".ce-board"); this.pcs = q(".ce-pcs"); this.fxl = q(".ce-fxl");
+      this.flash = q(".ce-flash"); this.cut = q(".ce-cut"); this.cap = q(".ce-cap"); this.ffEl = q(".ce-ff"); this.label = q(".ce-label"); this.evalEl = q(".ce-eval"); this.evF = q(".ce-ef"); this.evN = q(".ce-en"); this.openEl = q(".ce-open"); this.statEl = q(".ce-stat"); this.introEl = q(".ce-intro"); this.resEl = q(".ce-result"); this.prog = q(".ce-prog i"); this.dofEl = q(".ce-dof"); this.abr = q(".ce-abr"); this.abb = q(".ce-abb"); this.mbg = q(".ce-mbg"); this.pmg = q(".ce-pmg"); this.shd = q(".ce-shd"); this.fogEl = q(".ce-fog"); this.spotEl = q(".ce-spot"); this.lightEl = q(".ce-light"); this.barsEl = q(".ce-bars");
       q(".ce-title").textContent = this.o.title || ""; q(".ce-x").onclick = () => this.o.onClose && this.o.onClose(); q(".ce-pp").onclick = () => this.o.onToggle && this.o.onToggle();
       this.ppBtn = q(".ce-pp");
-      this.resize(); this.buildBoard(); this.setLook(this.o.look || "mono"); this.initParticles(); this.setFen(START);
-      this.camTo({ rx: 28, rz: 0, s: 0.92 }, 0);
+      this.setQuality(this.o.quality || "auto"); this.pm = null; this.shk2 = 0; this.frames = []; this.fps = 60;
+      this.resize(); this.buildBoard(); this.setLook(this.o.look || "mono"); this.initParticles(); this.setFen(START); this.setDirection(this.o.direction || "neon");
+      this.camTo({ rx: 22, rz: 0, s: 0.95 }, 0);
       this.raf = requestAnimationFrame((t) => this.loop(t)); this.last = performance.now();
       this._rs = () => this.resize(); window.addEventListener("resize", this._rs);
     }
@@ -56,6 +73,28 @@
       [this.bg, this.fg].forEach((c) => { c.width = Math.round(W * d); c.height = Math.round(H * d); c.style.width = W + "px"; c.style.height = H + "px"; c.getContext("2d").setTransform(d, 0, 0, d, 0, 0); });
       Object.values(this.pieces).forEach((el) => this.place(el, el._sq));
     }
+    /** qualité des effets : "auto" (démarre en normal sur téléphone, max sur PC, et BAISSE toute seule si l'image saccade), "light", "normal", "max" */
+    setQuality(q) {
+      this.qAuto = q === "auto"; const touch = (navigator.maxTouchPoints || 0) > 0 && Math.min(screen.width, screen.height) < 700;
+      this.ql = q === "light" ? 0 : q === "normal" ? 1 : q === "max" ? 2 : touch ? 1 : 2; this.applyQuality();
+    }
+    applyQuality() {
+      const l = this.ql, h = this.host; ["ce-q0", "ce-q1", "ce-q2"].forEach((c) => h.classList.toggle(c, c === "ce-q" + l));
+      this.fx = { chroma: l >= 1, mblur: l >= 1, pblur: l >= 1, shock: l >= 2, fog: l >= 1, grain: l >= 1, glow: l >= 1, part: [0.3, 0.7, 1][l], smoke: [0.35, 0.7, 1][l] };
+      if (this.dustB) this.initParticles();
+    }
+    /** direction artistique : ambiance, brouillard, projecteur, grain, braises, personnalité de la caméra */
+    setDirection(id) {
+      const D = DIRECTIONS[id] || DIRECTIONS.neon; this.dir = D; this.dirId = DIRECTIONS[id] ? id : "neon";
+      this.setLook(D.look); const h = this.host; Object.keys(DIRECTIONS).forEach((k) => h.classList.toggle("ce-dir-" + k, k === this.dirId));
+      this.fogEl.style.setProperty("--fa", D.fog); this.fogEl.style.setProperty("--fc", D.fogColor); this.spotEl.style.setProperty("--sa", D.spot); this.host.style.setProperty("--ga", D.grain);
+      this.spotAt(0.5, 0.5);
+    }
+    /** projecteur : zone éclairée centrée en (fx, fy) en fraction de l'écran */
+    focusSpot(sq) { const r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(); this.spotAt((q.left - r.left + q.width / 2) / r.width, (q.top - r.top + q.height / 2) / r.height); }
+    spotAt(fx, fy) { this.spotEl.style.setProperty("--sx", (fx * 100).toFixed(1) + "%"); this.spotEl.style.setProperty("--sy", (fy * 100).toFixed(1) + "%"); }
+    /** bandes de cinéma qui entrent / sortent */
+    bars(on) { this.barsEl.classList.toggle("on", !!on && !!(this.dir && this.dir.bars)); }
     xy(sq) { let c = sq.charCodeAt(0) - 97, r = 8 - +sq[1]; if (this.flip) { c = 7 - c; r = 7 - r; } return { x: c * this.cell, y: r * this.cell, c, r }; }
     buildBoard() {
       this.board.innerHTML = ""; this.sq = {}; this.sqList = [];
@@ -78,11 +117,11 @@
     move(ev, fast) {
       const pre = this.pieces[ev.from];
       if (!pre) { this.setFen(ev.fen); return; }
-      const dur = fast ? 70 : 300, tone = TONE[ev.tone] || TONE.green, a = this.xy(ev.from), b = this.xy(ev.to);
+      const dur = ev.dur || (fast ? 70 : 300), slow = dur > 600, tone = TONE[ev.tone] || TONE.green, a = this.xy(ev.from), b = this.xy(ev.to);
       const cap = this.pieces[ev.to];
-      if (cap) { cap.style.transition = "opacity .25s, transform .25s"; cap.style.opacity = "0"; cap.style.transform += " scale(1.6)"; const c2 = cap; this.later(() => c2.remove(), 260); delete this.pieces[ev.to]; }
+      if (cap) { if (fast) { cap.style.transition = "opacity .2s"; cap.style.opacity = "0"; const c2 = cap; this.later(() => c2.remove(), 220); } else this.dissolve(cap, ev.to, dur > 800); delete this.pieces[ev.to]; }
       delete this.pieces[ev.from]; this.pieces[ev.to] = pre; pre._sq = ev.to;
-      pre.style.transition = `transform ${dur}ms cubic-bezier(.2,.9,.2,1)`; pre.style.zIndex = 3; this.later(() => { pre.style.zIndex = ""; }, dur + 50);
+      pre.style.transition = `transform ${dur}ms ${slow ? "cubic-bezier(.35,.05,.2,1)" : "cubic-bezier(.2,.9,.2,1)"}`; pre.style.zIndex = 3; this.later(() => { pre.style.zIndex = ""; }, dur + 50);
       pre.style.transform = `translate(${b.x}px,${b.y}px)`;
       if (ev.piece === "k" && Math.abs(a.c - b.c) === 2) {                                           // roque : la tour suit
         const row = ev.from[1], short = ev.to[0] > ev.from[0], rf = (short ? "h" : "a") + row, rt = (short ? "f" : "d") + row, rk = this.pieces[rf];
@@ -90,22 +129,34 @@
       }
       this.later(() => { const target = fenMap(ev.fen); Object.keys(this.pieces).forEach((s) => { if (target[s] !== this.pieces[s]._p) { if (s === ev.to && target[s]) { this.pieces[s]._p = target[s]; this.pieces[s].src = pieceUrl(target[s]); } else { this.pieces[s].remove(); delete this.pieces[s]; } } });
         Object.keys(target).forEach((s) => { if (!this.pieces[s]) this.mkPiece(target[s], s); }); }, dur + 20);
-      if (!fast) {                                                                                   // traînée lumineuse : silhouettes fantômes le long du trajet
-        for (let i = 1; i <= 5; i++) {
-          const g = document.createElement("img"), f = i / 6; g.src = pre.src; g.className = "ce-ghost"; g.style.cssText = `width:${this.cell}px;height:${this.cell}px;left:${a.x + (b.x - a.x) * f}px;top:${a.y + (b.y - a.y) * f}px;filter:brightness(0) invert(1) drop-shadow(0 0 7px ${tone}) drop-shadow(0 0 16px ${tone});animation-delay:${i * 35}ms`;
-          this.fxl.appendChild(g); this.later(() => g.remove(), 700);
-        }
+      if (!fast) { this.highlight(ev); }
+      if (!fast && this.fx && this.fx.pblur) {                                                           // FLOU DE DÉPLACEMENT : la pièce est floutée dans le sens du mouvement (plus d'images rémanentes)
+        const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1;
+        this.pm = { el: pre, ux: Math.abs(dx) / dist, uy: Math.abs(dy) / dist, amp: Math.min(0.55 * this.cell, (dist / Math.max(0.25, dur / 1000)) * 0.034), t0: performance.now(), ms: dur };
+        pre.style.filter = "url(#ce-pm)";
       }
+    }
+    /** cases de départ et d'arrivée allumées (orange ; cyan pour un coup brillant ; rouge pour une gaffe) */
+    highlight(ev) {
+      (this.hl || []).forEach((e) => e.remove()); this.hl = [];
+      const col = ev.key === "brilliant" ? "0,242,254" : ev.key === "blunder" ? "255,42,68" : "255,150,40";
+      [ev.from, ev.to].forEach((sq, i) => {
+        const p = this.xy(sq), d = document.createElement("div"); d.className = "ce-hl";
+        d.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;background:rgba(${col},${i ? 0.5 : 0.3});box-shadow:0 0 ${this.cell * 0.5}px rgba(${col},.8)`;
+        this.fxl.prepend(d); this.hl.push(d);
+      });
     }
     // ---------------------------------------------------------------- caméra
     camTo(c, ms, col, row) {
-      const s = c.s, rx = c.rx, rz = c.rz; this.rz = rz;
+      const s = c.s, rx = c.rx, rz = c.rz; this.rz = rz; this.camNow = { rx, rz, s };
       let tx = 0, ty = 0;
       if (col != null) {
         let dx = (col - 3.5) * this.cell, dy = (row - 3.5) * this.cell; const a = (rz * Math.PI) / 180;
         const x2 = dx * Math.cos(a) - dy * Math.sin(a), y2 = dx * Math.sin(a) + dy * Math.cos(a);
         tx = -x2 * s * 0.75; ty = -y2 * s * Math.cos((rx * Math.PI) / 180) * 0.75;
       }
+      if (ms > 120 && this.prevCam) { const dx = tx - this.prevCam.tx, dy = ty - this.prevCam.ty, mag = Math.hypot(dx, dy) + Math.abs(s - this.prevCam.s) * this.cell * 2.2; this.mb = { x: dx / (Math.hypot(dx, dy) || 1), y: dy / (Math.hypot(dx, dy) || 1), k: Math.min(7, mag / 55), t0: performance.now(), ms: Math.min(ms, 900) }; }
+      this.prevCam = { tx, ty, s };
       this.cam.style.transition = ms ? `transform ${ms}ms cubic-bezier(0.16,1,0.3,1)` : "none";
       this.cam.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(${s})`;
     }
@@ -113,9 +164,11 @@
     /** ev : événement ; power 0..1 (force de l'impact) */
     hit(ev, power) {
       const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.kind === "drop";
-      const macro = ev.shot === "macro", s = macro ? rnd(3.1, 3.9) : 1.3 + power * 0.7 + (ev.kind === "drop" ? 0.25 : 0), rx = macro ? rnd(50, 62) : rnd(38, 54) + power * 4, rz = macro ? rnd(-16, 16) : rnd(-8, 8);
-      this.camTo({ rx, rz, s }, ev.kind === "drop" ? 1100 : 850, p.c, p.r);
-      this.warp = Math.max(this.warp, 0.5 + power * 0.8);
+      const cm = (this.dir && this.dir.cam) || { rx: [14, 24], roll: 6, s: [1.05, 1.4] }, macro = ev.shot === "macro";
+      const s = (macro ? cm.s[1] * 1.12 : cm.s[0] + (cm.s[1] - cm.s[0]) * power), rx = rnd(cm.rx[0], cm.rx[1]), rz = rnd(-cm.roll, cm.roll) * (macro ? 1.4 : 1);       // JAMAIS d'étirement : inclinaison ≤ ~28°, zoom ≤ ~1,6 ; on préfère les dé-zooms
+      this.camTo({ rx, rz, s }, Math.max(ev.kind === "drop" ? 1600 : 1300, (ev.freeze || 0) * 700), p.c, p.r);
+      this.punch(power);
+      this.warp = Math.max(this.warp, 0.12 + power * 0.22);
       if (macro) this.dof(1400);
       if (ev.shot === "hero") this.later(() => this.hero(ev), 360);
       if (ev.text) this.later(() => this.neon(ev.text, ev.tone, ev.to), 480);
@@ -221,13 +274,179 @@
       };
       tick();
     }
+    /** barre d'évaluation verticale à gauche (comme Stockfish / Chess.com) : cp du point de vue des Blancs, animée */
+    setEval(cp) {
+      if (cp == null) return; this.evalEl.hidden = false;
+      const mate = Math.abs(cp) >= 9000, v = Math.max(-99, Math.min(99, cp / 100)), pct = E.board && E.board.winPct ? E.board.winPct(cp) : 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * Math.max(-2000, Math.min(2000, cp)))) - 1);
+      this.evF.style.height = pct + "%"; this.evN.textContent = mate ? "M" : (v > 0 ? "+" : "") + v.toFixed(1); this.evN.style.top = Math.max(2, Math.min(94, 100 - pct - 3)) + "%";
+    }
+    /** nom de l'ouverture, en gros caractères bruns/dorés au bas de l'écran */
+    openingTitle(text, sec) {
+      const el = this.openEl; el.hidden = false; el.textContent = String(text).toUpperCase(); el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
+      clearTimeout(this._opT); this._opT = setTimeout(() => { if (this.alive) { el.classList.add("out"); this._opT = setTimeout(() => { el.hidden = true; el.classList.remove("out"); }, 900); } }, (sec || 4.5) * 1000);
+    }
+    /** flèches de menace orange (courbes) de la pièce vers les pièces qu'elle menace + panneaux ⚠ sur les cibles */
+    threats(list, ms) {
+      if (!list || !list.length) return;
+      const S = this.S, c = this.cell, ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg"), els = [svg];
+      svg.setAttribute("class", "ce-thr"); svg.setAttribute("viewBox", `0 0 ${S} ${S}`); svg.style.cssText = `width:${S}px;height:${S}px`;
+      list.forEach((t, i) => {
+        const a = this.xy(t.from), b = this.xy(t.to), x1 = a.x + c / 2, y1 = a.y + c / 2, x2 = b.x + c / 2, y2 = b.y + c / 2, mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+        const sg = i % 2 ? -1 : 1, cx = mx - (dy / L) * L * 0.32 * sg, cy = my + (dx / L) * L * 0.32 * sg, ang = Math.atan2(y2 - cy, x2 - cx), hs = c * 0.34;
+        const sx = x1 + Math.cos(Math.atan2(cy - y1, cx - x1)) * c * 0.35, sy = y1 + Math.sin(Math.atan2(cy - y1, cx - x1)) * c * 0.35, ex = x2 - Math.cos(ang) * c * 0.42, ey = y2 - Math.sin(ang) * c * 0.42;
+        const path = document.createElementNS(ns, "path"); path.setAttribute("d", `M${sx.toFixed(1)},${sy.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`); path.setAttribute("class", "ce-thp"); path.setAttribute("pathLength", "1"); path.style.strokeWidth = c * 0.13; path.style.animationDelay = i * 160 + "ms";
+        const head = document.createElementNS(ns, "polygon"); head.setAttribute("class", "ce-thh"); head.setAttribute("points", `0,${-hs * 0.55} ${hs},0 0,${hs * 0.55}`); head.setAttribute("transform", `translate(${ex.toFixed(1)},${ey.toFixed(1)}) rotate(${(ang * 180 / Math.PI).toFixed(1)})`); head.style.animationDelay = 350 + i * 160 + "ms";
+        svg.append(path, head);
+        const w = document.createElement("div"); w.className = "ce-warn"; w.textContent = "!"; w.style.cssText = `left:${b.x + c * 0.58}px;top:${b.y - c * 0.12}px;width:${c * 0.5}px;height:${c * 0.44}px;font-size:${c * 0.3}px;animation-delay:${450 + i * 160}ms`;
+        this.fxl.appendChild(w); els.push(w);
+      });
+      this.fxl.appendChild(svg);
+      this.later(() => els.forEach((e) => e.classList.add("out")), ms || 2200); this.later(() => els.forEach((e) => e.remove()), (ms || 2200) + 450);
+    }
+    /** contour « dessin au trait » d'une image de pièce (blanc, 3 px) : bord de son canal alpha ; mis en cache */
+    outlineOf(url, size) {
+      size = size || 220;
+      return (this.outl[url] = this.outl[url] || new Promise((res) => {
+        const im = new Image();
+        im.onload = () => {
+          try {
+            const c = document.createElement("canvas"); c.width = c.height = size; const g = c.getContext("2d"); g.drawImage(im, 0, 0, size, size);
+            const a = g.getImageData(0, 0, size, size).data, W = size, mask = new Uint8Array(W * W), out = g.createImageData(W, W), R = 3;
+            for (let i = 0; i < W * W; i++) mask[i] = a[i * 4 + 3] > 100 ? 1 : 0;
+            for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+              if (!mask[y * W + x]) continue; let edge = false;
+              for (let dy = -R; dy <= R && !edge; dy += R) for (let dx = -R; dx <= R; dx += R) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= W || !mask[ny * W + nx]) { edge = true; break; } }
+              if (edge) { const k = (y * W + x) * 4; out.data[k] = out.data[k + 1] = out.data[k + 2] = 255; out.data[k + 3] = 255; }
+            }
+            g.clearRect(0, 0, W, W); g.putImageData(out, 0, 0); res(c.toDataURL());
+          } catch (e) { res(url); }
+        };
+        im.onerror = () => res(url); im.src = url;
+      }));
+    }
+    /** fiche de la pièce maîtresse (Power / Speed / Defense / Trick), barres qui se remplissent doucement ; le plateau s'assombrit pendant ce temps */
+    async statCard(st, ms) {
+      if (!st) return;
+      const el = this.statEl, url = pieceUrl(st.piece), rows = [["Power", st.vals.power], ["Speed", st.vals.speed], ["Defense", st.vals.defense], ["Trick", st.vals.trick]], top = Math.max(...rows.map((r) => r[1]));
+      const ic = await this.outlineOf(url);
+      if (!this.alive) return;
+      el.hidden = false; el.classList.remove("out");
+      el.innerHTML = `<div class="ce-sc"><div class="ce-sc-ic"><img src="${ic}" alt=""><em>${esc2(st.name.toUpperCase())}</em></div><div class="ce-sc-bars">${rows.map(([n, v], i) => `<div class="r${v === top ? " top" : ""}" style="--d:${i * 170}ms"><span>${n}</span><i><u style="--v:${v}%"></u></i><b>${v}</b></div>`).join("")}</div></div>`;
+      this.host.classList.add("ce-dim"); const p = this.xy(st.sq), pu = document.createElement("div"); pu.className = "ce-pulse"; pu.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px`; this.fxl.appendChild(pu);
+      this.later(() => { el.classList.add("out"); this.host.classList.remove("ce-dim"); pu.remove(); }, ms - 450); this.later(() => { el.hidden = true; el.innerHTML = ""; }, ms);
+    }
+    /** la pièce prise MEURT : elle devient une ombre noire qui se délite en cendres et monte en fumée, braises qui s'élèvent (strong : plus long, plus de fumée) */
+    dissolve(el, sq, strong) {
+      const sec = strong ? 2.4 : 1.4, r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(), x = q.left - r.left + q.width / 2, y = q.top - r.top + q.height / 2;
+      el.style.transition = "none"; el.style.setProperty("--ash", sec + "s"); el.classList.add("ce-ash"); this.later(() => el.remove(), sec * 1000 + 120);
+      for (let i = 0, n = Math.round((strong ? 46 : 24) * this.fx.smoke); i < n; i++) this.smoke.push({ x: x + rnd(-q.width * 0.3, q.width * 0.3), y: y + rnd(-q.height * 0.2, q.height * 0.35), vx: rnd(-14, 14), vy: rnd(-46, -14), r: rnd(q.width * 0.12, q.width * 0.32), grow: rnd(10, 30), life: rnd(sec * 0.5, sec * 1.1), max: sec * 1.1, d: i * (strong ? 0.035 : 0.025) });
+      for (let i = 0; i < (strong ? 22 : 10); i++) this.burst.push({ x: x + rnd(-q.width * 0.25, q.width * 0.25), y: y + rnd(0, q.height * 0.3), vx: rnd(-20, 20), vy: rnd(-120, -40), life: rnd(0.8, 1.9), max: 1.9, c: Math.random() < 0.5 ? "#ff8a2a" : "#ffd27a", s: rnd(1.2, 2.6) });
+      this.shake = Math.max(this.shake, strong ? 9 : 4); if (strong) this.shockwave(0.7);
+      this.outlineOf(el.src).then((u) => { if (!this.alive) return; const g = document.createElement("img"), p = this.xy(sq); g.src = u; g.className = "ce-ghostline"; g.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;--gd:${(sec * 1.1).toFixed(2)}s`; this.fxl.appendChild(g); this.later(() => g.remove(), sec * 1100 + 200); });
+    }
+    /** le roi maté s'effondre en cendres (couleur du camp perdant : "w" ou "b") */
+    dissolveKing(color) {
+      const sq = Object.keys(this.pieces).find((s) => this.pieces[s]._p === (color === "w" ? "K" : "k"));
+      if (!sq) return; const el = this.pieces[sq]; delete this.pieces[sq]; this.dissolve(el, sq, true);
+    }
+    /** plan d'ambiance (avant le premier coup, le temps que la musique arrive à son moment) : caméra qui orbite lentement */
+    idle(sec) {
+      const ms = Math.round(sec * 1000);
+      this.camTo({ rx: 20, rz: -6, s: 1.0 }, ms * 0.5); this.later(() => this.camTo({ rx: 14, rz: 7, s: 1.15 }, ms * 0.5), ms * 0.5);
+    }
+    // ---------------------------------------------------------------- RYTHME VIRAL : ralenti, arrêt sur image, badges, effet brillant, intro / outro
+    /** impact discret des coups ordinaires (ouverture, milieu de partie) : halo + case allumée, étincelles à la prise */
+    soft(ev) {
+      this.punch(0.05);
+      const p = this.xy(ev.to), tone = TONE[ev.tone] || TONE.green, halo = document.createElement("div");
+      halo.className = "ce-halo"; halo.style.cssText = `left:${p.x - this.cell * 0.8}px;top:${p.y - this.cell * 0.8}px;width:${this.cell * 2.6}px;height:${this.cell * 2.6}px;background:radial-gradient(circle,${tone} 0%,${tone}55 35%,transparent 70%)`;
+      this.fxl.appendChild(halo); this.later(() => halo.remove(), 800);
+      if (this.lit) this.lit.remove();
+      this.lit = document.createElement("div"); this.lit.className = "ce-lit"; this.lit.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;box-shadow:0 0 ${this.cell * 0.5}px ${tone},inset 0 0 ${this.cell * 0.3}px ${tone}`;
+      this.fxl.appendChild(this.lit);
+      if (ev.captured) { this.shake = Math.max(this.shake, 6); this.explode(ev, tone, 16); }
+    }
+    /** « dé-zoom punch » : la caméra recule d'un coup à l'impact puis revient (au lieu d'un zoom qui grossit les pièces) */
+    punch(power) {
+      const c = this.camNow; if (!c) return;
+      this.cam.style.transition = "transform 110ms cubic-bezier(.2,.9,.2,1)"; this.cam.style.transform = this.cam.style.transform.replace(/scale\(([\d.]+)\)/, (m, v) => `scale(${(parseFloat(v) * (1 - 0.1 - power * 0.1)).toFixed(3)})`);
+      this.later(() => { this.cam.style.transition = "transform 520ms cubic-bezier(.16,1,.3,1)"; this.cam.style.transform = this.cam.style.transform.replace(/scale\(([\d.]+)\)/, `scale(${c.s})`); }, 120);
+    }
+    /** flou « éclair » anamorphique : trait de lumière horizontal à la hauteur de la case */
+    flare(sq, color) {
+      const r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(), d = document.createElement("div"); d.className = "ce-flare";
+      d.style.cssText = `top:${q.top - r.top + q.height / 2}px;--fc:${color || "#9ff6ff"}`; this.host.querySelector(".ce-dof").before(d); this.later(() => d.remove(), 1100);
+    }
+    /** fissures sur l'écran (gaffe, mat) depuis la case touchée */
+    cracks(sq) {
+      const r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(), cx = q.left - r.left + q.width / 2, cy = q.top - r.top + q.height / 2, ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("class", "ce-crack"); svg.setAttribute("viewBox", `0 0 ${this.W} ${this.H}`);
+      for (let k = 0; k < 9; k++) {
+        let x = cx, y = cy, a = (k / 9) * 6.283 + rnd(-0.3, 0.3); const pts = [`${x.toFixed(0)},${y.toFixed(0)}`];
+        for (let i = 0; i < 6; i++) { a += rnd(-0.5, 0.5); const L = rnd(28, 85) * (1 + i * 0.12); x += Math.cos(a) * L; y += Math.sin(a) * L; pts.push(`${x.toFixed(0)},${y.toFixed(0)}`); }
+        const pl = document.createElementNS(ns, "polyline"); pl.setAttribute("points", pts.join(" ")); pl.style.animationDelay = k * 18 + "ms"; svg.appendChild(pl);
+      }
+      this.host.querySelector(".ce-dof").before(svg); this.later(() => svg.remove(), 2200);
+    }
+    /** glitch numérique bref (translation + teinte qui sautent) */
+    glitch(ms) { this.host.classList.add("ce-glitch"); this.later(() => this.host.classList.remove("ce-glitch"), ms || 380); }
+    /** onde de choc : déformation radiale de l'image (qualité max) */
+    shockwave(power) { if (this.fx && this.fx.shock) this.shk2 = Math.max(this.shk2, 18 + (power || 1) * 22); }
+    /** ralenti : poussière et particules au ralenti pendant que le coup glisse */
+    slowmo(on) { this.ts = on ? 0.3 : 1; }
+    /** arrêt sur image : le temps (particules, poussière) se fige presque, la caméra pousse lentement vers la case ; reprend après `sec` */
+    freeze(sec, ev) {
+      this.ts = 0.05; this.host.classList.add("ce-frozen");
+      if (ev && ev.to) { const p = this.xy(ev.to), c = this.camNow || { rx: 46, rz: 0, s: 1.9 }; this.camTo({ rx: c.rx, rz: c.rz, s: c.s + 0.1 }, Math.round(sec * 1000), p.c, p.r); }
+      this.later(() => { this.ts = 1; this.host.classList.remove("ce-frozen"); }, sec * 1000);
+    }
+    /** pastille de qualité du coup (‼ cyan, ❓ rouge, ⁈ jaune, 👍 vert) sur la case d'arrivée + libellé néon en haut de l'écran */
+    badge(ev, ms) {
+      const bd = ev.badge; if (!bd) return;
+      const p = this.xy(ev.to), c = this.cell, b = document.createElement("div"), big = ev.key === "brilliant" || ev.key === "blunder";
+      b.className = "ce-badge2"; b.textContent = bd.glyph;
+      b.style.cssText = `left:${p.x + c * 0.5}px;top:${p.y - c * 0.38}px;width:${c * (big ? 0.86 : 0.7)}px;height:${c * (big ? 0.86 : 0.7)}px;font-size:${c * (big ? 0.62 : 0.5)}px;--bc:${bd.color}`;
+      this.fxl.appendChild(b); this.later(() => b.classList.add("out"), (ms || 1500)); this.later(() => b.remove(), (ms || 1500) + 400);      // le LOGO seul (pas de texte)
+    }
+    tag(text, color, ms) {
+      const L = this.label; L.hidden = false; L.textContent = text; L.style.setProperty("--lc", color); L.classList.remove("in"); void L.offsetWidth; L.classList.add("in");
+      clearTimeout(this._tagT); this._tagT = setTimeout(() => { if (this.alive) L.hidden = true; }, ms || 1400);
+    }
+    /** coup BRILLANT / sacrifice : zoom éclair sur la case, shake violent, inversion des couleurs + flash de lumière */
+    brilliantFx(ev) {
+      const p = this.xy(ev.to), cm = (this.dir && this.dir.cam) || { s: [1.05, 1.4] };
+      this.camTo({ rx: 18, rz: rnd(-6, 6), s: cm.s[1] * 1.1 }, 150, p.c, p.r);                                                       // petit coup de zoom...
+      this.later(() => this.camTo({ rx: 16, rz: rnd(-8, 8), s: 0.9 }, 800), 200);                                                    // ...puis DÉ-ZOOM large
+      this.shake = Math.max(this.shake, 38); this.chroma = Math.max(this.chroma, 18); this.warp = Math.max(this.warp, 0.4);
+      let n = 0; const inv = () => { this.host.classList.add("ce-inv"); this.later(() => this.host.classList.remove("ce-inv"), 80); if (++n < 3) this.later(inv, 170); };
+      inv(); this.flashFx("#d8fdff"); this.later(() => this.flashFx("#ffffff"), 120);
+      this.flare(ev.to, "#9ff6ff"); this.shockwave(1); this.glitch(300);
+      if (E.vibrate) E.vibrate([30, 30, 30, 30, 90]);
+    }
+    /** présentation des deux adversaires : portraits qui glissent, titres, Elo, « VS » qui claque */
+    intro(info, dur) {
+      const el = this.introEl, side = (s, k) => {
+        const img = s.img ? `${E.assetBase || ""}${s.img}` : `${E.assetBase || ""}img/chess/${k === "w" ? "w" : "b"}k.png`;
+        return `<div class="ce-pl ${k}"><div class="ce-port"><img src="${img}" alt=""></div><div class="ce-nm">${s.title ? `<em>${esc2(s.title)}</em>` : ""}${esc2(s.name)}</div><div class="ce-sub">${s.elo != null ? s.elo + " ELO" : s.human ? "JOUEUR" : "BOT"} · ${k === "w" ? "BLANCS" : "NOIRS"}</div></div>`;
+      };
+      el.hidden = false; el.style.setProperty("--d", dur + "s"); el.className = "ce-intro v-" + ((this.dir && this.dir.intro) || "versus");
+      el.innerHTML = `<div class="ce-ibg"></div><div class="ce-slash"></div>${side(info.white, "w")}${side(info.black, "b")}<div class="ce-vs"><b>VS</b></div><div class="ce-ittl">${esc2(info.title.split("·")[0].trim() || "CHESS EDIT")}</div>`;
+      this.later(() => { this.shake = Math.max(this.shake, 26); this.chroma = Math.max(this.chroma, 12); this.flashFx("#fff"); if (E.vibrate) E.vibrate([40, 30, 80]); }, Math.round(dur * 0.42 * 1000));
+      this.later(() => { el.classList.add("out"); }, Math.round((dur - 0.5) * 1000));
+      this.later(() => { el.hidden = true; el.classList.remove("out"); el.innerHTML = ""; }, Math.round(dur * 1000));
+    }
+    outro(info, dur) {
+      const el = this.resEl; el.hidden = false;
+      el.innerHTML = `<div class="ce-rbig">${esc2(info.result || "FIN")}</div><div class="ce-rsub">${esc2(info.intro.white.name)} <i>VS</i> ${esc2(info.intro.black.name)}</div>`;
+      this.later(() => { el.hidden = true; el.innerHTML = ""; }, Math.round((dur || 2.6) * 1000) + 500);
+    }
     ff(on) { this.ffEl.hidden = !on; this.host.classList.toggle("ce-rew", on); }
     setProgress(f) { this.prog.style.transform = `scaleX(${Math.max(0, Math.min(1, f))})`; }
     setPlaying(on) { this.ppBtn.textContent = on ? "⏸" : "▶"; }
     // ---------------------------------------------------------------- particules + boucle
     initParticles() {
       const mk = (n, fgl) => Array.from({ length: n }, () => ({ a: rnd(0, 6.283), r: rnd(0.02, 0.7), v: rnd(0.02, 0.09), s: fgl ? rnd(1.4, 2.8) : rnd(0.6, 1.8), al: fgl ? rnd(0.25, 0.7) : rnd(0.15, 0.55) }));
-      this.dustB = mk(110, false); this.dustF = mk(34, true);
+      const k = this.fx ? this.fx.part : 1; this.dustB = mk(Math.round(110 * k), false); this.dustF = mk(Math.round(34 * k), true);
     }
     drawDust(ctx, list, dt, mul) {
       const W = this.W, H = this.H, cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2;
@@ -243,19 +462,39 @@
     }
     loop(now) {
       if (!this.alive) return;
-      const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
+      const rdt = Math.min(0.05, (now - this.last) / 1000), dt = rdt * this.ts; this.last = now;
       const b = this.bg.getContext("2d"), f = this.fg.getContext("2d");
       b.clearRect(0, 0, this.W, this.H); f.clearRect(0, 0, this.W, this.H);
       this.drawOrbs(b, dt); this.drawDust(b, this.dustB, dt, 1); this.drawDust(f, this.dustF, dt, 1.6);
+      if (this.dir && this.dir.embers && this.fx.part > 0.5 && Math.random() < 0.35) this.burst.push({ x: rnd(0, this.W), y: this.H + 6, vx: rnd(-18, 18), vy: rnd(-190, -80), life: rnd(1.4, 2.8), max: 2.8, c: Math.random() < 0.5 ? "#ff5a1a" : "#ff9a3a", s: rnd(1, 2.2) });   // braises qui montent (direction « Sang »)
+      this.smoke = this.smoke.filter((p) => (p.life -= dt) > 0);
+      for (const p of this.smoke) {                                                      // fumée / cendres : disques sombres flous qui montent, grossissent et s'effacent
+        if (p.d > 0) { p.d -= dt; p.life += dt; continue; }
+        p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.grow * dt; const k = Math.max(0, p.life / p.max), g = f.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, `rgba(24,18,34,${(0.55 * k).toFixed(3)})`); g.addColorStop(1, "rgba(24,18,34,0)"); f.fillStyle = g; f.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+      }
       f.globalCompositeOperation = "lighter";
       this.burst = this.burst.filter((p) => (p.life -= dt) > 0);
       for (const p of this.burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy = p.vy * 0.97 + 120 * dt; f.globalAlpha = Math.max(0, p.life / p.max); f.fillStyle = p.c; f.shadowColor = p.c; f.shadowBlur = 8; f.fillRect(p.x, p.y, p.s, p.s); }
       f.globalCompositeOperation = "source-over"; f.shadowBlur = 0; f.globalAlpha = 1;
-      this.warp *= Math.pow(0.12, dt); if (this.warp < 0.02) this.warp = 0;
+      this.warp *= Math.pow(0.12, rdt); if (this.warp < 0.02) this.warp = 0;
       // shake amorti + aberration chromatique (le filtre SVG n'est actif que pendant l'impact : il coûte cher)
-      this.shake *= Math.pow(0.004, dt); this.chroma *= Math.pow(0.01, dt);
+      this.shake *= Math.pow(0.004, rdt); this.chroma *= Math.pow(0.01, rdt);
       if (this.shake > 0.4) { const a = this.shake; this.shk.style.transform = `translate(${rnd(-a, a).toFixed(1)}px,${rnd(-a, a).toFixed(1)}px) rotate(${rnd(-a, a) * 0.05}deg)`; } else if (this.shk.style.transform) this.shk.style.transform = "";
-      if (this.chroma > 0.5) { this.abr.setAttribute("dx", this.chroma.toFixed(1)); this.abb.setAttribute("dx", (-this.chroma).toFixed(1)); this.abb.setAttribute("dy", (this.chroma * 0.4).toFixed(1)); this.wrap.style.filter = "url(#ce-ab)"; this._ab = true; }
+      if (this.pm) {                                                                                  // flou de DÉPLACEMENT de la pièce qui glisse
+        const m = this.pm, f = (now - m.t0) / m.ms;
+        if (f >= 1.05 || !m.el.isConnected) { m.el.style.filter = ""; this.pm = null; }
+        else { const a = m.amp * Math.sin(Math.PI * Math.min(1, f)); this.pmg.setAttribute("stdDeviation", `${(m.ux * a).toFixed(2)} ${(m.uy * a).toFixed(2)}`); }
+      }
+      this.shk2 *= Math.pow(0.02, rdt);                                                                // onde de choc : déformation radiale qui s'éteint
+      const shOn = this.fx.shock && this.shk2 > 1.2; if (shOn) this.shd.setAttribute("scale", this.shk2.toFixed(1));
+      const m = this.mb, k = Math.max(0, 1 - (now - m.t0) / m.ms), amp = this.fx.mblur ? m.k * k * k : 0, mbOn = amp > 0.35;
+      if (mbOn) this.mbg.setAttribute("stdDeviation", `${Math.abs(m.x * amp).toFixed(2)} ${Math.abs(m.y * amp).toFixed(2)}`);
+      const want = (mbOn ? "url(#ce-mb) " : "") + (shOn ? "url(#ce-sh)" : "");                           // un seul endroit décide du filtre de la scène (flou caméra + onde de choc)
+      if (want !== this._want) { this.persp.style.filter = want; this._want = want; }
+      // auto-qualité : si l'image saccade (moyenne > 30 ms sur ~1,5 s) on allège les effets d'un cran
+      if (this.qAuto) { this.frames.push(rdt); if (this.frames.length >= 80) { const avg = this.frames.reduce((x, y) => x + y, 0) / this.frames.length; this.frames = []; if (avg > 0.03 && this.ql > 0) { this.ql--; this.applyQuality(); } } }
+      if (this.chroma > 0.5 && this.fx.chroma) { this.abr.setAttribute("dx", this.chroma.toFixed(1)); this.abb.setAttribute("dx", (-this.chroma).toFixed(1)); this.abb.setAttribute("dy", (this.chroma * 0.4).toFixed(1)); this.wrap.style.filter = "url(#ce-ab)"; this._ab = true; }
       else if (this._ab) { this.wrap.style.filter = ""; this._ab = false; }
       this.drift.style.transform = `rotateZ(${(Math.sin((now - this.t0) / 2300) * 1.4).toFixed(2)}deg)`;                 // respiration lente entre deux impacts
       this.raf = requestAnimationFrame((t) => this.loop(t));
@@ -263,5 +502,5 @@
     destroy() { this.alive = false; cancelAnimationFrame(this.raf); this.timers.forEach(clearTimeout); window.removeEventListener("resize", this._rs); this.host.classList.remove("ce-stage"); this.host.innerHTML = ""; }
   }
 
-  E.editFx = { Stage, TONE, LOOKS, fenMap, START };
+  E.editFx = { Stage, TONE, LOOKS, DIRECTIONS, fenMap, START };
 })();

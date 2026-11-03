@@ -18,6 +18,7 @@ var flip := false
 var movie := false
 var clock := 0.0
 var seek_to := 0.0
+var music_offset := 0.0   # manifeste v2 (rythme viral) : position de la musique à t = 0 de la vidéo (négatif : elle démarre plus tard)
 var duration := 0.0
 
 var player: AudioStreamPlayer
@@ -76,10 +77,18 @@ func _ready() -> void:
 		while idx < events.size() and float(events[idx]["t"]) < seek_to:
 			idx += 1
 		clock = seek_to
-		if player and player.stream:
-			player.play(seek_to)
-	elif player and player.stream:
-		player.play()
+		_start_music(seek_to)
+	else:
+		_start_music(0.0)
+
+func _start_music(vt: float) -> void:
+	if not (player and player.stream):
+		return
+	var pos := vt + music_offset
+	if pos >= 0.0:
+		player.play(pos)
+	else:
+		get_tree().create_timer(-pos).timeout.connect(func(): if player: player.play())
 
 # ---------------------------------------------------------------- chargement
 func _load_manifest(path: String) -> bool:
@@ -92,7 +101,8 @@ func _load_manifest(path: String) -> bool:
 	events = manifest.get("events", [])
 	events.sort_custom(func(a, b): return float(a["t"]) < float(b["t"]))
 	flip = bool(manifest.get("game", {}).get("flip", false))
-	duration = float(manifest.get("audio", {}).get("duration", 0.0))
+	duration = float(manifest.get("pacing", {}).get("duration", manifest.get("audio", {}).get("duration", 0.0)))
+	music_offset = float(manifest.get("audio", {}).get("start_offset", 0.0))
 	return true
 
 func _load_audio(dir: String) -> void:
@@ -583,7 +593,7 @@ func _now() -> float:
 	if movie or not player or not player.playing:
 		return clock
 	# position audio + temps depuis le dernier mixage, moins la latence de sortie : synchro au sample près
-	return player.get_playback_position() + AudioServer.get_time_since_last_mix() - AudioServer.get_output_latency()
+	return player.get_playback_position() - music_offset + AudioServer.get_time_since_last_mix() - AudioServer.get_output_latency()
 
 func _fire(ev: Dictionary) -> void:
 	var kind := String(ev.get("kind", ""))

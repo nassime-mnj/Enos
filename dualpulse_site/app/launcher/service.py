@@ -738,6 +738,47 @@ BRAIN_MAX_BYTES, BRAIN_MAX_DEVICES = 700_000, 12
 _DEV = re.compile(r"^[A-Za-z0-9_\-]{6,64}$")
 
 
+# ---------------------------------------------------------------- SAUVEGARDE de l'application mobile (parties, entraînements, préférences) : un document par appareil, repêché après réinstallation
+# Le téléphone envoie un instantané compressé (gzip + base64) ; le compte le garde (les 12 appareils les plus récents). Lecture : le plus récent de TOUS les appareils (y compris le même identifiant).
+BACKUP_MAX_BYTES = 8_000_000
+
+
+def backup_put(uid, device, doc):
+    if not _DEV.match(device or "") or not isinstance(doc, dict) or not isinstance(doc.get("z"), str):
+        raise AuthError(400, "Invalid backup.")
+    raw = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
+    if len(raw.encode("utf-8")) > BACKUP_MAX_BYTES:
+        raise AuthError(413, "Backup too large.")
+    tnow = now()
+    with db._lock:
+        c = _c()
+        c.execute("INSERT INTO brain_docs(user_id,kind,device,data,updated) VALUES(?,?,?,?,?) ON CONFLICT(user_id,kind,device) DO UPDATE SET data=excluded.data, updated=excluded.updated",
+                  (uid, "backup", device, raw, tnow))
+        for r in c.execute("SELECT device FROM brain_docs WHERE user_id=? AND kind='backup' ORDER BY updated DESC", (uid,)).fetchall()[BRAIN_MAX_DEVICES:]:
+            c.execute("DELETE FROM brain_docs WHERE user_id=? AND kind='backup' AND device=?", (uid, r["device"]))
+        c.commit()
+    return tnow
+
+
+def backup_list(uid):
+    with db._lock:
+        rows = _c().execute("SELECT device,updated,length(data) AS n FROM brain_docs WHERE user_id=? AND kind='backup' ORDER BY updated DESC", (uid,)).fetchall()
+    return [{"device": r["device"], "updated": r["updated"], "size": r["n"]} for r in rows]
+
+
+def backup_get(uid, device=""):
+    with db._lock:
+        if device:
+            if not _DEV.match(device):
+                raise AuthError(400, "Invalid device.")
+            row = _c().execute("SELECT device,data,updated FROM brain_docs WHERE user_id=? AND kind='backup' AND device=?", (uid, device)).fetchone()
+        else:
+            row = _c().execute("SELECT device,data,updated FROM brain_docs WHERE user_id=? AND kind='backup' ORDER BY updated DESC LIMIT 1", (uid,)).fetchone()
+    if not row:
+        raise AuthError(404, "No backup.")
+    return {"device": row["device"], "updated": row["updated"], "doc": json.loads(row["data"])}
+
+
 def brain_sync(uid, kind, device, doc):
     if kind not in BRAIN_KINDS or not _DEV.match(device or ""):
         raise AuthError(400, "Invalid brain document.")

@@ -2,6 +2,7 @@ package com.nasko.app;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.UriPermission;
@@ -15,7 +16,10 @@ import android.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
@@ -145,6 +149,94 @@ final class FilesBridge {
     }
 
     // ------------------------------------------------------------------ enregistrement dans la galerie / Téléchargements (MediaStore, sans permission)
+    // ------------------------------------------------------------------ SAUVEGARDE de l'application : Download/ENOS/enos-sauvegarde-<jour>.json (survit à la désinstallation ; les 6 plus récentes sont gardées)
+    private static final Pattern BK_NAME = Pattern.compile("enos-sauvegarde-[0-9A-Za-z_\\-]{1,40}\\.json");
+
+    boolean backupWrite(String name, String text) {
+        try {
+            if (name == null || text == null || !BK_NAME.matcher(name).matches() || text.length() > 30_000_000) return false;
+            ContentResolver cr = act.getContentResolver();
+            Uri base = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            try {   // même nom (même jour) : on remplace ; sans effet si le fichier appartient à une installation précédente (il reste alors, à côté)
+                cr.delete(base, MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?", new String[]{name, "Download/ENOS%"});
+            } catch (Exception ignored) {
+            }
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+            v.put(MediaStore.MediaColumns.MIME_TYPE, "application/json");
+            v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/ENOS");
+            v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+            Uri u = cr.insert(base, v);
+            if (u == null) return false;
+            try (OutputStream out = cr.openOutputStream(u)) {
+                out.write(text.getBytes(StandardCharsets.UTF_8));
+            }
+            ContentValues done = new ContentValues();
+            done.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            cr.update(u, done, null, null);
+            JSONArray all = new JSONArray(backupList());
+            for (int i = 6; i < all.length(); i++) {   // rotation : on supprime les plus anciennes (seulement celles que cette installation peut supprimer)
+                try {
+                    cr.delete(ContentUris.withAppendedId(base, all.getJSONObject(i).getLong("id")), null, null);
+                } catch (Exception ignored) {
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** [{id, name, size, t}] les plus récentes d'abord : sauvegardes visibles de cette installation (après une réinstallation, selon la version d'Android, seulement celles qu'elle a le droit de lire). */
+    String backupList() {
+        JSONArray out = new JSONArray();
+        try {
+            ContentResolver cr = act.getContentResolver();
+            Uri base = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            try (Cursor c = cr.query(base, new String[]{MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.DATE_MODIFIED},
+                    MediaStore.MediaColumns.DISPLAY_NAME + " LIKE ? AND " + MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?", new String[]{"enos-sauvegarde-%", "Download/ENOS%"},
+                    MediaStore.MediaColumns.DATE_MODIFIED + " DESC")) {
+                while (c != null && c.moveToNext() && out.length() < 20) {
+                    String n = c.getString(1);
+                    if (n == null || !BK_NAME.matcher(n).matches()) continue;
+                    JSONObject o = new JSONObject();
+                    o.put("id", c.getLong(0));
+                    o.put("name", n);
+                    o.put("size", c.getLong(2));
+                    o.put("t", c.getLong(3) * 1000L);
+                    out.put(o);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out.toString();
+    }
+
+    /** Contenu (texte JSON) d'une sauvegarde listée par backupList ; "" si introuvable ou illisible. */
+    String backupRead(long id) {
+        try {
+            JSONArray all = new JSONArray(backupList());
+            boolean known = false;
+            for (int i = 0; i < all.length(); i++) if (all.getJSONObject(i).getLong("id") == id) known = true;
+            if (!known) return "";
+            ContentResolver cr = act.getContentResolver();
+            Uri u = ContentUris.withAppendedId(MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), id);
+            try (InputStream in = cr.openInputStream(u)) {
+                if (in == null) return "";
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    bo.write(buf, 0, n);
+                    if (bo.size() > 30_000_000) return "";
+                }
+                return new String(bo.toByteArray(), StandardCharsets.UTF_8);
+            }
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     boolean saveMedia(String name, String mime, String b64, String collection) {
         try {
             String safe = name.replaceAll("[^\\p{L}\\p{N} ._\\-()]", "_");

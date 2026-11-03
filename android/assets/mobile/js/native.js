@@ -89,6 +89,14 @@
     },
   };
 
+  // ------------------------------------------------------------------ sauvegarde de l'application : Download/ENOS/enos-sauvegarde-*.json (survit à la désinstallation)
+  N.backup = {
+    can: () => !!(N.available && B.backupWrite),
+    write: (name, text) => !!(N.available && B.backupWrite && B.backupWrite(name, text)),
+    list: () => (N.available && B.backupList ? parse(B.backupList(), []) : []),
+    read: (id) => (N.available && B.backupRead ? B.backupRead(String(id)) : ""),
+  };
+
   // ------------------------------------------------------------------ import de la configuration du PC (fichier chiffré ; le code est vérifié par Java)
   N.pendingImport = () => (N.available ? B.pendingImport() : "");
   N.importApply = (blob, code) => oneShot("import", (id) => B.importApply(id, blob || "", code || ""));

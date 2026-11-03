@@ -133,6 +133,11 @@ class AgendaSync(BaseModel):
     tasks: list[dict] = Field(default_factory=list, max_length=500)
 
 
+class BackupIn(BaseModel):
+    device: str
+    doc: dict
+
+
 class BrainSync(BaseModel):
     kind: str = "superenos"
     device: str
@@ -309,6 +314,21 @@ def build(admin_guard, admin_path):
             raise service.AuthError(429, "Too many syncs, please try again in a minute.")
         docs, tnow = service.brain_sync(u["id"], b.kind, b.device, b.doc)
         return {"docs": docs, "now": tnow}
+
+    # ------------------------------------------------------------ sauvegarde de l'application mobile (parties, entraînements, préférences) : privée à chaque compte
+    @r.post(V1 + "/backup")
+    def backup_put(b: BackupIn, u=Depends(current_user)):
+        if not limits.ok("lbackup", u["id"], 30):
+            raise service.AuthError(429, "Too many backups, please try again in a minute.")
+        return {"updated": service.backup_put(u["id"], b.device, b.doc)}
+
+    @r.get(V1 + "/backup")
+    def backup_list(u=Depends(current_user)):
+        return {"items": service.backup_list(u["id"])}
+
+    @r.get(V1 + "/backup/latest")
+    def backup_latest(device: str = "", u=Depends(current_user)):
+        return service.backup_get(u["id"], device)
 
     # ------------------------------------------------------------ bannières, liste de souhaits
     @r.get(V1 + "/news")

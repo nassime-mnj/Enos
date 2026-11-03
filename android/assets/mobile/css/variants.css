@@ -1,0 +1,74 @@
+/* Variantes d'échecs : Élixir, Deux rois, Protège la dame (js/m_variants.js) */
+.va-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 8px}
+.va-modes button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;border-radius:14px;border:1px solid var(--line,#2a2a30);background:linear-gradient(160deg,#14141a,#101012);color:var(--text)}
+.va-modes button.on{border-color:var(--cyan,#1acfd6);box-shadow:0 0 0 1px var(--cyan,#1acfd6) inset,0 0 18px rgba(26,207,214,.18)}
+.va-modes button b{font:900 14.5px var(--ui);letter-spacing:.5px;text-align:center}.va-modes button small{font:600 10.5px var(--ui);color:var(--muted)}
+.va-ic{font-size:24px;line-height:1.2}
+.va-rules{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.5;color:var(--text)}.va-rules li{margin:3px 0}
+.va-opts{display:grid;gap:10px}.va-opts label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700}
+#va-board{margin:6px 0}
+.va-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:10px;background:#101014;border:1px solid transparent;min-height:34px}
+.va-bar.turn{border-color:var(--cyan,#1acfd6);background:#0c1a1c}
+.va-bar>b{font:800 14px var(--ui)}
+.va-elx{display:flex;align-items:center;gap:8px}
+.va-pips{display:flex;gap:2px}.va-pips i{width:11px;height:15px;border-radius:3px 3px 6px 6px;background:#23232b;border:1px solid #33333d}
+.va-pips i.on{background:linear-gradient(#c970ff,#8a2be2);border-color:#d79bff;box-shadow:0 0 6px rgba(190,100,255,.55)}
+.va-xn{font:800 13px var(--ui);color:#d79bff;min-width:38px;text-align:right}
+.va-msg{text-align:center;font-weight:700;margin:8px 0;min-height:22px}
+.va-tray{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0}
+.va-tray button{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px 5px;border-radius:12px;border:1px solid #2c2c36;background:#111116;color:var(--text)}
+.va-tray button img{width:100%;max-width:48px;aspect-ratio:1/1;pointer-events:none}
+.va-tray button b{font:800 12px var(--ui);color:#d79bff}
+.va-tray button.on{border-color:#d79bff;background:#1d1228;box-shadow:0 0 12px rgba(190,100,255,.4)}
+.va-tray button:disabled{opacity:.35}
+.va-end{margin-top:12px;padding:16px;border-radius:14px;background:#101014;border:1px solid #2a2a30;text-align:center}
+.va-end.win{border-color:#34d16b}.va-end.lose{border-color:#ff4d63}
+.va-end h3{margin:0 0 4px;font:900 22px var(--ui)}.va-end p{margin:0 0 12px;color:var(--muted)}
+#app-variants{max-width:640px;margin:0 auto}
+.elx{width:16px;height:16px;vertical-align:-3px;margin-right:2px}
+.va-xn{display:inline-flex;align-items:center;justify-content:flex-end}
+.va-tray button b{display:inline-flex;align-items:center;justify-content:center}
+.va-tray .elx{width:13px;height:13px;max-width:none;aspect-ratio:auto;vertical-align:0}
+/* ---- ambiance Clash Royale (mode Élixir) : arène vue du dessus, herbe, arbres, tours */
+.va-stage{position:relative;padding:0}
+.va-deco{display:none}
+.va-stage.clash{padding:26px 22px;border-radius:18px;background:linear-gradient(rgba(20,50,10,.28),rgba(20,50,10,.38)),var(--bg) center/cover;box-shadow:0 0 0 3px #3a2a14,0 8px 26px rgba(0,0,0,.55);overflow:hidden}
+.va-stage.clash .va-deco{display:block;position:absolute;font-style:normal;line-height:1;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));pointer-events:none;z-index:2}
+.va-k1{top:2px;left:calc(50% - 44px);font-size:26px}.va-k2{top:2px;left:calc(50% + 14px);font-size:26px}
+.va-t1{top:30%;left:-2px;font-size:34px}.va-t2{top:62%;left:-4px;font-size:30px}.va-t3{top:34%;right:-2px;font-size:34px}.va-t4{top:68%;right:-4px;font-size:30px}
+.va-stage.clash .cboard{border:5px solid #d9cfa3;border-radius:6px;box-shadow:0 0 0 3px #7a6a3a,0 6px 16px rgba(0,0,0,.5)}
+.va-stage.clash .cboard .sq.l{background:#bfe07a}.va-stage.clash .cboard .sq.d{background:#9fcb55}
+.va-stage.clash .cboard .sq .rk,.va-stage.clash .cboard .sq .fl{color:#4d6f1f}
+.va-stage.clash .cboard::after{content:"";position:absolute;left:0;right:0;top:calc(50% - 7px);height:14px;z-index:3;pointer-events:none;background:linear-gradient(rgba(70,170,230,.0),rgba(70,170,230,.35),rgba(70,170,230,.0))}   /* la rivière, entre les deux camps */
+@media (prefers-reduced-motion:no-preference){.va-stage.clash .va-deco{animation:vaSway 4s ease-in-out infinite alternate}.va-t2,.va-t4{animation-delay:-2s!important}}
+@keyframes vaSway{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
+/* ---- 2v2 : une ligne par joueur */
+.va-modes{grid-template-columns:repeat(2,1fr)}
+.va-seats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.va-seat{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:6px 8px;border-radius:10px;background:#101014;border:1px solid transparent;min-width:0}
+.va-seat>b:not(.va-xn){font:800 12.5px var(--ui);flex:1 1 100%;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.va-seat .va-sd{width:10px;height:10px;border-radius:50%;background:var(--sc);box-shadow:0 0 8px var(--sc);flex:none}
+.va-seat.turn{border-color:var(--sc);background:#0f1618}
+.va-seat.dead{opacity:.4;filter:grayscale(1)}
+.va-seat .va-pips i{width:8px;height:12px}.va-seat .va-xn{font-size:12px;min-width:30px}
+.va-ko{font:700 12px var(--ui);color:var(--muted)}
+#va-board .pce[data-o="0"]{filter:drop-shadow(0 0 3px #ff3b4f) drop-shadow(0 0 1px #ff3b4f)}
+#va-board .pce[data-o="1"]{filter:drop-shadow(0 0 3px #1acfd6) drop-shadow(0 0 1px #1acfd6)}
+#va-board .pce[data-o="2"]{filter:drop-shadow(0 0 3px #ffc34a) drop-shadow(0 0 1px #ffc34a)}
+#va-board .pce[data-o="3"]{filter:drop-shadow(0 0 3px #8be04d) drop-shadow(0 0 1px #8be04d)}
+/* ---- analyse en direct, plans des bots, journal des coups */
+.va-ana{margin:8px 0;padding:8px 10px;border-radius:12px;background:#0d0d12;border:1px solid #23232b}
+.va-evb{position:relative;height:20px;border-radius:6px;background:#1b1b22;overflow:hidden;border:1px solid #2e2e38}
+.va-evb i{position:absolute;left:0;top:0;bottom:0;width:50%;background:linear-gradient(90deg,#f4f4f4,#d8d8d8);transition:width .45s cubic-bezier(.3,.8,.3,1)}
+.va-evb span{position:absolute;right:8px;top:0;line-height:20px;font:900 12px var(--ui);color:#fff;mix-blend-mode:difference}
+.va-evm{font:600 11px var(--ui);color:var(--muted);margin:5px 0}
+.va-cd{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:8px;font:700 13px var(--ui)}
+.va-cd.c0{background:rgba(52,209,107,.12)}.va-cd b{width:16px;color:var(--muted)}.va-cd span{flex:1}.va-cd em{font-style:normal;color:#d79bff}
+.va-plans{display:grid;gap:3px;margin:4px 0}.va-pl{font:600 12.5px var(--ui);padding:4px 8px;border-radius:8px;background:#101014}.va-pl b{margin-right:6px}
+.va-log{display:flex;gap:5px;overflow-x:auto;padding:6px 2px;margin:6px 0;scrollbar-width:none}.va-log::-webkit-scrollbar{display:none}
+.va-lg{flex:none;padding:3px 8px;border-radius:999px;font:700 12px var(--ui);background:#14141a;border:1px solid var(--qc,#2a2a34);color:var(--text);white-space:nowrap}
+.va-rec{margin:6px 0 12px;font-size:13px;line-height:1.6;color:var(--muted);text-align:left}
+.row .btn.on{border-color:var(--cyan,#1acfd6);color:var(--cyan,#1acfd6)}
+#va-game{min-width:0;max-width:100%}
+.va-seats{grid-template-columns:repeat(2,minmax(0,1fr))}.va-seat{overflow:hidden}
+.va-log{max-width:100%}

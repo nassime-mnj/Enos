@@ -209,7 +209,7 @@
           const d = G.sqEl[i], x = i % 14, y = (i / 14) | 0, out = !C4.playable(st, x, y), ring = !out && soon <= 8 && (x === st.level || x === 13 - st.level || y === st.level || y === 13 - st.level);
           d.classList.toggle("storm", out); d.classList.toggle("warn", ring);
           d.classList.toggle("last", !!st.last && (st.last[0] == i || st.last[1] == i));
-          d.classList.toggle("sel", G.sel === +i); d.classList.toggle("tgt", G.legal.has(+i) && !st.b[i]); d.classList.toggle("cap", G.legal.has(+i) && !!st.b[i]);
+          d.classList.toggle("sel", G.sel === +i); { const pn = G.pc && G.pc.get(+i); if (pn) pn.classList.toggle("liftsel", G.sel === +i); } d.classList.toggle("tgt", G.legal.has(+i) && !st.b[i]); d.classList.toggle("cap", G.legal.has(+i) && !!st.b[i]);
           d.classList.toggle("chk", danger.has(+i));
         }
       }
@@ -438,6 +438,7 @@
         const vx = Math.min(13, Math.max(0, Math.floor((e.clientX - r.left) / r.width * 14))), vy = Math.min(13, Math.max(0, Math.floor((e.clientY - r.top) / r.height * 14)));
         const [x, y] = UNROT[G.view](vx, vy), sq = x + y * 14;
         if (!C4.VALID[sq]) return;
+        { const c = G.sqEl[sq]; if (c) { c.classList.remove("tap"); void c.offsetWidth; c.classList.add("tap"); setTimeout(() => c.classList.remove("tap"), 600); } }        // onde au clic
         G.legalMoves = C4.moves(st, o);                                         // toujours à jour (aucune attente de la boucle)
         if (G.sel >= 0 && G.legal.has(sq)) {
           const m = G.legalMoves.find((q) => C4.from(q) === G.sel && C4.to(q) === sq);

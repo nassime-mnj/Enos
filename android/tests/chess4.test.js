@@ -123,6 +123,18 @@ t("alliés : captures interdites, équipe gagnante quand les autres sont élimin
   s.alive[1] = false; s.out.push(1); s.b[sq(0, 7)] = 0; s.alive[3] = false; s.out.push(3); s.b[sq(13, 6)] = 0;
   assert.ok(C4.over(s), "il ne reste que l'équipe 0");
 });
+t("alliés : un roi qui se place sous le tir d'un ALLIÉ n'est ni illégal ni une gaffe (le jugement connaît les équipes)", () => {
+  const AI = require("../assets/mobile/js/chess4_ai.js");
+  const s = C4.newGame({ teams: [0, 1, 0, 1] }); s.b.fill(0);
+  s.b[sq(7, 13)] = C4.cell(0, C4.K); s.b[sq(6, 0)] = C4.cell(2, C4.K); s.b[sq(0, 7)] = C4.cell(1, C4.K); s.b[sq(13, 6)] = C4.cell(3, C4.K);
+  s.b[sq(6, 5)] = C4.cell(2, C4.R); s.turn = 0;                           // tour alliée (équipe 0) qui regarde la colonne 6
+  const m = C4.moves(s, 0).find((x) => C4.to(x) === sq(6, 13));
+  assert.ok(m, "le roi peut aller sous la tour de son allié");
+  const J = AI.judgeMove(s, 0, m, AI.neutral());
+  assert.ok(!["mistake", "blunder"].includes(J.key), "jugé " + J.key + " (écart " + J.gap + ")");
+  s.teams = [0, 1, 2, 3];                                                   // même position sans alliance : la tour devient ennemie -> coup interdit
+  assert.ok(!C4.moves(s, 0).some((x) => C4.to(x) === sq(6, 13)), "sans alliance, la case est attaquée");
+});
 t("tempête : le bord s'effondre, les pièces sont détruites, un roi détruit = éliminé", () => {
   const s = C4.newGame({ storm: { first: 1, every: 1 } }); s.b.fill(0);
   s.b[sq(7, 13)] = C4.cell(0, C4.K); s.b[sq(5, 13)] = C4.cell(0, C4.R); s.b[sq(0, 7)] = C4.cell(1, C4.K); s.b[sq(6, 5)] = C4.cell(2, C4.K); s.b[sq(13, 6)] = C4.cell(3, C4.K);
