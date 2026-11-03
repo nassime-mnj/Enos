@@ -45,7 +45,8 @@
       if (ev != null) d += Math.min(30, Math.abs(ev - prevEv) / 20);
       if (transformAt.includes(i)) { d += 55; tags.push("boss"); }
       else if (lines.some((l) => STRONG_CHAT.has(l.kind))) { d += 20; tags.push("réplique"); }
-      out.push({ i, n: i + 1, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "",
+      const fenBefore = i ? out[i - 1].fen : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+      out.push({ i, n: i + 1, fenBefore, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "",
         check: /[+#]/.test(mv.san), mate: /#/.test(mv.san), sacrifice: sac, boss: transformAt.includes(i), drama: Math.round(d * 10) / 10, tags, lines, fen: ch.fen() });
     });
     return out;
@@ -159,6 +160,49 @@
     return { events: all, key: events, duration: dur, plies: plies.length };
   }
 
+  // ---------------------------------------------------------------- géométrie légère (sans règles d'échec) : portées, attaquants, menaces, fiche « Power / Speed / Defense / Trick »
+  const PV = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+  const mapOf = (fen) => { const m = {}; fen.split(" ")[0].split("/").forEach((r, y) => { let x = 0; for (const c of r) { if (/\d/.test(c)) x += +c; else m[String.fromCharCode(97 + x++) + (8 - y)] = c; } }); return m; };
+  const isW = (c) => c === c.toUpperCase();
+  /** cases atteintes depuis sq : {moves: cases atteignables (vides ou ennemies), attacks: cases attaquées (pièces ennemies), protects: pièces amies protégées} */
+  function reach(map, sq) {
+    const pc = map[sq], out = { moves: [], attacks: [], protects: [] };
+    if (!pc) return out;
+    const t = pc.toLowerCase(), w = isW(pc), f0 = sq.charCodeAt(0) - 97, r0 = +sq[1] - 1, at = (f, r) => (f >= 0 && f < 8 && r >= 0 && r < 8 ? String.fromCharCode(97 + f) + (r + 1) : null);
+    const land = (s2) => { if (!s2) return false; const o = map[s2]; if (!o) { out.moves.push(s2); return true; } if (isW(o) !== w) { out.moves.push(s2); out.attacks.push(s2); } else out.protects.push(s2); return false; };
+    const slide = (dirs) => dirs.forEach(([a, b]) => { for (let f = f0 + a, r = r0 + b; ; f += a, r += b) if (!land(at(f, r))) break; });
+    if (t === "n") [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]].forEach(([a, b]) => land(at(f0 + a, r0 + b)));
+    else if (t === "k") { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (a || b) land(at(f0 + a, r0 + b)); }
+    else if (t === "p") { const d = w ? 1 : -1; [-1, 1].forEach((a) => { const s2 = at(f0 + a, r0 + d); if (!s2) return; const o = map[s2]; if (o && isW(o) !== w) { out.attacks.push(s2); out.moves.push(s2); } else if (o) out.protects.push(s2); }); const f1 = at(f0, r0 + d); if (f1 && !map[f1]) { out.moves.push(f1); const f2 = at(f0, r0 + 2 * d); if (f2 && !map[f2] && (w ? r0 === 1 : r0 === 6)) out.moves.push(f2); } }
+    else { if (t === "r" || t === "q") slide([[1, 0], [-1, 0], [0, 1], [0, -1]]); if (t === "b" || t === "q") slide([[1, 1], [1, -1], [-1, 1], [-1, -1]]); }
+    return out;
+  }
+  /** pièces de la couleur `white` qui attaquent / protègent la case sq */
+  function coverers(map, sq, white) { const o = []; for (const s2 of Object.keys(map)) { const p = map[s2]; if (isW(p) !== white || s2 === sq) continue; const r = reach(map, s2); if (r.attacks.includes(sq) || r.protects.includes(sq)) o.push(s2); } return o; }
+  /** menaces créées par la pièce arrivée en `to` : pièces ennemies de valeur ≥ 3 attaquées ET (plus fortes qu'elle, ou sans défenseur) ; le roi attaqué (échec) compte toujours. Au plus 3, les plus grosses d'abord. */
+  function threatsFrom(fenAfter, to) {
+    const map = mapOf(fenAfter), pc = map[to]; if (!pc) return [];
+    const w = isW(pc), me = PV[pc.toLowerCase()], r = reach(map, to), list = [];
+    r.attacks.forEach((t) => {
+      const tp = map[t], tv = PV[tp.toLowerCase()];
+      if (tv === 100) { list.push({ from: to, to: t, v: 100 }); return; }
+      if (tv < 3) return;
+      if (tv > me || coverers(map, t, !w).length === 0) list.push({ from: to, to: t, v: tv });
+    });
+    return list.sort((a, b) => b.v - a.v).slice(0, 3).map((x) => ({ from: x.from, to: x.to }));
+  }
+  const NAME_FR = { p: "Pion", n: "Cavalier", b: "Fou", r: "Tour", q: "Dame", k: "Roi" };
+  const MOB = { p: 4, n: 8, b: 13, r: 14, q: 27, k: 8 }, BASE = { p: 15, n: 55, b: 60, r: 75, q: 100, k: 35 };
+  const r5 = (x) => Math.max(5, Math.min(100, Math.round(x / 5) * 5));
+  /** fiche d'une pièce AVANT son coup : Power (valeur + pièces qu'elle menace), Speed (mobilité), Defense (protecteurs), Trick (cibles / fourchette / sacrifice) */
+  function pieceStats(fenBefore, sq, sacrifice) {
+    const map = mapOf(fenBefore), pc = map[sq]; if (!pc) return null;
+    const t = pc.toLowerCase(), w = isW(pc), r = reach(map, sq), tg = r.attacks.filter((s2) => PV[map[s2].toLowerCase()] >= 3 || PV[map[s2].toLowerCase()] === 100);
+    const defenders = coverers(map, sq, w).length;
+    const power = BASE[t] + Math.min(35, tg.reduce((a, s2) => a + Math.min(9, PV[map[s2].toLowerCase()]) * 4, 0)), speed = (r.moves.length / MOB[t]) * 100 * 1.25, defense = 25 + defenders * 22, trick = 10 + tg.length * 25 + (tg.length >= 2 ? 25 : 0) + (sacrifice ? 30 : 0);
+    return { piece: pc, type: t, color: w ? "w" : "b", sq, name: NAME_FR[t], vals: { power: r5(power), speed: r5(speed), defense: r5(defense), trick: r5(trick) } };
+  }
+
   // ---------------------------------------------------------------- 4. RYTHME « VIRAL » : toute la partie, ouverture fluide, accéléré, ralentis + arrêts sur image sur les moments critiques
   // Badges de coup (typographie Chess.com) : gaffe ❓ rouge, erreur ? orange, inexactitude ⁈ jaune, excellent 👍 vert, brillant ‼ cyan néon
   const BADGES = {
@@ -194,16 +238,16 @@
     plies.forEach((p, i) => {
       const l = L[i];
       let pl;
-      if (l >= 3) pl = { phase: "hero", anim: p.mate ? 1700 : 1500, freeze: p.mate ? 2.6 : p.key === "brilliant" ? 2.1 : p.key === "blunder" || p.loss > 300 ? 1.7 : 1.5, gap: 0.5 };
-      else if (l === 2) pl = { phase: "crit", anim: 1100, freeze: p.check ? 0.8 : 1.0, gap: 0.4 };
+      if (l >= 3) pl = { phase: "hero", anim: p.mate ? 1700 : 1500, freeze: p.mate ? 2.6 : p.key === "brilliant" ? 2.4 : p.key === "blunder" || p.loss > 300 ? 1.9 : 1.7, gap: 0.5, pre: p.key === "brilliant" || p.sacrifice || p.boss ? 3.0 : 0 };
+      else if (l === 2) pl = { phase: "crit", anim: 1100, freeze: p.check ? 1.2 : 1.5, gap: 0.4, pre: p.sacrifice ? 2.4 : 0 };
       else if (i < nOpen) pl = { phase: "open", anim: 520, freeze: 0, gap: 0.6 - 0.2 * (i / Math.max(1, nOpen - 1)) };
       else if (l === 1) pl = { phase: "mid", anim: 520, freeze: 0, gap: 0.45 };
       else pl = { phase: "ff", anim: 260, freeze: 0, gap: 0.18 };
-      pl.base = { gap: pl.gap };
+      pl.pre = pl.pre || 0; pl.base = { gap: pl.gap };
       plan.push(pl);
     });
     plan.forEach((pl, i) => { if (pl.phase !== "hero" && pl.phase !== "crit" && i + 1 < n && L[i + 1] >= 3 && i >= nOpen) { pl.phase = "tension"; pl.anim = 760; pl.gap = 0.55; pl.base.gap = 0.55; } });   // le calme avant le coup clé
-    const dt = (q) => q.anim / 1000 + q.freeze + q.gap, t0 = opts.intro ? opts.introDur : 0.4, fixed = () => t0 + (opts.idle || 0) + opts.outroDur;
+    const dt = (q) => q.pre + q.anim / 1000 + q.freeze + q.gap, t0 = opts.intro ? opts.introDur : 0.4, fixed = () => t0 + (opts.idle || 0) + opts.outroDur;
     const total = () => fixed() + plan.reduce((a, q) => a + dt(q), 0);
     // budget de durée : on resserre d'abord les coups passifs, puis les notables, puis l'ouverture (jamais au point d'aller vite : plancher 55 % du rythme posé)
     for (const phase of ["ff", "mid", "open"]) {
@@ -214,7 +258,7 @@
     if (total() > opts.maxLen) { const hs = plan.filter((q) => q.freeze).reduce((a, q) => a + q.freeze, 0), over = total() - opts.maxLen, k = Math.max(0.6, (hs - over) / Math.max(hs, 0.001)); plan.forEach((q) => { q.freeze *= k; }); }
     const heroIdx0 = (() => { let b = -1; plies.forEach((p, i) => { if (L[i] >= 3 && (b < 0 || p.drama > plies[b].drama)) b = i; }); return b < 0 ? plies.reduce((m, p, i) => (p.drama > plies[m].drama ? i : m), 0) : b; })();
     // ---- adaptation à la musique : quel moment tombe sur le DROP ?
-    const impactOf = (i) => t0 + (opts.idle || 0) + plan.slice(0, i).reduce((a, q) => a + dt(q), 0) + (plan[i].anim / 1000) * 0.82;
+    const impactOf = (i) => t0 + (opts.idle || 0) + plan.slice(0, i).reduce((a, q) => a + dt(q), 0) + plan[i].pre + (plan[i].anim / 1000) * 0.82;
     let heroIdx = heroIdx0, idle = 0, align = null;
     if (audio && opts.syncDrop && audio.mainDropTimestamp > 2) {
       const drop = audio.mainDropTimestamp, cands = plies.map((p, i) => i).filter((i) => L[i] >= 3);
@@ -243,9 +287,10 @@
       // logos seulement, pas de texte ; 👍 rare (un « meilleur coup » toutes les 8 coups au plus), le reste = logos d'alerte et brillant
       let bd = null;
       if (BADGES[key] && key !== "excellent") { if (key !== "best" || (L[i] >= 1 && i - lastThumb >= 8)) { bd = BADGES[key]; if (key === "best") lastThumb = i; } }
-      const impact = +(t + (pl.anim / 1000) * 0.82).toFixed(3);
+      const impact = +(t + pl.pre + (pl.anim / 1000) * 0.82).toFixed(3);
+      const th = kind === "ff" ? [] : threatsFrom(p.fen, p.to), stats = pl.pre > 0 ? pieceStats(p.fenBefore, p.from, p.sacrifice) : null;
       const e = { t: +t.toFixed(3), ply: p.i, n: p.n, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
-        lines: L[i] >= 2 ? p.lines : [], fen: p.fen, kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), freeze: +pl.freeze.toFixed(3), impact, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
+        lines: L[i] >= 2 ? p.lines : [], fen: p.fen, kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), pre: pl.pre, freeze: +pl.freeze.toFixed(3), impact, ev: p.ev, threats: pl.phase === "ff" || pl.phase === "open" ? [] : th, stats, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
         fx: kind === "ff" ? "FASTFORWARD" : fxOf(p, slot), text: kind === "ff" ? "" : textOf(p), shot: kind === "ff" ? "" : shotOf(p, slot), tone: kind === "ff" ? "green" : toneOf(p),
         cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (key === "brilliant" || (p.sacrifice && L[i] >= 2 && key !== "blunder")) };
       ev.push(e); t += dt(pl);
@@ -277,6 +322,9 @@
     if (opts.intro) all.push({ t: 0, kind: "intro", dur: opts.introDur, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     if (idle > 0.5) all.push({ t: t0, kind: "idle", dur: idle, fx: "IDLE", ply: -1 });
     ev.forEach((e) => all.push(e));
+    const firstOpen = ev.find((e) => e.phase === "open");
+    if (opts.opening && firstOpen) all.push({ t: +(firstOpen.t + 0.4).toFixed(3), kind: "title", dur: 4.5, text: opts.opening, fx: "TITLE", ply: -1 });
+    all.sort((a, b) => a.t - b.t);
     all.push({ t: end, kind: "outro", dur: opts.outroDur, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n });
     const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2), hero = ev[heroIdx];
     return { viral: true, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align, stats: { open: nOpen, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: hero ? hero.n : 0, freeze: +ev.reduce((a, e) => a + e.freeze, 0).toFixed(1), idle,
@@ -290,17 +338,17 @@
       version: tl.viral ? 2 : 1, generator: "E.N.O.S. Chess Edit Studio",
       audio: { path: opts.audioPath || "", name: opts.audioName || "", duration: audio ? audio.duration : tl.duration, mainDrop: audio ? audio.mainDropTimestamp : null, buildUpStart: audio ? audio.buildUpStart : null,
         preDropSilence: audio ? audio.preDropSilence : null, hardBeats: audio ? audio.hardBeats : [], introBeats: audio ? audio.introBeats : [], vocalPeaks: audio ? audio.vocalPeaks : [], start_offset: tl.musicStart || 0 },
-      pacing: tl.viral ? { mode: "viral", duration: tl.duration, stats: tl.stats || {}, outro_t: (tl.events.find((e) => e.kind === "outro") || {}).t || tl.duration } : { mode: "music" },
+      pacing: tl.viral ? { mode: "viral", opening: (tl.events.find((e) => e.kind === "title") || {}).text || "", duration: tl.duration, stats: tl.stats || {}, outro_t: (tl.events.find((e) => e.kind === "outro") || {}).t || tl.duration } : { mode: "music" },
       sfx: tl.viral ? tl.sfx : [],
       intro: tl.viral ? (tl.events.find((e) => e.kind === "intro") || {}).intro || null : null,
       game: { title: rec.title || "", white: rec.pw || "Blancs", black: rec.pb || "Noirs", result: rec.result || "", pgn: rec.pgn || "", plies: tl.plies, flip: rec.me === "b" },
       events: tl.events.filter((e) => e.from).map((e) => ({
         t: +e.t.toFixed(3), ply: e.n, san: e.san, uci: e.uci, color: e.color, piece: e.piece, captured: e.captured, promotion: e.promo, from: e.from, to: e.to, from_xy: sqXY(e.from), to_xy: sqXY(e.to),
         effect: e.fx, tone: e.tone, kind: e.kind, quality: e.key || "", drama: e.drama || 0, tags: e.tags || [], cutscene: e.cut ? { text: e.cut.text, piece: e.cut.piece, t: +((e.cutT != null ? e.cutT : e.t)).toFixed(3), duration: 0.8 } : null,
-        overlay_text: e.text || "", shot: e.shot || "", dur: e.dur != null ? +(e.dur / 1000).toFixed(3) : 0.3, freeze: e.freeze || 0, impact: e.impact != null ? e.impact : e.t, badge: e.badge ? { glyph: e.badge.glyph, label: e.badge.label, color: e.badge.color } : null, level: e.lvl != null ? e.lvl : 0, phase: e.phase || "", texts: (e.lines || []).map((l) => ({ bot: l.bot, text: l.text, kind: l.kind })), fast_forward: e.kind === "ff", fen_after: e.fen || "",
+        overlay_text: e.text || "", shot: e.shot || "", dur: e.dur != null ? +(e.dur / 1000).toFixed(3) : 0.3, freeze: e.freeze || 0, impact: e.impact != null ? e.impact : e.t, badge: e.badge ? { glyph: e.badge.glyph, label: e.badge.label, color: e.badge.color } : null, level: e.lvl != null ? e.lvl : 0, phase: e.phase || "", pre: e.pre || 0, eval_cp: e.ev == null ? null : e.ev, threats: e.threats || [], stats: e.stats ? { piece: e.stats.name, color: e.stats.color, square: e.stats.sq, ...e.stats.vals } : null, texts: (e.lines || []).map((l) => ({ bot: l.bot, text: l.text, kind: l.kind })), fast_forward: e.kind === "ff", fen_after: e.fen || "",
       })),
     };
   }
 
-  E.editMap = { gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo };
+  E.editMap = { gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, reach, threatsFrom, pieceStats, mapOf };
 })();

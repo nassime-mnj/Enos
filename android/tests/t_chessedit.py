@@ -200,6 +200,34 @@ with sync_playwright() as pw:
     check(r3["ash"] and r3["smoke"] >= 20 and r3["embers"] >= 8, "pièce prise : elle devient une ombre qui part en fumée + braises (%s)" % r3)
     check(r3["look"] == "neon" and r3["lookCls"] and r3["king"], "look néon violet + le roi maté peut partir en cendres")
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
+    # ---------------------------------------------------------------- références : barre d'évaluation, titre d'ouverture, menaces ⚠, fiche Power/Speed/Defense/Trick, HDR, flou de mouvement
+    v3 = pg.evaluate("""(args) => { const [rec] = args, M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { opening: 'Italian Game' }), ev = tl.events.filter((e) => e.from), mf = M.manifest(rec, tl, null, {});
+        const br = ev.find((e) => e.key === 'brilliant');
+        return { title: tl.events.filter((e) => e.kind === 'title').map((e) => [e.text, e.t]), pre: br && br.pre, stats: br && br.stats && br.stats.vals, statsName: br && br.stats && br.stats.name, threats: ev.filter((e) => e.threats && e.threats.length).length,
+          evs: ev.filter((e) => e.ev != null).length, impact: br && (br.impact - br.t - br.pre), firstOpenT: ev[0].t, mfstats: mf.events.filter((e) => e.stats).length, mfthr: mf.events.filter((e) => e.threats.length).length, opening: mf.pacing.opening,
+          fork: M.threatsFrom('4k3/8/8/8/8/8/8/R3K2q b - - 0 1', 'h1').length, pst: M.pieceStats('rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 1', 'f3', false) }; }""", [rec])
+    check(v3["title"] and v3["title"][0][0] == "Italian Game" and v3["title"][0][1] > v3["firstOpenT"] - 0.1, "titre d'ouverture « Italian Game » au début de l'ouverture : %s" % v3["title"])
+    check(v3["pre"] >= 2.4 and v3["stats"] and set(v3["stats"]) == {"power", "speed", "defense", "trick"} and v3["statsName"], "coup brillant : la pièce maîtresse présente ses stats %s (%s) AVANT le coup (%.1f s)" % (v3["stats"], v3["statsName"], v3["pre"]))
+    check(v3["threats"] >= 1 and v3["mfthr"] == v3["threats"] and v3["mfstats"] >= 1 and v3["opening"] == "Italian Game", "menaces calculées (%d coups) + stats + ouverture dans le manifeste" % v3["threats"])
+    check(v3["evs"] == 33 and v3["impact"] > 0.5, "évaluation de chaque coup pour la barre (%d) ; l'impact suit le pré-roll" % v3["evs"])
+    check(v3["pst"] and v3["pst"]["name"] == "Cavalier" and all(5 <= x <= 100 for x in v3["pst"]["vals"].values()), "fiche de pièce : %s" % v3["pst"])
+    r4 = pg.evaluate("""async () => { const E = ENOS, host = document.createElement('div'); document.getElementById('app').appendChild(host); const st = new E.editFx.Stage(host, { title: 'refs', look: 'neon' });
+        st.setFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4'); st.setEval(250); st.openingTitle('Fried Liver Attack', 3);
+        const ev = { from: 'h5', to: 'f7', fen: 'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', piece: 'q', color: 'w', tone: 'cyan', key: 'brilliant', captured: 'p', kind: 'crit', dur: 1100 };
+        st.move(ev); st.threats([{ from: 'f7', to: 'e8' }, { from: 'f7', to: 'f6' }], 2000);
+        await st.statCard({ piece: 'N', type: 'n', color: 'w', sq: 'f3', name: 'Cavalier', vals: { power: 65, speed: 75, defense: 50, trick: 100 } }, 3000);
+        st.camTo({ rx: 40, rz: 5, s: 2.0 }, 600, 5, 1); st.camTo({ rx: 30, rz: -5, s: 1.2 }, 600, 2, 3);
+        await new Promise((r) => setTimeout(r, 700));
+        const bars = [...host.querySelectorAll('.ce-sc-bars .r')].map((r) => r.classList.contains('top'));
+        return { eval: st.evF.style.height, evn: st.evN.textContent, title: !st.openEl.hidden && st.openEl.textContent, thr: !!host.querySelector('.ce-thr path'), warn: host.querySelectorAll('.ce-warn').length, card: !!host.querySelector('.ce-sc'), bars, dim: host.classList.contains('ce-dim'),
+          hl: host.querySelectorAll('.ce-hl').length, hdr: host.classList.contains('ce-hdr'), mb: st.mb.k, outline: (await st.outlineOf(st.pcs.querySelector('img').src)).startsWith('data:image'), pulse: !!host.querySelector('.ce-pulse') }; }""")
+    check(r4["eval"].endswith("%") and float(r4["eval"][:-1]) > 50 and r4["evn"] == "+2.5", "barre d'évaluation verticale animée (%s, %s)" % (r4["eval"], r4["evn"]))
+    check(r4["title"] == "FRIED LIVER ATTACK", "titre d'ouverture en gros caractères")
+    check(r4["thr"] and r4["warn"] == 2, "flèches de menace courbes orange + 2 panneaux ⚠")
+    check(r4["card"] and r4["bars"] == [False, False, False, True] and r4["dim"] and r4["pulse"], "fiche Power / Speed / Defense / Trick : la plus haute (Trick) en violet, plateau assombri, case de la pièce qui pulse")
+    check(r4["hl"] == 2 and r4["hdr"] and r4["outline"], "cases de départ/arrivée allumées, HDR actif, contour « dessin au trait » généré")
+    check(r4["mb"] > 0, "flou de mouvement armé par les mouvements de caméra (%.1f)" % r4["mb"])
+    pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
     # aperçu viral réel via l'interface : intro à t=0 puis les coups s'enchaînent
     pg.select_option("#ce-pace", "viral"); pg.wait_for_timeout(200)
     pg.click("#ce-play")

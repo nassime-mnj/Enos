@@ -44,8 +44,17 @@
         sel.innerHTML = h.length ? h.map((x, i) => `<option value="${i}">${esc(x.title)} · ${x.plies} coups · ${new Date(x.t).toLocaleDateString("fr-FR")}</option>`).reverse().join("") : '<option value="">Aucune partie enregistrée (joue un Défi / un Combat)</option>';
         if (h.length) setRec(S.rec && h.find((x) => x.t === S.rec.t) || h[h.length - 1]);
       }
+      async function openingOf(rec) {                                                                  // nom de l'ouverture (livre Lichess) : le plus profond reconnu dans les 16 premiers coups
+        try {
+          const K = E.brain, L = E.learnLib; if (!K || !L || !(await K.loadBook())) return "";
+          const path = (rec.mv || []).slice(0, 16).map((m) => m[1]); let name = "";
+          for (let i = 1; i <= path.length; i++) { const nm = L.nameAt(L.root, path.slice(0, i)); if (nm && nm[1]) name = nm[1]; }
+          return name.split(":")[0].trim();
+        } catch (e) { return ""; }
+      }
       function setRec(rec) {
-        S.rec = rec; S.plies = M().gamePlies(rec);
+        S.rec = rec; S.plies = M().gamePlies(rec); S.opening = "";
+        openingOf(rec).then((n) => { if (S.rec === rec && n) { S.opening = n; refresh(); } });
         const i = hist().findIndex((x) => x.t === rec.t); if (i >= 0) $("#ce-game").value = String(i);
         S.marks = E.settings.get(mkey(), []); S.dropPly = 0; S.sel = -1;
         const top = S.plies.slice().sort((a, b) => b.drama - a.drama).slice(0, 8);
@@ -84,7 +93,7 @@
       }
       function rebuild() {
         S.tl = null;
-        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio }); return; }
+        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio, opening: S.opening || "" }); return; }
         if (!S.rec || !S.audio) return;
         if (S.mode === "manual" && !S.marks.some((m) => m.type === "drop")) return;
         S.tl = M().build(S.plies, slots(), S.audio);
@@ -193,6 +202,7 @@
         function fire(e) {
           if (e.kind === "intro") { stage.intro(e.intro, e.dur); return; }
           if (e.kind === "idle") { stage.idle(e.dur); return; }
+          if (e.kind === "title") { stage.openingTitle(e.text, e.dur); return; }
           if (e.kind === "outro") {
             stage.ff(false); stage.outro(e, e.dur);
             if (au) { const v0 = au.volume, t0 = performance.now(); const fade = () => { if (!alive) return; const k = Math.min(1, (performance.now() - t0) / (e.dur * 1000)); au.volume = Math.max(0, v0 * (1 - k)); if (k < 1) requestAnimationFrame(fade); }; fade(); }      // la musique s'éteint avec le résultat
@@ -200,27 +210,33 @@
           }
           if (e.kind === "ff") {
             if (e.ffRun && !ffOn) { ffOn = true; stage.ff(true); }
-            stage.move(e, true); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
+            stage.move(e, true); if (e.ev != null) stage.setEval(e.ev); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
             return;
           }
           if (ffOn) { ffOn = false; stage.ff(false); }
           stage.setLook(lookFor(e));
-          const slow = e.dur > 600, p = stage.xy(e.to), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80));
-          if (slow) stage.slowmo(true);
-          stage.move({ ...e, dur: e.dur });
-          if (e.lvl >= 2) stage.camTo({ rx: 40, rz: (Math.random() - 0.5) * 10, s: 1.6 }, Math.round(e.dur * 0.9), p.c, p.r);
-          else stage.camTo({ rx: 30 + Math.random() * 6, rz: (Math.random() - 0.5) * 4, s: 1.05 }, 360);
-          const wait = Math.max(0, (e.impact - e.t) * 1000);
-          stage.later(() => {
-            if (slow) stage.slowmo(false);
-            if (e.lvl >= 2) stage.hit(e, power); else stage.soft(e);
-            if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
-            if (e.invert) stage.brilliantFx(e);
-            if (e.freeze) stage.freeze(e.freeze, e);
-            if (e.mate) stage.later(() => stage.dissolveKing(e.color === "w" ? "b" : "w"), 900);                         // le roi maté part en cendres
-            if (e.cut) stage.later(() => stage.cutscene(e.cut, e.tone), 120);
-            (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
-          }, wait);
+          const startMove = () => {
+            const slow = e.dur > 600, p = stage.xy(e.to), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80));
+            if (slow) stage.slowmo(true);
+            stage.move({ ...e, dur: e.dur });
+            if (e.lvl >= 2) stage.camTo({ rx: 40, rz: (Math.random() - 0.5) * 10, s: 1.6 }, Math.round(e.dur * 0.9), p.c, p.r);
+            else stage.camTo({ rx: 30 + Math.random() * 6, rz: (Math.random() - 0.5) * 4, s: 1.05 }, 600);
+            const wait = Math.max(0, (e.impact - e.t - (e.pre || 0)) * 1000);
+            stage.later(() => {
+              if (slow) stage.slowmo(false);
+              if (e.lvl >= 2) stage.hit(e, power); else stage.soft(e);
+              if (e.ev != null) stage.setEval(e.ev);
+              if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
+              if (e.threats && e.threats.length && e.lvl >= 2) stage.later(() => stage.threats(e.threats, Math.round((e.freeze || 1) * 1000) + 500), 350);        // menaces : flèches orange + ⚠ sur les pièces visées
+              if (e.invert) stage.brilliantFx(e);
+              if (e.freeze) stage.freeze(e.freeze, e);
+              if (e.cut) stage.later(() => stage.cutscene(e.cut, e.tone), 120);
+              if (e.mate) stage.later(() => stage.dissolveKing(e.color === "w" ? "b" : "w"), 900);                         // le roi maté part en cendres
+              (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
+            }, wait);
+          };
+          if (e.pre > 0 && e.stats) { stage.statCard(e.stats, e.pre * 1000); stage.later(startMove, e.pre * 1000); }                // la pièce maîtresse présente ses stats AVANT le coup
+          else startMove();
         }
         function tick() {
           if (!alive) return;

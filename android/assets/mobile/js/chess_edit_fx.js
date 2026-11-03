@@ -25,21 +25,22 @@
     /** host : élément plein écran (dans #app). opts : {flip, title, onClose, onToggle}. */
     constructor(host, opts) {
       this.o = opts || {}; this.host = host; this.flip = !!this.o.flip; this.timers = []; this.alive = true;
-      this.shake = 0; this.chroma = 0; this.warp = 0; this.ts = 1; this.smoke = []; this.burst = []; this.t0 = performance.now(); this.pieces = {}; this.ghosts = 0; this.rz = 0;
-      host.classList.add("ce-stage");
+      this.shake = 0; this.chroma = 0; this.warp = 0; this.ts = 1; this.smoke = []; this.mb = { x: 0, y: 0, k: 0, t0: 0, ms: 1 }; this.outl = {}; this.burst = []; this.t0 = performance.now(); this.pieces = {}; this.ghosts = 0; this.rz = 0;
+      host.classList.add("ce-stage", "ce-hdr");
       host.innerHTML = `<canvas class="ce-bg"></canvas>
         <svg width="0" height="0" style="position:absolute"><filter id="ce-ab" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
           <feColorMatrix in="SourceGraphic" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/><feOffset in="r" dx="0" dy="0" result="ro" class="ce-abr"/>
           <feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
           <feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/><feOffset in="b" dx="0" dy="0" result="bo" class="ce-abb"/>
-          <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/></filter></svg>
+          <feBlend in="ro" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="bo" mode="screen"/></filter>
+          <filter id="ce-mb" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur class="ce-mbg" stdDeviation="0 0"/></filter></svg>
         <div class="ce-fxwrap"><div class="ce-shake"><div class="ce-persp"><div class="ce-drift"><div class="ce-cam"><div class="ce-board"></div><div class="ce-pcs"></div><div class="ce-fxl"></div></div></div></div></div></div>
         <canvas class="ce-fg"></canvas><div class="ce-dof"></div><div class="ce-vig"></div><div class="ce-flash"></div><div class="ce-ff" hidden>▶▶ ×8</div>
-        <div class="ce-cut" hidden></div><div class="ce-cap" hidden></div><div class="ce-label" hidden></div><div class="ce-intro" hidden></div><div class="ce-result" hidden></div>
+        <div class="ce-cut" hidden></div><div class="ce-cap" hidden></div><div class="ce-label" hidden></div><div class="ce-eval" hidden><i class="ce-ef"></i><b class="ce-en">0.0</b></div><div class="ce-open" hidden></div><div class="ce-stat" hidden></div><div class="ce-intro" hidden></div><div class="ce-result" hidden></div>
         <div class="ce-hud"><button class="ce-x" aria-label="Fermer">✕</button><span class="ce-title"></span><button class="ce-pp" aria-label="Lecture / pause">⏸</button></div><div class="ce-prog"><i></i></div>`;
       const q = (s) => host.querySelector(s);
-      this.bg = q(".ce-bg"); this.fg = q(".ce-fg"); this.wrap = q(".ce-fxwrap"); this.shk = q(".ce-shake"); this.drift = q(".ce-drift"); this.cam = q(".ce-cam"); this.board = q(".ce-board"); this.pcs = q(".ce-pcs"); this.fxl = q(".ce-fxl");
-      this.flash = q(".ce-flash"); this.cut = q(".ce-cut"); this.cap = q(".ce-cap"); this.ffEl = q(".ce-ff"); this.label = q(".ce-label"); this.introEl = q(".ce-intro"); this.resEl = q(".ce-result"); this.prog = q(".ce-prog i"); this.dofEl = q(".ce-dof"); this.abr = q(".ce-abr"); this.abb = q(".ce-abb");
+      this.bg = q(".ce-bg"); this.fg = q(".ce-fg"); this.wrap = q(".ce-fxwrap"); this.shk = q(".ce-shake"); this.drift = q(".ce-drift"); this.persp = q(".ce-persp"); this.cam = q(".ce-cam"); this.board = q(".ce-board"); this.pcs = q(".ce-pcs"); this.fxl = q(".ce-fxl");
+      this.flash = q(".ce-flash"); this.cut = q(".ce-cut"); this.cap = q(".ce-cap"); this.ffEl = q(".ce-ff"); this.label = q(".ce-label"); this.evalEl = q(".ce-eval"); this.evF = q(".ce-ef"); this.evN = q(".ce-en"); this.openEl = q(".ce-open"); this.statEl = q(".ce-stat"); this.introEl = q(".ce-intro"); this.resEl = q(".ce-result"); this.prog = q(".ce-prog i"); this.dofEl = q(".ce-dof"); this.abr = q(".ce-abr"); this.abb = q(".ce-abb"); this.mbg = q(".ce-mbg");
       q(".ce-title").textContent = this.o.title || ""; q(".ce-x").onclick = () => this.o.onClose && this.o.onClose(); q(".ce-pp").onclick = () => this.o.onToggle && this.o.onToggle();
       this.ppBtn = q(".ce-pp");
       this.resize(); this.buildBoard(); this.setLook(this.o.look || "mono"); this.initParticles(); this.setFen(START);
@@ -91,12 +92,23 @@
       }
       this.later(() => { const target = fenMap(ev.fen); Object.keys(this.pieces).forEach((s) => { if (target[s] !== this.pieces[s]._p) { if (s === ev.to && target[s]) { this.pieces[s]._p = target[s]; this.pieces[s].src = pieceUrl(target[s]); } else { this.pieces[s].remove(); delete this.pieces[s]; } } });
         Object.keys(target).forEach((s) => { if (!this.pieces[s]) this.mkPiece(target[s], s); }); }, dur + 20);
+      if (!fast) { this.highlight(ev); }
       if (!fast) {                                                                                   // traînée lumineuse : silhouettes fantômes le long du trajet
         for (let i = 1; i <= (slow ? 9 : 5); i++) {
           const g = document.createElement("img"), f = i / (slow ? 10 : 6); g.src = pre.src; g.className = "ce-ghost"; g.style.cssText = `width:${this.cell}px;height:${this.cell}px;left:${a.x + (b.x - a.x) * f}px;top:${a.y + (b.y - a.y) * f}px;filter:brightness(0) invert(1) drop-shadow(0 0 7px ${tone}) drop-shadow(0 0 16px ${tone});animation-delay:${i * 35}ms`;
           this.fxl.appendChild(g); this.later(() => g.remove(), 700);
         }
       }
+    }
+    /** cases de départ et d'arrivée allumées (orange ; cyan pour un coup brillant ; rouge pour une gaffe) */
+    highlight(ev) {
+      (this.hl || []).forEach((e) => e.remove()); this.hl = [];
+      const col = ev.key === "brilliant" ? "0,242,254" : ev.key === "blunder" ? "255,42,68" : "255,150,40";
+      [ev.from, ev.to].forEach((sq, i) => {
+        const p = this.xy(sq), d = document.createElement("div"); d.className = "ce-hl";
+        d.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;background:rgba(${col},${i ? 0.5 : 0.3});box-shadow:0 0 ${this.cell * 0.5}px rgba(${col},.8)`;
+        this.fxl.prepend(d); this.hl.push(d);
+      });
     }
     // ---------------------------------------------------------------- caméra
     camTo(c, ms, col, row) {
@@ -107,6 +119,8 @@
         const x2 = dx * Math.cos(a) - dy * Math.sin(a), y2 = dx * Math.sin(a) + dy * Math.cos(a);
         tx = -x2 * s * 0.75; ty = -y2 * s * Math.cos((rx * Math.PI) / 180) * 0.75;
       }
+      if (ms > 120 && this.prevCam) { const dx = tx - this.prevCam.tx, dy = ty - this.prevCam.ty, mag = Math.hypot(dx, dy) + Math.abs(s - this.prevCam.s) * this.cell * 2.2; this.mb = { x: dx / (Math.hypot(dx, dy) || 1), y: dy / (Math.hypot(dx, dy) || 1), k: Math.min(7, mag / 55), t0: performance.now(), ms: Math.min(ms, 900) }; }
+      this.prevCam = { tx, ty, s };
       this.cam.style.transition = ms ? `transform ${ms}ms cubic-bezier(0.16,1,0.3,1)` : "none";
       this.cam.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(${s})`;
     }
@@ -222,6 +236,67 @@
       };
       tick();
     }
+    /** barre d'évaluation verticale à gauche (comme Stockfish / Chess.com) : cp du point de vue des Blancs, animée */
+    setEval(cp) {
+      if (cp == null) return; this.evalEl.hidden = false;
+      const mate = Math.abs(cp) >= 9000, v = Math.max(-99, Math.min(99, cp / 100)), pct = E.board && E.board.winPct ? E.board.winPct(cp) : 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * Math.max(-2000, Math.min(2000, cp)))) - 1);
+      this.evF.style.height = pct + "%"; this.evN.textContent = mate ? "M" : (v > 0 ? "+" : "") + v.toFixed(1); this.evN.style.top = Math.max(2, Math.min(94, 100 - pct - 3)) + "%";
+    }
+    /** nom de l'ouverture, en gros caractères bruns/dorés au bas de l'écran */
+    openingTitle(text, sec) {
+      const el = this.openEl; el.hidden = false; el.textContent = String(text).toUpperCase(); el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
+      clearTimeout(this._opT); this._opT = setTimeout(() => { if (this.alive) { el.classList.add("out"); this._opT = setTimeout(() => { el.hidden = true; el.classList.remove("out"); }, 900); } }, (sec || 4.5) * 1000);
+    }
+    /** flèches de menace orange (courbes) de la pièce vers les pièces qu'elle menace + panneaux ⚠ sur les cibles */
+    threats(list, ms) {
+      if (!list || !list.length) return;
+      const S = this.S, c = this.cell, ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg"), els = [svg];
+      svg.setAttribute("class", "ce-thr"); svg.setAttribute("viewBox", `0 0 ${S} ${S}`); svg.style.cssText = `width:${S}px;height:${S}px`;
+      list.forEach((t, i) => {
+        const a = this.xy(t.from), b = this.xy(t.to), x1 = a.x + c / 2, y1 = a.y + c / 2, x2 = b.x + c / 2, y2 = b.y + c / 2, mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+        const sg = i % 2 ? -1 : 1, cx = mx - (dy / L) * L * 0.32 * sg, cy = my + (dx / L) * L * 0.32 * sg, ang = Math.atan2(y2 - cy, x2 - cx), hs = c * 0.34;
+        const sx = x1 + Math.cos(Math.atan2(cy - y1, cx - x1)) * c * 0.35, sy = y1 + Math.sin(Math.atan2(cy - y1, cx - x1)) * c * 0.35, ex = x2 - Math.cos(ang) * c * 0.42, ey = y2 - Math.sin(ang) * c * 0.42;
+        const path = document.createElementNS(ns, "path"); path.setAttribute("d", `M${sx.toFixed(1)},${sy.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`); path.setAttribute("class", "ce-thp"); path.setAttribute("pathLength", "1"); path.style.strokeWidth = c * 0.13; path.style.animationDelay = i * 160 + "ms";
+        const head = document.createElementNS(ns, "polygon"); head.setAttribute("class", "ce-thh"); head.setAttribute("points", `0,${-hs * 0.55} ${hs},0 0,${hs * 0.55}`); head.setAttribute("transform", `translate(${ex.toFixed(1)},${ey.toFixed(1)}) rotate(${(ang * 180 / Math.PI).toFixed(1)})`); head.style.animationDelay = 350 + i * 160 + "ms";
+        svg.append(path, head);
+        const w = document.createElement("div"); w.className = "ce-warn"; w.textContent = "!"; w.style.cssText = `left:${b.x + c * 0.58}px;top:${b.y - c * 0.12}px;width:${c * 0.5}px;height:${c * 0.44}px;font-size:${c * 0.3}px;animation-delay:${450 + i * 160}ms`;
+        this.fxl.appendChild(w); els.push(w);
+      });
+      this.fxl.appendChild(svg);
+      this.later(() => els.forEach((e) => e.classList.add("out")), ms || 2200); this.later(() => els.forEach((e) => e.remove()), (ms || 2200) + 450);
+    }
+    /** contour « dessin au trait » d'une image de pièce (blanc, 3 px) : bord de son canal alpha ; mis en cache */
+    outlineOf(url, size) {
+      size = size || 220;
+      return (this.outl[url] = this.outl[url] || new Promise((res) => {
+        const im = new Image();
+        im.onload = () => {
+          try {
+            const c = document.createElement("canvas"); c.width = c.height = size; const g = c.getContext("2d"); g.drawImage(im, 0, 0, size, size);
+            const a = g.getImageData(0, 0, size, size).data, W = size, mask = new Uint8Array(W * W), out = g.createImageData(W, W), R = 3;
+            for (let i = 0; i < W * W; i++) mask[i] = a[i * 4 + 3] > 100 ? 1 : 0;
+            for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+              if (!mask[y * W + x]) continue; let edge = false;
+              for (let dy = -R; dy <= R && !edge; dy += R) for (let dx = -R; dx <= R; dx += R) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= W || !mask[ny * W + nx]) { edge = true; break; } }
+              if (edge) { const k = (y * W + x) * 4; out.data[k] = out.data[k + 1] = out.data[k + 2] = 255; out.data[k + 3] = 255; }
+            }
+            g.clearRect(0, 0, W, W); g.putImageData(out, 0, 0); res(c.toDataURL());
+          } catch (e) { res(url); }
+        };
+        im.onerror = () => res(url); im.src = url;
+      }));
+    }
+    /** fiche de la pièce maîtresse (Power / Speed / Defense / Trick), barres qui se remplissent doucement ; le plateau s'assombrit pendant ce temps */
+    async statCard(st, ms) {
+      if (!st) return;
+      const el = this.statEl, url = pieceUrl(st.piece), rows = [["Power", st.vals.power], ["Speed", st.vals.speed], ["Defense", st.vals.defense], ["Trick", st.vals.trick]], top = Math.max(...rows.map((r) => r[1]));
+      const ic = await this.outlineOf(url);
+      if (!this.alive) return;
+      el.hidden = false; el.classList.remove("out");
+      el.innerHTML = `<div class="ce-sc"><div class="ce-sc-ic"><img src="${ic}" alt=""><em>${esc2(st.name.toUpperCase())}</em></div><div class="ce-sc-bars">${rows.map(([n, v], i) => `<div class="r${v === top ? " top" : ""}" style="--d:${i * 170}ms"><span>${n}</span><i><u style="--v:${v}%"></u></i><b>${v}</b></div>`).join("")}</div></div>`;
+      this.host.classList.add("ce-dim"); const p = this.xy(st.sq), pu = document.createElement("div"); pu.className = "ce-pulse"; pu.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px`; this.fxl.appendChild(pu);
+      this.later(() => { el.classList.add("out"); this.host.classList.remove("ce-dim"); pu.remove(); }, ms - 450); this.later(() => { el.hidden = true; el.innerHTML = ""; }, ms);
+    }
     /** la pièce prise MEURT : elle devient une ombre noire qui se délite en cendres et monte en fumée, braises qui s'élèvent (strong : plus long, plus de fumée) */
     dissolve(el, sq, strong) {
       const sec = strong ? 2.4 : 1.4, r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(), x = q.left - r.left + q.width / 2, y = q.top - r.top + q.height / 2;
@@ -229,6 +304,7 @@
       for (let i = 0; i < (strong ? 46 : 24); i++) this.smoke.push({ x: x + rnd(-q.width * 0.3, q.width * 0.3), y: y + rnd(-q.height * 0.2, q.height * 0.35), vx: rnd(-14, 14), vy: rnd(-46, -14), r: rnd(q.width * 0.12, q.width * 0.32), grow: rnd(10, 30), life: rnd(sec * 0.5, sec * 1.1), max: sec * 1.1, d: i * (strong ? 0.035 : 0.025) });
       for (let i = 0; i < (strong ? 22 : 10); i++) this.burst.push({ x: x + rnd(-q.width * 0.25, q.width * 0.25), y: y + rnd(0, q.height * 0.3), vx: rnd(-20, 20), vy: rnd(-120, -40), life: rnd(0.8, 1.9), max: 1.9, c: Math.random() < 0.5 ? "#ff8a2a" : "#ffd27a", s: rnd(1.2, 2.6) });
       this.shake = Math.max(this.shake, strong ? 9 : 4);
+      this.outlineOf(el.src).then((u) => { if (!this.alive) return; const g = document.createElement("img"), p = this.xy(sq); g.src = u; g.className = "ce-ghostline"; g.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px;--gd:${(sec * 1.1).toFixed(2)}s`; this.fxl.appendChild(g); this.later(() => g.remove(), sec * 1100 + 200); });
     }
     /** le roi maté s'effondre en cendres (couleur du camp perdant : "w" ou "b") */
     dissolveKing(color) {
@@ -338,6 +414,9 @@
       // shake amorti + aberration chromatique (le filtre SVG n'est actif que pendant l'impact : il coûte cher)
       this.shake *= Math.pow(0.004, rdt); this.chroma *= Math.pow(0.01, rdt);
       if (this.shake > 0.4) { const a = this.shake; this.shk.style.transform = `translate(${rnd(-a, a).toFixed(1)}px,${rnd(-a, a).toFixed(1)}px) rotate(${rnd(-a, a) * 0.05}deg)`; } else if (this.shk.style.transform) this.shk.style.transform = "";
+      { const m = this.mb, k = Math.max(0, 1 - (now - m.t0) / m.ms), amp = m.k * k * k;
+        if (amp > 0.35) { this.mbg.setAttribute("stdDeviation", `${Math.abs(m.x * amp).toFixed(2)} ${Math.abs(m.y * amp).toFixed(2)}`); this.persp.style.filter = "url(#ce-mb)"; this._mb = true; }
+        else if (this._mb) { this.persp.style.filter = ""; this._mb = false; } }
       if (this.chroma > 0.5) { this.abr.setAttribute("dx", this.chroma.toFixed(1)); this.abb.setAttribute("dx", (-this.chroma).toFixed(1)); this.abb.setAttribute("dy", (this.chroma * 0.4).toFixed(1)); this.wrap.style.filter = "url(#ce-ab)"; this._ab = true; }
       else if (this._ab) { this.wrap.style.filter = ""; this._ab = false; }
       this.drift.style.transform = `rotateZ(${(Math.sin((now - this.t0) / 2300) * 1.4).toFixed(2)}deg)`;                 // respiration lente entre deux impacts
