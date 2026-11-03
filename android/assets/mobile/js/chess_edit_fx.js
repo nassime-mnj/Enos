@@ -15,6 +15,7 @@
     noir: { name: "Rouge noir", l: "#b3121c", d: "#2c070b", hi: "#ff2438", dust: "#ff9aa4", vig: "#1c0000" },
     galaxy: { name: "Galaxie", l: "rgba(238,230,255,.93)", d: "rgba(104,56,176,.62)", hi: "#2fe8cc", dust: "#fff", vig: "#05040c" },
     steel: { name: "Acier neon", l: "#a8a8a8", d: "#6a6a6a", hi: "#ff3b52", dust: "#fff", vig: "#161616" },
+    neon: { name: "Néon violet", l: "#f1e6ff", d: "#6b2fd1", hi: "#ff5cf0", dust: "#d9a8ff", vig: "#0a0216" },
     aura: { name: "Aura turquoise", l: "#14605a", d: "#082624", hi: "#34f5d8", dust: "#aefcf2", vig: "#010d0c" },
   };
   const esc2 = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -24,7 +25,7 @@
     /** host : élément plein écran (dans #app). opts : {flip, title, onClose, onToggle}. */
     constructor(host, opts) {
       this.o = opts || {}; this.host = host; this.flip = !!this.o.flip; this.timers = []; this.alive = true;
-      this.shake = 0; this.chroma = 0; this.warp = 0; this.ts = 1; this.burst = []; this.t0 = performance.now(); this.pieces = {}; this.ghosts = 0; this.rz = 0;
+      this.shake = 0; this.chroma = 0; this.warp = 0; this.ts = 1; this.smoke = []; this.burst = []; this.t0 = performance.now(); this.pieces = {}; this.ghosts = 0; this.rz = 0;
       host.classList.add("ce-stage");
       host.innerHTML = `<canvas class="ce-bg"></canvas>
         <svg width="0" height="0" style="position:absolute"><filter id="ce-ab" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
@@ -80,7 +81,7 @@
       if (!pre) { this.setFen(ev.fen); return; }
       const dur = ev.dur || (fast ? 70 : 300), slow = dur > 600, tone = TONE[ev.tone] || TONE.green, a = this.xy(ev.from), b = this.xy(ev.to);
       const cap = this.pieces[ev.to];
-      if (cap) { cap.style.transition = "opacity .25s, transform .25s"; cap.style.opacity = "0"; cap.style.transform += " scale(1.6)"; const c2 = cap; this.later(() => c2.remove(), 260); delete this.pieces[ev.to]; }
+      if (cap) { if (fast) { cap.style.transition = "opacity .2s"; cap.style.opacity = "0"; const c2 = cap; this.later(() => c2.remove(), 220); } else this.dissolve(cap, ev.to, dur > 800); delete this.pieces[ev.to]; }
       delete this.pieces[ev.from]; this.pieces[ev.to] = pre; pre._sq = ev.to;
       pre.style.transition = `transform ${dur}ms ${slow ? "cubic-bezier(.35,.05,.2,1)" : "cubic-bezier(.2,.9,.2,1)"}`; pre.style.zIndex = 3; this.later(() => { pre.style.zIndex = ""; }, dur + 50);
       pre.style.transform = `translate(${b.x}px,${b.y}px)`;
@@ -114,8 +115,8 @@
     hit(ev, power) {
       const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.kind === "drop";
       const macro = ev.shot === "macro", s = macro ? rnd(3.1, 3.9) : 1.3 + power * 0.7 + (ev.kind === "drop" ? 0.25 : 0), rx = macro ? rnd(50, 62) : rnd(38, 54) + power * 4, rz = macro ? rnd(-16, 16) : rnd(-8, 8);
-      this.camTo({ rx, rz, s }, ev.kind === "drop" ? 1100 : 850, p.c, p.r);
-      this.warp = Math.max(this.warp, 0.5 + power * 0.8);
+      this.camTo({ rx, rz, s }, Math.max(ev.kind === "drop" ? 1600 : 1300, (ev.freeze || 0) * 700), p.c, p.r);
+      this.warp = Math.max(this.warp, 0.12 + power * 0.22);
       if (macro) this.dof(1400);
       if (ev.shot === "hero") this.later(() => this.hero(ev), 360);
       if (ev.text) this.later(() => this.neon(ev.text, ev.tone, ev.to), 480);
@@ -221,6 +222,24 @@
       };
       tick();
     }
+    /** la pièce prise MEURT : elle devient une ombre noire qui se délite en cendres et monte en fumée, braises qui s'élèvent (strong : plus long, plus de fumée) */
+    dissolve(el, sq, strong) {
+      const sec = strong ? 2.4 : 1.4, r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(), x = q.left - r.left + q.width / 2, y = q.top - r.top + q.height / 2;
+      el.style.transition = "none"; el.style.setProperty("--ash", sec + "s"); el.classList.add("ce-ash"); this.later(() => el.remove(), sec * 1000 + 120);
+      for (let i = 0; i < (strong ? 46 : 24); i++) this.smoke.push({ x: x + rnd(-q.width * 0.3, q.width * 0.3), y: y + rnd(-q.height * 0.2, q.height * 0.35), vx: rnd(-14, 14), vy: rnd(-46, -14), r: rnd(q.width * 0.12, q.width * 0.32), grow: rnd(10, 30), life: rnd(sec * 0.5, sec * 1.1), max: sec * 1.1, d: i * (strong ? 0.035 : 0.025) });
+      for (let i = 0; i < (strong ? 22 : 10); i++) this.burst.push({ x: x + rnd(-q.width * 0.25, q.width * 0.25), y: y + rnd(0, q.height * 0.3), vx: rnd(-20, 20), vy: rnd(-120, -40), life: rnd(0.8, 1.9), max: 1.9, c: Math.random() < 0.5 ? "#ff8a2a" : "#ffd27a", s: rnd(1.2, 2.6) });
+      this.shake = Math.max(this.shake, strong ? 9 : 4);
+    }
+    /** le roi maté s'effondre en cendres (couleur du camp perdant : "w" ou "b") */
+    dissolveKing(color) {
+      const sq = Object.keys(this.pieces).find((s) => this.pieces[s]._p === (color === "w" ? "K" : "k"));
+      if (!sq) return; const el = this.pieces[sq]; delete this.pieces[sq]; this.dissolve(el, sq, true);
+    }
+    /** plan d'ambiance (avant le premier coup, le temps que la musique arrive à son moment) : caméra qui orbite lentement */
+    idle(sec) {
+      const ms = Math.round(sec * 1000);
+      this.camTo({ rx: 44, rz: -6, s: 1.1 }, ms * 0.5); this.later(() => this.camTo({ rx: 36, rz: 7, s: 1.25 }, ms * 0.5), ms * 0.5);
+    }
     // ---------------------------------------------------------------- RYTHME VIRAL : ralenti, arrêt sur image, badges, effet brillant, intro / outro
     /** impact discret des coups ordinaires (ouverture, milieu de partie) : halo + case allumée, étincelles à la prise */
     soft(ev) {
@@ -246,8 +265,7 @@
       const p = this.xy(ev.to), c = this.cell, b = document.createElement("div"), big = ev.key === "brilliant" || ev.key === "blunder";
       b.className = "ce-badge2"; b.textContent = bd.glyph;
       b.style.cssText = `left:${p.x + c * 0.5}px;top:${p.y - c * 0.38}px;width:${c * (big ? 0.86 : 0.7)}px;height:${c * (big ? 0.86 : 0.7)}px;font-size:${c * (big ? 0.62 : 0.5)}px;--bc:${bd.color}`;
-      this.fxl.appendChild(b); this.later(() => b.classList.add("out"), (ms || 1500)); this.later(() => b.remove(), (ms || 1500) + 400);
-      this.tag(bd.label + " " + bd.glyph, bd.color, ms || 1500);
+      this.fxl.appendChild(b); this.later(() => b.classList.add("out"), (ms || 1500)); this.later(() => b.remove(), (ms || 1500) + 400);      // le LOGO seul (pas de texte)
     }
     tag(text, color, ms) {
       const L = this.label; L.hidden = false; L.textContent = text; L.style.setProperty("--lc", color); L.classList.remove("in"); void L.offsetWidth; L.classList.add("in");
@@ -258,7 +276,7 @@
       const p = this.xy(ev.to);
       this.camTo({ rx: 52, rz: rnd(-6, 6), s: 3.9 }, 170, p.c, p.r);
       this.later(() => this.camTo({ rx: 46, rz: rnd(-8, 8), s: 2.3 }, 900, p.c, p.r), 230);
-      this.shake = Math.max(this.shake, 38); this.chroma = Math.max(this.chroma, 18); this.warp = Math.max(this.warp, 1.6);
+      this.shake = Math.max(this.shake, 38); this.chroma = Math.max(this.chroma, 18); this.warp = Math.max(this.warp, 0.4);
       let n = 0; const inv = () => { this.host.classList.add("ce-inv"); this.later(() => this.host.classList.remove("ce-inv"), 80); if (++n < 3) this.later(inv, 170); };
       inv(); this.flashFx("#d8fdff"); this.later(() => this.flashFx("#ffffff"), 120);
       if (E.vibrate) E.vibrate([30, 30, 30, 30, 90]);
@@ -306,6 +324,12 @@
       const b = this.bg.getContext("2d"), f = this.fg.getContext("2d");
       b.clearRect(0, 0, this.W, this.H); f.clearRect(0, 0, this.W, this.H);
       this.drawOrbs(b, dt); this.drawDust(b, this.dustB, dt, 1); this.drawDust(f, this.dustF, dt, 1.6);
+      this.smoke = this.smoke.filter((p) => (p.life -= dt) > 0);
+      for (const p of this.smoke) {                                                      // fumée / cendres : disques sombres flous qui montent, grossissent et s'effacent
+        if (p.d > 0) { p.d -= dt; p.life += dt; continue; }
+        p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.grow * dt; const k = Math.max(0, p.life / p.max), g = f.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0, `rgba(24,18,34,${(0.55 * k).toFixed(3)})`); g.addColorStop(1, "rgba(24,18,34,0)"); f.fillStyle = g; f.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+      }
       f.globalCompositeOperation = "lighter";
       this.burst = this.burst.filter((p) => (p.life -= dt) > 0);
       for (const p of this.burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy = p.vy * 0.97 + 120 * dt; f.globalAlpha = Math.max(0, p.life / p.max); f.fillStyle = p.c; f.shadowColor = p.c; f.shadowBlur = 8; f.fillRect(p.x, p.y, p.s, p.s); }

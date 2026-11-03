@@ -183,48 +183,75 @@
     return { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "" };
   }
 
-  /** Timeline « edit viral ». opts : {intro, introDur, outroDur, maxLen, voices, syncDrop}. Les temps sont ceux de la VIDÉO ; musicStart = position de la musique à t=0 (négatif : elle démarre plus tard). */
+  /** Timeline « edit viral ». opts : {intro, introDur, outroDur, maxLen, voices, syncDrop}. Les temps sont ceux de la VIDÉO ; la musique démarre TOUJOURS à t = 0 (musicStart = 0) et c'est le montage qui s'adapte à elle :
+   *  le moment clé choisi (le plus dramatique qu'on peut caler) tombe sur le DROP de la musique, en allongeant ou resserrant un peu les temps morts avant lui et, si la partie est « trop tôt », en ajoutant un
+   *  plan d'ambiance (kind "idle") avant le premier coup. Rythme POSÉ : on ne cherche pas à aller vite, chaque chose a son temps. */
   function buildViral(plies, rec, audio, opts) {
-    opts = Object.assign({ intro: true, introDur: 4.6, outroDur: 2.6, maxLen: 70, voices: true, syncDrop: true }, opts || {});
+    opts = Object.assign({ intro: true, introDur: 5.2, outroDur: 3.2, voices: true, syncDrop: true }, opts || {});
+    if (opts.maxLen == null) opts.maxLen = audio && audio.duration ? Math.max(40, audio.duration - 1.5) : 170;
     const n = plies.length, L = plies.map(lvlOf), plan = [], ev = [];
     const firstCrit = L.findIndex((l, i) => i >= 6 && l >= 2), nOpen = Math.min(n, Math.max(8, Math.min(14, firstCrit < 0 ? 14 : firstCrit)));
     plies.forEach((p, i) => {
       const l = L[i];
       let pl;
-      if (l >= 3) pl = { phase: "hero", anim: p.mate ? 1100 : 1000, freeze: p.mate ? 1.7 : p.key === "brilliant" ? 1.35 : p.key === "blunder" || p.loss > 300 ? 1.1 : 0.95 };
-      else if (l === 2) pl = { phase: "crit", anim: 680, freeze: p.check ? 0.5 : 0.62 };
-      else if (i < nOpen) pl = { phase: "open", anim: 330, freeze: 0, dt: 0.62 - 0.26 * (i / Math.max(1, nOpen - 1)) };
-      else if (l === 1) pl = { phase: "mid", anim: 300, freeze: 0, dt: 0.42 };
-      else pl = { phase: "ff", anim: 90, freeze: 0, dt: 0.17 };
-      if (pl.dt == null) pl.dt = pl.anim / 1000 + pl.freeze;
+      if (l >= 3) pl = { phase: "hero", anim: p.mate ? 1700 : 1500, freeze: p.mate ? 2.6 : p.key === "brilliant" ? 2.1 : p.key === "blunder" || p.loss > 300 ? 1.7 : 1.5, gap: 0.5 };
+      else if (l === 2) pl = { phase: "crit", anim: 1100, freeze: p.check ? 0.8 : 1.0, gap: 0.4 };
+      else if (i < nOpen) pl = { phase: "open", anim: 520, freeze: 0, gap: 0.6 - 0.2 * (i / Math.max(1, nOpen - 1)) };
+      else if (l === 1) pl = { phase: "mid", anim: 520, freeze: 0, gap: 0.45 };
+      else pl = { phase: "ff", anim: 260, freeze: 0, gap: 0.18 };
+      pl.base = { gap: pl.gap };
       plan.push(pl);
     });
-    plan.forEach((pl, i) => { if (pl.phase !== "hero" && pl.phase !== "crit" && i + 1 < n && L[i + 1] >= 3 && i >= nOpen) { pl.phase = "tension"; pl.anim = 420; pl.dt = 0.55; } });   // le calme avant le coup clé
-    // budget de durée (Shorts) : on comprime d'abord les coups passifs, puis les notables, puis les arrêts sur image
-    const t0 = opts.intro ? opts.introDur : 0.3, fixed = t0 + opts.outroDur, total = () => fixed + plan.reduce((a, q) => a + q.dt, 0);
+    plan.forEach((pl, i) => { if (pl.phase !== "hero" && pl.phase !== "crit" && i + 1 < n && L[i + 1] >= 3 && i >= nOpen) { pl.phase = "tension"; pl.anim = 760; pl.gap = 0.55; pl.base.gap = 0.55; } });   // le calme avant le coup clé
+    const dt = (q) => q.anim / 1000 + q.freeze + q.gap, t0 = opts.intro ? opts.introDur : 0.4, fixed = () => t0 + (opts.idle || 0) + opts.outroDur;
+    const total = () => fixed() + plan.reduce((a, q) => a + dt(q), 0);
+    // budget de durée : on resserre d'abord les coups passifs, puis les notables, puis l'ouverture (jamais au point d'aller vite : plancher 55 % du rythme posé)
     for (const phase of ["ff", "mid", "open"]) {
       if (total() <= opts.maxLen) break;
-      const sum = plan.filter((q) => q.phase === phase).reduce((a, q) => a + q.dt, 0), over = total() - opts.maxLen;
-      if (sum > 0) { const k = Math.max(phase === "ff" ? 0.07 / 0.17 : 0.5, (sum - over) / sum); plan.forEach((q) => { if (q.phase === phase) q.dt *= k; }); }
+      const sum = plan.filter((q) => q.phase === phase).reduce((a, q) => a + dt(q), 0), over = total() - opts.maxLen;
+      if (sum > 0) { const k = Math.max(0.55, (sum - over) / sum); plan.forEach((q) => { if (q.phase === phase) { q.anim *= k; q.gap *= k; } }); }
     }
-    if (total() > opts.maxLen) { const hs = plan.filter((q) => q.freeze).reduce((a, q) => a + q.freeze, 0), over = total() - opts.maxLen, k = Math.max(0.45, (hs - over) / Math.max(hs, 0.001)); plan.forEach((q) => { if (q.freeze) { q.dt -= q.freeze * (1 - k); q.freeze *= k; } }); }
+    if (total() > opts.maxLen) { const hs = plan.filter((q) => q.freeze).reduce((a, q) => a + q.freeze, 0), over = total() - opts.maxLen, k = Math.max(0.6, (hs - over) / Math.max(hs, 0.001)); plan.forEach((q) => { q.freeze *= k; }); }
+    const heroIdx0 = (() => { let b = -1; plies.forEach((p, i) => { if (L[i] >= 3 && (b < 0 || p.drama > plies[b].drama)) b = i; }); return b < 0 ? plies.reduce((m, p, i) => (p.drama > plies[m].drama ? i : m), 0) : b; })();
+    // ---- adaptation à la musique : quel moment tombe sur le DROP ?
+    const impactOf = (i) => t0 + (opts.idle || 0) + plan.slice(0, i).reduce((a, q) => a + dt(q), 0) + (plan[i].anim / 1000) * 0.82;
+    let heroIdx = heroIdx0, idle = 0, align = null;
+    if (audio && opts.syncDrop && audio.mainDropTimestamp > 2) {
+      const drop = audio.mainDropTimestamp, cands = plies.map((p, i) => i).filter((i) => L[i] >= 3);
+      const list = cands.length ? cands : plies.map((p, i) => i).filter((i) => L[i] >= 2);
+      let best = null;
+      list.forEach((i) => {
+        const T = impactOf(i), gapsBefore = plan.slice(0, i).reduce((a, q) => a + q.gap, 0);
+        // feasible : trop tôt -> plan d'ambiance (jusqu'à 28 s) ; trop tard -> on resserre les temps morts (jusqu'à -45 %)
+        let how = null, cost = 0;
+        if (T <= drop) { const pad = drop - T; if (pad <= 28) { how = { pad }; cost = pad * 0.5; } }
+        else { const can = gapsBefore * 0.45; if (T - drop <= can) { how = { shrink: 1 - (T - drop) / Math.max(gapsBefore, 0.001) }; cost = (T - drop) * 1.5; } }
+        if (!how) return;
+        const score = plies[i].drama - cost + (plies[i].key === "brilliant" ? 30 : 0);
+        if (!best || score > best.score) best = { i, how, score };
+      });
+      if (best) { heroIdx = best.i; align = best.how; if (align.pad) idle = +align.pad.toFixed(3); else plan.slice(0, heroIdx).forEach((q) => { q.gap = Math.max(0.08, q.gap * align.shrink); }); }
+    }
+    opts.idle = idle;
     // événements
     const botName = (p) => { const l = p.lines.find((x) => x.kind === "transform") || p.lines[0]; return l ? (E.botChat && E.botChat.bots[l.bot] ? E.botChat.bots[l.bot].name : l.bot) : ""; };
-    const heroIdx = (() => { let b = -1; plies.forEach((p, i) => { if (L[i] >= 3 && (b < 0 || p.drama > plies[b].drama)) b = i; }); return b < 0 ? plies.reduce((m, p, i) => (p.drama > plies[m].drama ? i : m), 0) : b; })();
-    let t = t0, ffRun = 0;
+    let t = t0 + idle, ffRun = 0, lastThumb = -99;
     plies.forEach((p, i) => {
       const pl = plan[i], kind = i === heroIdx ? "drop" : pl.phase === "hero" || pl.phase === "crit" ? "crit" : pl.phase === "ff" ? "ff" : pl.phase === "tension" ? "mid" : pl.phase;
       ffRun = pl.phase === "ff" ? ffRun + 1 : 0;
-      const slot = { kind: kind === "ff" ? "ff" : kind }, bd = BADGES[p.key] && (L[i] >= 1 || p.key === "brilliant") ? BADGES[p.key] : null;
+      const slot = { kind }, key = p.key;
+      // logos seulement, pas de texte ; 👍 rare (un « meilleur coup » toutes les 8 coups au plus), le reste = logos d'alerte et brillant
+      let bd = null;
+      if (BADGES[key] && key !== "excellent") { if (key !== "best" || (L[i] >= 1 && i - lastThumb >= 8)) { bd = BADGES[key]; if (key === "best") lastThumb = i; } }
       const impact = +(t + (pl.anim / 1000) * 0.82).toFixed(3);
-      const e = { t: +t.toFixed(3), ply: p.i, n: p.n, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key: p.key, drama: p.drama, tags: p.tags,
-        lines: L[i] >= 2 ? p.lines : [], fen: p.fen, kind, phase: pl.phase, lvl: L[i], dur: pl.anim, freeze: +pl.freeze.toFixed(3), impact, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 3, check: p.check, mate: p.mate,
+      const e = { t: +t.toFixed(3), ply: p.i, n: p.n, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
+        lines: L[i] >= 2 ? p.lines : [], fen: p.fen, kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), freeze: +pl.freeze.toFixed(3), impact, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
         fx: kind === "ff" ? "FASTFORWARD" : fxOf(p, slot), text: kind === "ff" ? "" : textOf(p), shot: kind === "ff" ? "" : shotOf(p, slot), tone: kind === "ff" ? "green" : toneOf(p),
-        cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (p.key === "brilliant" || (p.sacrifice && L[i] >= 2 && p.key !== "blunder")) };
-      ev.push(e); t += pl.dt;
+        cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (key === "brilliant" || (p.sacrifice && L[i] >= 2 && key !== "blunder")) };
+      ev.push(e); t += dt(pl);
     });
     const end = +(t + 0.2).toFixed(3);
-    // son : les bruits de base calés à la frame sur l'impact de chaque coup, les voix de Levy sur les coups clés (jamais deux voix à moins de 2,4 s)
+    // son : les bruits de base calés à la frame sur l'impact de chaque coup, les voix de Levy sur le SACRIFICE d'une pièce (jamais deux voix à moins de 2,4 s)
     const sfx = [];
     ev.forEach((e) => {
       const id = e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
@@ -246,13 +273,14 @@
       chosen.forEach((c) => sfx.push({ t: +(c.e.impact + 0.04).toFixed(3), id: c.id, gain: c.id === "the_rook" ? 2.3 : 1, bus: "voice", ply: c.e.n }));
     }
     sfx.sort((a, b) => a.t - b.t);
-    const hero = ev[heroIdx], musicStart = audio && opts.syncDrop && hero ? +(audio.mainDropTimestamp - hero.impact).toFixed(3) : 0;
     const all = [];
     if (opts.intro) all.push({ t: 0, kind: "intro", dur: opts.introDur, intro: introInfo(rec), fx: "INTRO", ply: -1 });
+    if (idle > 0.5) all.push({ t: t0, kind: "idle", dur: idle, fx: "IDLE", ply: -1 });
     ev.forEach((e) => all.push(e));
     all.push({ t: end, kind: "outro", dur: opts.outroDur, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n });
-    const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
-    return { viral: true, events: all, key, duration: dur, plies: n, musicStart, sfx, stats: { open: nOpen, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: heroIdx >= 0 ? ev[heroIdx].n : 0, freeze: +ev.reduce((a, e) => a + e.freeze, 0).toFixed(1) } };
+    const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2), hero = ev[heroIdx];
+    return { viral: true, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align, stats: { open: nOpen, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: hero ? hero.n : 0, freeze: +ev.reduce((a, e) => a + e.freeze, 0).toFixed(1), idle,
+      heroT: hero ? hero.impact : 0, drop: audio && audio.mainDropTimestamp ? audio.mainDropTimestamp : 0 } };
   }
 
   // ---------------------------------------------------------------- manifeste JSON (pont Godot)
@@ -266,7 +294,7 @@
       sfx: tl.viral ? tl.sfx : [],
       intro: tl.viral ? (tl.events.find((e) => e.kind === "intro") || {}).intro || null : null,
       game: { title: rec.title || "", white: rec.pw || "Blancs", black: rec.pb || "Noirs", result: rec.result || "", pgn: rec.pgn || "", plies: tl.plies, flip: rec.me === "b" },
-      events: tl.events.filter((e) => e.kind !== "intro" && e.kind !== "outro").map((e) => ({
+      events: tl.events.filter((e) => e.from).map((e) => ({
         t: +e.t.toFixed(3), ply: e.n, san: e.san, uci: e.uci, color: e.color, piece: e.piece, captured: e.captured, promotion: e.promo, from: e.from, to: e.to, from_xy: sqXY(e.from), to_xy: sqXY(e.to),
         effect: e.fx, tone: e.tone, kind: e.kind, quality: e.key || "", drama: e.drama || 0, tags: e.tags || [], cutscene: e.cut ? { text: e.cut.text, piece: e.cut.piece, t: +((e.cutT != null ? e.cutT : e.t)).toFixed(3), duration: 0.8 } : null,
         overlay_text: e.text || "", shot: e.shot || "", dur: e.dur != null ? +(e.dur / 1000).toFixed(3) : 0.3, freeze: e.freeze || 0, impact: e.impact != null ? e.impact : e.t, badge: e.badge ? { glyph: e.badge.glyph, label: e.badge.label, color: e.badge.color } : null, level: e.lvl != null ? e.lvl : 0, phase: e.phase || "", texts: (e.lines || []).map((l) => ({ bot: l.bot, text: l.text, kind: l.kind })), fast_forward: e.kind === "ff", fen_after: e.fen || "",

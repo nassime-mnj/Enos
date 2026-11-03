@@ -33,7 +33,7 @@
           <label class="fld" style="margin-top:10px">Coup du DROP (par défaut : le plus dramatique)</label><select id="ce-drop" class="sel"></select>
           <p class="ce-stat" id="ce-sum" style="margin-top:8px"></p></div>
         <div class="card"><h3>4 · Rendu</h3>
-          <label class="fld">Style visuel</label><select id="ce-look" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · change selon l'action (acier, rouge noir, galaxie, aura)</option><option value="mono">Noir &amp; blanc</option><option value="noir">Rouge noir</option><option value="galaxy">Galaxie</option><option value="steel">Acier néon</option><option value="aura">Aura turquoise</option></select>
+          <label class="fld">Style visuel</label><select id="ce-look" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · change selon l'action (acier, rouge noir, galaxie, aura)</option><option value="neon">Néon violet</option><option value="mono">Noir &amp; blanc</option><option value="noir">Rouge noir</option><option value="galaxy">Galaxie</option><option value="steel">Acier néon</option><option value="aura">Aura turquoise</option></select>
           <div class="row" style="margin-top:0"><button class="btn pri" id="ce-play">▶ APERÇU 3D (TEMPS RÉEL)</button></div>
           <div class="row"><button class="btn" id="ce-json">EXPORTER LE MANIFESTE GODOT</button><button class="btn" id="ce-pc">RENDRE SUR LE PC</button></div>
           <p class="ce-stat" id="ce-pcs" style="margin-top:8px">Rendu PC : scène Godot (Glow HDR, particules GPU, aberration chromatique), enregistrable en .mp4 60 FPS.</p></div>`;
@@ -93,7 +93,7 @@
         const el2 = $("#ce-sum");
         if (S.pace === "viral" && S.tl) {
           const st = S.tl.stats, v = S.tl.sfx.filter((x) => x.bus === "voice").length;
-          return (el2.innerHTML = `<b>${S.plies.length}</b> coups, <b>aucun sauté</b> : ouverture fluide (${st.open} premiers coups), <b>${st.ff}</b> en accéléré, <b>${S.tl.key.length}</b> moments clés en ralenti / arrêt sur image (${st.freeze} s de pauses).<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés à la frame · <b>${v}</b> voix de Levy · coup du DROP : n°${st.hero}${S.audio ? ` · musique décalée de ${(S.tl.musicStart >= 0 ? "-" : "+") + Math.abs(S.tl.musicStart).toFixed(1)} s pour que son drop tombe dessus` : ""}.`);
+          return (el2.innerHTML = `<b>${S.plies.length}</b> coups, <b>aucun sauté</b> : ouverture posée (${st.open} premiers coups), <b>${st.ff}</b> en accéléré doux, <b>${S.tl.key.length}</b> moments clés en ralenti / arrêt sur image (${st.freeze} s de pauses).<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés à la frame · <b>${v}</b> voix de Levy.${S.audio ? `<br>🎵 La musique démarre <b>dès le début</b> ; le montage s'adapte : le coup n°${st.hero} tombe sur le DROP (${st.drop.toFixed(1)} s)${st.idle > 0.5 ? `, avec un plan d'ambiance de ${st.idle.toFixed(1)} s avant le 1ᵉʳ coup` : S.tl.align && S.tl.align.shrink ? ", temps morts resserrés pour y arriver" : ""}.` : ""}`);
         }
         if (!S.audio) return (el2.textContent = "Choisis une musique pour voir la timeline.");
         if (!S.tl) return (el2.textContent = "Mode manuel : pose un marqueur rouge DROP sur la forme d'onde (touche pour ajouter, glisse pour déplacer).");
@@ -181,8 +181,8 @@
         app.appendChild(host);
         const sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null;
         let alive = true, raf = 0, idx = 0, paused = false, ffOn = false, T0 = 0;
-        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.kind === "ff" ? "steel" : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" || e.key === "blunder" ? "noir" : e.key === "brilliant" ? "aura" : e.t > ((tl.events.find((x) => x.kind === "drop") || {}).t || 1e9) ? "galaxy" : "steel");
-        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "steel" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
+        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" || e.key === "blunder" ? "noir" : e.key === "brilliant" ? "aura" : e.kind !== "ff" && e.t > ((tl.events.find((x) => x.kind === "drop") || {}).t || 1e9) + 8 ? "galaxy" : "neon");
+        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "neon" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
         stage.later(() => {}, 0);
         function toggle() {
           paused = !paused; stage.setPlaying(!paused);
@@ -192,7 +192,12 @@
         sfx.onVoice = duck;
         function fire(e) {
           if (e.kind === "intro") { stage.intro(e.intro, e.dur); return; }
-          if (e.kind === "outro") { stage.ff(false); stage.outro(e, e.dur); return; }
+          if (e.kind === "idle") { stage.idle(e.dur); return; }
+          if (e.kind === "outro") {
+            stage.ff(false); stage.outro(e, e.dur);
+            if (au) { const v0 = au.volume, t0 = performance.now(); const fade = () => { if (!alive) return; const k = Math.min(1, (performance.now() - t0) / (e.dur * 1000)); au.volume = Math.max(0, v0 * (1 - k)); if (k < 1) requestAnimationFrame(fade); }; fade(); }      // la musique s'éteint avec le résultat
+            return;
+          }
           if (e.kind === "ff") {
             if (e.ffRun && !ffOn) { ffOn = true; stage.ff(true); }
             stage.move(e, true); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
@@ -212,6 +217,7 @@
             if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
             if (e.invert) stage.brilliantFx(e);
             if (e.freeze) stage.freeze(e.freeze, e);
+            if (e.mate) stage.later(() => stage.dissolveKing(e.color === "w" ? "b" : "w"), 900);                         // le roi maté part en cendres
             if (e.cut) stage.later(() => stage.cutscene(e.cut, e.tone), 120);
             (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
           }, wait);
