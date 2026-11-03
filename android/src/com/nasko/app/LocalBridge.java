@@ -132,6 +132,26 @@ final class LocalBridge {
         return ok() && files.saveMedia(name, mime, b64, collection);
     }
 
+    // ------------------------------------------------------------------ sauvegarde de l'application (Download/ENOS/enos-sauvegarde-*.json)
+    @JavascriptInterface
+    public boolean backupWrite(String name, String text) {
+        return ok() && files.backupWrite(name, text);
+    }
+
+    @JavascriptInterface
+    public String backupList() {
+        return ok() ? files.backupList() : "[]";
+    }
+
+    @JavascriptInterface
+    public String backupRead(String id) {
+        try {
+            return ok() ? files.backupRead(Long.parseLong(id)) : "";
+        } catch (NumberFormatException e) {
+            return "";
+        }
+    }
+
     // ------------------------------------------------------------------ import de la configuration du PC (chiffree, code saisi par l'utilisateur)
     /** Image partagee vers l'application (base64, "" s'il n'y en a pas) : lue une seule fois. */
     @JavascriptInterface

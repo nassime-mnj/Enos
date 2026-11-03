@@ -635,6 +635,27 @@ def test_agenda_sync_last_write_wins_per_task_and_is_private():
     assert c.post(V + "/agenda/sync", json={"since": 0, "tasks": []}).status_code == 401
 
 
+def test_backup_is_private_bounded_and_survives_reinstall():
+    c = fresh()
+    ceo = make_ceo(c)
+    a, b2 = invited(c, ceo, "friends", "a@x.fr"), invited(c, ceo, "friends", "b@x.fr")
+    A, B = H(a["access_token"]), H(b2["access_token"])
+    doc = {"v": 1, "t": 1, "z": "H4sIAAAAAAAA/ytJLS4BAAx+f9gEAAAA", "meta": {"games": 3}}
+    assert c.post(V + "/backup", json={"device": "pixel-aaaaaa", "doc": doc}).status_code == 401
+    assert c.post(V + "/backup", json={"device": "pixel-aaaaaa", "doc": doc}, headers=A).status_code == 200
+    assert c.get(V + "/backup/latest", headers=A).json()["doc"]["meta"] == {"games": 3}          # un appareil réinstallé (même identifiant) retrouve sa sauvegarde
+    c.post(V + "/backup", json={"device": "pixel-bbbbbb", "doc": dict(doc, meta={"games": 9})}, headers=A)
+    assert c.get(V + "/backup/latest", headers=A).json()["doc"]["meta"] == {"games": 9}          # le plus récent de tous les appareils
+    assert c.get(V + "/backup/latest?device=pixel-aaaaaa", headers=A).json()["doc"]["meta"] == {"games": 3}
+    assert [x["device"] for x in c.get(V + "/backup", headers=A).json()["items"]] == ["pixel-bbbbbb", "pixel-aaaaaa"]
+    assert c.get(V + "/backup/latest", headers=B).status_code == 404 and c.get(V + "/backup", headers=B).json()["items"] == []       # privé à chaque compte
+    for bad in ({"device": "x", "doc": doc}, {"device": "pixel-aaaaaa", "doc": {"z": 5}}, {"device": "../etc/passwd", "doc": doc}, {"device": "pixel-aaaaaa", "doc": {"z": "x" * 8_100_000}}):
+        assert c.post(V + "/backup", json=bad, headers=A).status_code in (400, 413, 422), str(bad)[:40]
+    for n in range(14):
+        c.post(V + "/backup", json={"device": f"phone{n:04d}x", "doc": doc}, headers=A)
+    assert len(c.get(V + "/backup", headers=A).json()["items"]) == 12                              # 12 appareils maximum
+
+
 if __name__ == "__main__":
     import traceback
     bad = 0

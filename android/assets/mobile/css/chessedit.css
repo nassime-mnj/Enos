@@ -120,3 +120,8 @@
 .ce-rsub{font:700 14px var(--ui,system-ui);letter-spacing:3px;color:#bbb;text-transform:uppercase}.ce-rsub i{color:#ff2a44;font-style:italic;margin:0 6px}
 @media (prefers-reduced-motion:reduce){.ce-ibg,.ce-port,.ce-port img{animation:none}}
 .ce-opts{display:flex;flex-wrap:wrap;gap:12px;margin:2px 0 10px;font-size:13px}.ce-opts label{display:flex;align-items:center;gap:6px}
+
+/* Sauvegarde (module) */
+.bk-st{margin:8px 0}.bk-row{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:9px;background:var(--surf2,#14141a);margin-bottom:5px;font-size:13.5px}.bk-row b{color:var(--muted)}.bk-row b.ok{color:#34d16b}
+.bk-err{font-size:12.5px;color:#ff9a1f;padding:4px 2px}.bk-opt{display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:13px}.bk-opt input{margin-top:3px}
+.bk-item{display:block;width:100%;margin-top:6px;text-align:left}
