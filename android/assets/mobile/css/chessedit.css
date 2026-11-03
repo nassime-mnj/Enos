@@ -81,3 +81,42 @@
 @keyframes ceFlick{0%{opacity:0}15%{opacity:1}35%{opacity:.2}55%{opacity:1}100%{opacity:0}}
 .ce-note{position:absolute;pointer-events:none;color:#c8fffa;text-shadow:0 0 8px #19f4ff;animation:ceNote 1.4s ease-out both}
 @keyframes ceNote{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(40deg)}}
+
+/* ---- rythme viral : badges, libellé, arrêt sur image, inversion, intro VS, outro */
+.ce-badge2{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bc);color:#fff;font-weight:900;font-family:var(--ui,system-ui);line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.45);box-shadow:0 0 18px var(--bc),0 0 0 2px #fff;animation:ceBadgePop .45s cubic-bezier(.2,1.7,.4,1) both;z-index:5}
+.ce-badge2.out{opacity:0;transition:opacity .35s}
+@keyframes ceBadgePop{0%{transform:scale(0) rotate(-50deg)}100%{transform:scale(1) rotate(0)}}
+.ce-label{position:absolute;left:0;right:0;top:17%;text-align:center;font:900 clamp(26px,9vw,52px)/1 var(--ui,system-ui);letter-spacing:3px;color:var(--lc,#00f2fe);text-shadow:0 0 12px var(--lc),0 0 34px var(--lc),0 2px 0 #000;pointer-events:none;z-index:9}
+.ce-label.in{animation:ceLabel .45s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes ceLabel{0%{opacity:0;transform:scale(2.3);letter-spacing:22px}100%{opacity:1;transform:scale(1);letter-spacing:3px}}
+.ce-inv .ce-fxwrap{filter:invert(1) hue-rotate(180deg) saturate(1.8) contrast(1.2)}
+.ce-frozen .ce-vig{animation:ceVigPulse .5s ease-in-out infinite alternate}
+@keyframes ceVigPulse{from{opacity:.9}to{opacity:1;filter:brightness(.6)}}
+.ce-intro,.ce-result{position:absolute;inset:0;z-index:30;overflow:hidden;background:#05050a;color:#fff;font-family:var(--ui,system-ui)}
+.ce-intro.out{opacity:0;transform:scale(1.25);transition:opacity .5s,transform .5s}
+.ce-ibg{position:absolute;inset:-20%;background:repeating-linear-gradient(115deg,rgba(255,255,255,.04) 0 14px,transparent 14px 38px),radial-gradient(circle at 50% 50%,#2a0a3c,#05050a 70%);animation:ceBgMove 5s linear infinite}
+@keyframes ceBgMove{to{transform:translateX(-38px)}}
+.ce-slash{position:absolute;left:-10%;right:-10%;top:48.5%;height:3px;background:linear-gradient(90deg,transparent,#fff,transparent);box-shadow:0 0 18px #fff,0 0 50px #a24bff;transform:rotate(-14deg) scaleX(0);animation:ceSlash .5s .75s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes ceSlash{to{transform:rotate(-14deg) scaleX(1)}}
+.ce-pl{position:absolute;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0}
+.ce-pl.w{top:7%;animation:ceInL .7s .15s cubic-bezier(.15,.9,.2,1) forwards}
+.ce-pl.b{bottom:6%;animation:ceInR .7s .35s cubic-bezier(.15,.9,.2,1) forwards}
+@keyframes ceInL{from{opacity:0;transform:translateX(-120%) skewX(-12deg)}to{opacity:1;transform:none}}
+@keyframes ceInR{from{opacity:0;transform:translateX(120%) skewX(-12deg)}to{opacity:1;transform:none}}
+.ce-port{width:34vmin;height:34vmin;border-radius:50%;padding:4px;background:conic-gradient(from 0deg,#fff,#a24bff,#00f2fe,#fff);box-shadow:0 0 34px rgba(162,75,255,.8);animation:ceSpin 6s linear infinite}
+.ce-pl.b .ce-port{background:conic-gradient(from 0deg,#ff2a44,#ffd21f,#ff2a44);box-shadow:0 0 34px rgba(255,42,68,.8)}
+.ce-port img{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#111;animation:ceSpin 6s linear infinite reverse}
+.ce-nm{font:900 clamp(26px,9vw,46px)/1 var(--ui,system-ui);letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 16px rgba(255,255,255,.55),0 3px 0 #000;display:flex;align-items:center;gap:8px}
+.ce-nm em{font-style:normal;font-size:.42em;letter-spacing:1px;padding:3px 8px;border-radius:5px;background:#d3202f;color:#fff;transform:translateY(-3px)}
+.ce-sub{font:700 12px var(--ui,system-ui);letter-spacing:4px;color:#9aa;opacity:.9}
+.ce-vs{position:absolute;left:0;right:0;top:calc(50% - 15vmin);height:30vmin;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.ce-vs b{font:900 clamp(60px,26vw,150px)/1 var(--ui,system-ui);font-style:italic;color:#fff;letter-spacing:-4px;text-shadow:0 0 22px #a24bff,0 0 60px #00f2fe,6px 6px 0 #ff2a44;opacity:0;animation:ceVs .45s .95s cubic-bezier(.1,1.8,.3,1) forwards}
+@keyframes ceVs{0%{opacity:0;transform:scale(6) rotate(-14deg)}100%{opacity:1;transform:scale(1) rotate(-6deg)}}
+.ce-ittl{position:absolute;left:0;right:0;bottom:calc(50% - 22vmin);text-align:center;font:800 13px var(--ui,system-ui);letter-spacing:6px;color:#00f2fe;text-transform:uppercase;opacity:0;animation:ceFade .5s 1.5s forwards}
+@keyframes ceFade{to{opacity:.95}}
+.ce-result{background:radial-gradient(circle at 50% 45%,rgba(20,0,30,.55),rgba(0,0,0,.92));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;animation:ceFadeIn .6s both}
+@keyframes ceFadeIn{from{opacity:0}to{opacity:1}}
+.ce-rbig{font:900 clamp(30px,11vw,64px)/1.05 var(--ui,system-ui);text-align:center;padding:0 16px;letter-spacing:3px;text-transform:uppercase;text-shadow:0 0 16px #a24bff,0 0 44px #00f2fe;animation:ceLabel .6s .15s cubic-bezier(.2,1.5,.4,1) both}
+.ce-rsub{font:700 14px var(--ui,system-ui);letter-spacing:3px;color:#bbb;text-transform:uppercase}.ce-rsub i{color:#ff2a44;font-style:italic;margin:0 6px}
+@media (prefers-reduced-motion:reduce){.ce-ibg,.ce-port,.ce-port img{animation:none}}
+.ce-opts{display:flex;flex-wrap:wrap;gap:12px;margin:2px 0 10px;font-size:13px}.ce-opts label{display:flex;align-items:center;gap:6px}

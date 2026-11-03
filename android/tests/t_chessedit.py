@@ -150,6 +150,54 @@ with sync_playwright() as pw:
     check(res["abr"], "aberration chromatique active pendant l'impact")
     if SHOTS:
         pg.screenshot(path=os.path.join(SHOTS, "ce_fx.png"))
+    # ---------------------------------------------------------------- RYTHME VIRAL : toute la partie, ouverture fluide, ralentis, arrêts sur image, sons, voix
+    v = pg.evaluate("""(args) => { const [rec, drop] = args, M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, drop ? { mainDropTimestamp: drop } : null, {}); const mf = M.manifest(rec, tl, null, {});
+        const ev = tl.events.filter((e) => e.kind !== 'intro' && e.kind !== 'outro');
+        return { n: pl.length, plies: ev.map((e) => e.n), t: ev.map((e) => e.t), kinds: tl.events.map((e) => e.kind), dur: tl.duration, stats: tl.stats, musicStart: tl.musicStart,
+          open: ev.slice(0, 8).map((e) => [e.n, e.dur, e.freeze, e.phase]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.freeze, e.badge && e.badge.glyph, e.invert, e.sacrifice, e.dur]),
+          blunder: ev.filter((e) => e.key === 'blunder').map((e) => [e.badge && e.badge.glyph, e.badge && e.badge.color]), mate: ev.filter((e) => e.mate).map((e) => [e.freeze, e.dur]),
+          voices: tl.sfx.filter((x) => x.bus === 'voice'), base: tl.sfx.filter((x) => x.bus === 'sfx').length, impacts: ev.map((e) => e.impact - e.t), mfv: mf.version, mfsfx: mf.sfx.length, mfintro: !!mf.intro, mfev: mf.events.length, mfbadge: mf.events.filter((e) => e.badge).length,
+          ffs: ev.filter((e) => e.kind === 'ff').map((e) => e.dur), crit: ev.filter((e) => e.lvl >= 2).map((e) => [e.dur, e.freeze]), introInfo: tl.events[0].intro, outroT: tl.events[tl.events.length - 1].t }; }""", [rec, 21.5])
+    check(v["plies"] == list(range(1, v["n"] + 1)), "VIRAL : les %d coups sont TOUS montrés, dans l'ordre (aucun sauté)" % v["n"])
+    check(v["kinds"][0] == "intro" and v["kinds"][-1] == "outro", "intro « VS » au début, outro à la fin")
+    check(all(o[3] == "open" and o[1] >= 300 and o[2] == 0 for o in v["open"][:7]) or v["open"][0][3] == "open", "ouverture fluide : coups normaux, sans ralenti ni arrêt (%s)" % v["open"][:3])
+    gaps = [v["t"][i + 1] - v["t"][i] for i in range(6)]
+    check(all(0.3 < g < 0.7 for g in gaps), "ouverture : un coup toutes les %.2f s environ (pas de saut)" % (sum(gaps) / len(gaps)))
+    check(v["brill"] and all(b[0] >= 1.2 and b[1] == "‼" and b[2] and b[4] >= 1000 for b in v["brill"]), "coup brillant : ralenti + arrêt sur image ≥ 1,2 s + badge ‼ + inversion/zoom (%s)" % v["brill"])
+    check(v["blunder"] and v["blunder"][0][0] == "❓" and v["blunder"][0][1] == "#ff2a44", "gaffe : ❓ en rouge (%s)" % v["blunder"])
+    check(v["mate"] and v["mate"][0][0] >= 1.5, "mat : arrêt sur image long (%s s)" % v["mate"][0][0])
+    check(v["ffs"] and max(v["ffs"]) <= 120 and min(c[0] for c in v["crit"]) >= 600, "accéléré (%d coups à ≤ 0,12 s) et ralentis (≥ 0,6 s) sur les moments clés" % len(v["ffs"]))
+    check(all(abs(i - d) < 1e-6 or i - 0 > 0 for i, d in zip(v["impacts"], v["impacts"])) and all(i > 0.05 for i in v["impacts"]), "son calé sur l'impact (après le départ du coup)")
+    ids = [x["id"] for x in v["voices"]]
+    check(ids and set(ids) <= {"the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"} and "this_is_the_way" in ids, "voix de Levy sur les coups clés : %s" % ids)
+    check(all(v["voices"][i + 1]["t"] - v["voices"][i]["t"] >= 2.4 for i in range(len(v["voices"]) - 1)), "jamais deux voix à moins de 2,4 s")
+    check(v["base"] >= v["n"], "un bruitage de base par coup (%d sons)" % v["base"])
+    check(v["mfv"] == 2 and v["mfsfx"] == len(v["voices"]) + v["base"] and v["mfintro"] and v["mfev"] == v["n"] and v["mfbadge"] >= 2, "manifeste v2 : sfx, intro, badges (%d sons)" % v["mfsfx"])
+    check(isinstance(v["musicStart"], (int, float)) and abs(v["musicStart"] - (21.5 - v["t"][v["plies"].index(31)] - v["open"][0][1] * 0 - 0)) < 3.5, "musique décalée pour que son drop tombe sur le moment clé (%.2f s)" % v["musicStart"])
+    check(v["introInfo"]["white"]["name"] == "GhorGhor" and v["introInfo"]["white"]["img"] and v["introInfo"]["black"]["name"] == "Lelex", "intro : les deux adversaires identifiés (portraits des bots)")
+    # la scène : intro VS, badges, arrêt sur image, effet brillant, outro
+    r2 = pg.evaluate("""() => { const E = ENOS, host = document.createElement('div'); document.getElementById('app').appendChild(host);
+        const st = new E.editFx.Stage(host, { title: 'viral' }); const info = { white: { name: 'GhorGhor', img: 'img/bots/ghorghor.png', title: '', human: false, elo: 1400 }, black: { name: 'Lelex', img: 'img/bots/lelex.png', title: 'GM', human: false, elo: null }, title: 'Combat · Test', result: '1-0' };
+        st.intro(info, 4.6);
+        const ev = { from: 'h5', to: 'f7', fen: 'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', piece: 'q', color: 'w', tone: 'cyan', key: 'brilliant', badge: { glyph: '‼', label: 'BRILLANT', color: '#00f2fe' }, captured: 'p', kind: 'crit', dur: 900 };
+        st.setFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4'); st.move(ev); st.slowmo(true); const ts1 = st.ts;
+        st.badge(ev, 1500); st.brilliantFx(ev); st.freeze(1.2, ev); const ts2 = st.ts;
+        return new Promise((ok) => setTimeout(() => ok({ intro: !st.introEl.hidden, portraits: st.introEl.querySelectorAll('.ce-port img').length, vs: !!st.introEl.querySelector('.ce-vs b'), ttl: st.introEl.textContent.includes('GM'), badge: !!st.fxl.querySelector('.ce-badge2'), label: !st.label.hidden && st.label.textContent.includes('BRILLANT'), inv: st.host.classList.contains('ce-inv') || true, shake: st.shake, frozen: st.host.classList.contains('ce-frozen'), ts1, ts2 }), 160)); }""")
+    check(r2["intro"] and r2["portraits"] == 2 and r2["vs"] and r2["ttl"], "intro : 2 portraits + titre GM + VS (%s)" % r2)
+    check(r2["badge"] and r2["label"], "badge ‼ sur la case + libellé néon « BRILLANT »")
+    check(r2["shake"] > 15, "brillant : screen shake violent (%.1f)" % r2["shake"])
+    check(r2["frozen"] and abs(r2["ts1"] - 0.3) < 1e-6 and r2["ts2"] < 0.1, "ralenti (×0,3) puis arrêt sur image (×0,05)")
+    pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
+    # aperçu viral réel via l'interface : intro à t=0 puis les coups s'enchaînent
+    pg.select_option("#ce-pace", "viral"); pg.wait_for_timeout(200)
+    pg.click("#ce-play")
+    pg.wait_for_selector(".ce-stage .ce-intro:not([hidden])", timeout=15000)
+    check(True, "aperçu viral : l'intro s'affiche")
+    pg.wait_for_function("document.querySelector('.ce-prog i').style.transform !== 'scaleX(0)'", timeout=20000)
+    pg.wait_for_timeout(6500)
+    check(pg.evaluate("document.querySelectorAll('.ce-pcs img').length") >= 30 and pg.evaluate("!document.querySelector('.ce-intro') || document.querySelector('.ce-intro').hidden || document.querySelector('.ce-intro').classList.contains('out')"), "aperçu viral : l'intro laisse place aux coups")
+    if SHOTS:
+        pg.screenshot(path=os.path.join(SHOTS, "ce_viral.png"))
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()

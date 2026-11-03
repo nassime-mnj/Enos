@@ -14,15 +14,17 @@
     icon: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16M17 4v16M2 9h5M2 15h5M17 9h5M17 15h5"/>',
     build(el, A) {
       const $ = (s) => el.querySelector(s), esc = E.esc;
-      const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
+      const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", pace: E.settings.get("chessedit.pace", "viral"), marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
       const hist = () => E.settings.get("defi.hist", []).filter((x) => x.mv && x.mv.length >= 2);
       const mkey = () => "chessedit.marks." + (S.rec ? S.rec.t : 0);
 
       el.innerHTML = `
         <div class="card"><h3>1 · La partie</h3><select id="ce-game" class="sel"></select><p class="ce-stat" id="ce-gs" style="margin-top:8px"></p></div>
-        <div class="card"><h3>2 · La musique</h3>
+        <div class="card"><h3>2 · Rythme et musique</h3>
+          <label class="fld">Rythme du montage</label><select id="ce-pace" class="sel" style="margin-bottom:8px"><option value="viral">🔥 VIRAL · toute la partie : ouverture fluide, accéléré, ralentis + arrêts sur image</option><option value="music">♫ Calé sur la musique (ancien mode : seulement les coups clés)</option></select>
+          <div class="ce-opts" id="ce-vopts"><label><input type="checkbox" id="ce-intro" checked> Intro « VS »</label><label><input type="checkbox" id="ce-voice" checked> Voix de Levy + reverb/écho</label></div>
           <div class="row" style="margin-top:0"><button class="btn" id="ce-pick">CHOISIR UN .MP3 / .WAV</button></div>
-          <p class="ce-stat" id="ce-as" style="margin-top:8px">Aucune musique.</p>
+          <p class="ce-stat" id="ce-as" style="margin-top:8px">Aucune musique (facultative en mode viral : les bruitages et les voix suffisent).</p>
           <div class="seg" id="ce-mode" style="margin-top:10px"><button data-m="ia" class="on">MODE IA</button><button data-m="manual">MODE MANUEL</button><i class="seg-ind"></i></div></div>
         <div class="card"><h3>3 · Timeline</h3>
           <div class="ce-wave"><canvas id="ce-cv"></canvas></div>
@@ -82,18 +84,23 @@
       }
       function rebuild() {
         S.tl = null;
+        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio }); return; }
         if (!S.rec || !S.audio) return;
         if (S.mode === "manual" && !S.marks.some((m) => m.type === "drop")) return;
         S.tl = M().build(S.plies, slots(), S.audio);
       }
       function summary() {
         const el2 = $("#ce-sum");
+        if (S.pace === "viral" && S.tl) {
+          const st = S.tl.stats, v = S.tl.sfx.filter((x) => x.bus === "voice").length;
+          return (el2.innerHTML = `<b>${S.plies.length}</b> coups, <b>aucun sauté</b> : ouverture fluide (${st.open} premiers coups), <b>${st.ff}</b> en accéléré, <b>${S.tl.key.length}</b> moments clés en ralenti / arrêt sur image (${st.freeze} s de pauses).<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés à la frame · <b>${v}</b> voix de Levy · coup du DROP : n°${st.hero}${S.audio ? ` · musique décalée de ${(S.tl.musicStart >= 0 ? "-" : "+") + Math.abs(S.tl.musicStart).toFixed(1)} s pour que son drop tombe dessus` : ""}.`);
+        }
         if (!S.audio) return (el2.textContent = "Choisis une musique pour voir la timeline.");
         if (!S.tl) return (el2.textContent = "Mode manuel : pose un marqueur rouge DROP sur la forme d'onde (touche pour ajouter, glisse pour déplacer).");
         const k = S.tl.key.length, ff = S.tl.events.length - k, ex = S.tl.events.filter((e) => e.cut).length;
         el2.innerHTML = `<b>${k}</b> coups clés calés sur la musique, <b>${ff}</b> coups passifs en accéléré ×8, ${S.plies.length - k - ff} sautés · ${ex} cutscene${ex > 1 ? "s" : ""}.<br>Drop : ${S.tl.key.filter((e) => e.kind === "drop").map((e) => `coup ${e.n} (${esc(e.san)}) à ${fmtT(e.t)}`).join("") || "—"}`;
       }
-      function refresh() { audioStat(); rebuild(); summary(); drawWave(); $("#ce-ai2m").hidden = S.mode !== "ia"; $("#ce-del").hidden = S.mode !== "manual"; $("#ce-leg").hidden = S.mode !== "manual"; el.querySelectorAll("#ce-leg button").forEach((b) => b.classList.toggle("on", b.dataset.t === S.type)); }
+      function refresh() { audioStat(); rebuild(); summary(); drawWave(); $("#ce-mode").hidden = S.pace === "viral"; $("#ce-vopts").hidden = S.pace !== "viral"; $("#ce-ai2m").hidden = true; $("#ce-del").hidden = true; $("#ce-leg").hidden = true; if (S.pace !== "viral") { $("#ce-ai2m").hidden = S.mode !== "ia"; $("#ce-del").hidden = S.mode !== "manual"; $("#ce-leg").hidden = S.mode !== "manual"; el.querySelectorAll("#ce-leg button").forEach((b) => b.classList.toggle("on", b.dataset.t === S.type)); } }
 
       const cv = $("#ce-cv");
       function drawWave(head) {
@@ -137,6 +144,7 @@
 
       // ------------------------------------------------------------ aperçu temps réel
       function preview() {
+        if (S.tl && S.tl.viral) return previewViral();
         if (!S.tl) return A.toast(S.audio ? "Mode manuel : pose d'abord un marqueur DROP." : "Choisis une musique.", "warn");
         const app = document.getElementById("app") || document.body, host = document.createElement("div"), au = new Audio(S.url), evs = S.tl.events, dur = S.audio.duration;
         app.appendChild(host);
@@ -167,14 +175,84 @@
         stage.setPlaying(true);
         au.play().then(() => { raf = requestAnimationFrame(tick); }).catch(() => { A.toast("Lecture audio refusée.", "err"); stop(); });
       }
+      // ------------------------------------------------------------ aperçu « viral » : horloge = horloge audio (sons programmés à la frame près)
+      async function previewViral() {
+        const tl = S.tl, evs = tl.events, dur = tl.duration, app = document.getElementById("app") || document.body, host = document.createElement("div");
+        app.appendChild(host);
+        const sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null;
+        let alive = true, raf = 0, idx = 0, paused = false, ffOn = false, T0 = 0;
+        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.kind === "ff" ? "steel" : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" || e.key === "blunder" ? "noir" : e.key === "brilliant" ? "aura" : e.t > ((tl.events.find((x) => x.kind === "drop") || {}).t || 1e9) ? "galaxy" : "steel");
+        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "steel" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
+        stage.later(() => {}, 0);
+        function toggle() {
+          paused = !paused; stage.setPlaying(!paused);
+          if (paused) { sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au && au.currentTime > 0) au.play(); }
+        }
+        const duck = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.4; }, ms); setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 250); };
+        sfx.onVoice = duck;
+        function fire(e) {
+          if (e.kind === "intro") { stage.intro(e.intro, e.dur); return; }
+          if (e.kind === "outro") { stage.ff(false); stage.outro(e, e.dur); return; }
+          if (e.kind === "ff") {
+            if (e.ffRun && !ffOn) { ffOn = true; stage.ff(true); }
+            stage.move(e, true); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
+            return;
+          }
+          if (ffOn) { ffOn = false; stage.ff(false); }
+          stage.setLook(lookFor(e));
+          const slow = e.dur > 600, p = stage.xy(e.to), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80));
+          if (slow) stage.slowmo(true);
+          stage.move({ ...e, dur: e.dur });
+          if (e.lvl >= 2) stage.camTo({ rx: 40, rz: (Math.random() - 0.5) * 10, s: 1.6 }, Math.round(e.dur * 0.9), p.c, p.r);
+          else stage.camTo({ rx: 30 + Math.random() * 6, rz: (Math.random() - 0.5) * 4, s: 1.05 }, 360);
+          const wait = Math.max(0, (e.impact - e.t) * 1000);
+          stage.later(() => {
+            if (slow) stage.slowmo(false);
+            if (e.lvl >= 2) stage.hit(e, power); else stage.soft(e);
+            if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
+            if (e.invert) stage.brilliantFx(e);
+            if (e.freeze) stage.freeze(e.freeze, e);
+            if (e.cut) stage.later(() => stage.cutscene(e.cut, e.tone), 120);
+            (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
+          }, wait);
+        }
+        function tick() {
+          if (!alive) return;
+          if (!paused) {
+            const vt = sfx.ctx.currentTime - T0;
+            sfx.pump(vt);
+            while (idx < evs.length && evs[idx].t <= vt) fire(evs[idx++]);
+            stage.setProgress(vt / dur);
+            if (vt > dur + 0.5) return stop();
+          }
+          raf = requestAnimationFrame(tick);
+        }
+        function stop() { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); sfx.close(); stage.destroy(); host.remove(); S.stage = null; }
+        S.stage = { stop };
+        try {
+          await sfx.ctx.resume(); await sfx.load();
+        } catch (e) { A.toast("Audio indisponible : " + e.message, "err"); }
+        if (!alive) return;
+        stage.setPlaying(true);
+        const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
+        if (au) {                                                                                  // musique : sa position à t=0 est tl.musicStart (négatif = elle démarre plus tard)
+          au.volume = 0.85; const ms = tl.musicStart || 0;
+          if (ms >= 0) { au.currentTime = ms; setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }
+          else setTimeout(() => { if (alive) { au.currentTime = 0; au.play().catch(() => {}); } }, (LEAD - ms) * 1000);
+        }
+        raf = requestAnimationFrame(tick);
+      }
       $("#ce-play").onclick = preview;
+      $("#ce-pace").value = S.pace; $("#ce-pace").onchange = (e) => { S.pace = e.target.value; E.settings.set("chessedit.pace", S.pace); refresh(); };
+      $("#ce-voice").onchange = $("#ce-intro").onchange = () => refresh();
+      window.__cePrevViral = previewViral;
 
       // ------------------------------------------------------------ pont PC (Godot)
       function manifest() { return M().manifest(S.rec, S.tl, S.audio, { audioName: S.file ? S.file.name : "", audioPath: S.file ? S.file.name : "" }); }
       $("#ce-json").onclick = async () => {
         if (!S.tl) return A.toast("Rien à exporter : choisis une musique (et un DROP en manuel).", "warn");
         await A.save("edit_timeline_manifest.json", "application/json", new TextEncoder().encode(JSON.stringify(manifest(), null, 1)), "downloads");
-        A.toast("Copie aussi la musique « " + S.file.name + " » dans le même dossier que le manifeste.", "ok");
+        A.toast(S.file ? "Copie aussi la musique « " + S.file.name + " » dans le même dossier que le manifeste." : "Manifeste exporté (sans musique : voix et bruitages seulement).", "ok");
       };
       $("#ce-pc").onclick = async () => {
         if (!S.tl) return A.toast("Rien à rendre : choisis une musique (et un DROP en manuel).", "warn");
@@ -182,8 +260,8 @@
         const st = $("#ce-pcs");
         st.textContent = "Envoi au PC…";
         try {
-          const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(S.file); });
-          const r = await E.link.api("/api/chessedit/lancer", { method: "POST", body: { manifest: manifest(), audio_b64: b64, audio_name: S.file.name, render: false } });
+          const b64 = S.file ? await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(S.file); }) : "";
+          const r = await E.link.api("/api/chessedit/lancer", { method: "POST", body: { manifest: manifest(), audio_b64: b64, audio_name: S.file ? S.file.name : "", render: false } });
           const j = r.json ? r.json() : r;
           if (r.status && r.status >= 400) throw new Error((j && j.detail) || "refusé (" + r.status + ")");
           st.textContent = "Scène Godot lancée sur le PC (" + ((j && j.dossier) || "") + ").";
