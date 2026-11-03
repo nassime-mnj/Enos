@@ -56,9 +56,14 @@
       const a = this.ctx, S = E.chessSound, base = E.assetBase || "";
       this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a);
       for (const k of ["move", "check", "promote", "mate"]) { try { this.bufs[k] = S && S.buffer ? await S.buffer(k) : null; } catch (e) { this.bufs[k] = null; } }
+      const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
-        try { const r = await fetch(`${base}audio/levy/${id}.mp3`); this.bufs[id] = await a.decodeAudioData(await r.arrayBuffer()); } catch (e) { this.bufs[id] = null; }
+        try {
+          if (L[id]) { const raw = atob(L[id]), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); this.bufs[id] = await a.decodeAudioData(u8.buffer); }      // voix embarquées (base64)
+          else { const r = await fetch(`${base}audio/levy/${id}.mp3`); this.bufs[id] = await a.decodeAudioData(await r.arrayBuffer()); }
+        } catch (e) { this.bufs[id] = null; this.err = (this.err || "") + id + " "; }
       }));
+      this.voicesOk = VOICES.filter((k) => this.bufs[k]).length;
       return Object.keys(this.bufs).filter((k) => this.bufs[k]).length;
     }
     /** liste triée {t, id, gain, bus} ; t0 = instant (horloge audio) correspondant à t = 0 de la vidéo */

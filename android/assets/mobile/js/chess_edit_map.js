@@ -12,11 +12,17 @@
 
   // ---------------------------------------------------------------- 1. les coups et leur dramaScore
   function gamePlies(rec) {
-    const ch = new Chess(), out = [], chat = rec.ch || [];
+    const ch = new Chess(), out = [], chat = rec.ch || [], ids = {};
+    "abcdefgh".split("").forEach((f) => ["1", "2", "7", "8"].forEach((r) => { ids[f + r] = f + r; }));                          // identité d'une pièce = sa case de départ, suivie coup après coup
     const transformAt = chat.filter((c) => c[3] === "transform").map((c) => c[0] - 1);
     (rec.mv || []).forEach((m, i) => {
       const uci = m[0], mv = ch.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
       if (!mv) return;
+      const pid = ids[mv.from] || mv.from;
+      delete ids[mv.from];
+      if (mv.flags && mv.flags.indexOf("e") >= 0) delete ids[mv.to[0] + mv.from[1]];
+      if (/^O-O/.test(mv.san)) { const rk = mv.from[1], short = mv.to[0] === "g", rf = (short ? "h" : "a") + rk, rt = (short ? "f" : "d") + rk; ids[rt] = ids[rf] || rf; delete ids[rf]; }
+      ids[mv.to] = pid;
       const key = m[2] || "good", loss = m[3] | 0, ev = m[4] == null ? null : m[4], prevEv = i && rec.mv[i - 1][4] != null ? rec.mv[i - 1][4] : 0;
       const lines = chat.filter((c) => c[0] - 1 === i).map((c) => ({ bot: c[1], text: c[2], kind: c[3] || "" }));
       const tags = [];
@@ -46,7 +52,7 @@
       if (transformAt.includes(i)) { d += 55; tags.push("boss"); }
       else if (lines.some((l) => STRONG_CHAT.has(l.kind))) { d += 20; tags.push("réplique"); }
       const fenBefore = i ? out[i - 1].fen : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-      out.push({ i, n: i + 1, fenBefore, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "",
+      out.push({ i, n: i + 1, pid, fenBefore, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "",
         check: /[+#]/.test(mv.san), mate: /#/.test(mv.san), sacrifice: sac, boss: transformAt.includes(i), drama: Math.round(d * 10) / 10, tags, lines, fen: ch.fen() });
     });
     return out;
@@ -233,7 +239,7 @@
   function buildViral(plies, rec, audio, opts) {
     opts = Object.assign({ intro: true, introDur: 5.2, outroDur: 3.2, voices: true, syncDrop: true }, opts || {});
     if (opts.maxLen == null) opts.maxLen = audio && audio.duration ? Math.max(40, audio.duration - 1.5) : 170;
-    const n = plies.length, L = plies.map(lvlOf), plan = [], ev = [];
+    const n = plies.length, L = plies.map(lvlOf), plan = [], ev = [], statSeen = new Set();
     const firstCrit = L.findIndex((l, i) => i >= 6 && l >= 2), nOpen = Math.min(n, Math.max(8, Math.min(14, firstCrit < 0 ? 14 : firstCrit)));
     plies.forEach((p, i) => {
       const l = L[i];
@@ -243,7 +249,9 @@
       else if (i < nOpen) pl = { phase: "open", anim: 520, freeze: 0, gap: 0.6 - 0.2 * (i / Math.max(1, nOpen - 1)) };
       else if (l === 1) pl = { phase: "mid", anim: 520, freeze: 0, gap: 0.45 };
       else pl = { phase: "ff", anim: 260, freeze: 0, gap: 0.18 };
-      pl.pre = pl.pre || 0; pl.base = { gap: pl.gap };
+      pl.pre = pl.pre || 0;
+      if (pl.pre > 0) { if (statSeen.has(p.pid)) pl.pre = 0; else statSeen.add(p.pid); }                                        // la fiche d'une pièce n'apparaît QU'UNE FOIS (même pièce = pas de nouvelle fiche)
+      pl.base = { gap: pl.gap };
       plan.push(pl);
     });
     plan.forEach((pl, i) => { if (pl.phase !== "hero" && pl.phase !== "crit" && i + 1 < n && L[i + 1] >= 3 && i >= nOpen) { pl.phase = "tension"; pl.anim = 760; pl.gap = 0.55; pl.base.gap = 0.55; } });   // le calme avant le coup clé
@@ -289,7 +297,7 @@
       if (BADGES[key] && key !== "excellent") { if (key !== "best" || (L[i] >= 1 && i - lastThumb >= 8)) { bd = BADGES[key]; if (key === "best") lastThumb = i; } }
       const impact = +(t + pl.pre + (pl.anim / 1000) * 0.82).toFixed(3);
       const th = kind === "ff" ? [] : threatsFrom(p.fen, p.to), stats = pl.pre > 0 ? pieceStats(p.fenBefore, p.from, p.sacrifice) : null;
-      const e = { t: +t.toFixed(3), ply: p.i, n: p.n, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
+      const e = { t: +t.toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
         lines: L[i] >= 2 ? p.lines : [], fen: p.fen, kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), pre: pl.pre, freeze: +pl.freeze.toFixed(3), impact, ev: p.ev, threats: pl.phase === "ff" || pl.phase === "open" ? [] : th, stats, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
         fx: kind === "ff" ? "FASTFORWARD" : fxOf(p, slot), text: kind === "ff" ? "" : textOf(p), shot: kind === "ff" ? "" : shotOf(p, slot), tone: kind === "ff" ? "green" : toneOf(p),
         cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (key === "brilliant" || (p.sacrifice && L[i] >= 2 && key !== "blunder")) };
@@ -308,12 +316,12 @@
       ev.forEach((e) => {
         let id = "", pr = 0;
         if (e.mate) { id = "this_is_the_way"; pr = 10; }
-        else if (e.sacrifice && VOICE[e.piece] && e.key !== "blunder") { id = VOICE[e.piece]; pr = e.key === "brilliant" ? 9 : 7; }     // « The Queen » = il SACRIFIE la dame ; idem tour, fou, cavalier
-        else if (e.key === "brilliant") { id = "this_is_the_way"; pr = 8; }
+        else if (e.key === "brilliant") { id = VOICE[e.piece] || "this_is_the_way"; pr = e.sacrifice ? 10 : 9; }                  // coup BRILLANT : « The Queen / The Rook / The Knight / The Bishop » selon la pièce
+        else if (e.sacrifice && VOICE[e.piece] && e.key !== "blunder") { id = VOICE[e.piece]; pr = 7; }                          // pièce SACRIFIÉE : sa voix
         else if (e.kind === "drop") { id = "this_is_the_way"; pr = 5; }
         if (id) cand.push({ e, id, pr });
       });
-      const cap = Math.max(3, Math.round(ev.length / 9)), chosen = [];
+      const cap = Math.max(4, Math.round(ev.length / 6)), chosen = [];
       cand.sort((a, b) => b.pr - a.pr || a.e.t - b.e.t).forEach((c) => { if (chosen.length < cap && chosen.every((x) => Math.abs(x.e.impact - c.e.impact) >= 2.4)) chosen.push(c); });
       chosen.forEach((c) => sfx.push({ t: +(c.e.impact + 0.04).toFixed(3), id: c.id, gain: c.id === "the_rook" ? 2.3 : 1, bus: "voice", ply: c.e.n }));
     }

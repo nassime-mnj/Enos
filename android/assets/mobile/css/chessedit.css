@@ -2,7 +2,7 @@
 .ce-stage{position:fixed;inset:0;z-index:56;background:#000;overflow:hidden;color:#fff;font-family:var(--ui,system-ui)}
 .ce-stage canvas{position:absolute;inset:0;pointer-events:none}
 .ce-fxwrap,.ce-shake{position:absolute;inset:0}
-.ce-persp{position:absolute;inset:0;perspective:900px;perspective-origin:50% 45%}
+.ce-persp{position:absolute;inset:0;perspective:1500px;perspective-origin:50% 45%}
 .ce-drift{position:absolute;inset:0}
 .ce-cam{position:absolute;transform-origin:50% 50%;will-change:transform}
 .ce-board,.ce-pcs,.ce-fxl{position:absolute;left:0;top:0}
@@ -175,3 +175,38 @@
 .cl-stat{margin:8px 0;font-size:13.5px}.cl-say{min-height:38px;font:italic 600 14px var(--ui);color:#cfc3ff;margin-bottom:8px}
 .cl-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line,#23232b)}.cl-item small{display:block;color:var(--muted);font-size:12px}.cl-item .btn{flex:none;margin:0}
 .cl-fin p{line-height:1.5}#cl-board{margin:6px 0}
+
+/* ---- ambiances sombres variées (directions artistiques), brouillard, projecteur, grain, bandes de cinéma, éclairs, fissures, glitch ; qualité des effets */
+.ce-look-blood .ce-board{filter:contrast(1.15) brightness(.95) saturate(1.2)}
+.ce-look-fog .ce-board{filter:grayscale(1) contrast(1.15) brightness(.78)}
+.ce-look-spot .ce-board{filter:grayscale(.85) contrast(1.25) brightness(.8)}
+.ce-look-fog .ce-pcs{filter:grayscale(1) contrast(1.2) drop-shadow(0 0 10px rgba(255,255,255,.3))}
+.ce-look-blood .ce-pcs{filter:grayscale(.55) contrast(1.2) drop-shadow(0 0 12px rgba(255,40,40,.45))}
+.ce-fog,.ce-spot,.ce-light,.ce-grain,.ce-bars{position:absolute;inset:0;pointer-events:none}
+.ce-fog{z-index:3;opacity:var(--fa,0);mix-blend-mode:screen}
+.ce-fog i{position:absolute;left:-30%;right:-30%;height:46%;background:radial-gradient(ellipse at 50% 50%,var(--fc,#888) 0%,transparent 68%);filter:blur(26px);opacity:.75;animation:ceFogA 16s ease-in-out infinite alternate}
+.ce-fog i:nth-child(1){top:2%}.ce-fog i:nth-child(2){top:34%;animation-duration:22s;animation-direction:alternate-reverse}.ce-fog i:nth-child(3){top:60%;animation-duration:19s}
+@keyframes ceFogA{from{transform:translateX(-9%) scaleX(1)}to{transform:translateX(9%) scaleX(1.15)}}
+.ce-q0 .ce-fog,.ce-q0 .ce-grain,.ce-q0 .ce-light{display:none}.ce-q1 .ce-fog i{filter:blur(14px)}.ce-q1 .ce-fog i:nth-child(3){display:none}
+.ce-spot{z-index:4;background:radial-gradient(circle at var(--sx,50%) var(--sy,50%),transparent 8%,rgba(0,0,0,calc(.85*var(--sa,0))) 58%,rgba(0,0,0,calc(.96*var(--sa,0))) 100%);transition:background .5s}
+.ce-light{z-index:4;mix-blend-mode:screen;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.12) 45%,transparent 60%);transform:translateX(-120%);animation:ceLight 7s ease-in-out infinite}
+.ce-dir-blood .ce-light{background:linear-gradient(105deg,transparent 30%,rgba(255,40,40,.22) 45%,transparent 60%)}
+@keyframes ceLight{0%,60%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.ce-grain{z-index:30;opacity:var(--ga,.15);mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");animation:ceGrain .6s steps(4) infinite}
+@keyframes ceGrain{0%{background-position:0 0}25%{background-position:-30px 20px}50%{background-position:25px -35px}75%{background-position:-15px -10px}100%{background-position:0 0}}
+.ce-bars{z-index:31}.ce-bars i{position:absolute;left:0;right:0;height:0;background:#000;transition:height .8s cubic-bezier(.2,.9,.2,1)}.ce-bars i:first-child{top:0}.ce-bars i:last-child{bottom:0}.ce-bars.on i{height:11%}
+.ce-flare{position:absolute;left:-10%;right:-10%;height:6px;margin-top:-3px;background:linear-gradient(90deg,transparent,var(--fc,#9ff6ff) 30%,#fff 50%,var(--fc,#9ff6ff) 70%,transparent);filter:blur(1.5px) drop-shadow(0 0 16px var(--fc,#9ff6ff));mix-blend-mode:screen;transform:scaleX(0);animation:ceFlare 1s ease-out both;z-index:9;pointer-events:none}
+@keyframes ceFlare{0%{transform:scaleX(0);opacity:1}35%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1.15);opacity:0}}
+.ce-crack{position:absolute;inset:0;width:100%;height:100%;z-index:9;pointer-events:none}.ce-crack polyline{fill:none;stroke:#fff;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px #fff);stroke-dasharray:600;stroke-dashoffset:600;animation:ceCr .35s ease-out forwards,ceCrOut .6s 1.5s forwards}
+@keyframes ceCr{to{stroke-dashoffset:0}}@keyframes ceCrOut{to{opacity:0}}
+.ce-glitch .ce-fxwrap{animation:ceGl2 .09s steps(2) infinite}
+@keyframes ceGl2{0%{transform:translate(6px,-2px);filter:hue-rotate(40deg)}50%{transform:translate(-8px,3px);filter:hue-rotate(-50deg) saturate(1.6)}100%{transform:translate(3px,1px)}}
+.ce-q0 .ce-pcs img,.ce-q0 .ce-hdr .ce-pcs img{filter:none!important}.ce-q0 .ce-board{filter:none!important}.ce-q0 .ce-halo,.ce-q0 .ce-lit{mix-blend-mode:normal}
+.ce-q1 .ce-hdr .ce-pcs img,.ce-q1 .ce-pcs img{filter:drop-shadow(0 4px 5px rgba(0,0,0,.5))}
+.ce-intro.v-slash .ce-ibg{background:repeating-linear-gradient(115deg,rgba(255,40,40,.07) 0 14px,transparent 14px 38px),radial-gradient(circle at 50% 50%,#3a0508,#050203 70%)}
+.ce-intro.v-slash .ce-slash{background:linear-gradient(90deg,transparent,#ff2a2a,transparent);box-shadow:0 0 18px #f00,0 0 50px #a00}
+.ce-intro.v-slash .ce-vs b{text-shadow:0 0 22px #ff2a2a,0 0 60px #a00,6px 6px 0 #000}
+.ce-intro.v-spot .ce-ibg{background:radial-gradient(circle at 50% 44%,rgba(255,255,255,.18),transparent 38%),radial-gradient(circle at 50% 50%,#17181b,#020203 72%);animation:none}
+.ce-intro.v-spot .ce-slash{display:none}
+.ce-intro.v-spot .ce-port,.ce-intro.v-spot .ce-pl.b .ce-port{background:#cfd3d9;box-shadow:0 0 40px rgba(255,255,255,.45);animation:none}
+.ce-intro.v-spot .ce-vs b{font-style:normal;letter-spacing:6px;text-shadow:0 0 30px rgba(255,255,255,.7)}

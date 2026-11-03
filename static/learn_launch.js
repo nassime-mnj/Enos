@@ -20,6 +20,7 @@
   if (arena) arena.addEventListener("click", () => open("#arena"));
   const variants = document.getElementById("b-variants");
   if (variants) variants.addEventListener("click", () => open("#variants"));
+  [["b-chessedit", "#chessedit"], ["b-clips", "#clips"], ["b-backup", "#backup"]].forEach(([id, h]) => { const b = document.getElementById(id); if (b) b.addEventListener("click", () => open(h)); });
   const royale = document.getElementById("b-royale");
   if (royale) royale.addEventListener("click", () => open("#royale"));
   // DÉFI › BOTS et DÉFI › CHESS › mode « BOTS · ARÈNE » : même Arène que le bouton du panneau

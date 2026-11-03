@@ -13,8 +13,14 @@ window.ENOS = window.ENOS || {};
   E.userName = () => E.settings.get("name", "Nassime");                       // prénom donné aux bots quand ils te parlent (chat des Défis)
   const mem = {};
   const raw = { get(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] == null ? null : mem[k]; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } } };
-  const store = { get(k, d) { try { const v = raw.get("enos." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { raw.set("enos." + k, JSON.stringify(v)); } };
-  E.settings = { get: (k, d) => store.get("s." + k, d), set: (k, v) => store.set("s." + k, v) };
+  raw.del = (k) => { try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } };
+  E.ls = { get: raw.get, set: raw.set, del: raw.del };
+  E.store = { get(k, d) { try { const v = raw.get("enos." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { raw.set("enos." + k, JSON.stringify(v)); }, del(k) { raw.del("enos." + k); } };      // mêmes clés « enos.* » que le téléphone : les sauvegardes sont interchangeables
+  const subs = {};
+  E.on = (ev, fn) => { (subs[ev] = subs[ev] || []).push(fn); return () => { subs[ev] = (subs[ev] || []).filter((f) => f !== fn); }; };
+  E.emit = (ev, d) => (subs[ev] || []).slice().forEach((f) => { try { f(d); } catch (e) { /* abonné défaillant */ } });
+  E.settings = { get: (k, d) => E.store.get("s." + k, d), set: (k, v) => { E.store.set("s." + k, v); E.emit("settings", k); } };
+  E.native = { available: false, deviceId: () => "pc-browser", version: () => "pc", vault: { has: () => false }, backup: { can: () => false, write: () => false, list: () => [], read: () => "" }, files: { save: async () => false } };      // pas de pont Android sur PC
 
   let onClose = null;
   const $ = (s) => document.querySelector(s);
@@ -74,6 +80,8 @@ window.ENOS = window.ENOS || {};
       let done = false; const end = (v) => { if (done) return; done = true; i.remove(); res(v); };
       i.onchange = () => end(Array.from(i.files || [])); i.addEventListener("cancel", () => end([])); i.click();
     }),
+    readText: (file) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("lecture impossible")); r.readAsText(file); }),
+    save: async (name, mime, bytes) => { const url = URL.createObjectURL(new Blob([bytes], { type: mime })), a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); ui.toast("Enregistré : " + name); return true; },
     copy: async (t) => { try { await navigator.clipboard.writeText(t); ui.toast("Copié."); return true; } catch (e) { ui.toast("Copie impossible."); return false; } },
     read: (file) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result)); r.onerror = () => rej(new Error("lecture impossible")); r.readAsArrayBuffer(file); }),
     llm: async ({ system, user, json, maxTokens }) => (await post("/api/chess/llm", { system: system || "", user, max_tokens: maxTokens || 400, json_mode: !!json })).text,

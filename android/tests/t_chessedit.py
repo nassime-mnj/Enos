@@ -119,7 +119,7 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(1500)
     info = pg.evaluate("""() => { const c = document.querySelector('.ce-cam'), p = document.querySelector('.ce-persp'), b = document.querySelector('.ce-board');
         return { persp: getComputedStyle(p).perspective, board: getComputedStyle(b).filter, pieces: document.querySelectorAll('.ce-pcs img').length, vig: !!document.querySelector('.ce-vig') }; }""")
-    check(info["persp"] == "900px", "perspective 900px")
+    check(info["persp"] == "1500px", "perspective 1500px")
     check(pg.evaluate("document.querySelector('.ce-stage').className.includes('ce-look-')"), "look (étalonnage) appliqué à la scène")
     check(info["pieces"] == 32 or info["pieces"] > 0, "pièces dessinées (%d)" % info["pieces"])
     # on saute le temps : audio -> juste avant puis après le drop
@@ -227,6 +227,33 @@ with sync_playwright() as pw:
     check(r4["card"] and r4["bars"] == [False, False, False, True] and r4["dim"] and r4["pulse"], "fiche Power / Speed / Defense / Trick : la plus haute (Trick) en violet, plateau assombri, case de la pièce qui pulse")
     check(r4["hl"] == 2 and r4["hdr"] and r4["outline"], "cases de départ/arrivée allumées, HDR actif, contour « dessin au trait » généré")
     check(r4["mb"] > 0, "flou de mouvement armé par les mouvements de caméra (%.1f)" % r4["mb"])
+    pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
+    # ---------------------------------------------------------------- retours : voix sur coups brillants, fiche une seule fois par pièce, pas d'étirement, flou de déplacement, directions, qualité
+    v5 = pg.evaluate("""(args) => { const [rec] = args, M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, {}), ev = tl.events.filter((e) => e.from), st = ev.filter((e) => e.stats);
+        const pids = st.map((e) => e.pid), br = ev.filter((e) => e.key === 'brilliant');
+        return { pids, uniq: new Set(pids).size, brillVoices: br.map((e) => [e.n, e.piece, tl.sfx.filter((x) => x.bus === 'voice' && x.ply === e.n).map((x) => x.id)]), allVoices: tl.sfx.filter((x) => x.bus === 'voice').map((x) => [x.ply, x.id]), levy: Object.keys(window.ENOS_LEVY || {}).sort() }; }""", [rec])
+    check(v5["uniq"] == len(v5["pids"]), "la fiche Power/Speed/Defense/Trick n'apparaît qu'UNE FOIS par pièce (%d fiches, pièces %s)" % (len(v5["pids"]), v5["pids"]))
+    check(all(len(b[2]) == 1 and b[2][0] == {"q": "the_queen", "r": "the_rook", "b": "the_bishop", "n": "the_knight"}.get(b[1], "this_is_the_way") for b in v5["brillVoices"]), "coup brillant : la voix de la pièce (The Queen / The Rook / The Knight / The Bishop) : %s" % v5["brillVoices"])
+    check(v5["levy"] == ["the_bishop", "the_knight", "the_queen", "the_rook", "this_is_the_way"], "les 5 voix de Levy sont embarquées dans le JavaScript (plus de fetch)")
+    sf = pg.evaluate("""async () => { const P = new ENOS.editSfx.Player(); const n = await P.load(); return { n, voices: P.voicesOk, err: P.err || '', q: !!P.bufs.the_queen, onset: P.onsetOf('the_queen') }; }""")
+    check(sf["voices"] == 5 and sf["q"], "les 5 voix se décodent : %s" % sf)
+    r6 = pg.evaluate("""async () => { const E = ENOS, mk = (q, d) => { const host = document.createElement('div'); document.getElementById('app').appendChild(host); return new E.editFx.Stage(host, { title: 't', quality: q, direction: d }); };
+        const st = mk('max', 'blood'), lo = mk('light', 'fog');
+        st.setFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
+        const ev = { from: 'h5', to: 'f7', fen: 'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', piece: 'q', color: 'w', tone: 'cyan', key: 'brilliant', captured: 'p', kind: 'crit', dur: 1000, shot: 'macro' };
+        st.move(ev); const blur = !!st.pm && st.pcs.querySelector('img[style*="ce-pm"]') !== null; const ghosts = st.fxl.querySelectorAll('.ce-ghost').length;
+        st.hit(ev, 1); st.brilliantFx(ev); st.cracks('f7'); st.glitch(200); st.flare('f7'); st.bars(true); st.focusSpot('f7');
+        await new Promise((r) => setTimeout(r, 400));
+        const tf = st.cam.style.transform, rx = parseFloat((tf.match(/rotateX\(([-\d.]+)deg/) || [0, 0])[1]), sc = parseFloat((tf.match(/scale\(([\d.]+)\)/) || [0, 0])[1]);
+        const o = { blur, ghosts, rx, sc, blood: st.host.classList.contains('ce-dir-blood') && st.look === 'blood', q2: st.host.classList.contains('ce-q2') && st.fx.shock && st.fx.pblur, q0: lo.host.classList.contains('ce-q0') && !lo.fx.pblur && !lo.fx.shock && lo.fx.part < 0.4, fog: lo.look === 'fog',
+          crack: !!st.host.querySelector('.ce-crack'), flare: !!st.host.querySelector('.ce-flare'), bars: st.barsEl.classList.contains('on'), spot: st.spotEl.style.getPropertyValue('--sx') !== '50.0%', dirs: Object.keys(E.editFx.DIRECTIONS).sort(), looks: ['blood', 'fog', 'spot'].every((k) => !!E.editFx.LOOKS[k]) };
+        lo.ql = 2; lo.qAuto = true; lo.frames = new Array(80).fill(0.05); lo.ql = 2; lo.applyQuality(); const before = lo.ql; lo.frames = new Array(79).fill(0.05); lo.last = performance.now() - 50; lo.loop(performance.now()); o.auto = [before, lo.ql]; return o; }""")
+    check(r6["blur"] and r6["ghosts"] == 0, "flou de DÉPLACEMENT sur la pièce qui glisse, plus aucune image rémanente (ghost=%d)" % r6["ghosts"])
+    check(r6["rx"] <= 30 and r6["sc"] <= 1.9, "plateau jamais étiré : inclinaison %.0f° ≤ 30°, zoom ×%.2f" % (r6["rx"], r6["sc"]))
+    check(r6["blood"] and r6["q2"] and r6["q0"] and r6["fog"], "directions artistiques (Sang / Brume) et qualités (Max / Léger) appliquées")
+    check(r6["crack"] and r6["flare"] and r6["bars"] and r6["spot"], "effets : fissures, flare, bandes de cinéma, projecteur : %s" % {k: r6[k] for k in ("crack", "flare", "bars", "spot")})
+    check(r6["dirs"] == ["aura", "blood", "fog", "galaxy", "neon", "spot"] and r6["looks"], "6 directions artistiques disponibles")
+    check(r6["auto"][1] == 1, "qualité AUTO : l'image saccade -> les effets sont allégés d'un cran %s" % r6["auto"])
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
     # aperçu viral réel via l'interface : intro à t=0 puis les coups s'enchaînent
     pg.select_option("#ce-pace", "viral"); pg.wait_for_timeout(200)

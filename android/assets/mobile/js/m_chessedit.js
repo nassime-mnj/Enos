@@ -33,7 +33,8 @@
           <label class="fld" style="margin-top:10px">Coup du DROP (par défaut : le plus dramatique)</label><select id="ce-drop" class="sel"></select>
           <p class="ce-stat" id="ce-sum" style="margin-top:8px"></p></div>
         <div class="card"><h3>4 · Rendu</h3>
-          <label class="fld">Style visuel</label><select id="ce-look" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · change selon l'action (acier, rouge noir, galaxie, aura)</option><option value="neon">Néon violet</option><option value="mono">Noir &amp; blanc</option><option value="noir">Rouge noir</option><option value="galaxy">Galaxie</option><option value="steel">Acier néon</option><option value="aura">Aura turquoise</option></select>
+          <label class="fld">Direction artistique</label><select id="ce-look" class="sel" style="margin-bottom:8px"><option value="auto">🎲 AUTO · varie à chaque edit (sang, brume, projecteur, néon…)</option><option value="blood">Sang · rouge et noir, braises</option><option value="fog">Brume · gris, fumée, projecteur</option><option value="spot">Projecteur · très sombre, un seul spot</option><option value="neon">Néon violet</option><option value="galaxy">Galaxie</option><option value="aura">Aura turquoise</option></select>
+          <label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
           <div class="row" style="margin-top:0"><button class="btn pri" id="ce-play">▶ APERÇU 3D (TEMPS RÉEL)</button></div>
           <div class="row"><button class="btn" id="ce-json">EXPORTER LE MANIFESTE GODOT</button><button class="btn" id="ce-pc">RENDRE SUR LE PC</button></div>
           <p class="ce-stat" id="ce-pcs" style="margin-top:8px">Rendu PC : scène Godot (Glow HDR, particules GPU, aberration chromatique), enregistrable en .mp4 60 FPS.</p></div>`;
@@ -158,8 +159,8 @@
         const app = document.getElementById("app") || document.body, host = document.createElement("div"), au = new Audio(S.url), evs = S.tl.events, dur = S.audio.duration;
         app.appendChild(host);
         let idx = 0, raf = 0, alive = true, ffT = 0;
-        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.kind === "ff" ? "steel" : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" ? "noir" : e.key === "brilliant" ? "aura" : e.t >= (S.audio.mainDropTimestamp || 1e9) ? "galaxy" : "steel");
-        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "steel" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
+        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = (e) => (e.mate || e.key === "blunder" ? "blood" : e.key === "brilliant" && ["neon", "galaxy"].includes(dirId) ? "aura" : E.editFx.DIRECTIONS[dirId].look);
+        const stage = new E.editFx.Stage(host, { look: E.editFx.DIRECTIONS[dirId].look, direction: dirId, quality: $("#ce-qual").value, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
         function fire(e) {
           const power = e.kind === "drop" ? 1 : Math.max(0.3, Math.min(1, (e.drama || 0) / 80));
           if (e.kind === "ff") {
@@ -190,8 +191,8 @@
         app.appendChild(host);
         const sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null;
         let alive = true, raf = 0, idx = 0, paused = false, ffOn = false, T0 = 0;
-        const pick = $("#ce-look").value, lookFor = (e) => (pick !== "auto" ? pick : e.mate || e.shot === "macro" || e.fx === "BOSS_AWAKENING" || e.key === "blunder" ? "noir" : e.key === "brilliant" ? "aura" : e.kind !== "ff" && e.t > ((tl.events.find((x) => x.kind === "drop") || {}).t || 1e9) + 8 ? "galaxy" : "neon");
-        const stage = new E.editFx.Stage(host, { look: pick === "auto" ? "neon" : pick, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
+        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = (e) => (e.mate || e.key === "blunder" ? "blood" : e.key === "brilliant" && ["neon", "galaxy"].includes(dirId) ? "aura" : E.editFx.DIRECTIONS[dirId].look);
+        const stage = new E.editFx.Stage(host, { look: E.editFx.DIRECTIONS[dirId].look, direction: dirId, quality: $("#ce-qual").value, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
         stage.later(() => {}, 0);
         function toggle() {
           paused = !paused; stage.setPlaying(!paused);
@@ -216,11 +217,19 @@
           if (ffOn) { ffOn = false; stage.ff(false); }
           stage.setLook(lookFor(e));
           const startMove = () => {
-            const slow = e.dur > 600, p = stage.xy(e.to), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80));
+            const slow = e.dur > 600, p = stage.xy(e.to), q = stage.xy(e.from), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80)), cm = stage.dir.cam;
+            const rr = (a, b2) => a + Math.random() * (b2 - a), sg = Math.random() < 0.5 ? -1 : 1;
             if (slow) stage.slowmo(true);
             stage.move({ ...e, dur: e.dur });
-            if (e.lvl >= 2) stage.camTo({ rx: 40, rz: (Math.random() - 0.5) * 10, s: 1.6 }, Math.round(e.dur * 0.9), p.c, p.r);
-            else stage.camTo({ rx: 30 + Math.random() * 6, rz: (Math.random() - 0.5) * 4, s: 1.05 }, 600);
+            stage.focusSpot(e.to);
+            if (e.lvl >= 2) {                                                                          // caméra : 4 mouvements possibles (jamais d'étirement : inclinaison douce, zoom limité)
+              const style = ["track", "orbit", "crane", "pushpull"][Math.floor(Math.random() * 4)], d = Math.round(e.dur * 0.9);
+              if (style === "track") stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll * 0.6, s: cm.s[0] }, d, p.c, p.r);
+              else if (style === "orbit") { stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: -sg * cm.roll, s: cm.s[0] }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll, s: cm.s[0] + 0.1 }, d, p.c, p.r), 40); }
+              else if (style === "crane") { stage.camTo({ rx: cm.rx[0] * 0.5, rz: 0, s: cm.s[0] }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: cm.rx[1], rz: sg * cm.roll * 0.5, s: cm.s[0] + 0.12 }, d, p.c, p.r), 40); }
+              else { stage.camTo({ rx: cm.rx[0], rz: 0, s: 0.88 }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll * 0.4, s: cm.s[1] }, d, p.c, p.r), 40); }
+              if (stage.dir.bars && (e.lvl >= 3 || e.kind === "drop")) stage.bars(true);
+            } else stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: rr(-cm.roll, cm.roll) * 0.5, s: cm.s[0] }, 900);
             const wait = Math.max(0, (e.impact - e.t - (e.pre || 0)) * 1000);
             stage.later(() => {
               if (slow) stage.slowmo(false);
@@ -229,7 +238,10 @@
               if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
               if (e.threats && e.threats.length && e.lvl >= 2) stage.later(() => stage.threats(e.threats, Math.round((e.freeze || 1) * 1000) + 500), 350);        // menaces : flèches orange + ⚠ sur les pièces visées
               if (e.invert) stage.brilliantFx(e);
+              if (e.captured && e.lvl >= 2) stage.shockwave(0.6);
+              if (e.key === "blunder" || e.mate) { stage.cracks(e.to); stage.glitch(e.mate ? 520 : 340); if (e.mate) stage.shockwave(1); }
               if (e.freeze) stage.freeze(e.freeze, e);
+              if (e.lvl >= 3 || e.kind === "drop") stage.later(() => stage.bars(false), Math.round((e.freeze || 1) * 1000) + 600);
               if (e.cut) stage.later(() => stage.cutscene(e.cut, e.tone), 120);
               if (e.mate) stage.later(() => stage.dissolveKing(e.color === "w" ? "b" : "w"), 900);                         // le roi maté part en cendres
               (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
@@ -255,6 +267,7 @@
           await sfx.ctx.resume(); await sfx.load();
         } catch (e) { A.toast("Audio indisponible : " + e.message, "err"); }
         if (!alive) return;
+        if (tl.sfx.some((x) => x.bus === "voice") && sfx.voicesOk < 5) A.toast("Voix de Levy : " + sfx.voicesOk + "/5 chargées (" + (sfx.err || "") + ")", "warn");
         stage.setPlaying(true);
         const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
         if (au) {                                                                                  // musique : sa position à t=0 est tl.musicStart (négatif = elle démarre plus tard)
