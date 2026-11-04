@@ -11,7 +11,30 @@
   const sqXY = (s) => ({ col: s.charCodeAt(0) - 97, row: 8 - +s[1] });                  // col 0 = colonne a ; row 0 = rangée 8 (en haut pour les Blancs)
 
   // ---------------------------------------------------------------- 1. les coups et leur dramaScore
+  /** Parties des VARIANTES (Élixir, Élixir +, Roulette, 2v2…) : pas de règles standard (poses, cartes, écrasements) -> on lit les actions enregistrées (rec.v.acts) au lieu de rejouer avec chess.js. */
+  function variantPlies(rec) {
+    const V = rec.v || {}, acts = (V.acts || []).filter((a) => a.k !== "spin" && a.k !== "pass"), out = [], VALX = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0, m: 9, e: 9, g: 3, s: 1 };
+    const START = V.start || "4k3/8/8/8/8/8/8/4K3 w - - 0 1", SPN2 = { mk: "mk", rei: "rei", barrel: "barrel", army: "army" };
+    acts.forEach((a, i) => {
+      const prevFen = i ? out[i - 1].fen : START, drop = a.k === "drop", smash = a.smash || [], special = a.special || "", key = a.key || "good", tags = [];
+      let d = 1;
+      if (a.cap) { d += 6 + (VALX[a.cap] || 1) * 4; tags.push("capture"); }
+      if (smash.length) { d += 22 * smash.length; tags.push("écrasement"); }
+      if (special) { d += { mk: 40, rei: 25, army: 30, barrel: 20 }[special] || 15; tags.push(special); }
+      if (drop && !special) d += 3;
+      if (a.elim && a.elim.length) { d += 90 * a.elim.length; tags.push("élimination"); }
+      const last = i === acts.length - 1, over = last && (V.over === "mate" || V.over === "smash" || /mate|smash/.test(V.over || ""));
+      if (over) { d += 70; tags.push("mat"); }
+      if (key === "brilliant") { d += 80; tags.push("brillant"); } else if (key === "blunder") { d += 45; tags.push("gaffe"); } else if (key === "mistake") d += 12; else if (key === "miss") { d += 30; tags.push("manqué"); } else if (key === "forced") tags.push("forcé");
+      const prevEv = i ? acts[i - 1].ev : 0; if (a.ev != null) d += Math.min(30, Math.abs(a.ev - (prevEv || 0)) / 20);
+      const to = a.to, piece = (a.piece || "p"), color = a.side || "w", fen = a.fen, mapAfter = mapOf(fen);
+      out.push({ i, n: i + 1, pid: a.n + ":" + to, fenBefore: prevFen, color, san: a.san || "", uci: a.uci || "@" + to, from: drop ? "" : a.from, to, piece, captured: a.cap || (smash.length ? "p" : ""), promo: a.promo || "", key, loss: a.loss || 0, ev: a.ev == null ? null : a.ev, best: "",
+        check: false, mate: over, sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, lines: [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "" });
+    });
+    return out;
+  }
   function gamePlies(rec) {
+    if (rec.variant) return variantPlies(rec);
     const ch = new Chess(), out = [], chat = rec.ch || [], ids = {};
     "abcdefgh".split("").forEach((f) => ["1", "2", "7", "8"].forEach((r) => { ids[f + r] = f + r; }));                          // identité d'une pièce = sa case de départ, suivie coup après coup
     const transformAt = chat.filter((c) => c[3] === "transform").map((c) => c[0] - 1);
@@ -46,6 +69,8 @@
       if (key === "brilliant") { d += 80; tags.push("brillant"); }
       else if (key === "blunder" || loss > 300) { d += 45 + Math.min(30, loss / 40); tags.push("gaffe"); }
       else if (key === "mistake") d += 12;
+      else if (key === "miss") { d += 30; tags.push("manqué"); }
+      else if (key === "forced") tags.push("forcé");
       else if (key === "best") { d += 6; tags.push("meilleur"); }
       else if (key === "excellent") d += 4;
       if (ev != null) d += Math.min(30, Math.abs(ev - prevEv) / 20);
@@ -129,7 +154,9 @@
   }
   const textOf = (p) => (p.mate ? "IT'S OVER..." : p.key === "blunder" || p.loss > 300 ? "BIG MISTAKE" : p.captured === "q" ? "QUEEN DOWN" : p.check ? "CHECK !" : "");
   const shotOf = (p, s) => (p.mate || p.key === "blunder" || p.captured === "q" || p.captured === "r" ? "macro" : s.kind === "drop" || p.promo || p.key === "brilliant" ? "hero" : "");
+  const SPCUT = { mk: ["MÉGA CHEVALIER !", "m"], rei: ["R.E.I.N.E !", "e"], barrel: ["BARIL DU FOU !", "g"], army: ["L'ARMÉE !", "s"] };
   function cutOf(p, s, botName) {
+    if (p.variant && p.special && (p.special === "mk" || p.drop)) return { text: SPCUT[p.special][0], piece: SPCUT[p.special][1], color: p.color, boss: p.special === "mk" };
     if (p.promo === "q") return { text: "LA DAME !", piece: "q", color: p.color };
     if (p.boss || s.kind === "boss") return { text: botName || "LE VRAI VISAGE", piece: "k", color: p.color, boss: true };
     if ((s.kind === "drop" || s.kind === "end") && (p.piece === "r" || p.captured === "r") && (p.key === "brilliant" || p.captured)) return { text: "THE ROOK !", piece: "r", color: p.color };
@@ -213,14 +240,15 @@
   // Badges de coup (typographie Chess.com) : gaffe ❓ rouge, erreur ? orange, inexactitude ⁈ jaune, excellent 👍 vert, brillant ‼ cyan néon
   const BADGES = {
     brilliant: { glyph: "‼", label: "BRILLANT", color: "#00f2fe" }, best: { glyph: "👍", label: "EXCELLENT", color: "#7bd64d" }, excellent: { glyph: "👍", label: "EXCELLENT", color: "#7bd64d" },
-    inaccuracy: { glyph: "⁈", label: "INEXACTITUDE", color: "#ffd21f" }, mistake: { glyph: "?", label: "ERREUR", color: "#ff9a1f" }, blunder: { glyph: "❓", label: "GAFFE", color: "#ff2a44" },
+    inaccuracy: { glyph: "⁈", label: "INEXACTITUDE", color: "#ffd21f" }, miss: { glyph: "✖", label: "MANQUÉ", color: "#ff6b7d" }, forced: { glyph: "»", label: "FORCÉ", color: "#9aa7bd" }, mistake: { glyph: "?", label: "ERREUR", color: "#ff9a1f" }, blunder: { glyph: "❓", label: "GAFFE", color: "#ff2a44" },
   };
   const VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };              // samples vocaux de Levy (audio/levy/*.mp3)
   const ELO_OF = { penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
   /** Niveau d'importance d'un coup : 3 = moment clé (arrêt sur image long), 2 = important (ralenti), 1 = notable, 0 = passif (accéléré). */
   function lvlOf(p) {
+    if (p.variant) { if (p.mate || p.key === "brilliant" || p.key === "blunder" || (p.elim && p.elim.length) || (p.smash && p.smash.length >= 2) || p.special === "mk") return 3; if (p.special || (p.smash && p.smash.length) || p.captured || p.key === "miss" || p.key === "mistake") return 2; return p.drop ? 1 : p.drama >= 14 ? 1 : 0; }
     if (p.mate || p.key === "brilliant" || p.boss || p.key === "blunder" || p.loss > 300 || p.promo === "q" || p.captured === "q") return 3;
-    if (p.check || p.sacrifice || p.promo || p.key === "mistake" || p.drama >= 45 || (p.captured && VAL[p.captured] >= 5)) return 2;
+    if (p.check || p.sacrifice || p.promo || p.key === "mistake" || p.key === "miss" || p.drama >= 45 || (p.captured && VAL[p.captured] >= 5)) return 2;
     if (p.captured || p.key === "inaccuracy" || p.key === "best" || p.key === "excellent") return 1;
     return 0;
   }
@@ -249,6 +277,7 @@
       else if (i < nOpen) pl = { phase: "open", anim: 520, freeze: 0, gap: 0.6 - 0.2 * (i / Math.max(1, nOpen - 1)) };
       else if (l === 1) pl = { phase: "mid", anim: 520, freeze: 0, gap: 0.45 };
       else pl = { phase: "ff", anim: 260, freeze: 0, gap: 0.18 };
+      if (p.drop) pl.anim = p.special === "barrel" ? 1600 : p.special === "army" ? 1300 : p.special === "mk" ? 1200 : Math.max(pl.anim, 800);                 // le baril décolle et tournoie (1,15 s) avant d'atterrir
       pl.pre = pl.pre || 0;
       pl.base = { gap: pl.gap };
       plan.push(pl);
@@ -300,9 +329,9 @@
       let bd = null;
       if (BADGES[key] && key !== "excellent") { if (key !== "best" || (L[i] >= 1 && i - lastThumb >= 8)) { bd = BADGES[key]; if (key === "best") lastThumb = i; } }
       const impact = +(t + pl.pre + (pl.anim / 1000) * 0.82).toFixed(3);
-      const th = kind === "ff" ? [] : threatsFrom(p.fen, p.to), stats = pl.pre > 0 ? pieceStats(p.fenBefore, p.from, p.sacrifice) : null;
+      const th = kind === "ff" ? [] : threatsFrom(p.fen, p.to), stats = pl.pre > 0 && p.from ? pieceStats(p.fenBefore, p.from, p.sacrifice) : null;
       const e = { t: +t.toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
-        lines: L[i] >= 2 ? p.lines : [], fen: p.fen, kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), pre: pl.pre, freeze: +pl.freeze.toFixed(3), impact, ev: p.ev, threats: pl.phase === "ff" || pl.phase === "open" ? [] : th, stats, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
+        lines: L[i] >= 2 ? p.lines : [], fen: p.fen, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), pre: pl.pre, freeze: +pl.freeze.toFixed(3), impact, ev: p.ev, threats: pl.phase === "ff" || pl.phase === "open" ? [] : th, stats, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
         fx: kind === "ff" ? "FASTFORWARD" : fxOf(p, slot), text: kind === "ff" ? "" : textOf(p), shot: kind === "ff" ? "" : shotOf(p, slot), tone: kind === "ff" ? "green" : toneOf(p),
         cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (key === "brilliant" || (p.sacrifice && L[i] >= 2 && key !== "blunder")) };
       ev.push(e); t += dt(pl);
@@ -341,15 +370,15 @@
   function manifest(rec, tl, audio, opts) {
     opts = opts || {};
     return {
-      version: tl.viral ? 2 : 1, generator: "E.N.O.S. Chess Edit Studio",
+      version: tl.viral ? 2 : 1, variant: !!rec.variant, generator: "E.N.O.S. Chess Edit Studio",
       audio: { path: opts.audioPath || "", name: opts.audioName || "", duration: audio ? audio.duration : tl.duration, mainDrop: audio ? audio.mainDropTimestamp : null, buildUpStart: audio ? audio.buildUpStart : null,
         preDropSilence: audio ? audio.preDropSilence : null, hardBeats: audio ? audio.hardBeats : [], introBeats: audio ? audio.introBeats : [], vocalPeaks: audio ? audio.vocalPeaks : [], start_offset: tl.musicStart || 0 },
       pacing: tl.viral ? { mode: "viral", opening: (tl.events.find((e) => e.kind === "title") || {}).text || "", duration: tl.duration, stats: tl.stats || {}, outro_t: (tl.events.find((e) => e.kind === "outro") || {}).t || tl.duration } : { mode: "music" },
       sfx: tl.viral ? tl.sfx : [],
       intro: tl.viral ? (tl.events.find((e) => e.kind === "intro") || {}).intro || null : null,
       game: { title: rec.title || "", white: rec.pw || "Blancs", black: rec.pb || "Noirs", result: rec.result || "", pgn: rec.pgn || "", plies: tl.plies, flip: rec.me === "b" },
-      events: tl.events.filter((e) => e.from).map((e) => ({
-        t: +e.t.toFixed(3), ply: e.n, san: e.san, uci: e.uci, color: e.color, piece: e.piece, captured: e.captured, promotion: e.promo, from: e.from, to: e.to, from_xy: sqXY(e.from), to_xy: sqXY(e.to),
+      events: tl.events.filter((e) => e.from || e.drop).map((e) => ({
+        t: +e.t.toFixed(3), ply: e.n, san: e.san, uci: e.uci, color: e.color, piece: e.piece, captured: e.captured, promotion: e.promo, from: e.from, to: e.to, from_xy: sqXY(e.from || e.to), to_xy: sqXY(e.to), drop: !!e.drop, special: e.special || "", smash: e.smash || [],
         effect: e.fx, tone: e.tone, kind: e.kind, quality: e.key || "", drama: e.drama || 0, tags: e.tags || [], cutscene: e.cut ? { text: e.cut.text, piece: e.cut.piece, t: +((e.cutT != null ? e.cutT : e.t)).toFixed(3), duration: 0.8 } : null,
         overlay_text: e.text || "", shot: e.shot || "", dur: e.dur != null ? +(e.dur / 1000).toFixed(3) : 0.3, freeze: e.freeze || 0, impact: e.impact != null ? e.impact : e.t, badge: e.badge ? { glyph: e.badge.glyph, label: e.badge.label, color: e.badge.color } : null, level: e.lvl != null ? e.lvl : 0, phase: e.phase || "", pre: e.pre || 0, eval_cp: e.ev == null ? null : e.ev, threats: e.threats || [], stats: e.stats ? { piece: e.stats.name, color: e.stats.color, square: e.stats.sq, ...e.stats.vals } : null, texts: (e.lines || []).map((l) => ({ bot: l.bot, text: l.text, kind: l.kind })), fast_forward: e.kind === "ff", fen_after: e.fen || "",
       })),

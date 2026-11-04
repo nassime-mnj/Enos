@@ -104,7 +104,7 @@
       }
     }
     place(el, sq) { const p = this.xy(sq); el._sq = sq; el.style.width = el.style.height = this.cell + "px"; el.style.transform = `translate(${p.x}px,${p.y}px)`; }
-    mkPiece(ch, sq) { const el = document.createElement("img"); el.src = pieceUrl(ch); el._p = ch; el.draggable = false; this.pcs.appendChild(el); this.place(el, sq); this.pieces[sq] = el; return el; }
+    mkPiece(ch, sq) { const el = document.createElement("img"); el.src = pieceUrl(ch); el._p = ch; const spx = { m: "mk", e: "rei", g: "barrel", s: "army" }[ch.toLowerCase()]; if (spx) el.dataset.sp = spx; el.draggable = false; this.pcs.appendChild(el); this.place(el, sq); this.pieces[sq] = el; return el; }
     /** pose directe d'une position (aucune animation) */
     setFen(fen) {
       const m = fenMap(fen);
@@ -136,9 +136,52 @@
         pre.style.filter = "url(#ce-pm)";
       }
     }
+    /** VARIANTES — pose d'une pièce : elle tombe du ciel ; BARIL DU FOU : il DÉCOLLE au-dessus de l'échiquier en tournoyant puis ATTERRIT ; ARMÉE : les pions se déploient un à un ; MÉGA CHEVALIER : atterrissage + écrasement du 3×3 */
+    drop(ev) {
+      const to = ev.to, ch = ev.dropPiece || fenMap(ev.fen)[to];
+      if (!ch) { this.setFen(ev.fen); return; }
+      const old = this.pieces[to]; if (old) { old.remove(); delete this.pieces[to]; }
+      const p = this.xy(to), c = this.cell, sp = ev.special, tone = sp === "mk" ? "255,138,31" : sp === "rei" ? "58,230,255" : sp === "barrel" ? "107,220,80" : sp === "army" ? "176,74,255" : "255,255,255";
+      const ring = (sx, sy, delay) => { const r = document.createElement("div"); r.className = "ce-ring"; r.style.cssText = `left:${sx + c / 2}px;top:${sy + c / 2}px;border-color:rgb(${tone});box-shadow:0 0 18px rgb(${tone});animation-delay:${delay || 0}ms`; this.fxl.appendChild(r); this.later(() => r.remove(), 1200 + (delay || 0)); };
+      const spawn = (sq, ms, delay) => {                                                           // pose directe : chute avec rebond
+        const q = this.xy(sq), el = this.mkPiece(fenMap(ev.fen)[sq] || ch, sq); el.style.transition = "none"; el.style.opacity = "0";
+        this.later(() => { el.style.opacity = "1"; el.animate([{ translate: "0 -320%", scale: "2.1", opacity: 0 }, { translate: "0 0", scale: "1", opacity: 1, offset: 0.7 }, { translate: "0 -8%", scale: "1.06", opacity: 1, offset: 0.85 }, { translate: "0 0", scale: "1", opacity: 1 }], { duration: ms, easing: "cubic-bezier(.3,0,.3,1)" }); this.later(() => { ring(q.x, q.y, 0); this.shake = Math.max(this.shake, 6); }, ms * 0.7); }, delay || 0);
+        return el;
+      };
+      if (sp === "barrel") {                                                                       // le baril décolle, tournoie au-dessus du plateau, puis atterrit
+        const el = this.mkPiece(ch, to); el.style.transition = "none"; el.style.opacity = "0";
+        const fly = document.createElement("img"), S = this.S, sx = S / 2 - c / 2, sy = S + c * 1.2, apexY = -c * 2.4, midX = (sx + p.x) / 2;
+        fly.src = el.src; fly.className = "ce-fly"; fly.style.cssText = `left:0;top:0;width:${c}px;height:${c}px;filter:drop-shadow(0 0 12px rgb(${tone})) drop-shadow(0 0 26px rgb(${tone}))`; this.fxl.appendChild(fly);
+        const shadow = document.createElement("div"); shadow.className = "ce-fshadow"; shadow.style.cssText = `left:${p.x}px;top:${p.y + c * 0.7}px;width:${c}px;height:${c * 0.35}px`; this.fxl.appendChild(shadow);
+        shadow.animate([{ transform: "scale(.2)", opacity: 0 }, { transform: "scale(.6)", opacity: 0.25, offset: 0.55 }, { transform: "scale(1.15)", opacity: 0.6 }], { duration: 1150, easing: "ease-in", fill: "forwards" });
+        const anim = fly.animate([
+          { transform: `translate(${sx}px,${sy}px) scale(.5) rotate(0deg)`, opacity: 0 },
+          { transform: `translate(${sx}px,${sy - c * 0.8}px) scale(.9) rotate(120deg)`, opacity: 1, offset: 0.1 },
+          { transform: `translate(${midX}px,${apexY}px) scale(2.2) rotate(560deg)`, opacity: 1, offset: 0.5 },
+          { transform: `translate(${p.x + (midX - p.x) * 0.15}px,${p.y - c * 1.6}px) scale(1.6) rotate(960deg)`, opacity: 1, offset: 0.82 },
+          { transform: `translate(${p.x}px,${p.y}px) scale(1) rotate(1080deg)`, opacity: 1 }], { duration: 1150, easing: "cubic-bezier(.4,.1,.3,1)", fill: "forwards" });
+        this.warp = Math.max(this.warp, 0.25);
+        anim.onfinish = () => { fly.remove(); shadow.remove(); el.style.opacity = "1"; el.animate([{ scale: "1.35 0.7" }, { scale: "0.92 1.1", offset: 0.4 }, { scale: "1 1" }], { duration: 380, easing: "ease-out" }); ring(p.x, p.y, 0); ring(p.x, p.y, 140); this.shake = Math.max(this.shake, 14); this.explode({ to }, "#6bdc50", 22); this.flashFx("#d7ffcf"); if (E.vibrate) E.vibrate([30, 20, 60]); };
+        return;
+      }
+      if (sp === "army") { (ev.filled && ev.filled.length ? ev.filled : [to]).forEach((sq, k) => spawn(sq, 420, k * 90)); this.later(() => { this.shake = Math.max(this.shake, 16); this.flashFx("#e7caff"); }, 400 + (ev.filled || [1]).length * 90); return; }
+      const el = spawn(to, 480, 0);
+      if (sp === "mk") {                                                                           // Méga Chevalier : atterrissage, onde de choc puis écrasement du 3×3
+        this.later(() => { this.shake = Math.max(this.shake, 30); this.chroma = Math.max(this.chroma, 12); this.flashFx("#ffd9a0"); ring(p.x, p.y, 0); ring(p.x, p.y, 120); ring(p.x, p.y, 260); this.shockwave(1); (ev.smash || []).forEach((sq, k) => this.later(() => this.dissolveAt(sq), 80 + k * 60)); }, 480);
+      } else if (sp === "rei") this.later(() => { this.electric(p); this.flashFx("#c9faff"); }, 480);
+    }
+    /** une pièce disparaît en cendres (écrasement, élimination) */
+    dissolveAt(sq) { const el = this.pieces[sq]; if (!el) return; delete this.pieces[sq]; this.dissolve(el, sq, true); }
+    /** synchronise la scène avec une position : les pièces qui ont disparu partent en cendres (écrasements, joueur éliminé), les manquantes apparaissent */
+    syncFenFx(fen) {
+      const target = fenMap(fen);
+      Object.keys(this.pieces).forEach((sq) => { if (target[sq] !== this.pieces[sq]._p) { if (target[sq]) { this.pieces[sq]._p = target[sq]; this.pieces[sq].src = pieceUrl(target[sq]); } else this.dissolveAt(sq); } });
+      Object.keys(target).forEach((sq) => { if (!this.pieces[sq]) this.mkPiece(target[sq], sq); });
+      this.fen = fen;
+    }
     /** cases de départ et d'arrivée allumées (orange ; cyan pour un coup brillant ; rouge pour une gaffe) */
     highlight(ev) {
-      (this.hl || []).forEach((e) => e.remove()); this.hl = [];
+      (this.hl || []).forEach((e) => e.remove()); this.hl = []; if (!ev.from) ev = { ...ev, from: ev.to };
       const col = ev.key === "brilliant" ? "0,242,254" : ev.key === "blunder" ? "255,42,68" : "255,150,40";
       [ev.from, ev.to].forEach((sq, i) => {
         const p = this.xy(sq), d = document.createElement("div"); d.className = "ce-hl";

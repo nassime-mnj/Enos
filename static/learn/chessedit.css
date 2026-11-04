@@ -212,3 +212,11 @@
 .ce-intro.v-spot .ce-slash{display:none}
 .ce-intro.v-spot .ce-port,.ce-intro.v-spot .ce-pl.b .ce-port{background:#cfd3d9;box-shadow:0 0 40px rgba(255,255,255,.45);animation:none}
 .ce-intro.v-spot .ce-vs b{font-style:normal;letter-spacing:6px;text-shadow:0 0 30px rgba(255,255,255,.7)}
+
+/* variantes : pièces spéciales (auras), baril en vol */
+.ce-pcs img[data-sp]{animation:ceAura 1.3s ease-in-out infinite alternate}
+.ce-pcs img[data-sp="mk"]{--ac:#ff7a1a}.ce-pcs img[data-sp="rei"]{--ac:#3ae6ff}.ce-pcs img[data-sp="barrel"]{--ac:#6bdc50}.ce-pcs img[data-sp="army"]{--ac:#b04aff}
+@keyframes ceAura{from{filter:drop-shadow(0 0 6px var(--ac)) drop-shadow(0 0 12px var(--ac))}to{filter:drop-shadow(0 0 14px var(--ac)) drop-shadow(0 0 30px var(--ac))}}
+.ce-fly{position:absolute;pointer-events:none;z-index:6;will-change:transform}
+.ce-fshadow{position:absolute;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.7),transparent 70%);pointer-events:none}
+.ce-q0 .ce-pcs img[data-sp]{animation:none}

@@ -9,8 +9,8 @@
   const FR = { n: "cavalier", b: "fou", r: "tour", q: "dame" };
   const FILES = "abcdefgh";
   const MAT = 10000, CAP = 1000;
-  K.QUALITY = { brilliant: "Brillant", book: "Théorie", best: "Meilleur coup", excellent: "Excellent", good: "Bon", inaccuracy: "Imprécision", mistake: "Erreur", blunder: "Gaffe" };
-  K.KEYS = ["brilliant", "book", "best", "excellent", "good", "inaccuracy", "mistake", "blunder"];
+  K.QUALITY = { brilliant: "Brillant", book: "Théorie", best: "Meilleur coup", excellent: "Excellent", good: "Bon", forced: "Coup forcé", inaccuracy: "Imprécision", mistake: "Erreur", miss: "Manqué", blunder: "Gaffe" };
+  K.KEYS = ["brilliant", "book", "best", "excellent", "good", "forced", "inaccuracy", "mistake", "miss", "blunder"];
   K.MAT = MAT;
 
   // ------------------------------------------------------------------ plateau
@@ -109,9 +109,18 @@
   /** Jugement d'un coup : beforeW / afterW = évaluations (Blancs) AVANT et APRÈS, color = 'w'|'b'. Mêmes seuils que CHESS (PC). */
   K.quality = (fenBefore, uci, beforeW, afterW, color) => {
     const sgn = color === "w" ? 1 : -1;
-    const b = Math.max(-CAP, Math.min(CAP, sgn * beforeW)), a = Math.max(-CAP, Math.min(CAP, sgn * afterW)), loss = Math.max(0, b - a);
+    const braw = sgn * beforeW, araw = sgn * afterW;                                              // point de vue du camp qui joue, SANS plafond : les mats sont lus tels que Stockfish les annonce
+    const b = Math.max(-CAP, Math.min(CAP, braw)), a = Math.max(-CAP, Math.min(CAP, araw)), loss = Math.max(0, b - a);
+    const mateB = braw >= 9000 ? Math.round(MAT - braw) : 0, mateA = araw >= 9000 ? Math.round(MAT - araw) : -1;       // « mat en n » du camp au trait avant / après son coup (-1 : plus de mat)
     let key;
-    if (loss <= 15 && a >= -50 && b < 600 && K.isSacrifice(fenBefore, uci)) key = "brilliant";
+    if (mateB) {                                                                                  // il AVAIT un mat forcé : le garder (même vitesse) = meilleur coup ; sacrifier sans avancer = coup MANQUÉ, jamais « brillant »
+      if (mateA >= 0 && mateA <= mateB - 1) key = "best";                                          // mat en n avant -> mat en n-1 après (ou immédiat) : le mat avance
+      else if (mateA >= 0 && mateA <= mateB + 1) key = "good";                                     // le mat ne se rapproche pas (même distance) : correct mais pas le plus direct
+      else if (araw >= 300) key = "miss";                                                          // mat perdu ou beaucoup plus lent, mais la position reste gagnante
+      else key = araw >= -100 ? "mistake" : "blunder";                                             // il a jeté la victoire
+    }
+    else if (loss <= 15 && a >= -50 && braw < 600 && K.isSacrifice(fenBefore, uci)) key = "brilliant";
+    else if (braw >= 600 && araw >= 200 && araw < braw - 250 && loss >= 70) key = "miss";            // position déjà gagnante : le coup en laisse filer l'essentiel sans tout perdre
     else if (loss <= 8) key = "best";
     else if (loss <= 30) key = "excellent";
     else if (loss <= 70) key = "good";
@@ -164,14 +173,21 @@
    * ou brillant est donc ré-évalué 3 fois plus longtemps, avant et après, avant de recevoir son étiquette. -> {q, before:{w,best}, after:{w,best}}
    */
   K.judge = async (fenBefore, uci, evBefore, evAfter, color, ms) => {
-    let q = K.quality(fenBefore, uci, evBefore.w, evAfter.w, color);
-    if (q.loss > 60 || q.key === "brilliant") {
+    let q = K.quality(fenBefore, uci, evBefore.w, evAfter.w, color), res = { q, before: evBefore, after: evAfter };
+    if (q.loss > 60 || ["brilliant", "miss", "mistake", "blunder"].includes(q.key) || Math.abs(evBefore.w) >= 9000) {          // jugement CONFIRMÉ (3× plus long) : on ne colle pas « manqué » / « brillant » sur un score bruité
       const c = new Chess(fenBefore); play(c, uci);
       const b2 = await K.evaluate(fenBefore, (ms || 450) * 3), a2 = await K.evaluate(c.fen(), (ms || 450) * 3);
-      q = K.quality(fenBefore, uci, b2.w, a2.w, color);
-      return { q, before: b2, after: a2 };
+      q = K.quality(fenBefore, uci, b2.w, a2.w, color); res = { q, before: b2, after: a2 };
     }
-    return { q, before: evBefore, after: evAfter };
+    try {                                                                                      // COUP FORCÉ : un seul coup légal, ou le seul qui ne perd pas (Stockfish : l'écart avec le 2ᵉ meilleur ≥ 350 cp)
+      const c0 = new Chess(fenBefore), n = c0.moves().length;
+      if (n === 1) res.q = { ...res.q, key: "forced", label: K.QUALITY.forced, only: false };
+      else if (["best", "excellent", "good", "book"].includes(res.q.key) && (n <= 4 || c0.in_check())) {
+        const ln = await E.chessLocal.lines(fenBefore, 2, ms || 450);
+        if (ln.length >= 2 && ln[0].uci === uci) { const sc = (l) => (l.mate != null ? (l.mate > 0 ? MAT - l.mate : -MAT - l.mate) : l.cp || 0); if (sc(ln[0]) - sc(ln[1]) >= 350) res.q = { ...res.q, key: "forced", label: K.QUALITY.forced, only: true }; }
+      }
+    } catch (e) { /* le jugement principal reste valable */ }
+    return res;
   };
 
   /**
@@ -235,7 +251,7 @@
     if (!h.best) return null;
     const best = h.best, bestMate = best.mate != null && best.mate > 0;
     const decisive = (s) => s.mate != null ? s.mate > 0 : s.score >= 200;
-    const cands = h.sacrifices.filter((s) => decisive(s) && ((!bestMate && best.score - s.score <= 200) || (bestMate && s.mate != null && s.mate > 0)));
+    const cands = h.sacrifices.filter((s) => decisive(s) && ((!bestMate && best.score - s.score <= 200) || (bestMate && s.mate != null && s.mate > 0 && s.mate <= best.mate)));        // si Stockfish voit un mat en n, un sacrifice ne compte que s'il mate aussi vite (sinon : coup manqué)
     const evalW = (score) => (fen.split(" ")[1] === "b" ? -score : score);
     if (cands.length) {
       cands.sort((a, b) => ((b.mate != null) - (a.mate != null)) || (b.score - a.score) || ((b.deficit || 0) - (a.deficit || 0)));
@@ -257,6 +273,8 @@
     if (q.key === "best") return `${sanMove} : le meilleur coup de la position.`;
     if (q.key === "excellent") return `${sanMove} : excellent, presque aussi bon que le meilleur.`;
     if (q.key === "good") return `${sanMove} : un bon coup.${bestSan ? " Le moteur préférait " + bestSan + "." : ""}`;
+    if (q.key === "forced") return `${sanMove} : coup forcé${q.only ? " (le seul qui ne perd pas)" : " (le seul coup légal)"}.`;
+    if (q.key === "miss") return `${sanMove} : coup MANQUÉ — ${q.before >= 9000 ? "il y avait un mat forcé" : "la position était gagnante"}, ce coup ne l'avance pas.${bestSan ? " Mieux : " + bestSan + "." : ""}`;
     if (q.key === "inaccuracy") return `${sanMove} : imprécision (−${q.loss} cp).${bestSan ? " Mieux : " + bestSan + "." : ""}`;
     if (q.key === "mistake") return `${sanMove} : erreur (−${q.loss} cp).${bestSan ? " Il fallait jouer " + bestSan + "." : ""}`;
     return `${sanMove} : gaffe (−${q.loss} cp) !${bestSan ? " Il fallait jouer " + bestSan + "." : ""}`;

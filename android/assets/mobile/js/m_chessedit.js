@@ -15,7 +15,7 @@
     build(el, A) {
       const $ = (s) => el.querySelector(s), esc = E.esc;
       const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", pace: E.settings.get("chessedit.pace", "viral"), marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
-      const hist = () => E.settings.get("defi.hist", []).filter((x) => x.mv && x.mv.length >= 2);
+      const hist = () => E.settings.get("defi.hist", []).concat(E.settings.get("variants.hist", [])).filter((x) => x.mv && x.mv.length >= 2).sort((x, y) => x.t - y.t);           // parties des Défis, scènes (Game Clips) ET parties des variantes
       const mkey = () => "chessedit.marks." + (S.rec ? S.rec.t : 0);
 
       el.innerHTML = `
@@ -45,7 +45,8 @@
         sel.innerHTML = h.length ? h.map((x, i) => `<option value="${i}">${esc(x.title)} · ${x.plies} coups · ${new Date(x.t).toLocaleDateString("fr-FR")}</option>`).reverse().join("") : '<option value="">Aucune partie enregistrée (joue un Défi / un Combat)</option>';
         if (h.length) setRec(S.rec && h.find((x) => x.t === S.rec.t) || h[h.length - 1]);
       }
-      async function openingOf(rec) {                                                                  // nom de l'ouverture (livre Lichess) : le plus profond reconnu dans les 16 premiers coups
+      async function openingOf(rec) {
+        if (rec.variant) return "";                                                                  // nom de l'ouverture (livre Lichess) : le plus profond reconnu dans les 16 premiers coups
         try {
           const K = E.brain, L = E.learnLib; if (!K || !L || !(await K.loadBook())) return "";
           const path = (rec.mv || []).slice(0, 16).map((m) => m[1]); let name = "";
@@ -211,7 +212,8 @@
           }
           if (e.kind === "ff") {
             if (e.ffRun && !ffOn) { ffOn = true; stage.ff(true); }
-            stage.move(e, true); if (e.ev != null) stage.setEval(e.ev); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
+            if (e.drop) stage.drop(e); else stage.move(e, true);
+            if (e.ev != null) stage.setEval(e.ev); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
             return;
           }
           if (ffOn) { ffOn = false; stage.ff(false); }
@@ -220,7 +222,7 @@
             const slow = e.dur > 600, p = stage.xy(e.to), q = stage.xy(e.from), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80)), cm = stage.dir.cam;
             const rr = (a, b2) => a + Math.random() * (b2 - a), sg = Math.random() < 0.5 ? -1 : 1;
             if (slow) stage.slowmo(true);
-            stage.move({ ...e, dur: e.dur });
+            if (e.drop) { stage.drop(e); stage.highlight(e); } else stage.move({ ...e, dur: e.dur });
             stage.focusSpot(e.to);
             if (e.lvl >= 2) {                                                                          // caméra : 4 mouvements possibles (jamais d'étirement : inclinaison douce, zoom limité)
               const style = ["track", "orbit", "crane", "pushpull"][Math.floor(Math.random() * 4)], d = Math.round(e.dur * 0.9);
@@ -238,6 +240,8 @@
               if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
               if (e.threats && e.threats.length && e.lvl >= 2) stage.later(() => stage.threats(e.threats, Math.round((e.freeze || 1) * 1000) + 500), 350);        // menaces : flèches orange + ⚠ sur les pièces visées
               if (e.invert) stage.brilliantFx(e);
+              if (!e.drop && e.smash && e.smash.length) { stage.shockwave(1); e.smash.forEach((sq, k) => stage.later(() => stage.dissolveAt(sq), 60 + k * 60)); }            // Méga Chevalier : saut qui écrase
+              if (e.elim && e.elim.length) stage.later(() => stage.syncFenFx(e.fen), 400);                                                        // joueur éliminé : ses pièces partent en cendres
               if (e.captured && e.lvl >= 2) stage.shockwave(0.6);
               if (e.key === "blunder" || e.mate) { stage.cracks(e.to); stage.glitch(e.mate ? 520 : 340); if (e.mate) stage.shockwave(1); }
               if (e.freeze) stage.freeze(e.freeze, e);

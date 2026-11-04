@@ -5,7 +5,7 @@
 (() => {
   const E = window.ENOS, esc = E.esc;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-  const COL = { brilliant: "#1acfd6", book: "#a8896c", best: "#7bd64d", excellent: "#9ecc38", good: "#739e66", inaccuracy: "#f5c542", mistake: "#f5a524", blunder: "#ff4d63" };
+  const COL = { forced: "#9aa7bd", miss: "#ff6b7d", brilliant: "#1acfd6", book: "#a8896c", best: "#7bd64d", excellent: "#9ecc38", good: "#739e66", inaccuracy: "#f5c542", mistake: "#f5a524", blunder: "#ff4d63" };
   const powerOfElo = (e) => Math.max(1, Math.min(100, Math.round(e <= 1500 ? 1 + (e - 250) / 1250 * 49 : 50 + (e - 1500) / 1700 * 50)));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const ELOS = [400, 600, 800, 1000, 1200, 1500, 1800, 2200, 2600, 3200];
@@ -245,7 +245,7 @@
         const w = Math.abs(g.evalW) >= 9000 ? (g.evalW > 0 ? 100 : 0) : B.winPct(g.evalW);
         $("#df-eval").style.setProperty("--w", (g.flip ? 100 - w : w) + "%");
         $("#df-evt").textContent = Math.abs(g.evalW) >= 9000 ? "MAT" : (g.evalW / 100 * (g.flip ? -1 : 1)).toFixed(1).replace(".", ",").replace(/^(\d)/, "+$1");
-        $("#df-moves").innerHTML = g.moves.map((m, i) => `<span style="${m.q.key === "brilliant" || m.q.key === "blunder" || m.q.key === "mistake" ? "color:" + COL[m.q.key] : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(m.san)}${m.q.key === "brilliant" ? "!!" : m.q.key === "blunder" ? "??" : m.q.key === "mistake" ? "?" : ""}</span>`).join("");
+        $("#df-moves").innerHTML = g.moves.map((m, i) => `<span style="${["brilliant", "blunder", "mistake", "miss"].includes(m.q.key) ? "color:" + COL[m.q.key] : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(m.san)}${m.q.key === "brilliant" ? "!!" : m.q.key === "blunder" ? "??" : m.q.key === "mistake" ? "?" : m.q.key === "miss" ? " ✖" : m.q.key === "forced" ? " »" : ""}</span>`).join("");
         $("#df-moves").scrollLeft = 1e5;
       }
       const status = (t) => { $("#df-status").textContent = t; };
@@ -367,7 +367,7 @@
         }
         ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ ew: ev.w, san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "", bookExit });
         const victim = turn === "w" ? "b" : "w", mvRec = g.moves[g.moves.length - 1];
-        if (g.pl[victim].gain && ["inaccuracy", "mistake", "blunder"].includes(q.key)) {          // Naskurieux : +200 Elo à chaque inexactitude, erreur ou gaffe de l'adversaire
+        if (g.pl[victim].gain && ["inaccuracy", "mistake", "miss", "blunder"].includes(q.key)) {          // Naskurieux : +200 Elo à chaque inexactitude, erreur ou gaffe de l'adversaire
           g.pl[victim].elo = Math.min(3200, g.pl[victim].elo + 200); mvRec.eloUp = g.pl[victim].elo;
           E.ui.toast(`${g.pl[victim].name} : +200 Elo → ${g.pl[victim].elo}`, "ok", 2600); E.vibrate(20);
         }
@@ -376,7 +376,7 @@
           E.ui.toast(`${g.pl[turn].name} : meilleur coup, +200 Elo → ${g.pl[turn].elo}`, "ok", 2600);
         }
         const dropElo = (col) => { const q2 = g.pl[col]; q2.elo = Math.max(1, q2.elo - 100); mvRec.eloDown = { col, elo: q2.elo }; E.ui.toast(`${q2.name} : −100 Elo → ${q2.elo}`, "warn", 2600); };
-        if (g.pl[turn].lose && ["inaccuracy", "mistake", "blunder"].includes(q.key)) dropElo(turn);                  // Naskolit se trompe
+        if (g.pl[turn].lose && ["inaccuracy", "mistake", "miss", "blunder"].includes(q.key)) dropElo(turn);                  // Naskolit se trompe
         if (g.pl[victim].lose && (q.key === "best" || q.key === "brilliant")) dropElo(victim);                         // ... ou l'adversaire trouve le meilleur coup
         if (m.captured && (m.captured === "n" || m.captured === "b")) { g.lostMinor[victim]++; mvRec.minorLost = { col: victim, n: g.lostMinor[victim] }; }
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
@@ -427,7 +427,7 @@
         if (mv.bookExit) { if (g.moves.length <= 10) say(O, "open_refused") || say(T, "open_end"); else say(T, "open_end") || say(O, "open_end"); }
         else if (k === "brilliant") { say(T, "bot_brilliant"); say(O, oOverride || "h_brilliant"); }
         else if (k === "blunder") { say(T, "bot_blunder"); say(O, oOverride || "h_blunder"); }
-        else if (k === "mistake") { say(T, "bot_mistake"); say(O, oOverride || "h_mistake"); }
+        else if (k === "mistake" || k === "miss") { say(T, "bot_mistake"); say(O, oOverride || "h_mistake"); }
         else if (k === "inaccuracy" && oOverride) say(O, oOverride);
         else if (k === "best" && mv.eloSelf) say(T, "elo_self");
         else if (k === "best" || k === "excellent") { if (swing >= 120) { say(T, "super"); if (!say(O, oOverride || "h_good")) { /* silence */ } } else say(T, "good") || say(O, oOverride || "h_good"); }
