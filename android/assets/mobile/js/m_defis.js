@@ -21,6 +21,7 @@
     { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
     { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo par erreur adverse ou meilleur coup", human: true },
+    ...(E.aiBots ? E.aiBots.ids.map((id) => ({ id, t: "🤖 " + E.aiBots.def[id].name, s: E.aiBots.def[id].elo + " Elo · " + E.aiBots.def[id].tag, human: true, style: true, ai: true })) : []),
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
     { id: "jester", t: "🃏 Le Jester", s: "Une roue tire son Elo au sort (1-3200) tous les 10 coups", human: true },
@@ -55,7 +56,8 @@
       if (!STY) { const sc = document.createElement("script"); sc.src = (E.assetBase || "") + "data/style_bots.js"; sc.onload = () => { STY = window.ENOS_STYLE; }; document.head.appendChild(sc); }
 
       // combattants : modèle de joueur (talk = personnage qui parle dans la chat box)
-      const eloOf = (id) => (STY && STY[id] ? STY[id].eloEst : 1000);
+      const AIP = window.ENOS_AIPROF || {}, prof = (id) => AIP[id] || (STY && STY[id]) || null;
+      const eloOf = (id) => (prof(id) ? prof(id).eloEst : 1000);
       const FIGHT = {
         nasko: () => ({ kind: "style", style: "nasko", elo: eloOf("nasko"), name: "Nasko", talk: "nasko" }),
         penoire: () => ({ kind: "penoire", elo: 2500, name: "Nasko (pénoire)", talk: "penoire" }),
@@ -68,10 +70,11 @@
         jester: () => ({ kind: "sf", elo: 1600, name: "Le Jester", talk: "jester", wheel: true }),                         // la roue tire son Elo (1-3200) avant son 1er coup puis tous les 10 de ses coups
         ghorghor: () => ({ kind: "style", style: "lelex", elo: 1400, skill: { mistake: 0.12, blunder: 0.05 }, name: "GhorGhor", talk: "ghorghor", transform: true }),   // style Lelex ; 3 pièces mineures perdues -> GhorGhor le vrai
       };
-      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester"];
+      (E.aiBots ? E.aiBots.ids : []).forEach((id) => { FIGHT[id] = () => ({ kind: "style", style: id, elo: eloOf(id), name: E.aiBots.def[id].name, talk: id }); });
+      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...(E.aiBots ? E.aiBots.ids : [])];
       const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
-      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+      const FIGHT_NAMES = { ...Object.fromEntries((E.aiBots ? E.aiBots.ids : []).map((id) => [id, E.aiBots.def[id].name])), nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
         ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
 
@@ -134,6 +137,7 @@
             <div class="df-presets">${PRESETS.map((p, i) => `<button data-p="${i}">${p[2]}</button>`).join("")}</div>
             <div class="df-pick"><label>Blancs<select id="su-cw" class="sel">${opt(last[0])}</select></label><label>Noirs<select id="su-cb" class="sel">${opt(last[1])}</select></label></div>`;
         }
+        else if (m.ai) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>${m.t.slice(3)}</b> — ${E.aiBots.def[id].tag}. Une <b>illusion</b> : aucune IA n'est interrogée (zéro token). Ses <b>ouvertures préférées</b> et son <b>style</b> sont donnés à Stockfish, qui joue à sa place, avec une fréquence d'erreurs adaptée à son niveau (<b>${E.aiBots.def[id].elo} Elo</b>, estimé d'après les classements publics de parties d'IA).</p>` + colorSeg;
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
         else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
@@ -321,7 +325,7 @@
       // ---- bots de style (Nasko, Lelex) : livre d'ouvertures du joueur, puis Stockfish + fréquence d'erreurs mesurée sur ses parties
       const wpick = (items) => { let t = items.reduce((a, x) => a + x[1], 0), r = Math.random() * t; for (const [v, w] of items) { if ((r -= w) <= 0) return v; } return items[items.length - 1][0]; };
       async function styleMove(fen, p) {
-        const S = STY && STY[p.style], ch = new Chess(fen), turn = ch.turn();
+        const S = prof(p.style), ch = new Chess(fen), turn = ch.turn();
         const hist = g.ch.history({ verbose: true }), path = hist.map((m) => m.from + m.to + (m.promotion || "")).join(" ");
         const legal = new Set(ch.moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion || "")));
         const alien = p.style === "nasko" && turn === "w" ? ALIEN[path] : null;                     // le Gambit Alien contre la Caro-Kann reste son arme favorite

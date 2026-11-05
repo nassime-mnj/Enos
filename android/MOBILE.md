@@ -158,3 +158,8 @@ Tout l'état de l'appli est dans le localStorage (`enos.*`). Instantané JSON au
 - Déplacements / prises / échecs : vrais sons Chess.com fournis (`chess_sounds_data.js`).
 - Variété : traînée lumineuse, vrille en plein air (1 ou 2 tours + saut), **impact frame** (négatif / point noir).
 - Titre d'ouverture discret (petite taille). Animation de promotion allégée (rayons en couche GPU, ombres réduites, plus de gros plan en double).
+
+## 1.47 — Bots « IA » dans les Défis (Claude Fable 5, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek V4.1)
+Illusion assumée : **aucune IA n'est interrogée** (zéro token). Chaque bot = profil de style (`js/ai_bots.js` : livre d'ouvertures, prudence/agressivité, taux d'erreurs) donné à Stockfish, via le même moteur que Nasko/Lelex (`styleMove`).
+Niveaux (échelle de benchmark ChessBench oct. 2026, pas des Elo FIDE) : Gemini 4 Argon 2170 · Claude Fable 5 2150 (estimé, Opus 5.5 mesuré à 2111) · GPT-6 Astra 2045 · DeepSeek V4.1 1690.
+Les ouvertures/styles sont des estimations (aucune source publique ne les détaille). Illustrations : `android/tools/gen_ai_avatars.py`.
