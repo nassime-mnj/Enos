@@ -151,3 +151,10 @@ Tout l'état de l'appli est dans le localStorage (`enos.*`). Instantané JSON au
 - **2v2** : chaque siège (équipier, adversaires) est humain ou bot au choix ; capturer le dernier roi adverse termine la partie.
 - **Chess Edit** accepte les parties de variantes (`variants.hist`) : poses/cartes = événements « drop ».
 - **Jugement** lu sur les vrais scores Stockfish (mat) : coup MANQUÉ (mat existant perdu, sacrifice inutile) et coup FORCÉ (icône + statut), jamais « brillant » à tort.
+
+## 1.46 — Game Clips : ouvertures mises en scène, vrais sons Chess.com, plus de variété
+- **Lelex / GhorGhor** jouant les Noirs sortent la **Scandinave** ; un **Nasko** (ou variante) jouant les Blancs sort l'**Alien Gambit** (priorité si les deux se rencontrent). `Cxf7` (11ᵉ demi-coup) est un **brillant imposé** (`rec.clip.alien`).
+- Son : l'enregistrement fourni joue sur ce sacrifice avec un **écho épique** (bus `epic`, reverb 4 s + 3 échos) ; si un son/voix de sacrifice a été joué **≥ 3 coups avant** un nouveau brillant, celui-ci reçoit le **witty alien**.
+- Déplacements / prises / échecs : vrais sons Chess.com fournis (`chess_sounds_data.js`).
+- Variété : traînée lumineuse, vrille en plein air (1 ou 2 tours + saut), **impact frame** (négatif / point noir).
+- Titre d'ouverture discret (petite taille). Animation de promotion allégée (rayons en couche GPU, ombres réduites, plus de gros plan en double).

@@ -22,7 +22,13 @@ with sync_playwright() as pw:
     check(ok["legal"] and ok["pgn"], "tous les coups sont légaux et le PGN correspond")
     check(ok["fmt"] and rec["clip"]["hero"] == "eto" and rec["clip"]["ant"] == "lelex" and rec["id"] == "clip" and rec["pw"] == "ETO Brillant" and rec["pb"] == "Lelex", "format identique aux parties des Défis + méta de la scène")
     check(all(k in ("book", "best", "brilliant") for k in ok["heroSide"]), "le héros ne joue que des coups de théorie / meilleurs / brillants : %s" % ok["heroSide"])
-    check(all(k in ("good", "inaccuracy", "mistake", "blunder") for k in ok["antSide"]) and ok["antSide"][:4] == ["good"] * 4, "l'antagoniste joue plausible dans l'ouverture (aucune gaffe avant le coup 8) : %s" % ok["antSide"])
+    check(all(k in ("book", "good", "inaccuracy", "mistake", "blunder") for k in ok["antSide"]) and ok["antSide"][:3] == ["book"] * 3, "l'antagoniste joue plausible dans l'ouverture (aucune gaffe avant le coup 8) : %s" % ok["antSide"])
+    # --- ouvertures mises en scène : Scandinave (Lelex en Noir) et Alien Gambit (Nasko en Blanc) + son
+    check(rec["mv"][1][0] == "d7d5" and rec["mv"][5][0] == "d5a5" and rec["clip"]["opening"] == "scand", "Lelex (Noirs) sort la SCANDINAVE : %s" % [m[1] for m in rec["mv"][:6]])
+    al = ev("""async () => { const r = await ENOS.clips.run({ hero: 'nasko', ant: 'eto', heroColor: 'w', intensity: 'subtle', maxPlies: 14, times: { think: 60, heroTop: 80, heroSac: 100, antLines: 80, antTop: 60, antSac: 80, evalMs: 60 } }, () => {});
+      const M = ENOS.editMap, pl = M.gamePlies(r), tl = M.buildViral(pl, r, null, { voices: true }); return { san: r.mv.slice(0, 11).map((m) => m[1]), k: r.mv[10][2], alien: r.clip.alien, sfx: tl.sfx.filter((x) => x.id === 'rec' || x.id === 'witty').map((x) => [x.id, x.bus, x.ply]) }; }""")
+    check(al["san"][-1] == "Nxf7" and al["k"] == "brilliant" and al["alien"] == 11, "Nasko (Blancs) : ALIEN GAMBIT, Cxf7 = brillant (%s)" % " ".join(al["san"]))
+    check(["rec", "epic", 11] in al["sfx"], "le sacrifice joue l'enregistrement avec l'écho épique : %s" % al["sfx"])
     check(len(rec["ch"]) >= 1 and rec["ch"][0][1] == "eto" and all(len(c) == 4 and isinstance(c[0], int) for c in rec["ch"]), "répliques de personnages dans le format du Chess Edit : %s" % rec["ch"][:2])
     # enregistrement + module
     ev("(rec) => { ENOS.clips.save(rec); }", rec)

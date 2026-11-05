@@ -129,12 +129,33 @@
       }
       this.later(() => { const target = fenMap(ev.fen); Object.keys(this.pieces).forEach((s) => { if (target[s] !== this.pieces[s]._p) { if (s === ev.to && target[s]) { this.pieces[s]._p = target[s]; this.pieces[s].src = pieceUrl(target[s]); } else { this.pieces[s].remove(); delete this.pieces[s]; } } });
         Object.keys(target).forEach((s) => { if (!this.pieces[s]) this.mkPiece(target[s], s); }); }, dur + 20);
-      if (!fast) { this.highlight(ev); }
+      if (!fast) { this.highlight(ev); this.flair(ev, pre, a, b, dur); }
       if (!fast && this.fx && this.fx.pblur) {                                                           // FLOU DE DÉPLACEMENT : la pièce est floutée dans le sens du mouvement (plus d'images rémanentes)
         const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1;
         this.pm = { el: pre, ux: Math.abs(dx) / dist, uy: Math.abs(dy) / dist, amp: Math.min(0.55 * this.cell, (dist / Math.max(0.25, dur / 1000)) * 0.034), t0: performance.now(), ms: dur };
         pre.style.filter = "url(#ce-pm)";
       }
+    }
+    /** VARIÉTÉ des coups : traînée lumineuse du déplacement, pièce qui TOURNE en l'air (vrille + saut), IMPACT FRAME (négatif + point noir une fraction de seconde) ; choisis selon le coup pour que deux coups de suite ne se ressemblent pas */
+    flair(ev, pre, a, b, dur) {
+      if (dur < 260 || !pre.animate) return;
+      const n = ev.n || ev.ply || 0, big = ev.key === "brilliant" || ev.lvl >= 2 || ev.captured, tone = TONE[ev.tone] || TONE.cyan, h = this.cell / 2;
+      const style = (n * 7 + (ev.to ? ev.to.charCodeAt(0) : 0)) % 4;                                  // 0 traînée seule · 1 vrille · 2 saut + vrille inverse · 3 traînée + impact
+      if (style !== 1 && style !== 2 || (ev.piece === "p" && !big)) {
+        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy), tr = document.createElement("div"); tr.className = "ce-trail";
+        tr.style.cssText = `left:${a.x + h}px;top:${a.y + h}px;width:${d}px;transform:rotate(${Math.atan2(dy, dx)}rad);--tc:${tone}`; this.fxl.appendChild(tr); this.later(() => tr.remove(), 760);
+      }
+      if ((style === 1 || style === 2) && dur >= 320) {                                              // rotation en plein air (propriétés individuelles : ne touche pas au transform de position)
+        const dir = n % 2 ? 1 : -1, turns = style === 2 ? 2 : 1;
+        try { pre.animate([{ rotate: "0deg", scale: 1 }, { rotate: `${dir * 180 * turns}deg`, scale: style === 2 ? 1.5 : 1.3, offset: 0.5 }, { rotate: `${dir * 360 * turns}deg`, scale: 1 }], { duration: dur, easing: "cubic-bezier(.3,.1,.2,1)" }); } catch (e) { /* ancien WebView : pas de rotate individuel */ }
+      }
+      if ((style === 3 || (big && n % 3 === 0)) && this.alive !== false) this.later(() => this.impactFrame(ev.key === "blunder"), Math.max(60, dur - 40));
+    }
+    /** IMPACT FRAME : une ou deux images en négatif (puis un fond noir au point blanc au centre) comme dans les anime */
+    impactFrame(dark) {
+      const f = document.createElement("div"); f.className = "ce-impact" + (dark ? " k" : ""); this.host.appendChild(f);
+      f.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 110, easing: "steps(2,end)" }); this.later(() => f.remove(), 130);
+      this.shake = Math.max(this.shake, 12);
     }
     /** VARIANTES — pose d'une pièce : elle tombe du ciel ; BARIL DU FOU : il DÉCOLLE au-dessus de l'échiquier en tournoyant puis ATTERRIT ; ARMÉE : les pions se déploient un à un ; MÉGA CHEVALIER : atterrissage + écrasement du 3×3 */
     drop(ev) {
@@ -213,7 +234,7 @@
       this.punch(power);
       this.warp = Math.max(this.warp, 0.12 + power * 0.22);
       if (macro) this.dof(1400);
-      if (ev.shot === "hero") this.later(() => this.hero(ev), 360);
+      if (ev.shot === "hero" && !ev.cut) this.later(() => this.hero(ev), 360);          // pas de gros plan EN PLUS de la cutscene (promotion) : c'était ce qui faisait ramer
       if (ev.text) this.later(() => this.neon(ev.text, ev.tone, ev.to), 480);
       // halo radial + case d'arrivée allumée
       const halo = document.createElement("div"); halo.className = "ce-halo"; halo.style.cssText = `left:${p.x - this.cell}px;top:${p.y - this.cell}px;width:${this.cell * 3}px;height:${this.cell * 3}px;background:radial-gradient(circle,${tone} 0%,${tone}88 28%,transparent 68%)`;
@@ -295,7 +316,7 @@
       const col = tone === "red" ? "#ff3a52" : TONE.gold, img = `${E.assetBase || ""}img/chess/${c.color}${c.piece}.png`;
       this.cut.hidden = false;
       this.cut.innerHTML = `<div class="ce-rays"></div><div class="ce-arrows">${Array.from({ length: 8 }, (_, i) => `<b style="transform:rotate(${i * 45}deg) translateY(-34vmin)">➤</b>`).join("")}</div>
-        <img src="${img}" style="filter:brightness(0) drop-shadow(0 0 10px ${col}) drop-shadow(0 0 30px ${col}) drop-shadow(0 0 60px #fff8)"><div class="ce-big" style="text-shadow:0 0 14px ${col},0 0 40px ${col}">${E.esc(c.text)}</div>`;
+        <img src="${img}" style="filter:brightness(0) drop-shadow(0 0 22px ${col})"><div class="ce-big" style="text-shadow:0 0 18px ${col}">${E.esc(c.text)}</div>`;
       this.cut.animate([{ opacity: 0, transform: "scale(1.5)" }, { opacity: 1, transform: "scale(1)", offset: 0.18 }, { opacity: 1, transform: "scale(1.04)", offset: 0.82 }, { opacity: 0, transform: "scale(1.15)" }], { duration: 800, easing: "ease-out" });
       this.shake = Math.max(this.shake, 14); this.chroma = Math.max(this.chroma, 10); this.flashFx(col === TONE.gold ? "#ffe9a8" : "#ff3a52");
       this.later(() => { this.cut.hidden = true; this.cut.innerHTML = ""; }, 800);

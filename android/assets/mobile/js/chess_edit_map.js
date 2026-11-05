@@ -78,7 +78,7 @@
       else if (lines.some((l) => STRONG_CHAT.has(l.kind))) { d += 20; tags.push("réplique"); }
       const fenBefore = i ? out[i - 1].fen : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
       out.push({ i, n: i + 1, pid, fenBefore, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "",
-        check: /[+#]/.test(mv.san), mate: /#/.test(mv.san), sacrifice: sac, boss: transformAt.includes(i), drama: Math.round(d * 10) / 10, tags, lines, fen: ch.fen() });
+        check: /[+#]/.test(mv.san), mate: /#/.test(mv.san), sacrifice: sac, alien: !!(rec.clip && rec.clip.alien === i + 1), boss: transformAt.includes(i), drama: Math.round(d * 10) / 10, tags, lines, fen: ch.fen() });
     });
     return out;
   }
@@ -330,7 +330,7 @@
       if (BADGES[key] && key !== "excellent") { if (key !== "best" || (L[i] >= 1 && i - lastThumb >= 8)) { bd = BADGES[key]; if (key === "best") lastThumb = i; } }
       const impact = +(t + pl.pre + (pl.anim / 1000) * 0.82).toFixed(3);
       const th = kind === "ff" ? [] : threatsFrom(p.fen, p.to), stats = pl.pre > 0 && p.from ? pieceStats(p.fenBefore, p.from, p.sacrifice) : null;
-      const e = { t: +t.toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
+      const e = { alien: !!p.alien, t: +t.toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
         lines: L[i] >= 2 ? p.lines : [], fen: p.fen, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), pre: pl.pre, freeze: +pl.freeze.toFixed(3), impact, ev: p.ev, threats: pl.phase === "ff" || pl.phase === "open" ? [] : th, stats, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
         fx: kind === "ff" ? "FASTFORWARD" : fxOf(p, slot), text: kind === "ff" ? "" : textOf(p), shot: kind === "ff" ? "" : shotOf(p, slot), tone: kind === "ff" ? "green" : toneOf(p),
         cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (key === "brilliant" || (p.sacrifice && L[i] >= 2 && key !== "blunder")) };
@@ -349,8 +349,16 @@
     });
     if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS (jamais sur une erreur, une gaffe, un mat…), une seule par coup
       const chosen = [];
-      ev.filter((e) => e.key === "brilliant").forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
-      chosen.forEach((e) => { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", ply: e.n }); });
+      ev.filter((e) => e.key === "brilliant" && !e.alien).forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
+      let lastVoice = null;                                                                          // dernier coup ayant eu une voix / un son de sacrifice
+      ev.filter((e) => e.key === "brilliant").forEach((e) => {
+        if (e.alien) {                                                                               // ALIEN GAMBIT : le sacrifice du cavalier = l'enregistrement, avec un écho ÉPIQUE
+          sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "rec", gain: 1.5, bus: "epic", ply: e.n }); lastVoice = e.n; return;
+        }
+        const c = chosen.includes(e);
+        if (lastVoice != null && e.n - lastVoice >= 3) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
+        if (c) { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", ply: e.n }); lastVoice = e.n; }
+      });
     }
     sfx.sort((a, b) => a.t - b.t);
     const all = [];

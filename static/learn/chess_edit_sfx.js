@@ -61,12 +61,16 @@
       const conv = a.createConvolver(); conv.buffer = impulse(a, FX.irSeconds, FX.irDecay); const wet = a.createGain(); wet.gain.value = FX.wet; hp.connect(conv); conv.connect(wet); wet.connect(this.master); this.conv = conv;
       const dl = a.createDelay(1); dl.delayTime.value = FX.echoTime; const fb = a.createGain(); fb.gain.value = FX.echoFeedback; const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = FX.lowpass;
       const eg = a.createGain(); eg.gain.value = FX.echo; hp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(lp); lp.connect(eg); eg.connect(this.master);
+      // bus « épique » (enregistrement de l'Alien Gambit) : grande reverb + écho long à plusieurs répétitions
+      this.ein = a.createGain(); const ed = a.createGain(); ed.gain.value = 0.9; this.ein.connect(ed); ed.connect(this.master);
+      const ec = a.createConvolver(); ec.buffer = impulse(a, 4.2, 2.2); const ew = a.createGain(); ew.gain.value = 1.4; this.ein.connect(ec); ec.connect(ew); ew.connect(this.master);
+      [0.36, 0.72, 1.1].forEach((tm, k) => { const d = a.createDelay(2), f = a.createBiquadFilter(), g = a.createGain(); d.delayTime.value = tm; f.type = "lowpass"; f.frequency.value = 5200; g.gain.value = [0.5, 0.35, 0.2][k]; this.ein.connect(d); d.connect(f); f.connect(g); g.connect(this.master); });
       this.onVoice = null;
     }
     async load() {
       const a = this.ctx, S = E.chessSound, base = E.assetBase || "";
       this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
-      for (const k of ["move", "check", "promote", "mate"]) { try { this.bufs[k] = S && S.buffer ? await S.buffer(k) : null; } catch (e) { this.bufs[k] = null; } }
+      for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
         try {
@@ -106,6 +110,7 @@
         if (wet > 1 && this.conv) { const x = a.createGain(); x.gain.value = wet - 1; g.connect(x); x.connect(this.conv); }                  // reverb SUPPLÉMENTAIRE (The Rook : la voix la plus importante)
         if (this.onVoice) this.onVoice(when, b.duration / rate + 1.2);
       }
+      else if (bus === "epic") { src.connect(g); g.connect(this.ein); if (this.onVoice) this.onVoice(when, b.duration + 2); }
       else { src.connect(g); g.connect(this.sfx); }
       const at = when - this.onsetOf(id) / rate;
       if (at >= a.currentTime) src.start(at); else src.start(a.currentTime, Math.min(b.duration - 0.001, (a.currentTime - at) * rate));

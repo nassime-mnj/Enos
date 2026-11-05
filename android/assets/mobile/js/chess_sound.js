@@ -30,8 +30,8 @@
     try {
       const a = ac();
       if (a.state === "suspended") await a.resume();
-      if (kind === "capture") return capture(a);
-      const b = await load(kind === "check" || kind === "promote" || kind === "mate" || kind === "brilliant" ? kind : "move");
+      if (kind === "capture") { const cb = await load("capture"); if (!cb) return capture(a); }
+      const b = await load(kind === "capture" || kind === "check" || kind === "promote" || kind === "mate" || kind === "brilliant" ? kind : "move");
       if (!b) return;
       const s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start();
     } catch (e) { /* audio indisponible : le jeu continue en silence */ }

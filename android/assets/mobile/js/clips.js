@@ -16,6 +16,11 @@
     fast: { think: 250, heroTop: 350, heroSac: 700, antLines: 350, antTop: 200, antSac: 350, evalMs: 200 },
     careful: { think: 600, heroTop: 1000, heroSac: 1800, antLines: 800, antTop: 450, antSac: 800, evalMs: 450 },
   };
+  /** OUVERTURES MISES EN SCÈNE : un bot « Nasko » (ou variante) jouant les Blancs sort l'ALIEN GAMBIT (Caro-Kann, 5.Cg5 h6 6.Cxf7 : le sacrifice du cavalier = coup BRILLANT) ; Lelex / GhorGhor jouant les Noirs sortent la SCANDINAVE. */
+  const NASKO = new Set(["nasko", "penoire", "naskurieux", "naskolit"]), SCAND_BOTS = new Set(["lelex", "ghorghor"]);
+  C.ALIEN = ["e2e4", "c7c6", "d2d4", "d7d5", "b1c3", "d5e4", "c3e4", "g8f6", "e4g5", "h7h6", "g5f7"];          // le 11e demi-coup (Cxf7) est le sacrifice brillant
+  C.SCAND = ["e2e4", "d7d5", "e4d5", "d8d5", "b1c3", "d5a5"];
+  C.openingFor = (whiteId, blackId) => (NASKO.has(whiteId) ? { id: "alien", name: "Alien Gambit", moves: C.ALIEN, brilliantAt: 11 } : SCAND_BOTS.has(blackId) ? { id: "scand", name: "Défense scandinave", moves: C.SCAND } : null);
   const MAT = 10000, pick = (a) => a[Math.floor(Math.random() * a.length)];
   const line = (id, cat, d) => {
     const L = (window.ENOS_BOT_LINES || {})[id === "ghorghor" && d && d.real ? "ghorreal" : id] || null, list = L && L[cat];
@@ -37,6 +42,7 @@
     const ch = new Chess(), mv = [], chat = [];
     let brilliants = 0, gifts = 0, lastTalk = -9, heroEval = 0;
     await K.loadBook().catch(() => false);
+    const opn = C.openingFor(hc === "w" ? hero : ant, hc === "w" ? ant : hero); let alienPly = 0;
     const say = (bot, cat, ply, d, force) => {                                                      // réplique pré-écrite (jamais plus d'une tous les 3 coups, sauf moments forts)
       if (!force && ply - lastTalk < 3) return "";
       const t = line(bot, cat, d); if (!t) return "";
@@ -47,7 +53,11 @@
       const fen = ch.fen(), n = ch.history().length, turn = ch.turn(), isHero = turn === hc;
       if (n >= maxPlies && heroEval < 900) break;
       let uci = "", key = "good", loss = 0, gift = false, bestSan = "";
-      if (isHero) {
+      const scripted = opn && n < opn.moves.length ? opn.moves[n] : "";
+      if (scripted && ch.moves({ verbose: true }).some((x) => x.from + x.to + (x.promotion || "") === scripted)) {
+        uci = scripted; key = "book";
+        if (opn.brilliantAt === n + 1) { key = "brilliant"; alienPly = n + 1; if (isHero) brilliants++; }                // sacrifice du cavalier de l'Alien Gambit : brillant imposé
+      } else if (isHero) {
         if (n < 6) { const r = await L.think(fen, 100, T.think); uci = r.uci; key = "book"; }
         else { const r = await K.etoMove(fen, { topMs: T.heroTop, sacMs: T.heroSac }); if (!r) break; uci = r.uci; key = r.brilliant ? "brilliant" : "best"; if (r.brilliant) brilliants++; }
       } else {
@@ -100,7 +110,7 @@
     const wName = names.w, bName = names.b, result = (heroWon ? C.nameOf(hero) : C.nameOf(ant)) + " gagne" + (ch.in_checkmate() ? "" : " (l'antagoniste abandonne)");
     const heroBrill = mv.filter((m, i) => m[2] === "brilliant").length;
     return { t: Date.now(), title: "🎭 " + C.nameOf(hero) + " – " + C.nameOf(ant) + " · Scène", result, plies: mv.length, brill: heroBrill, acc: null, pgn: ch.pgn(), id: "clip", pw: wName, pb: bName, pk: ["clip", "clip"],
-      bw: hc === "w" ? heroBrill : 0, bb: hc === "b" ? heroBrill : 0, me: null, accW: null, accB: null, ch: chat, mv, clip: { hero, ant, heroColor: hc, intensity: o.intensity || "normal", gifts, brilliants: heroBrill } };
+      bw: hc === "w" ? heroBrill : 0, bb: hc === "b" ? heroBrill : 0, me: null, accW: null, accB: null, ch: chat, mv, clip: { opening: opn ? opn.id : "", alien: alienPly || 0, hero, ant, heroColor: hc, intensity: o.intensity || "normal", gifts, brilliants: heroBrill } };
   };
 
   /** enregistre la scène dans l'historique des Défis (où le Chess Edit la trouve) */
