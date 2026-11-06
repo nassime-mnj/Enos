@@ -172,3 +172,6 @@ Les ouvertures/styles sont des estimations (aucune source publique ne les détai
 
 ## 1.49 — Prime battable + plot twist
 ~35 % des parties, Prime est **battable** (il triche à peine, ne se sauve plus en cas d'échec, joue faible). Si tu le mates : « De quoi tu parles ? Tu t'es fait checkmate. », le plateau fait un **180°** (pièces restes droites), il « prend notre place » et affiche **CHATGPT A GAGNÉ PAR CHECKMATE** ; la partie est enregistrée avec lui vainqueur (action `cheat: "twist"`). Chess Edit : le twist est rejoué (`Stage.twist`), et les coups `+` / `#` des parties de variantes sont maintenant reconnus (échec / mat).
+
+## 1.51 — Prime discret + animations de déplacement
+Les coups illégaux de Prime ne sont plus signalés : plus de ⚠, de tampon, de glitch ni d'aveu (notation SAN normale, même explication confiante que les autres, compteur retiré) — dans la partie et dans le Chess Edit. Le roi capturé est présenté comme un échec et mat. Seul le plot twist garde ses effets. Animations de glissement des pièces dans Prime (Stockfish contre Prime) et dans les scènes Game Clips (bot contre bot). Correctif : la liste de coups n'élargit plus la page (plateau énorme).

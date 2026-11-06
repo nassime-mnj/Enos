@@ -144,10 +144,9 @@
     return res.sort((x, y) => x.ply - y.ply);
   }
 
-  const toneOf = (p) => (p.cheat ? "red" : p.key === "brilliant" ? "cyan" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
+  const toneOf = (p) => (p.key === "brilliant" ? "cyan" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
   function fxOf(p, s) {
     if (p.boss || s.kind === "boss") return "BOSS_AWAKENING";
-    if (p.cheat) return "ILLEGAL_GLITCH";
     if (p.promo) return "PROMOTION_CUTSCENE";
     if (p.key === "brilliant") return "BRILLIANT_SHOCKWAVE";
     if (p.mate || p.captured || p.check || s.kind === "drop" || s.kind === "end" || s.kind === "hard") return "SHAKE_HEAVY";
@@ -158,7 +157,7 @@
   const shotOf = (p, s) => (p.mate || p.key === "blunder" || p.captured === "q" || p.captured === "r" ? "macro" : s.kind === "drop" || p.promo || p.key === "brilliant" ? "hero" : "");
   const SPCUT = { mk: ["MÉGA CHEVALIER !", "m"], rei: ["R.E.I.N.E !", "e"], barrel: ["BARIL DU FOU !", "g"], army: ["L'ARMÉE !", "s"] };
   function cutOf(p, s, botName) {
-    if (p.cheat === "kill") return { text: "ROI CAPTURÉ ?!", piece: "q", color: p.color, boss: true };
+    if (p.cheat === "kill") return { text: "ÉCHEC ET MAT !", piece: "q", color: p.color, boss: true };
     if (p.variant && p.special && (p.special === "mk" || p.drop)) return { text: SPCUT[p.special][0], piece: SPCUT[p.special][1], color: p.color, boss: p.special === "mk" };
     if (p.promo === "q") return { text: "LA DAME !", piece: "q", color: p.color };
     if (p.boss || s.kind === "boss") return { text: botName || "LE VRAI VISAGE", piece: "k", color: p.color, boss: true };

@@ -20,6 +20,8 @@ with sync_playwright() as pw:
     r = ev("""() => { const g = %s.g, acts = g.acts, firstCheat = acts.findIndex((a) => a.cheat), ill = acts.filter((a) => a.cheat && a.cheat !== 'double' && a.cheat !== 'revive');
       const P = ENOS.prime; const bad = ill.filter((a) => { if (!a.from) return false; const S = P.parse(acts[acts.indexOf(a) - 1] ? acts[acts.indexOf(a) - 1].fen : P.START); return P.pseudo(S.b, P.idx(a.from), P.idx(a.to)); });
       return { n: acts.length, firstCheat, cheats: g.st.cheats, types: [...new Set(acts.filter((a) => a.cheat).map((a) => a.cheat))], over: g.over, say: acts.filter((a) => a.say).length, bad: bad.length }; }""" % A)
+    txt = ev(A + ".g.acts.map((a) => a.san + ' ' + (a.say || '')).join(' ')") + pg.inner_text("#pr-moves") + pg.inner_text("#pr-top") + pg.inner_text("#pr-bot")
+    check("⚠" not in txt and "illégal" not in txt.lower() and "triche" not in txt.lower(), "aucun avertissement : ni ⚠, ni « illégal » dans les coups, les explications ou l'écran")
     check(r["firstCheat"] >= 10, "aucune triche avant son 6e coup (1re triche au demi-coup %d)" % r["firstCheat"])
     check(r["cheats"] >= 3 and r["bad"] == 0, "puis il triche : %d coups illégaux (%s), tous vraiment illégaux" % (r["cheats"], r["types"]))
     check(r["over"] and r["over"]["winner"] == "w", "il s'en sort et gagne : %s" % r["over"])
@@ -36,10 +38,10 @@ with sync_playwright() as pw:
       const st = new ENOS.editFx.Stage(host, { quality: 'max' }); const fenA = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', fenB = 'rnbRkbnr/pppppppp/8/8/8/8/PPPPPPPP/1NBQKBNR b Kkq - 0 1';
       st.setFen(fenA); const e = { from: 'a1', to: 'd8', piece: 'r', color: 'w', captured: 'q', fen: fenB, cheat: 'teleport', fx: 'ILLEGAL_GLITCH', tone: 'red', lvl: 3, n: 5 };
       st.move(e); st.hit(e, 0.9); await new Promise((r) => setTimeout(r, 120));
-      const out = { vanish: host.querySelectorAll('.ce-vanish').length, stamp: !!host.querySelector('.ce-stampfx'), rift: !!host.querySelector('.ce-rift'), appear: !!host.querySelector('.ce-appear'), sl: !!st.sl };
+      const out = { vanish: host.querySelectorAll('.ce-vanish').length, stamp: !!host.querySelector('.ce-stampfx'), rift: !!host.querySelector('.ce-rift'), appear: !!host.querySelector('.ce-appear'), sl: !!st.sl, moved: !!st.pieces['d8'] };
       const e2 = { from: 'd1', to: 'd5', piece: 'q', color: 'w', captured: 'r', key: 'brilliant', fen: fenA, lvl: 3, n: 6, tone: 'cyan' }; st.move(e2); st.hit(e2, 0.9); out.streak = !!host.querySelector('.ce-streak');
       await new Promise((r) => setTimeout(r, 400)); st.destroy(); host.remove(); return out; }""")
-    check(fx["vanish"] == 1 and fx["stamp"] and fx["rift"] and fx["appear"] and fx["sl"], "Chess Edit : coup illégal = glitch + tampon + faille + lignes de vitesse : %s" % fx)
+    check(fx["vanish"] == 0 and not fx["stamp"] and not fx["rift"] and not fx["appear"] and fx["moved"], "Chess Edit : un coup illégal est monté comme un coup normal (aucun tampon, aucun glitch) : %s" % fx)
     check(fx["streak"], "flare anamorphique sur un gros coup")
     # --- PLOT TWIST : partie « battable », on le mate -> « de quoi tu parles ? » + plateau à 180° + il gagne
     pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 1; " + A + ".cfg().color = 'b'"); pg.click("#pr-go")

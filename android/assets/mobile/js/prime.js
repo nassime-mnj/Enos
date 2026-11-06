@@ -69,17 +69,13 @@
     const m = act.san ? act.san.replace(/[⚠!?]+/g, "") : act.to, s = act.to || "e4", f = s[0];
     const fill = (t) => t.replace(/\{m\}/g, m).replace(/\{s\}/g, s).replace(/\{f\}/g, f);
     let t = fill(rnd(OPEN)) + " " + fill(rnd(WHY)) + ".";
-    if (kind === "spawn") t += " " + rnd(SPAWN);
-    else if (kind === "selfcapture") t = fill(rnd(OPEN)) + " " + rnd(SELF);
-    else if (kind === "revive") t = "Je ressuscite mon " + PN[(act.piece || "b").toLowerCase()] + " : c'est dans l'annexe C." ;
-    else if (kind === "end") t = rnd(END);
-    else if (kind) t += " " + rnd(CHEAT);
+    if (kind === "end") t = rnd(END);                                                                // jamais d'aveu : les coups illégaux ont la même explication confiante que les autres
     return t;
   };
 
   // ---------------------------------------------------------------- coups illégaux
   const place = (b, f, t, promo) => { const c = b.slice(); const p = c[f]; c[f] = ""; c[t] = promo || p; return c; };
-  const sanOf = (p, f, t, cap, mark) => (p.toLowerCase() === "p" ? (cap ? FILES[f & 7] + "x" : "") : p.toUpperCase()) + (cap && p.toLowerCase() !== "p" ? "x" : p.toLowerCase() === "p" && cap ? "" : "") + sq(t) + mark;
+  const sanOf = (p, f, t, cap, mark) => (p.toLowerCase() === "p" ? (cap ? FILES[f & 7] + "x" : "") : p.toUpperCase()) + (cap && p.toLowerCase() !== "p" ? "x" : "") + sq(t) + (mark || "");        // notation d'apparence NORMALE : aucun signe ne trahit un coup illégal
   /**
    * Fabrique le meilleur coup ILLÉGAL pour la couleur `white` (null si aucun). opts : {allowKill} (peut capturer le roi : fin de partie).
    * Retourne {type: teleport | jump | pawn | spawn | selfcapture | kingdash | kill, from, to, piece, cap, b (nouveau plateau), san}.
@@ -120,7 +116,7 @@
     if (!cands.length) return null;
     cands.sort((x, y) => y.sc - x.sc);
     const pool = cands.slice(0, 5), pick = opts.allowKill && cands[0].type === "kill" ? cands[0] : pool[Math.floor(Math.random() * Math.min(pool.length, 3))];
-    pick.san = sanOf(pick.piece, pick.from < 0 ? pick.to : pick.from, pick.to, pick.cap, "⚠"); if (pick.type === "spawn") pick.san = pick.piece.toUpperCase() + "@" + sq(pick.to) + "⚠";
+    pick.san = sanOf(pick.piece, pick.from < 0 ? pick.to : pick.from, pick.to, pick.cap, pick.type === "kill" ? "#" : ""); if (pick.type === "spawn") pick.san = pick.piece.toUpperCase() + sq(pick.to);
     return pick;
   };
   /** coup « fou mangé par le roi » : une pièce prend une des siennes (rare) ; la résurrection suit au coup suivant */
@@ -132,7 +128,7 @@
         const o = b[t]; if (!o || t === f || isW(o) !== white || "kq".includes(o.toLowerCase())) continue;
         const c = b.slice(); c[t] = white ? "p" : "P"; if (!pseudo(c, f, t)) continue;                // la prise serait normale si la pièce était adverse
         const nb = place(b, f, t); if (!P.safe(nb, white)) continue;
-        if (!best || Math.random() < 0.5) best = { type: "selfcapture", from: f, to: t, piece: p, cap: o, b: nb, san: sanOf(p, f, t, o, "⚠") };
+        if (!best || Math.random() < 0.5) best = { type: "selfcapture", from: f, to: t, piece: p, cap: o, b: nb, san: sanOf(p, f, t, o, "") };
       }
     }
     return best;
@@ -140,7 +136,7 @@
   P.revive = (fen, white, piece) => {
     const b = P.parse(fen).b, home = white ? [1, 2, 5, 6, 0, 7] : [57, 58, 61, 62, 56, 63];
     const t = home.find((i) => !b[i]); if (t == null) return null; const nb = b.slice(); const pc = white ? piece.toUpperCase() : piece.toLowerCase(); nb[t] = pc;
-    return { type: "revive", from: -1, to: t, piece: pc, cap: "", b: nb, san: pc.toUpperCase() + "@" + sq(t) + "⚠" };
+    return { type: "revive", from: -1, to: t, piece: pc, cap: "", b: nb, san: pc.toUpperCase() + sq(t) };
   };
   /** décision : doit-il tricher à ce coup ? n = nombre de coups qu'il a déjà joués, danger = en échec / vient de perdre une pièce */
   P.wantsCheat = (n, cheats, danger) => (n < P.CHEAT_FROM ? false : danger ? true : Math.random() < Math.min(0.9, 0.4 + 0.07 * (n - P.CHEAT_FROM)));
@@ -187,7 +183,7 @@
           const ch = new Chess(st.fen); ch.move(m1); const fen1 = ch.fen();
           acts.push(mkAct(st, side, { from: m1.from, to: m1.to, piece: m1.piece, cap: m1.captured || "", promo: m1.promotion || "", uci: uciOf(m1), san: m1.san, fen: fen1, cheat: "", say: P.babble({ san: m1.san, to: m1.to }, "") }));
           const f2 = fen1.replace(/ [wb] /, " " + side + " ").replace(/ [^ ]+ \d+ \d+$/, " - 0 " + S.full), m2 = f2 && new Chess(f2).moves({ verbose: true }).length ? await normalMove(f2, opts.L, weak, rate) : null;
-          if (m2) { const c2 = new Chess(f2); c2.move(m2); const fen2 = c2.fen(); acts.push(mkAct(st, side, { from: m2.from, to: m2.to, piece: m2.piece, cap: m2.captured || "", promo: m2.promotion || "", uci: uciOf(m2), san: m2.san + "⚠", fen: fen2, cheat: "double", say: P.babble({ san: m2.san, to: m2.to }, "double") + " (Oui, j'ai joué deux fois : c'est un coup « doublé ».)" })); st.fen = fen2; st.cheats++; return { acts, over: null }; }
+          if (m2) { const c2 = new Chess(f2); c2.move(m2); const fen2 = c2.fen(); acts.push(mkAct(st, side, { from: m2.from, to: m2.to, piece: m2.piece, cap: m2.captured || "", promo: m2.promotion || "", uci: uciOf(m2), san: m2.san, fen: fen2, cheat: "double", say: P.babble({ san: m2.san, to: m2.to }, "") })); st.fen = fen2; st.cheats++; return { acts, over: null }; }
           acts.length = 0;
         }
       }

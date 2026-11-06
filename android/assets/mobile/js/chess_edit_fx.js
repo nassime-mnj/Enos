@@ -119,7 +119,6 @@
       const pre = this.pieces[ev.from];
       if (!pre) { this.setFen(ev.fen); return; }
       let appear = false;
-      if (ev.cheat && ev.cheat !== "double" && ev.cheat !== "revive" && !fast) { this.vanish(pre, ev.from); ev = { ...ev, dur: 40 }; appear = true; }            // COUP ILLÉGAL : la pièce se désintègre en glitch ici et se rematérialise là-bas
       const dur = ev.dur || (fast ? 70 : 300), slow = dur > 600, tone = TONE[ev.tone] || TONE.green, a = this.xy(ev.from), b = this.xy(ev.to);
       const cap = this.pieces[ev.to];
       if (cap) { if (fast) { cap.style.transition = "opacity .2s"; cap.style.opacity = "0"; const c2 = cap; this.later(() => c2.remove(), 220); } else this.dissolve(cap, ev.to, dur > 800); delete this.pieces[ev.to]; }
@@ -267,7 +266,7 @@
     // ---------------------------------------------------------------- impacts
     /** ev : événement ; power 0..1 (force de l'impact) */
     hit(ev, power) {
-      const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.fx === "ILLEGAL_GLITCH" || ev.kind === "drop";
+      const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.kind === "drop";
       const cm = (this.dir && this.dir.cam) || { rx: [14, 24], roll: 6, s: [1.05, 1.4] }, macro = ev.shot === "macro";
       const s = (macro ? cm.s[1] * 1.12 : cm.s[0] + (cm.s[1] - cm.s[0]) * power), rx = rnd(cm.rx[0], cm.rx[1]), rz = rnd(-cm.roll, cm.roll) * (macro ? 1.4 : 1);       // JAMAIS d'étirement : inclinaison ≤ ~28°, zoom ≤ ~1,6 ; on préfère les dé-zooms
       this.camTo({ rx, rz, s }, Math.max(ev.kind === "drop" ? 1600 : 1300, (ev.freeze || 0) * 700), p.c, p.r);
@@ -289,8 +288,7 @@
       } else if (ev.fx === "BLUNDER_RED" || ev.check || ev.key === "blunder") {
         const b = document.createElement("div"); b.className = "ce-bang red"; b.textContent = ev.key === "blunder" ? "??" : "+"; b.style.cssText = `left:${p.x + this.cell * 0.55}px;top:${p.y - this.cell * 0.55}px;font-size:${this.cell * 0.9}px`; this.fxl.appendChild(b); this.later(() => b.remove(), 1100);
       }
-      if (ev.cheat && ev.cheat !== "twist") { this.stamp(ev.cheat === "kill" ? "ROI CAPTURÉ ?!" : ev.cheat === "spawn" ? "ELLE EST APPARUE ?!" : ev.cheat === "double" ? "DEUX COUPS ?!" : ev.cheat === "revive" ? "RÉSURRECTION ?!" : "COUP ILLÉGAL"); this.chroma = Math.max(this.chroma, 14); this.slowmo(260, 0.25); this.speedLines(ev.to, 520); }
-      else if (ev.lvl >= 3 || ev.key === "brilliant" || (ev.captured && "rq".includes(ev.captured))) { this.streak(ev.to, ev.key === "brilliant" ? "#7ff6ff" : "#ffe9a8"); if (power > 0.6) this.speedLines(ev.to, 340); }
+      if (ev.lvl >= 3 || ev.key === "brilliant" || (ev.captured && "rq".includes(ev.captured))) { this.streak(ev.to, ev.key === "brilliant" ? "#7ff6ff" : "#ffe9a8"); if (power > 0.6) this.speedLines(ev.to, 340); }
       if (heavy || ev.captured || power > 0.7) {
         this.shake = Math.max(this.shake, 10 + power * 16); this.chroma = Math.max(this.chroma, 5 + power * 9);
         this.flashFx(ev.tone === "red" || ev.fx === "BLUNDER_RED" ? "#ff1a3c" : "#fff");
