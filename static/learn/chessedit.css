@@ -226,3 +226,14 @@
 @keyframes ceTrail{0%{opacity:0;clip-path:inset(0 100% 0 0)}25%{opacity:1;clip-path:inset(0 0 0 0)}100%{opacity:0;clip-path:inset(0 0 0 0)}}
 .ce-impact{position:absolute;inset:0;z-index:12;pointer-events:none;mix-blend-mode:difference;background:#fff}
 .ce-impact.k{mix-blend-mode:normal;background:radial-gradient(circle,#fff 0 8%,#000 8.5% 100%)}
+
+/* AAA : coup illégal (glitch), tampon, flare anamorphique — uniquement opacity / transform (composés par le GPU) */
+.ce-vanish{pointer-events:none;animation:ceVanish .42s steps(7,end) both;will-change:transform,opacity}
+@keyframes ceVanish{0%{opacity:1;clip-path:inset(0 0 0 0)}30%{opacity:.9;transform-origin:center;filter:hue-rotate(120deg);clip-path:inset(0 0 50% 0)}60%{opacity:.6;clip-path:inset(50% 0 0 0);filter:hue-rotate(-90deg)}100%{opacity:0;clip-path:inset(40% 0 40% 0)}}
+.ce-appear{animation:ceAppear .5s steps(8,end) both}@keyframes ceAppear{0%{opacity:0;clip-path:inset(45% 0 45% 0)}35%{opacity:1;clip-path:inset(0 0 60% 0)}65%{clip-path:inset(40% 0 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
+.ce-rift{position:absolute;pointer-events:none;border:2px solid #ff3b52;box-shadow:0 0 18px #ff3b52,inset 0 0 14px #ff3b52;animation:ceRift .6s ease-out both}@keyframes ceRift{0%{opacity:1;transform:scale(.6)}100%{opacity:0;transform:scale(2)}}
+.ce-stampfx{position:absolute;left:50%;top:40%;z-index:14;padding:8px 18px;border:5px solid var(--sc,#ff3b52);border-radius:8px;color:var(--sc,#ff3b52);font:900 clamp(26px,9vw,46px)/1 Impact,"Arial Black",system-ui;letter-spacing:3px;text-shadow:0 0 14px var(--sc,#ff3b52);background:rgba(0,0,0,.55);white-space:nowrap;pointer-events:none;animation:ceStampIn 1.4s cubic-bezier(.2,1.4,.3,1) both}
+@keyframes ceStampIn{0%{opacity:0;transform:translate(-50%,-50%) rotate(-9deg) scale(3)}14%{opacity:1;transform:translate(-50%,-50%) rotate(-9deg) scale(1)}78%{opacity:1;transform:translate(-50%,-50%) rotate(-9deg) scale(1.02)}100%{opacity:0;transform:translate(-50%,-50%) rotate(-9deg) scale(1.08)}}
+.ce-siren::after{content:"";position:absolute;inset:0;z-index:13;pointer-events:none;background:radial-gradient(circle,transparent 35%,rgba(255,30,60,.45));animation:ceSiren .3s linear 3}@keyframes ceSiren{0%,100%{opacity:0}50%{opacity:1}}
+.ce-streak{position:absolute;height:6px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--c,#9fe9ff) 45%,#fff 50%,var(--c,#9fe9ff) 55%,transparent);box-shadow:0 0 22px var(--c,#9fe9ff);border-radius:6px;transform-origin:50% 50%;animation:ceStreak .65s cubic-bezier(.2,.8,.2,1) both;will-change:transform,opacity}
+@keyframes ceStreak{0%{opacity:0;transform:scaleX(.05)}20%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1.15) scaleY(.2)}}

@@ -7,7 +7,7 @@
 (() => {
   const E = window.ENOS;
   const C = (E.clips = {});
-  const FALL = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", naskurieux: "Naskurieux", ghorghor: "GhorGhor", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+  const FALL = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", naskurieux: "Naskurieux", ghorghor: "GhorGhor", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish", prime: "ChatGPT Prime" };
   C.BOTS = Object.keys(FALL);
   C.nameOf = (id) => (E.botChat && E.botChat.bots[id] ? E.botChat.bots[id].name : FALL[id] || id);
   C.INTENSITY = { subtle: { tol: 120, goal: 2, label: "Subtil" }, normal: { tol: 260, goal: 3, label: "Normal" }, theatre: { tol: 480, goal: 5, label: "Théâtral" } };
@@ -35,6 +35,7 @@
    * Retourne l'enregistrement (même format que defi.hist) ou null si moins de 2 coups.
    */
   C.run = async (o, onStep, ctl) => {
+    if (o.hero === "prime" || o.ant === "prime") return C.runPrime(o, onStep, ctl);
     const K = E.brain, L = E.chessLocal; ctl = ctl || {};
     if (!K || !L) throw new Error("Stockfish n'est pas disponible ici.");
     const T = o.times || C.TIMES[o.quality || "fast"], I = C.INTENSITY[o.intensity || "normal"], maxPlies = o.maxPlies || C.LENGTH[o.length || "normal"];
@@ -111,6 +112,40 @@
     const heroBrill = mv.filter((m, i) => m[2] === "brilliant").length;
     return { t: Date.now(), title: "🎭 " + C.nameOf(hero) + " – " + C.nameOf(ant) + " · Scène", result, plies: mv.length, brill: heroBrill, acc: null, pgn: ch.pgn(), id: "clip", pw: wName, pb: bName, pk: ["clip", "clip"],
       bw: hc === "w" ? heroBrill : 0, bb: hc === "b" ? heroBrill : 0, me: null, accW: null, accB: null, ch: chat, mv, clip: { opening: opn ? opn.id : "", alien: alienPly || 0, hero, ant, heroColor: hc, intensity: o.intensity || "normal", gifts, brilliants: heroBrill } };
+  };
+
+
+  /** Scène avec CHATGPT PRIME (9999 Elo, GM) : il joue normalement au début, puis triche (coups illégaux) et s'en sort toujours ; l'autre personnage joue de vrais coups (Stockfish). Enregistré au format des variantes (actions + FEN). */
+  C.runPrime = async (o, onStep, ctl) => {
+    const P = E.prime, L = E.chessLocal, T = o.times || C.TIMES[o.quality || "fast"]; ctl = ctl || {};
+    if (!P || !L) throw new Error("Stockfish n'est pas disponible ici.");
+    const hc = o.heroColor || "w", primeHero = o.hero === "prime", pc = primeHero ? hc : hc === "w" ? "b" : "w", other = primeHero ? o.ant : o.hero, maxPlies = o.maxPlies || C.LENGTH[o.length || "normal"];
+    const st = P.newState(pc === "w"), acts = [], chat = [], names = { [pc]: P.NAME, [pc === "w" ? "b" : "w"]: C.nameOf(other) };
+    let over = null, lastTalk = -9;
+    const talk = (bot, cat, ply, d) => { const t = line(bot, cat, d); if (t) { chat.push([ply, bot, t, cat]); lastTalk = ply; } return t; };
+    talk("prime", "greet", 1, { me: C.nameOf(other) });
+    while (!over && acts.length < maxPlies + 24 && !ctl.stop) {
+      const ch = new Chess(st.fen); if (ch.game_over() && !ch.in_checkmate()) break;
+      if (ch.turn() === pc) {
+        const r = await P.turn(st, { L, weak: 18, danger: false });
+        for (const a of r.acts) {
+          acts.push(a); const ply = acts.length;
+          if (a.cheat) { chat.push([ply, "prime", a.say, a.cheat === "kill" ? "mate_win" : "bot_blunder"]); talk(other, "h_blunder", ply + 1, { me: P.NAME, san: a.san }); } else if (ply - lastTalk >= 4 && Math.random() < 0.5) chat.push([ply, "prime", a.say, "good"]);
+          if (onStep) await onStep({ fen: a.fen, san: a.san, ply, uci: a.uci, role: primeHero ? "hero" : "ant", key: "good", gift: !!a.cheat, ev: 0, brilliants: 0, gifts: st.cheats, say: a.cheat ? a.say : "", last: [a.from || a.to, a.to] });
+        }
+        over = r.over;
+      } else {
+        const mv = ch.moves({ verbose: true }); if (!mv.length) break;
+        let uci = ""; try { uci = (await L.think(st.fen, 100, T.think)).uci; } catch (e) { uci = ""; }
+        const m = mv.find((x) => x.from + x.to + (x.promotion || "") === uci) || mv[0]; ch.move(m);
+        const a = { k: "mv", side: m.color, seat: m.color === "w" ? 0 : 1, key: "good", ev: null, from: m.from, to: m.to, piece: m.piece, cap: m.captured || "", promo: m.promotion || "", uci: m.from + m.to + (m.promotion || ""), san: m.san, fen: ch.fen(), cheat: "" };
+        acts.push(a); st.fen = a.fen; if (onStep) await onStep({ fen: a.fen, san: a.san, ply: acts.length, uci: a.uci, role: primeHero ? "ant" : "hero", key: "good", gift: false, ev: 0, brilliants: 0, gifts: st.cheats, say: "", last: [a.from, a.to] });
+      }
+    }
+    if (acts.length < 2) return null;
+    const heroWon = primeHero ? (!over || over.winner === pc) : false, result = (over && over.why === "kill" ? P.NAME + " gagne (roi capturé, règle 47 bis)" : P.NAME + " gagne (il conteste le reste)");
+    return { variant: true, mode: "prime", t: Date.now(), title: "🎭 " + C.nameOf(o.hero) + " – " + C.nameOf(o.ant) + " · Scène", result, plies: acts.length, brill: 0, acc: null, cheats: st.cheats, pgn: "", id: "clip", pw: names.w, pb: names.b, pk: ["clip", "clip"], bw: 0, bb: 0, me: null, accW: null, accB: null, ch: chat,
+      mv: acts.map((a) => [a.uci, a.san, a.key || "good", 0, null, ""]), v: { mode: "prime", acts: acts.map((a) => Object.assign({}, a)), start: P.START, over: over ? over.why : "end", duo: false }, clip: { hero: o.hero, ant: o.ant, heroColor: hc, intensity: o.intensity || "normal", gifts: st.cheats, brilliants: 0, opening: "", alien: 0, prime: true } };
   };
 
   /** enregistre la scène dans l'historique des Défis (où le Chess Edit la trouve) */

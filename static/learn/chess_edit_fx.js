@@ -69,7 +69,7 @@
       this.S = S; this.cell = S / 8; this.W = W; this.H = H;
       [this.board, this.pcs, this.fxl].forEach((e) => { e.style.width = e.style.height = S + "px"; });
       this.cam.style.width = this.cam.style.height = S + "px"; this.cam.style.left = (W - S) / 2 + "px"; this.cam.style.top = (H - S) / 2 - H * 0.04 + "px";
-      const d = Math.min(devicePixelRatio || 1, 1.5);
+      const d = this.ql >= 2 ? Math.min(devicePixelRatio || 1, 1.5) : 1;                                // canvas à 1× sur téléphone / en qualité réduite : 2× moins de pixels à remplir
       [this.bg, this.fg].forEach((c) => { c.width = Math.round(W * d); c.height = Math.round(H * d); c.style.width = W + "px"; c.style.height = H + "px"; c.getContext("2d").setTransform(d, 0, 0, d, 0, 0); });
       Object.values(this.pieces).forEach((el) => this.place(el, el._sq));
     }
@@ -81,7 +81,7 @@
     applyQuality() {
       const l = this.ql, h = this.host; ["ce-q0", "ce-q1", "ce-q2"].forEach((c) => h.classList.toggle(c, c === "ce-q" + l));
       this.fx = { chroma: l >= 1, mblur: l >= 1, pblur: l >= 1, shock: l >= 2, fog: l >= 1, grain: l >= 1, glow: l >= 1, part: [0.3, 0.7, 1][l], smoke: [0.35, 0.7, 1][l] };
-      if (this.dustB) this.initParticles();
+      if (this.dustB) { this.initParticles(); this.resize(); }
     }
     /** direction artistique : ambiance, brouillard, projecteur, grain, braises, personnalité de la caméra */
     setDirection(id) {
@@ -117,6 +117,8 @@
     move(ev, fast) {
       const pre = this.pieces[ev.from];
       if (!pre) { this.setFen(ev.fen); return; }
+      let appear = false;
+      if (ev.cheat && ev.cheat !== "double" && ev.cheat !== "revive" && !fast) { this.vanish(pre, ev.from); ev = { ...ev, dur: 40 }; appear = true; }            // COUP ILLÉGAL : la pièce se désintègre en glitch ici et se rematérialise là-bas
       const dur = ev.dur || (fast ? 70 : 300), slow = dur > 600, tone = TONE[ev.tone] || TONE.green, a = this.xy(ev.from), b = this.xy(ev.to);
       const cap = this.pieces[ev.to];
       if (cap) { if (fast) { cap.style.transition = "opacity .2s"; cap.style.opacity = "0"; const c2 = cap; this.later(() => c2.remove(), 220); } else this.dissolve(cap, ev.to, dur > 800); delete this.pieces[ev.to]; }
@@ -129,6 +131,7 @@
       }
       this.later(() => { const target = fenMap(ev.fen); Object.keys(this.pieces).forEach((s) => { if (target[s] !== this.pieces[s]._p) { if (s === ev.to && target[s]) { this.pieces[s]._p = target[s]; this.pieces[s].src = pieceUrl(target[s]); } else { this.pieces[s].remove(); delete this.pieces[s]; } } });
         Object.keys(target).forEach((s) => { if (!this.pieces[s]) this.mkPiece(target[s], s); }); }, dur + 20);
+      if (appear) { pre.classList.add("ce-appear"); this.later(() => pre.classList.remove("ce-appear"), 520); }
       if (!fast) { this.highlight(ev); this.flair(ev, pre, a, b, dur); }
       if (!fast && this.fx && this.fx.pblur) {                                                           // FLOU DE DÉPLACEMENT : la pièce est floutée dans le sens du mouvement (plus d'images rémanentes)
         const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1;
@@ -136,6 +139,25 @@
         pre.style.filter = "url(#ce-pm)";
       }
     }
+    /** AAA : la pièce laisse un fantôme qui se découpe en tranches RVB et s'évapore (ne coûte que de l'opacité / transform : composé par le GPU) */
+    vanish(pre, sq) {
+      const g = pre.cloneNode(); g.className = "ce-vanish"; g.style.cssText = pre.style.cssText; g.style.transition = "none"; g.style.filter = ""; this.pcs.appendChild(g); this.later(() => g.remove(), 460);
+      const p = this.xy(sq), rift = document.createElement("div"); rift.className = "ce-rift"; rift.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px`; this.fxl.appendChild(rift); this.later(() => rift.remove(), 600);
+    }
+    /** AAA : tampon « COUP ILLÉGAL » qui claque, scanlines, éclair rouge (sirène) */
+    stamp(text, color) {
+      const el = document.createElement("div"); el.className = "ce-stampfx"; el.textContent = text; el.style.setProperty("--sc", color || "#ff3b52"); this.host.appendChild(el); this.later(() => el.remove(), 1500);
+      this.host.classList.add("ce-siren"); this.later(() => this.host.classList.remove("ce-siren"), 900); this.flashFx(color || "#ff3b52");
+    }
+    /** AAA : trait de lumière anamorphique horizontal (flare de cinéma) sur une case */
+    streak(sq, color) {
+      const p = this.xy(sq), el = document.createElement("div"); el.className = "ce-streak"; el.style.cssText = `left:${-this.S * 0.2}px;top:${p.y + this.cell / 2 - 3}px;width:${this.S * 1.4}px;--c:${color || "#9fe9ff"}`;
+      this.fxl.appendChild(el); this.later(() => el.remove(), 700);
+    }
+    /** AAA : lignes de vitesse (manga) rayonnant depuis une case : dessinées sur le canvas avant, quelques centaines de ms */
+    speedLines(sq, ms) { const p = this.xy(sq), r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(); this.sl = { x: q.left - r.left + q.width / 2, y: q.top - r.top + q.height / 2, t0: performance.now(), ms: ms || 380, seed: Math.random() * 6.28 }; }
+    /** AAA : ralenti (rampe de temps) : le temps des particules passe à k puis revient en douceur */
+    slowmo(ms, k) { this.ts = k || 0.3; this.later(() => { const t0 = performance.now(), up = () => { if (!this.alive) return; const f = Math.min(1, (performance.now() - t0) / 450); this.ts = (k || 0.3) + (1 - (k || 0.3)) * f; if (f < 1) requestAnimationFrame(up); }; up(); }, ms || 350); }
     /** VARIÉTÉ des coups : traînée lumineuse du déplacement, pièce qui TOURNE en l'air (vrille + saut), IMPACT FRAME (négatif + point noir une fraction de seconde) ; choisis selon le coup pour que deux coups de suite ne se ressemblent pas */
     flair(ev, pre, a, b, dur) {
       if (dur < 260 || !pre.animate) return;
@@ -227,7 +249,7 @@
     // ---------------------------------------------------------------- impacts
     /** ev : événement ; power 0..1 (force de l'impact) */
     hit(ev, power) {
-      const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.kind === "drop";
+      const tone = TONE[ev.tone] || TONE.green, p = this.xy(ev.to), heavy = ev.fx === "SHAKE_HEAVY" || ev.fx === "BOSS_AWAKENING" || ev.fx === "PROMOTION_CUTSCENE" || ev.fx === "ILLEGAL_GLITCH" || ev.kind === "drop";
       const cm = (this.dir && this.dir.cam) || { rx: [14, 24], roll: 6, s: [1.05, 1.4] }, macro = ev.shot === "macro";
       const s = (macro ? cm.s[1] * 1.12 : cm.s[0] + (cm.s[1] - cm.s[0]) * power), rx = rnd(cm.rx[0], cm.rx[1]), rz = rnd(-cm.roll, cm.roll) * (macro ? 1.4 : 1);       // JAMAIS d'étirement : inclinaison ≤ ~28°, zoom ≤ ~1,6 ; on préfère les dé-zooms
       this.camTo({ rx, rz, s }, Math.max(ev.kind === "drop" ? 1600 : 1300, (ev.freeze || 0) * 700), p.c, p.r);
@@ -249,6 +271,8 @@
       } else if (ev.fx === "BLUNDER_RED" || ev.check || ev.key === "blunder") {
         const b = document.createElement("div"); b.className = "ce-bang red"; b.textContent = ev.key === "blunder" ? "??" : "+"; b.style.cssText = `left:${p.x + this.cell * 0.55}px;top:${p.y - this.cell * 0.55}px;font-size:${this.cell * 0.9}px`; this.fxl.appendChild(b); this.later(() => b.remove(), 1100);
       }
+      if (ev.cheat) { this.stamp(ev.cheat === "kill" ? "ROI CAPTURÉ ?!" : ev.cheat === "spawn" ? "ELLE EST APPARUE ?!" : ev.cheat === "double" ? "DEUX COUPS ?!" : ev.cheat === "revive" ? "RÉSURRECTION ?!" : "COUP ILLÉGAL"); this.chroma = Math.max(this.chroma, 14); this.slowmo(260, 0.25); this.speedLines(ev.to, 520); }
+      else if (ev.lvl >= 3 || ev.key === "brilliant" || (ev.captured && "rq".includes(ev.captured))) { this.streak(ev.to, ev.key === "brilliant" ? "#7ff6ff" : "#ffe9a8"); if (power > 0.6) this.speedLines(ev.to, 340); }
       if (heavy || ev.captured || power > 0.7) {
         this.shake = Math.max(this.shake, 10 + power * 16); this.chroma = Math.max(this.chroma, 5 + power * 9);
         this.flashFx(ev.tone === "red" || ev.fx === "BLUNDER_RED" ? "#ff1a3c" : "#fff");
@@ -531,21 +555,29 @@
     }
     loop(now) {
       if (!this.alive) return;
+      if (document.hidden || (this.ql === 0 && (this._skip = !this._skip))) { if (document.hidden) this.last = now; this.raf = requestAnimationFrame((t) => this.loop(t)); return; }       // onglet caché : rien à dessiner ; qualité « léger » : 30 images / s
       const rdt = Math.min(0.05, (now - this.last) / 1000), dt = rdt * this.ts; this.last = now;
       const b = this.bg.getContext("2d"), f = this.fg.getContext("2d");
       b.clearRect(0, 0, this.W, this.H); f.clearRect(0, 0, this.W, this.H);
       this.drawOrbs(b, dt); this.drawDust(b, this.dustB, dt, 1); this.drawDust(f, this.dustF, dt, 1.6);
       if (this.dir && this.dir.embers && this.fx.part > 0.5 && Math.random() < 0.35) this.burst.push({ x: rnd(0, this.W), y: this.H + 6, vx: rnd(-18, 18), vy: rnd(-190, -80), life: rnd(1.4, 2.8), max: 2.8, c: Math.random() < 0.5 ? "#ff5a1a" : "#ff9a3a", s: rnd(1, 2.2) });   // braises qui montent (direction « Sang »)
       this.smoke = this.smoke.filter((p) => (p.life -= dt) > 0);
-      for (const p of this.smoke) {                                                      // fumée / cendres : disques sombres flous qui montent, grossissent et s'effacent
+      if (this.smoke.length > 140) this.smoke.splice(0, this.smoke.length - 140);
+      if (!this._spr) { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, "rgba(24,18,34,.55)"); r.addColorStop(1, "rgba(24,18,34,0)"); g.fillStyle = r; g.fillRect(0, 0, 64, 64); this._spr = c; }
+      for (const p of this.smoke) {                                                      // fumée / cendres : sprite flou PRÉ-RENDU (un drawImage au lieu d'un dégradé radial par particule et par image)
         if (p.d > 0) { p.d -= dt; p.life += dt; continue; }
-        p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.grow * dt; const k = Math.max(0, p.life / p.max), g = f.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0, `rgba(24,18,34,${(0.55 * k).toFixed(3)})`); g.addColorStop(1, "rgba(24,18,34,0)"); f.fillStyle = g; f.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+        p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.grow * dt; f.globalAlpha = Math.max(0, p.life / p.max); f.drawImage(this._spr, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
       }
+      f.globalAlpha = 1;
       f.globalCompositeOperation = "lighter";
-      this.burst = this.burst.filter((p) => (p.life -= dt) > 0);
-      for (const p of this.burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy = p.vy * 0.97 + 120 * dt; f.globalAlpha = Math.max(0, p.life / p.max); f.fillStyle = p.c; f.shadowColor = p.c; f.shadowBlur = 8; f.fillRect(p.x, p.y, p.s, p.s); }
-      f.globalCompositeOperation = "source-over"; f.shadowBlur = 0; f.globalAlpha = 1;
+      this.burst = this.burst.filter((p) => (p.life -= dt) > 0); if (this.burst.length > 420) this.burst.splice(0, this.burst.length - 420);
+      for (const p of this.burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy = p.vy * 0.97 + 120 * dt; const al = Math.max(0, p.life / p.max); f.fillStyle = p.c; f.globalAlpha = al * 0.3; f.fillRect(p.x - p.s, p.y - p.s, p.s * 3, p.s * 3); f.globalAlpha = al; f.fillRect(p.x, p.y, p.s, p.s); }      // halo = 2ᵉ carré translucide (shadowBlur coûtait très cher)
+      if (this.sl) {                                                                                  // lignes de vitesse manga
+        const q = this.sl, k = (now - q.t0) / q.ms;
+        if (k >= 1) this.sl = null;
+        else { f.globalAlpha = (1 - k) * 0.85; f.strokeStyle = "#fff"; f.lineWidth = 2; f.beginPath(); const R = Math.hypot(this.W, this.H); for (let i = 0; i < 26; i++) { const a = q.seed + i * 0.2417 * 6.28 % 6.28, r0 = R * (0.12 + 0.2 * k + (i % 5) * 0.03), r1 = r0 + R * (0.22 + (i % 3) * 0.08); f.moveTo(q.x + Math.cos(a) * r0, q.y + Math.sin(a) * r0); f.lineTo(q.x + Math.cos(a) * r1, q.y + Math.sin(a) * r1); } f.stroke(); }
+      }
+      f.globalCompositeOperation = "source-over"; f.globalAlpha = 1;
       this.warp *= Math.pow(0.12, rdt); if (this.warp < 0.02) this.warp = 0;
       // shake amorti + aberration chromatique (le filtre SVG n'est actif que pendant l'impact : il coûte cher)
       this.shake *= Math.pow(0.004, rdt); this.chroma *= Math.pow(0.01, rdt);

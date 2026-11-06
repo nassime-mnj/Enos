@@ -22,6 +22,7 @@
       if (smash.length) { d += 22 * smash.length; tags.push("écrasement"); }
       if (special) { d += { mk: 40, rei: 25, army: 30, barrel: 20 }[special] || 15; tags.push(special); }
       if (drop && !special) d += 3;
+      const cheat = a.cheat || ""; if (cheat) { d += cheat === "kill" ? 110 : cheat === "double" || cheat === "revive" ? 25 : 60; tags.push("illégal"); }
       if (a.elim && a.elim.length) { d += 90 * a.elim.length; tags.push("élimination"); }
       const last = i === acts.length - 1, over = last && (V.over === "mate" || V.over === "smash" || /mate|smash/.test(V.over || ""));
       if (over) { d += 70; tags.push("mat"); }
@@ -29,7 +30,7 @@
       const prevEv = i ? acts[i - 1].ev : 0; if (a.ev != null) d += Math.min(30, Math.abs(a.ev - (prevEv || 0)) / 20);
       const to = a.to, piece = (a.piece || "p"), color = a.side || "w", fen = a.fen, mapAfter = mapOf(fen);
       out.push({ i, n: i + 1, pid: a.n + ":" + to, fenBefore: prevFen, color, san: a.san || "", uci: a.uci || "@" + to, from: drop ? "" : a.from, to, piece, captured: a.cap || (smash.length ? "p" : ""), promo: a.promo || "", key, loss: a.loss || 0, ev: a.ev == null ? null : a.ev, best: "",
-        check: false, mate: over, sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, lines: [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "" });
+        check: false, mate: over, sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, cheat, lines: a.say && (cheat || i % 3 === 0) ? [{ bot: a.side === (V.primeSide || "") || V.mode === "prime" ? "prime" : "", text: a.say, kind: cheat ? "prime_cheat" : "prime" }].filter((l) => l.bot) : [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "" });
     });
     return out;
   }
@@ -143,9 +144,10 @@
     return res.sort((x, y) => x.ply - y.ply);
   }
 
-  const toneOf = (p) => (p.key === "brilliant" ? "cyan" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
+  const toneOf = (p) => (p.cheat ? "red" : p.key === "brilliant" ? "cyan" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
   function fxOf(p, s) {
     if (p.boss || s.kind === "boss") return "BOSS_AWAKENING";
+    if (p.cheat) return "ILLEGAL_GLITCH";
     if (p.promo) return "PROMOTION_CUTSCENE";
     if (p.key === "brilliant") return "BRILLIANT_SHOCKWAVE";
     if (p.mate || p.captured || p.check || s.kind === "drop" || s.kind === "end" || s.kind === "hard") return "SHAKE_HEAVY";
@@ -156,6 +158,7 @@
   const shotOf = (p, s) => (p.mate || p.key === "blunder" || p.captured === "q" || p.captured === "r" ? "macro" : s.kind === "drop" || p.promo || p.key === "brilliant" ? "hero" : "");
   const SPCUT = { mk: ["MÉGA CHEVALIER !", "m"], rei: ["R.E.I.N.E !", "e"], barrel: ["BARIL DU FOU !", "g"], army: ["L'ARMÉE !", "s"] };
   function cutOf(p, s, botName) {
+    if (p.cheat === "kill") return { text: "ROI CAPTURÉ ?!", piece: "q", color: p.color, boss: true };
     if (p.variant && p.special && (p.special === "mk" || p.drop)) return { text: SPCUT[p.special][0], piece: SPCUT[p.special][1], color: p.color, boss: p.special === "mk" };
     if (p.promo === "q") return { text: "LA DAME !", piece: "q", color: p.color };
     if (p.boss || s.kind === "boss") return { text: botName || "LE VRAI VISAGE", piece: "k", color: p.color, boss: true };
@@ -167,7 +170,7 @@
   function build(plies, slots, audio) {
     const A = assign(plies, slots), events = [], vocal = (audio && audio.vocalPeaks) || [], dur = (audio && audio.duration) || 60;
     const botName = (p) => { const l = p.lines.find((x) => x.kind === "transform") || p.lines[0]; return l ? (E.botChat && E.botChat.bots[l.bot] ? E.botChat.bots[l.bot].name : l.bot) : ""; };
-    const mk = (p, s, extra) => ({ t: s.t, ply: p.i, n: p.n, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key: p.key, drama: p.drama, tags: p.tags,
+    const mk = (p, s, extra) => ({ cheat: p.cheat || "", t: s.t, ply: p.i, n: p.n, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key: p.key, drama: p.drama, tags: p.tags,
       lines: p.lines, fen: p.fen, kind: s.kind, fx: fxOf(p, s), text: textOf(p), shot: shotOf(p, s), tone: toneOf(p), cut: cutOf(p, s, botName(p) ? "GM " + botName(p).toUpperCase() : ""), ...extra });
     A.forEach((s) => {
       const ev = mk(plies[s.ply], s, {});
@@ -243,10 +246,10 @@
     inaccuracy: { glyph: "⁈", label: "INEXACTITUDE", color: "#ffd21f" }, miss: { glyph: "✖", label: "MANQUÉ", color: "#ff6b7d" }, forced: { glyph: "»", label: "FORCÉ", color: "#9aa7bd" }, mistake: { glyph: "?", label: "ERREUR", color: "#ff9a1f" }, blunder: { glyph: "❓", label: "GAFFE", color: "#ff2a44" },
   };
   const VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };              // samples vocaux de Levy (audio/levy/*.mp3)
-  const ELO_OF = { penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
+  const ELO_OF = { prime: 9999, penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
   /** Niveau d'importance d'un coup : 3 = moment clé (arrêt sur image long), 2 = important (ralenti), 1 = notable, 0 = passif (accéléré). */
   function lvlOf(p) {
-    if (p.variant) { if (p.mate || p.key === "brilliant" || p.key === "blunder" || (p.elim && p.elim.length) || (p.smash && p.smash.length >= 2) || p.special === "mk") return 3; if (p.special || (p.smash && p.smash.length) || p.captured || p.key === "miss" || p.key === "mistake") return 2; return p.drop ? 1 : p.drama >= 14 ? 1 : 0; }
+    if (p.variant) { if (p.cheat) return p.cheat === "kill" || p.cheat === "teleport" || p.cheat === "spawn" ? 3 : 2; if (p.mate || p.key === "brilliant" || p.key === "blunder" || (p.elim && p.elim.length) || (p.smash && p.smash.length >= 2) || p.special === "mk") return 3; if (p.special || (p.smash && p.smash.length) || p.captured || p.key === "miss" || p.key === "mistake") return 2; return p.drop ? 1 : p.drama >= 14 ? 1 : 0; }
     if (p.mate || p.key === "brilliant" || p.boss || p.key === "blunder" || p.loss > 300 || p.promo === "q" || p.captured === "q") return 3;
     if (p.check || p.sacrifice || p.promo || p.key === "mistake" || p.key === "miss" || p.drama >= 45 || (p.captured && VAL[p.captured] >= 5)) return 2;
     if (p.captured || p.key === "inaccuracy" || p.key === "best" || p.key === "excellent") return 1;
@@ -330,7 +333,7 @@
       if (BADGES[key] && key !== "excellent") { if (key !== "best" || (L[i] >= 1 && i - lastThumb >= 8)) { bd = BADGES[key]; if (key === "best") lastThumb = i; } }
       const impact = +(t + pl.pre + (pl.anim / 1000) * 0.82).toFixed(3);
       const th = kind === "ff" ? [] : threatsFrom(p.fen, p.to), stats = pl.pre > 0 && p.from ? pieceStats(p.fenBefore, p.from, p.sacrifice) : null;
-      const e = { alien: !!p.alien, t: +t.toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
+      const e = { cheat: p.cheat || "", alien: !!p.alien, t: +t.toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
         lines: L[i] >= 2 ? p.lines : [], fen: p.fen, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind, phase: pl.phase, lvl: L[i], dur: Math.round(pl.anim), pre: pl.pre, freeze: +pl.freeze.toFixed(3), impact, ev: p.ev, threats: pl.phase === "ff" || pl.phase === "open" ? [] : th, stats, badge: bd, sacrifice: p.sacrifice, ffRun: kind === "ff" && ffRun >= 6, check: p.check, mate: p.mate,
         fx: kind === "ff" ? "FASTFORWARD" : fxOf(p, slot), text: kind === "ff" ? "" : textOf(p), shot: kind === "ff" ? "" : shotOf(p, slot), tone: kind === "ff" ? "green" : toneOf(p),
         cut: kind === "ff" ? null : cutOf(p, slot, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: (key === "brilliant" || (p.sacrifice && L[i] >= 2 && key !== "blunder")) };

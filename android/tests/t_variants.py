@@ -152,7 +152,7 @@ with sync_playwright() as pw:
     check(ev(A + ".g.s.b[ENOS.variants.sqIdx('f5')]") == "" and ev(A + ".g.s.b[ENOS.variants.sqIdx('g5')]") == "" and ev(A + ".g.s.b[ENOS.variants.sqIdx('e5')]") == "" and ev(A + ".g.s.sp[ENOS.variants.sqIdx('f4')]") == "mk", "le Méga Chevalier atterrit en f4 et ÉCRASE le 3×3 (e5 f5 g5)")
     check(pg.locator(".va-aura.mk").count() == 1 and pg.locator('#va-board .pce[data-sp="mk"]').count() == 1, "aura du Méga Chevalier affichée")
     ev(A + ".g.s.elixir.w = 15; " + A + ".render()")
-    pg.click('#va-tray button[data-t="army"]'); pg.click('#va-board [data-sq="d2"]'); pg.wait_for_timeout(300)
+    pg.click('#va-tray button[data-t="army"]'); pg.click('#va-board [data-sq="d2"]'); pg.wait_for_function("document.querySelectorAll('.va-aura.army').length === 8", timeout=4000)
     check(ev("Object.values(%s.g.s.sp).filter((x) => x === 'army').length" % A) == 8 and pg.locator(".va-aura.army").count() == 8, "Armée de pions : toute la rangée de pions se remplit (8 squelettes)")
     ev(A + ".g.s.elixir.w = 15; " + A + ".render()")
     pg.click('#va-tray button[data-t="barrel"]'); pg.click('#va-board [data-sq="b6"]')

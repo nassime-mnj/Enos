@@ -162,4 +162,10 @@ Tout l'état de l'appli est dans le localStorage (`enos.*`). Instantané JSON au
 ## 1.47 — Bots « IA » dans les Défis (Claude Fable 5, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek V4.1)
 Illusion assumée : **aucune IA n'est interrogée** (zéro token). Chaque bot = profil de style (`js/ai_bots.js` : livre d'ouvertures, prudence/agressivité, taux d'erreurs) donné à Stockfish, via le même moteur que Nasko/Lelex (`styleMove`).
 Niveaux (échelle de benchmark ChessBench oct. 2026, pas des Elo FIDE) : Gemini 4 Argon 2170 · Claude Fable 5 2150 (estimé, Opus 5.5 mesuré à 2111) · GPT-6 Astra 2045 · DeepSeek V4.1 1690.
-Les ouvertures/styles sont des estimations (aucune source publique ne les détaille). Illustrations : `android/tools/gen_ai_avatars.py`.
+Les ouvertures/styles sont des estimations (aucune source publique ne les détaille). Illustrations : les vrais logos (test).
+
+## 1.48 — ChatGPT Prime (9999 Elo, GM) + effets AAA + perf
+- **ChatGPT Prime** (`js/prime.js`, `js/m_prime.js`) : joue normalement (et plutôt mal) ses 5 premiers coups, puis **triche** : téléportation, saut par-dessus les pièces, pion qui bouge n'importe comment, pièce qui apparaît de nulle part, coup double, pièce qui mange une des siennes puis la ressuscite, enfin capture du roi (« règle 47 bis »). Il s'en sort toujours. Chaque coup a une **explication qui ne veut rien dire** (`P.babble`). Modes : toi contre Prime, ou Stockfish contre Prime (spectacle).
+- Parties enregistrées dans `variants.hist` (mode `prime`, actions + FEN) : **éditables dans le Chess Edit** ; **Game Clips** : Prime est un personnage (scène `C.runPrime`).
+- Chess Edit — nouveaux effets : glitch de téléportation (fantôme RVB + faille), tampon « COUP ILLÉGAL » + sirène, lignes de vitesse manga, flare anamorphique, rampe de ralenti. Perf : canvas à 1× hors qualité max, 30 i/s en « léger », pause onglet caché, fumée en sprite pré-rendu, plus de `shadowBlur`, listes de particules plafonnées.
+- Logos réels pour les bots IA (usage de test).

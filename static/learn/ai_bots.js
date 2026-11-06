@@ -51,7 +51,8 @@
   }
   E.aiBots = { ids: Object.keys(DEF), def: DEF, prof: P };
   Object.entries(DEF).forEach(([id, d]) => {
-    P[id] = { name: d.name, eloEst: d.elo, skill: d.skill, capRate: d.capRate, checkRate: d.checkRate, games: 0, ai: true, tag: d.tag, book: { w: book(d.w, "w"), b: book(d.b, "b") } };
+    let bk = null;                                                                               // livre construit à la demande (chess.js est chargé après ce fichier)
+    P[id] = { name: d.name, eloEst: d.elo, skill: d.skill, capRate: d.capRate, checkRate: d.checkRate, games: 0, ai: true, tag: d.tag, get book() { return (bk = bk || { w: book(d.w, "w"), b: book(d.b, "b") }); } };
     if (E.botChat && E.botChat.bots) E.botChat.bots[id] = { name: d.name, img: d.img, style: `Tu es ${d.name}, un assistant IA qui joue aux échecs (${d.tag}). Phrases courtes, en français.` };
     window.ENOS_BOT_LINES = window.ENOS_BOT_LINES || {}; window.ENOS_BOT_LINES[id] = d.lines;
   });

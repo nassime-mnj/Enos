@@ -37,7 +37,7 @@
   const place = (node, sq, flip) => { const [x, y] = pos(sq, flip); node.style.transform = `translate(${x * 100}%,${y * 100}%)`; };
 
   // Symboles de qualité de coup (style Chess.com) posés en coin de la case d'arrivée : [glyphe, couleur]. Clés = celles de chess_brain / chess_review.
-  B.BADGES = { forced: ["»", "#9aa7bd"], miss: ["✖", "#ff6b7d"], brilliant: ["!!", "#1acfd6"], great: ["!", "#5c8bb0"], best: ["★", "#7bd64d"], excellent: ["👍", "#9ecc38"], good: ["✓", "#739e66"], book: ["📖", "#a8896c"], inaccuracy: ["?!", "#f5c542"], mistake: ["?", "#f5a524"], blunder: ["??", "#ff4d63"] };
+  B.BADGES = { illegal: ["⚠", "#ff3b52"], forced: ["»", "#9aa7bd"], miss: ["✖", "#ff6b7d"], brilliant: ["!!", "#1acfd6"], great: ["!", "#5c8bb0"], best: ["★", "#7bd64d"], excellent: ["👍", "#9ecc38"], good: ["✓", "#739e66"], book: ["📖", "#a8896c"], inaccuracy: ["?!", "#f5c542"], mistake: ["?", "#f5a524"], blunder: ["??", "#ff4d63"] };
   const fxCell = (st, sq) => { const c = document.createElement("div"); c.className = "fxs"; place(c, sq, st.flip); st.fx.append(c); return c; };
   /** Éclat d'animation sur une case. kind : brilliant (anneaux cyan + étincelles) | great | capture (onde blanche) | blunder (anneau rouge + secousse) | mate (pulsation rouge). Éphémère : s'efface seul. */
   B.burst = (el, sq, kind) => {
