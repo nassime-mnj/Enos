@@ -301,7 +301,9 @@
    */
   function buildSync(plies, rec, audio, opts, L) {
     const n = plies.length, D = audio.dropTime || audio.mainDropTimestamp || 0, beatsAll = (audio.introBeats || []).concat(audio.hardBeats || []).sort((a, b) => a - b);
-    const t00 = opts.intro ? 0.62 : 0.1, intro = (audio.introBeats || []).filter((b) => b >= t00 && b < D - 0.25), post = (audio.hardBeats || []).filter((b) => b > D + 0.12), hats = (audio.hats || []).filter((b) => b >= t00);
+    const INTRO = opts.intro ? 3.8 : 0, t00 = INTRO + 0.05, rawIntro = (audio.introBeats || []).filter((b) => b >= t00 && b < D - 0.4), post = (audio.hardBeats || []).filter((b) => b > D + 0.12), hats = (audio.hats || []).filter((b) => b >= t00);
+    // grille d'intro : le 1er coup claque dès la fin de l'intro VS (3,85 s), puis un coup toutes les 0,45–0.6 s MÊME si les beats sont doux (jamais de plateau figé)
+    const intro = []; { let tc = t00; while (tc < D - 0.4) { intro.push(+tc.toFixed(3)); const lo = tc + 0.45, hi = tc + 0.6, b = rawIntro.filter((x) => x >= lo && x <= hi).sort((p, q) => Math.abs(p - tc - 0.5) - Math.abs(q - tc - 0.5))[0]; tc = b != null ? b : tc + 0.5; } }
     const botLine = (i) => { for (let k = i; k >= Math.max(0, i - 6); k--) { const l = plies[k].lines.find((x) => x.bot && E.botChat && E.botChat.bots[x.bot]); if (l) return l; } return null; };
     const score = (i) => plies[i].drama + (L[i] >= 3 ? 40 : L[i] >= 2 ? 15 : 0) + (i === n - 1 ? 60 : 0);
     let h = -1; plies.forEach((p, i) => { if (L[i] >= 3 && (h < 0 || score(i) > score(h))) h = i; }); if (h < 0) h = plies.reduce((m, p, i) => (score(i) > score(m) ? i : m), 0);
@@ -309,7 +311,8 @@
     const spread = (list, k) => (k >= list.length ? list.slice() : k <= 0 ? [] : Array.from({ length: k }, (_, j) => list[Math.round((j * (list.length - 1)) / Math.max(1, k - 1))]));       // k temps répartis du 1er au dernier (le dernier tombe juste avant le drop)
     const sched = [];                                                                                 // [{i, t(impact), dur, kind}]
     const preIdx = []; for (let i = 0; i < h; i++) preIdx.push(i);
-    const selPre = pick(preIdx, Math.min(preIdx.length, intro.length)), beatsPre = spread(intro, selPre.length);
+    let selPre = pick(preIdx.slice(1), Math.max(0, Math.min(preIdx.length, intro.length) - 1)); if (preIdx.length) selPre = [0].concat(selPre);                    // le 1er coup de la partie (1. e4) ouvre le montage
+    let beatsPre = intro.slice(0, selPre.length); if (selPre.length > 3 && intro.length - selPre.length >= 3) beatsPre = intro.slice(0, selPre.length - 3).concat(intro.slice(-3));          // trop peu de coups : les 3 derniers montent vers le drop
     selPre.forEach((i, j) => sched.push({ i, t: beatsPre[j], dur: 70, kind: "crit" }));
     // coups de transition joués en 60 ms sur les hi-hats (entre deux coups retenus)
     { let hp = 0; preIdx.filter((i) => !selPre.includes(i)).slice(0, 18).forEach((i) => { const after = sched.filter((x) => x.i > i).sort((a, b) => a.t - b.t)[0], lim = after ? after.t - 0.12 : D - 0.3, prev = sched.filter((x) => x.i < i).sort((a, b) => b.t - a.t)[0], lo = (prev ? prev.t : t00) + 0.1;
@@ -321,17 +324,19 @@
     sched.sort((a, b) => a.i - b.i);
     const botName = (p) => { const l = p.lines.find((x) => x.kind === "transform") || p.lines[0]; return l ? (E.botChat && E.botChat.bots[l.bot] ? E.botChat.bots[l.bot].name : l.bot) : ""; };
     const ev = [], bots = (E.botChat && E.botChat.bots) || {}; let lastShown = -1;
+    const primeSide = rec.mode === "prime" ? (rec.pw === "ChatGPT Prime" ? "w" : rec.pb === "ChatGPT Prime" ? "b" : "") : "";
     sched.forEach((q) => {
       const p = plies[q.i], key = p.key, lvl = L[q.i], big = q.kind === "drop", sl = { kind: q.kind };
       const boss = !!(p.from && !p.drop && q.kind !== "ff" && (p.mate || (p.captured && "qr".includes(p.piece) && ["q", "r", "b", "n"].includes(p.captured) && lvl >= 2))), lead = boss ? 0.25 : 0;
-      let bd = null; if (BADGES[key] && q.kind !== "ff" && (key !== "best" || lvl >= 1)) bd = BADGES[key];
+      let dk = key; if (key === "good" || key === "book" || !BADGES[key]) dk = p.captured && ["q", "r", "b", "n"].includes(p.captured) ? "best" : p.check || p.mate ? "great" : p.captured ? "excellent" : "";             // palette complète : ★ ! !! ?! ? ?? — jamais le ✓ vert sur tout
+      let bd = null; if (dk && BADGES[dk] && q.kind !== "ff") bd = BADGES[dk];
       const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
       const e = { cheat, alien: !!p.alien, t: +(q.t - q.dur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
         lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
         dur: q.dur, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
         fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: !!(p.from && !p.drop && q.kind !== "ff" && (p.captured || p.check || p.mate || big || lvl >= 3)), arrow: !!(p.from && !p.drop && (q.i === n - 1 || illegal)),
-        illegal, aiImg: illegal && bl ? bots[bl.bot].img : "", glasses: illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
+        illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
       lastShown = q.i;
       if (p.check || p.mate) { const kq = (() => { const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; return Object.keys(m).find((z) => m[z] === want) || ""; })(); e.kingEdge = !!kq && (/^[ah]/.test(kq) || /[18]$/.test(kq)); e.kingSq = kq; }
       ev.push(e);
@@ -346,12 +351,18 @@
     }
     const sfx = sfxFor(ev, opts), all = [];
     if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
-    if (opts.intro) all.push({ t: 0, kind: "intro", dur: 0.5, intro: introInfo(rec), fx: "INTRO", ply: -1 });
+    if (opts.intro) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));
     const last = ev[ev.length - 1], end = +(((last ? last.impact : 1) + 0.9)).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
     all.push({ t: end, kind: "outro", dur: opts.outroDur, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
     const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
     return { viral: true, sync: true, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align: null, stats: { open: 0, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: heroEv ? heroEv.n : 0, freeze: 0, idle: 0, heroT: heroEv ? heroEv.impact : 0, drop: D, skipped: n - ev.length, beats: beatsAll.length } };
+  }
+  /** sans musique : grille de beats synthétique (intro 3,8 s + un coup toutes les 0,5 s, drop au coup clé, kicks toutes les 0,25 s) */
+  function synthAudio(plies, L) {
+    let h = -1; plies.forEach((p, i) => { if (L[i] >= 3 && (h < 0 || p.drama > plies[h].drama)) h = i; }); if (h < 0) h = Math.max(0, plies.length - 1);
+    const t0 = 3.9, introBeats = Array.from({ length: Math.max(1, h) }, (_, k) => +(t0 + 0.5 * k).toFixed(3)), D = +(t0 + 0.5 * Math.max(1, h) + 0.5).toFixed(3), hardBeats = Array.from({ length: Math.max(8, plies.length - h) + 2 }, (_, k) => +(D + 0.3 + 0.25 * k).toFixed(3));
+    return { duration: +(D + 0.3 + 0.25 * hardBeats.length + 3).toFixed(3), mainDropTimestamp: D, dropTime: D, introBeats, hardBeats, hats: [], vocalPeaks: [], synthetic: true };
   }
   const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -360,7 +371,8 @@
    *  plan d'ambiance (kind "idle") avant le premier coup. Rythme POSÉ : on ne cherche pas à aller vite, chaque chose a son temps. */
   function buildViral(plies, rec, audio, opts) {
     opts = Object.assign({ intro: true, introDur: 5.2, outroDur: 3.2, voices: true, syncDrop: true }, opts || {});
-    if (audio && opts.syncDrop && opts.hardSync !== false && (audio.introBeats || audio.hardBeats) && (audio.mainDropTimestamp || audio.dropTime) > 1.5) { const Ls = plies.map(lvlOf); return buildSync(plies, rec, audio, Object.assign({}, opts, { outroDur: Math.min(opts.outroDur, 2.8) }), Ls); }
+    if (!audio && opts.synth && opts.hardSync !== false) audio = synthAudio(plies, plies.map(lvlOf));
+    if (audio && (opts.syncDrop || opts.synth) && opts.hardSync !== false && (audio.introBeats || audio.hardBeats) && (audio.mainDropTimestamp || audio.dropTime) > 1.5) { const Ls = plies.map(lvlOf); return buildSync(plies, rec, audio, Object.assign({}, opts, { outroDur: Math.min(opts.outroDur, 2.8) }), Ls); }
     if (opts.maxLen == null) opts.maxLen = audio && audio.duration ? Math.max(40, audio.duration - 1.5) : 170;
     const n = plies.length, L = plies.map(lvlOf), plan = [], ev = [], statSeen = new Set();
     const firstCrit = L.findIndex((l, i) => i >= 6 && l >= 2), nOpen = Math.min(n, Math.max(8, Math.min(14, firstCrit < 0 ? 14 : firstCrit)));
@@ -466,5 +478,5 @@
     };
   }
 
-  E.editMap = { gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, reach, threatsFrom, pieceStats, mapOf };
+  E.editMap = { synthAudio, gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, reach, threatsFrom, pieceStats, mapOf };
 })();

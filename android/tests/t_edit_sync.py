@@ -19,9 +19,9 @@ with sync_playwright() as pw:
         strobes: moves.filter((e) => e.strobe).length, texts: moves.filter((e) => e.text).length, prompt: evs.filter((e) => e.kind === 'prompt' || e.kind === 'cut3').map((e) => [e.kind, e.t]), intro: evs.filter((e) => e.kind === 'intro').map((e) => e.dur), setup: evs.filter((e) => e.kind === 'setup').length,
         outro: evs.filter((e) => e.kind === 'outro').map((e) => !!e.final), illegal: moves.filter((e) => e.illegal).length, glasses: moves.filter((e) => e.glasses).length, ai: moves.filter((e) => e.aiImg).length, arrow: moves.filter((e) => e.arrow).length, red: moves.filter((e) => e.redPath).length, boss: moves.filter((e) => e.boss).length,
         sfxOnImpact: moves.filter((e) => e.kind !== 'ff').every((e) => t.sfx.some((x) => Math.abs(x.t - e.impact) < 0.001 && (x.id === 'move' || x.id === 'capture' || x.id === 'check' || x.id === 'mate'))), skipped: t.stats.skipped, snaps: moves.filter((e) => e.snap).length, ids: moves.map((e) => e.impact), tHero: hero && hero.t }; }""", [rec, audio])
-    check(tl["sync"] and "setup" in tl["kinds"] and tl["intro"] == [0.5] and tl["setup"] == 1, "montage hard-sync : plateau dès 0,0 s (setup) + intro face-off de 0,5 s : %s" % tl["kinds"])
+    check(tl["sync"] and "setup" in tl["kinds"] and tl["intro"] == [3.8] and tl["setup"] == 1, "montage hard-sync : plateau dès 0,0 s (setup) + intro VS de 3,8 s : %s" % tl["kinds"])
     check(abs(tl["heroImpact"] - 12.0) < 0.001, "le coup clé tombe EXACTEMENT sur le drop (%.3f s)" % tl["heroImpact"])
-    check(set(tl["durs"]) <= {70, 60} and tl["firstMove"] >= 0.62, "coups de 70 ms (60 ms pour les transitions), le 1er après l'intro (%.2f s)" % tl["firstMove"])
+    check(set(tl["durs"]) <= {70, 60} and tl["firstMove"] >= 3.8, "coups de 70 ms (60 ms pour les transitions), le 1er après l'intro (%.2f s)" % tl["firstMove"])
     check(tl["minGapPre"] >= 0.44, "avant le drop : un coup par temps de l'intro, ≥ 450 ms d'écart (%.2f)" % tl["minGapPre"])
     check(1 <= tl["strobes"] <= 4, "flash RGB sur les 3-4 kicks les plus violents (%d)" % tl["strobes"])
     check(tl["texts"] == 0, "aucun texte « QUEEN DOWN / IT'S OVER »")

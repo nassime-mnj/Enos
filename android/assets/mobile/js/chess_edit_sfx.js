@@ -50,8 +50,8 @@
   }
 
   class Player {
-    constructor() {
-      const S = E.chessSound; this.ctx = S && S.ac ? S.ac() : new (window.AudioContext || window.webkitAudioContext)();
+    constructor(ctx) {
+      const S = E.chessSound; this.ctx = ctx || (S && S.ac ? S.ac() : new (window.AudioContext || window.webkitAudioContext)());
       const a = this.ctx; this.bufs = {}; this.ons = {}; this.queue = []; this.i = 0; this.t0 = 0;
       this.master = a.createGain(); this.master.gain.value = 0.95; this.master.connect(a.destination);
       this.sfx = a.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(this.master);

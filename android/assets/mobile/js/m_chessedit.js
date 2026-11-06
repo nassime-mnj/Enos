@@ -35,7 +35,9 @@
         <div class="card"><h3>4 · Rendu</h3>
           <label class="fld">Direction artistique</label><select id="ce-look" class="sel" style="margin-bottom:8px"><option value="auto">🎲 AUTO · varie à chaque edit (sang, brume, projecteur, néon…)</option><option value="blood">Sang · rouge et noir, braises</option><option value="fog">Brume · gris, fumée, projecteur</option><option value="spot">Projecteur · très sombre, un seul spot</option><option value="neon">Néon violet</option><option value="galaxy">Galaxie</option><option value="aura">Aura turquoise</option></select>
           <label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
-          <div class="row" style="margin-top:0"><button class="btn pri" id="ce-play">▶ APERÇU 3D (TEMPS RÉEL)</button></div>
+          <label class="fld">Résolution de l'export</label><select id="ce-res" class="sel"><option value="720">720 × 1280 · rapide (téléphone)</option><option value="1080">1080 × 1920 · qualité maximale</option></select>
+          <div class="row"><button class="btn pri" id="ce-gen">🎬 GÉNÉRER L'EDIT (MP4 · 60 FPS)</button></div>
+          <div class="row"><button class="btn" id="ce-play">▶ APERÇU RAPIDE</button></div>
           <div class="row"><button class="btn" id="ce-json">EXPORTER LE MANIFESTE GODOT</button><button class="btn" id="ce-pc">RENDRE SUR LE PC</button></div>
           <p class="ce-stat" id="ce-pcs" style="margin-top:8px">Rendu PC : scène Godot (Glow HDR, particules GPU, aberration chromatique), enregistrable en .mp4 60 FPS.</p></div>`;
 
@@ -95,7 +97,7 @@
       }
       function rebuild() {
         S.tl = null;
-        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio, opening: S.opening || "" }); return; }
+        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio, synth: !S.audio, opening: S.opening || "" }); return; }
         if (!S.rec || !S.audio) return;
         if (S.mode === "manual" && !S.marks.some((m) => m.type === "drop")) return;
         S.tl = M().build(S.plies, slots(), S.audio);
@@ -104,6 +106,7 @@
         const el2 = $("#ce-sum");
         if (S.pace === "viral" && S.tl) {
           const st = S.tl.stats, v = S.tl.sfx.filter((x) => x.bus === "voice").length;
+          if (S.tl.sync) return (el2.innerHTML = `<b>${S.plies.length}</b> coups : <b>${S.plies.length - S.tl.stats.skipped}</b> joués sur les temps de la musique, <b>${S.tl.stats.skipped}</b> sautés · coup clé calé sur le drop (${S.tl.stats.drop.toFixed(1)} s) · intro VS de 3,8 s · <b>${S.tl.key.length}</b> moments forts.`);
           return (el2.innerHTML = `<b>${S.plies.length}</b> coups, <b>aucun sauté</b> : ouverture posée (${st.open} premiers coups), <b>${st.ff}</b> en accéléré doux, <b>${S.tl.key.length}</b> moments clés en ralenti / arrêt sur image (${st.freeze} s de pauses).<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés à la frame · <b>${v}</b> voix de Levy.${S.audio ? `<br>🎵 La musique démarre <b>dès le début</b> ; le montage s'adapte : le coup n°${st.hero} tombe sur le DROP (${st.drop.toFixed(1)} s)${st.idle > 0.5 ? `, avec un plan d'ambiance de ${st.idle.toFixed(1)} s avant le 1ᵉʳ coup` : S.tl.align && S.tl.align.shrink ? ", temps morts resserrés pour y arriver" : ""}.` : ""}`);
         }
         if (!S.audio) return (el2.textContent = "Choisis une musique pour voir la timeline.");
@@ -294,7 +297,46 @@
         }
         raf = requestAnimationFrame(tick);
       }
-      $("#ce-play").onclick = preview;
+      // ------------------------------------------------------------ rendu déterministe : aperçu canvas + export MP4 (60 FPS fixes)
+      const overlay = (html) => { const o = document.createElement("div"); o.className = "ce-ov"; o.innerHTML = html; (document.getElementById("app") || document.body).appendChild(o); return o; };
+      async function ready() {                                                                    // JAMAIS de lecture avant la fin de l'analyse audio et de la timeline
+        if (!S.rec) throw new Error("Choisis d'abord une partie.");
+        if (S.pace !== "viral") throw new Error("Passe le rythme du montage sur « VIRAL » pour générer la vidéo.");
+        rebuild(); if (!S.tl || !S.tl.viral) throw new Error("Timeline indisponible.");
+        return S.tl;
+      }
+      async function previewCanvas() {
+        let tl; try { tl = await ready(); } catch (e) { return A.toast(e.message, "warn"); }
+        const ov = overlay('<canvas class="ce-cvp"></canvas><div class="ce-load">Préparation de l\'edit…</div><button class="ce-x" aria-label="Fermer">✕</button><button class="ce-pp" aria-label="Pause">⏸</button><div class="ce-prog"><i></i></div>'), cvp = ov.querySelector("canvas"), load = ov.querySelector(".ce-load");
+        const W = 540, H = Math.round((W * (innerHeight || 960)) / (innerWidth || 540)); cvp.width = W; cvp.height = H;
+        const R = new E.editRender.Renderer(cvp, tl, { flip: S.rec.me === "b", rec: S.rec }), sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null; let alive = true, paused = false, T0 = 0, raf = 0, pausedAt = 0;
+        const stop = () => { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); try { sfx.close(); } catch (e) { /* ok */ } ov.remove(); };
+        ov.querySelector(".ce-x").onclick = stop; ov.querySelector(".ce-pp").onclick = () => { paused = !paused; ov.querySelector(".ce-pp").textContent = paused ? "▶" : "⏸"; if (paused) { pausedAt = sfx.ctx.currentTime - T0; sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au) au.play().catch(() => {}); } };
+        try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load())]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }
+        if (!alive) return; load.remove(); const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
+        if (au) { au.volume = 0.85; setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }
+        const loop = () => { if (!alive) return; if (!paused) { const vt = Math.max(0, sfx.ctx.currentTime - T0); sfx.pump(vt); R.draw(vt); ov.querySelector(".ce-prog i").style.transform = `scaleX(${clamp01(vt / tl.duration)})`; if (vt > tl.duration + 0.4) return stop(); } raf = requestAnimationFrame(loop); };
+        loop();
+      }
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      async function generate() {
+        let tl; try { tl = await ready(); } catch (e) { return A.toast(e.message, "warn"); }
+        const ov = overlay('<div class="ce-genbox"><h3>Génération de l\'edit</h3><div class="ce-gbar"><i></i></div><p class="ce-gmsg">Préparation…</p><div class="row"><button class="btn" id="ce-gstop">ANNULER</button></div></div>'), bar = ov.querySelector(".ce-gbar i"), msg = ov.querySelector(".ce-gmsg"), signal = { stop: false };
+        ov.querySelector("#ce-gstop").onclick = () => { signal.stop = true; ov.remove(); };
+        const hh = $("#ce-res").value === "1080" ? 1920 : 1280, ww = $("#ce-res").value === "1080" ? 1080 : 720;
+        try {
+          const r = await E.editExport.render(tl, { width: ww, height: hh, fps: 60, musicFile: S.file, rec: S.rec, flip: S.rec.me === "b", signal, onProgress: (k, t) => { bar.style.width = Math.round(k * 100) + "%"; msg.textContent = t; } });
+          if (signal.stop) return; ov.innerHTML = '<div class="ce-genbox big"><video controls autoplay loop playsinline muted></video><p class="ce-gmsg"></p><div class="row"><button class="btn pri" id="ce-dl">⬇ TÉLÉCHARGER LE MP4</button><button class="btn" id="ce-gclose">FERMER</button></div></div>';
+          const vid = ov.querySelector("video"), url = URL.createObjectURL(r.blob); vid.src = url; vid.muted = false; vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+          ov.querySelector(".ce-gmsg").textContent = `${r.w}×${r.h} · ${r.fps} FPS · ${(r.blob.size / 1048576).toFixed(1)} Mo · ${r.via}`;
+          const ext = r.mime.includes("mp4") ? "mp4" : "webm", name = `ChessEdit_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.${ext}`;
+          ov.querySelector("#ce-dl").onclick = async () => { await A.save(name, r.mime, new Uint8Array(await r.blob.arrayBuffer()), "videos"); };
+          ov.querySelector("#ce-gclose").onclick = () => { vid.pause(); URL.revokeObjectURL(url); ov.remove(); };
+          S.lastExport = r;
+        } catch (e) { if (!signal.stop) { msg.textContent = "Échec : " + e.message; } }
+      }
+      $("#ce-gen").onclick = generate;
+      $("#ce-play").onclick = () => (S.pace === "viral" ? previewCanvas() : preview());
       $("#ce-pace").value = S.pace; $("#ce-pace").onchange = (e) => { S.pace = e.target.value; E.settings.set("chessedit.pace", S.pace); refresh(); };
       $("#ce-voice").onchange = $("#ce-intro").onchange = () => refresh();
       window.__cePrevViral = previewViral;

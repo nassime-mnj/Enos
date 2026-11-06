@@ -152,8 +152,8 @@
 .ce-warn{position:absolute;opacity:0;animation:ceWarn .4s cubic-bezier(.2,1.8,.4,1) forwards,ceWarnPulse .8s ease-in-out .5s infinite alternate;filter:drop-shadow(0 0 7px #ffcb1f) drop-shadow(0 2px 3px rgba(0,0,0,.6));z-index:5}.ce-warn svg{display:block;width:100%;height:100%}
 .ce-warn.out,.ce-thr.out{opacity:0!important;transition:opacity .4s}
 @keyframes ceWarn{from{opacity:0;transform:scale(.2) rotate(-30deg)}to{opacity:1;transform:none}}@keyframes ceWarnPulse{to{transform:scale(1.18)}}
-.ce-stat{position:absolute;left:0;right:0;top:25%;z-index:20;pointer-events:none;perspective:700px;transition:opacity .45s}
-.ce-stat.out{opacity:0}
+.ce-statcard{position:absolute;left:0;right:0;top:25%;z-index:20;pointer-events:none;perspective:700px;transition:opacity .45s}
+.ce-statcard.out{opacity:0}
 .ce-sc{display:flex;align-items:center;justify-content:center;gap:5vmin;transform:rotateY(-14deg) rotateX(4deg)}
 .ce-sc.slam{animation:ceScSlam .32s cubic-bezier(.1,1.9,.3,1) both}
 @keyframes ceScSlam{0%{opacity:0;transform:rotateY(-14deg) rotateX(4deg) scale(2.6)}60%{opacity:1;transform:rotateY(-14deg) rotateX(4deg) scale(.94)}100%{opacity:1;transform:rotateY(-14deg) rotateX(4deg) scale(1)}}
@@ -285,3 +285,20 @@
 .ce-prompt .pq{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.75);box-shadow:0 0 18px rgba(255,255,255,.45);color:#fff;transform:rotate(-6deg) skewX(-6deg);transform-origin:100% 100%}
 .ce-prompt .pa{transform:rotate(-6deg) skewX(-6deg);transform-origin:0 100%;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.75);box-shadow:0 0 18px rgba(255,255,255,.35);color:#fff}
 .ce-prompt .pa i{background:#fff;box-shadow:0 0 12px #fff}
+
+/* panneau de configuration : colonne propre, jamais de superposition (le texte d'aide était absolu à cause d'un nom de classe en double) */
+.suite-body .card{display:flex;flex-direction:column;gap:12px;overflow:hidden}.suite-body .card>*{min-width:0;margin-top:0!important;margin-bottom:0!important}
+.suite-body .card .row{display:flex;flex-wrap:wrap;gap:8px}.suite-body .card .row>.btn{flex:1 1 140px;min-width:0;white-space:normal;line-height:1.2}
+.suite-body select.sel{width:100%;max-width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+p.ce-stat{position:static;white-space:normal;overflow-wrap:anywhere}
+
+/* aperçu canvas + génération MP4 */
+.ce-ov{position:fixed;inset:0;z-index:99990;background:#000;display:flex;align-items:center;justify-content:center}
+.ce-cvp{position:absolute;inset:0;width:100vw;height:100vh;display:block;background:#000}
+.ce-ov .ce-load{position:absolute;left:0;right:0;top:45%;text-align:center;color:#fff;font:700 18px system-ui}
+.ce-ov .ce-x{position:absolute;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:2}.ce-ov .ce-pp{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:2}
+.ce-ov .ce-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:#ffffff22}.ce-ov .ce-prog i{display:block;height:100%;background:#ff2a2a;transform-origin:0 50%;transform:scaleX(0)}
+.ce-genbox{width:min(92vw,420px);max-height:92vh;overflow:auto;padding:16px;border-radius:14px;background:#14141a;border:1px solid #ffffff22;display:flex;flex-direction:column;gap:12px;color:#fff}
+.ce-genbox.big{width:min(96vw,520px)}.ce-genbox video{width:100%;max-height:68vh;background:#000;border-radius:10px}
+.ce-gbar{height:10px;border-radius:6px;background:#ffffff22;overflow:hidden}.ce-gbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2a2a,#ffd24a);transition:width .12s}
+.ce-gmsg{font-size:13px;line-height:1.4;color:#c8c8d0;overflow-wrap:anywhere}

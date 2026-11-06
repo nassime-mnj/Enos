@@ -115,7 +115,8 @@ with sync_playwright() as pw:
     mk = pg.evaluate("""([rec, an]) => { const M = ENOS.editMap, pl = M.gamePlies(rec), sl = M.manualSlots([{t: 5, type: 'beat'}, {t: 9, type: 'drop'}, {t: 12, type: 'beat'}, {t: 14, type: 'brill'}, {t: 18, type: 'beat'}], pl), tl = M.build(pl, sl, an); return tl.key.map(e => [e.t, e.n, e.kind]); }""", [rec, an])
     check(len(mk) >= 4 and [m[1] for m in mk] == sorted(m[1] for m in mk), "mode manuel : %s" % mk)
 
-    # ---------------------------------------------------------------- 3. aperçu 3D temps réel
+    # ---------------------------------------------------------------- 3. aperçu 3D temps réel (ancien rendu DOM, rythme « musique »)
+    pg.select_option("#ce-pace", "music"); pg.wait_for_timeout(200)
     pg.click("#ce-play")
     pg.wait_for_selector(".ce-stage .ce-cam")
     pg.wait_for_timeout(1500)
@@ -266,11 +267,14 @@ with sync_playwright() as pw:
     # aperçu viral réel via l'interface : intro à t=0 puis les coups s'enchaînent
     pg.select_option("#ce-pace", "viral"); pg.wait_for_timeout(200)
     pg.click("#ce-play")
-    pg.wait_for_selector(".ce-stage .ce-intro:not([hidden])", timeout=15000)
-    check(True, "aperçu viral : l'intro s'affiche")
-    pg.wait_for_function("document.querySelector('.ce-prog i').style.transform !== 'scaleX(0)'", timeout=20000)
-    pg.wait_for_timeout(6500)
-    check(pg.evaluate("document.querySelectorAll('.ce-pcs img').length") >= 20 and pg.evaluate("!document.querySelector('.ce-intro') || document.querySelector('.ce-intro').hidden || document.querySelector('.ce-intro').classList.contains('out')"), "aperçu viral : l'intro laisse place aux coups")
+    pg.wait_for_selector(".ce-ov canvas.ce-cvp", timeout=15000)
+    check(True, "aperçu viral (canvas déterministe) : le loader s'affiche pendant la préparation")
+    pg.wait_for_function("!document.querySelector('.ce-ov .ce-load')", timeout=30000)
+    pg.wait_for_function("document.querySelector('.ce-ov .ce-prog i').style.transform !== 'scaleX(0)'", timeout=20000)
+    pg.wait_for_timeout(1500)
+    sz = pg.evaluate("(() => { const c = document.querySelector('.ce-cvp'), r = c.getBoundingClientRect(); const g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < g.length; i += 101) s += g[i]; return [r.width, r.height, innerWidth, innerHeight, s]; })()")
+    check(sz[0] == sz[2] and sz[1] == sz[3] and sz[4] > 5000, "le canvas fait exactement la taille de l'écran (%dx%d) et dessine l'intro VS" % (sz[0], sz[1]))
+    pg.click(".ce-ov .ce-x")
     if SHOTS:
         pg.screenshot(path=os.path.join(SHOTS, "ce_viral.png"))
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
