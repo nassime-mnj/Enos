@@ -202,3 +202,5 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **⚡ CO-PILOTE GEMINI** (sans API) : « Copier le prompt » (coups numérotés + durée exacte de l'audio + schéma) → Gemini écoute la musique → « Coller le script JSON » (`GeminiEditScript` : intro, events {moveIndex, timestamp, badge, camera, vfx}, outro `3D_BOARD_FLIP_CHECKMATE`) → le moteur joue chaque coup au timestamp exact. vfx : `CYAN_HALF_BOARD_GLOW SHOCKWAVE_DOUBLE RGB_FLASH RED_PATH YELLOW_ARROW CHECK_BEAM BOSS_PIECE SPEED_LINES RED_TINT SPIN GLASSES PROMPT_STREAM CUTSCENE_BADASS_ROOK CUTSCENE_PAWN_EVOLUTION`.
 
 ## 1.56 — Yeux de la tour (cutscene BADASS ROOK) redessinés : orbite sombre, œil en amande à paupière oblique, iris dégradé jaune → rouge, pupille fendue, reflets, sourcils, lueur ; dessinés dans le corps de la tour.
+
+## 1.57 — Yeux de la tour retirés (cutscene BADASS ROOK : tour seule sur fond rouge, braises, mouvement de caméra).

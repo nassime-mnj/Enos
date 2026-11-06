@@ -333,23 +333,6 @@
       const rnd = mulberry(91); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 34; i++) { const x = rnd() * W, y = H - ((rnd() * H * 0.9 + u * (200 + rnd() * 300) * k) % H), s = (2 + rnd() * 5) * k; g.globalAlpha = 0.3 + 0.5 * rnd(); g.fillStyle = rnd() < 0.5 ? "#ff5a1a" : "#ffb45a"; g.fillRect(x, y, s, s); } g.restore();
       this.glowAt(g, "#ff3a10", W / 2, H * 0.66, W * 0.75, 0.55 + 0.2 * Math.sin(u * 14));
       const spr = this.pc.r; if (spr) { const s = W * 1.12; g.save(); g.translate(W / 2, H * 0.52 + (1 - EASE.out3(u)) * 40 * k); g.rotate(-0.14 + 0.03 * u); g.scale(1 + 0.07 * u, 1 + 0.07 * u); g.drawImage(spr, -s / 2, -s / 2, s, s);
-        const ey = s * 0.035, ex = s * 0.09, ew = s * 0.06, eh = s * 0.052 * (1 - 0.18 * EASE.out3(u)), flick = 0.85 + 0.15 * Math.sin(u * 40);                       // yeux dessinés DANS le corps de la tour
-        [-1, 1].forEach((sd) => {
-          this.glowAt(g, "#ff2a10", sd * ex, ey, s * 0.19, 0.75 * flick);
-          g.save(); g.translate(sd * ex, ey); if (sd > 0) g.scale(-1, 1);                                                                  // on dessine l'œil gauche, le droit est son miroir
-          const eye = () => { g.beginPath(); g.moveTo(-ew, -eh * 0.55); g.lineTo(ew, eh * 0.2); g.bezierCurveTo(ew * 0.85, eh * 1.0, -ew * 0.45, eh * 1.12, -ew, eh * 0.45); g.closePath(); };      // amande : paupière supérieure OBLIQUE (regard froncé)
-          g.fillStyle = "rgba(0,0,0,.6)"; g.save(); g.translate(0, eh * 0.12); g.scale(1.22, 1.3); eye(); g.fill(); g.restore();                                                                   // orbite sombre
-          const sc = g.createRadialGradient(ew * 0.1, eh * 0.2, 1, 0, eh * 0.1, ew * 1.2); sc.addColorStop(0, "#fff6c8"); sc.addColorStop(0.45, "#ff9a2a"); sc.addColorStop(1, "#c4160a"); g.fillStyle = sc; eye(); g.fill();
-          g.save(); eye(); g.clip();                                                                                                       // iris, pupille fendue et reflets (rognés par la paupière)
-          const ix = ew * 0.12, iy = eh * 0.3, ir = eh * 0.52, ig = g.createRadialGradient(ix, iy, 1, ix, iy, ir); ig.addColorStop(0, "#ffe27a"); ig.addColorStop(0.55, "#ff5a14"); ig.addColorStop(1, "#8a0a05"); g.fillStyle = ig; g.beginPath(); g.arc(ix, iy, ir, 0, TAU); g.fill();
-          g.fillStyle = "#050000"; g.beginPath(); g.ellipse(ix, iy, ir * 0.2, ir * 0.78, 0, 0, TAU); g.fill(); g.fillStyle = "#ffffff"; g.beginPath(); g.arc(ix - ir * 0.34, iy - ir * 0.36, ir * 0.2, 0, TAU); g.fill(); g.globalAlpha = 0.7; g.beginPath(); g.arc(ix + ir * 0.3, iy + ir * 0.34, ir * 0.09, 0, TAU); g.fill();
-          g.restore();
-          g.lineCap = "round"; g.strokeStyle = "#060000"; g.lineWidth = eh * 0.62; g.beginPath(); g.moveTo(-ew * 1.22, -eh * 0.95); g.lineTo(ew * 1.12, eh * 0.02); g.stroke();                       // paupière lourde
-          g.strokeStyle = "rgba(255,120,60,.55)"; g.lineWidth = eh * 0.1; g.beginPath(); g.moveTo(-ew * 1.0, -eh * 0.52); g.lineTo(ew * 0.95, eh * 0.18); g.stroke();                              // liseré lumineux sous la paupière
-          g.strokeStyle = "#060000"; g.lineWidth = eh * 0.5; g.beginPath(); g.moveTo(-ew * 1.35, -eh * 2.0); g.lineTo(ew * 1.0, -eh * 0.78); g.stroke();                                          // sourcil
-          g.strokeStyle = "rgba(255,255,255,.18)"; g.lineWidth = eh * 0.08; g.beginPath(); g.moveTo(-ew * 1.2, -eh * 2.2); g.lineTo(ew * 0.9, -eh * 1.02); g.stroke();
-          g.restore();
-        });
         g.restore(); }
       const vg = g.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.75); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.75)"); g.fillStyle = vg; g.fillRect(0, 0, W, H); g.restore();
     }
