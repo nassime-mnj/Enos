@@ -1,4 +1,4 @@
-"""Chess Edit : hard-sync (impacts sur les kicks), intro face-off 0,5 s, effets signatures (chemin rouge, boss, prompt, strobe, badges IA, flèche, reality check)."""
+"""Chess Edit : hard-sync (impacts sur les kicks), intro face-off 0,5 s, effets signatures (pas de chemin rouge (rouge réservé aux gaffes et au mat), boss, prompt, strobe, badges IA, flèche, reality check)."""
 from mobile_common import *
 
 errs = []
@@ -27,7 +27,7 @@ with sync_playwright() as pw:
     check(tl["texts"] == 0, "aucun texte « QUEEN DOWN / IT'S OVER »")
     check(tl["outro"] == [True] or tl["outro"] == [False], "outro prévue (reality check si le bot a une réplique)")
     check(tl["sfxOnImpact"], "chaque son de coup est calé sur l'impact, à la milliseconde")
-    check(tl["illegal"] >= 1 and tl["ai"] >= 1 and tl["arrow"] <= 1 and tl["red"] >= 1, "effets de triche : badges IA / ✖, UNE seule flèche jaune, chemin rouge : %s" % {k: tl[k] for k in ("illegal", "glasses", "ai", "arrow", "red", "boss")})
+    check(tl["illegal"] >= 1 and tl["ai"] >= 1 and tl["arrow"] <= 1 and tl["red"] == 0, "effets de triche : badges IA / ✖, UNE seule flèche jaune, pas de chemin rouge (rouge réservé aux gaffes et au mat) : %s" % {k: tl[k] for k in ("illegal", "glasses", "ai", "arrow", "red", "boss")})
     print("prompt/cut3:", tl["prompt"], "skipped:", tl["skipped"], "snaps:", tl["snaps"])
     # --- effets de scène
     fx = ev("""async () => { const host = document.createElement('div'); host.style.cssText = 'position:fixed;inset:0;z-index:99999'; document.body.appendChild(host); const s = new ENOS.editFx.Stage(host, { quality: 'max' });
@@ -40,7 +40,7 @@ with sync_playwright() as pw:
       s.reality('Tu confonds les camps.', 'prime'); o.reality = s.look === 'classic' && host.classList.contains('ce-reality');
       await new Promise((r) => setTimeout(r, 120)); o.pcs = s.pcs.querySelector('img').src.startsWith('data:') || s.pcs.querySelector('img').src.includes('.png'); s.destroy(); host.remove(); return o; }""")
     check(fx["fo"], "intro face-off : 2 avatars + VS + Elo")
-    check(fx["path"] >= 5 and fx["beam"] and fx["arrow"], "chemin rouge (%d cases), rayon d'échec, flèche jaune" % fx["path"])
+    check(fx["path"] >= 5 and fx["beam"] and fx["arrow"], "pas de chemin rouge (rouge réservé aux gaffes et au mat) (%d cases), rayon d'échec, flèche jaune" % fx["path"])
     check(fx["badges"] == 2 and fx["brk"] and fx["ring"] == 2 and fx["gl"], "badges ✖/IA côte à côte + double onde + cadre de visée + lunettes")
     check(fx["prompt"] and fx["grid"] and fx["chroma"], "cutscene prompt & streaming, flash RGB grid blur")
     check(fx["boss"] and fx["tilt"], "pièce géante rouge + roi qui bascule (animations sur leur propre centre)")

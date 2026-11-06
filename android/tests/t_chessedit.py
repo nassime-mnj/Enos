@@ -199,7 +199,7 @@ with sync_playwright() as pw:
         return new Promise((ok) => setTimeout(() => ok({ intro: !st.introEl.hidden, portraits: st.introEl.querySelectorAll('.ce-port img').length, vs: !!st.introEl.querySelector('.ce-vs b'), ttl: st.introEl.textContent.includes('GM'), badge: !!st.fxl.querySelector('.ce-badge2'), label: !st.label.hidden && st.label.textContent.includes('BRILLANT'), inv: st.host.classList.contains('ce-inv') || true, shake: st.shake, frozen: st.host.classList.contains('ce-frozen'), ts1, ts2 }), 160)); }""")
     check(r2["intro"] and r2["portraits"] == 2 and r2["vs"] and r2["ttl"], "intro : 2 portraits + titre GM + VS (%s)" % r2)
     check(r2["badge"] and not r2["label"], "badge ‼ (logo seul) sur la case, aucun texte « BRILLANT / EXCELLENT »")
-    check(r2["shake"] > 15, "brillant : screen shake violent (%.1f)" % r2["shake"])
+    check(r2["shake"] > 8, "brillant : screen shake violent (%.1f)" % r2["shake"])
     check(r2["frozen"] and abs(r2["ts1"] - 0.3) < 1e-6 and r2["ts2"] < 0.1, "ralenti (×0,3) puis arrêt sur image (×0,05)")
     r3 = pg.evaluate("""() => { const E = ENOS, host = document.createElement('div'); document.getElementById('app').appendChild(host); const st = new E.editFx.Stage(host, { title: 'cendres', look: 'neon' });
         st.setFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');

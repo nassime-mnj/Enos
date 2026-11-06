@@ -144,7 +144,7 @@
     return res.sort((x, y) => x.ply - y.ply);
   }
 
-  const toneOf = (p) => (p.key === "brilliant" ? "cyan" : p.key === "great" || p.key === "excellent" ? "blue" : p.key === "best" || p.key === "good" ? "green" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
+  const toneOf = (p) => (p.key === "brilliant" ? "cyan" : p.key === "great" || p.key === "excellent" ? "blue" : p.key === "best" || p.key === "good" ? "green" : p.mate || p.key === "blunder" || p.loss > 300 ? "red" : p.check ? "blue" : "green");           // ROUGE réservé aux gaffes et au mat
   function fxOf(p, s) {
     if (p.boss || s.kind === "boss") return "BOSS_AWAKENING";
     if (p.promo) return "PROMOTION_CUTSCENE";
@@ -280,6 +280,9 @@
     ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
       if (e.stats && e.pre > 0) { sfx.push({ t: +e.t.toFixed(3), id: "boom", gain: 1.1, bus: "sfx", ply: e.n }); sfx.push({ t: +(e.t + e.pre - 0.3).toFixed(3), id: "whoosh", gain: 0.7, bus: "sfx", ply: e.n }); }
     });
+    {                                                                                                  // « HAWAII » : en ouverture, quand un coup donne un FORT avantage à l'un des deux camps (écart d'évaluation ≥ 250 cp, gaffe, dame prise) — UNE seule fois par partie (jamais plus de 2)
+      let prev = null, used = 0; ev.forEach((e) => { if (used >= 1 || e.kind === "ff") { if (e.kind !== "ff") prev = e; return; } const swing = prev && e.ev != null && prev.ev != null ? Math.abs(e.ev - prev.ev) : 0, big = swing >= 250 || (e.loss || 0) >= 250 || e.key === "blunder" || e.captured === "q"; if (e.n <= 16 && big) { sfx.push({ t: e.impact, id: "hawaii", gain: 1.3, bus: "echo", ply: e.n, duck: true }); used++; } prev = e; });
+    }
     if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS (jamais sur une erreur, une gaffe, un mat…), une seule par coup
       const chosen = [];
       ev.filter((e) => e.key === "brilliant" && !e.alien).forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
@@ -290,7 +293,7 @@
         }
         const c = chosen.includes(e);
         if (lastVoice != null && e.n - lastVoice >= 3) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
-        if (c) { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", ply: e.n }); lastVoice = e.n; }
+        if (c) { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", level: id === "the_rook" ? 0.22 : 0.45, ply: e.n }); lastVoice = e.n; }
       });
     }
     if (opts.voices) { const m = ev.find((e) => e.mate && e.cheat !== "twist" && e.kind !== "ff"); if (m && !sfx.some((x) => x.bus === "voice" && Math.abs(x.t - m.impact) < 2.4)) sfx.push({ t: +(m.impact + 0.1).toFixed(3), id: "this_is_the_way", gain: 1.35, bus: "voice", ply: m.n }); }
@@ -331,23 +334,24 @@
     const primeSide = rec.mode === "prime" ? (rec.pw === "ChatGPT Prime" ? "w" : rec.pb === "ChatGPT Prime" ? "b" : "") : "";
     sched.forEach((q) => {
       const p = plies[q.i], key = p.key, lvl = L[q.i], big = q.kind === "drop", sl = { kind: q.kind }, soft = !!q.soft;
-      const boss = !soft && !!(p.from && !p.drop && q.kind !== "ff" && (p.mate || (p.captured && "qr".includes(p.piece) && ["q", "r", "b", "n"].includes(p.captured) && lvl >= 2))), lead = boss ? 0.25 : 0;
+      const boss = !soft && !!(p.from && !p.drop && q.kind !== "ff" && (p.mate || (p.captured && "qr".includes(p.piece) && ["q", "r", "b", "n"].includes(p.captured) && lvl >= 2))), bigMove = !soft && q.kind !== "ff" && (key === "brilliant" || !!p.sacrifice), lead = boss ? 0.25 : bigMove ? 0.12 : 0;                         // coup brillant / sacrifice : 120 ms d'ANTICIPATION avant l'impact
       let dk = key; if (key === "good" || key === "book" || !BADGES[key]) dk = p.captured && ["q", "r", "b", "n"].includes(p.captured) ? "best" : p.check || p.mate ? "great" : p.captured ? "excellent" : "";             // palette complète : ★ ! !! ?! ? ?? — jamais le ✓ vert sur tout
       if (q.badge) dk = q.badge === "NONE" ? "" : ({ BOOK: "book", BRILLIANT: "brilliant", GREAT: "great", BEST: "best", EXCELLENT: "excellent", GOOD: "good", INACCURACY: "inaccuracy", MISTAKE: "mistake", BLUNDER: "blunder", MISS: "miss", FORCED: "forced" })[String(q.badge).toUpperCase()] || dk;
+      if (bigMove && !q.badge) dk = "brilliant";                                                                                  // sacrifice = badge « !! » cyan officiel
       let bd = null; if (dk && BADGES[dk] && q.kind !== "ff") bd = BADGES[dk];
       const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
       const e = { cheat, alien: !!p.alien, t: +(q.t - q.dur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
         lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
-        dur: q.dur, soft, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
+        dur: q.dur, soft, bigMove, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
         fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
-        snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: !soft && !!(p.from && !p.drop && q.kind !== "ff" && (p.captured || p.check || p.mate || big || lvl >= 3)), arrow: false,
+        snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: false, arrow: false,
         illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: !soft && illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
-      lastShown = q.i;
+      lastShown = q.i; if (bigMove) e.tone = "cyan";
       if (q.cam) e.cam = q.cam;
       (soft ? [] : (q.vfx || [])).forEach((v) => {                                                                                // effets demandés par le script Gemini (ignorés pendant l'intro calme)
         const V = String(v).toUpperCase();
-        if (V === "CYAN_HALF_BOARD_GLOW") e.glow = true; else if (V === "SHOCKWAVE_DOUBLE") e.shock2 = true; else if (V === "RGB_FLASH" || V === "STROBE") e.strobe = true; else if (V === "RED_PATH") e.redPath = !!p.from; else if (V === "YELLOW_ARROW") e._arrow = !!p.from;
-        else if (V === "SPEED_LINES") e.speed = true; else if (V === "RED_TINT") e.tintRed = true; else if (V === "SPIN") e.spin = true; else if (V === "GLASSES") e.glasses = true; else if (V === "BOSS_PIECE" && p.from && !p.drop) { e.boss = true; e.pre = 0.25; e.t = +(e.t - 0.25).toFixed(3); }
+        if (V === "CYAN_HALF_BOARD_GLOW") e.glow = true; else if (V === "SHOCKWAVE_DOUBLE") e.shock2 = true; else if (V === "RGB_FLASH" || V === "STROBE") e.strobe = true; else if (V === "RED_PATH") e.redPath = !!p.from && key === "blunder"; else if (V === "YELLOW_ARROW") e._arrow = !!p.from;
+        else if (V === "SPEED_LINES") e.speed = true; else if (V === "RED_TINT") e.tintRed = key === "blunder"; else if (V === "SPIN") e.spin = true; else if (V === "GLASSES") e.glasses = true; else if (V === "BOSS_PIECE" && p.from && !p.drop) { e.boss = true; e.pre = 0.25; e.t = +(e.t - 0.25).toFixed(3); }
         else if (V === "CHECK_BEAM") { e.check = true; const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; e.kingSq = Object.keys(m).find((z) => m[z] === want) || ""; } else if (V === "CUTSCENE_BADASS_ROOK") e._cutrook = true; else if (V === "CUTSCENE_PAWN_EVOLUTION") e._cutevo = true; else if (V === "PROMPT_STREAM") e._prompt = true;
       });
       if (p.check || p.mate) { const kq = (() => { const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; return Object.keys(m).find((z) => m[z] === want) || ""; })(); e.kingEdge = !!kq && (/^[ah]/.test(kq) || /[18]$/.test(kq)); e.kingSq = kq; }
@@ -368,21 +372,23 @@
     const heroEv = ev.find((e) => e.kind === "drop"), extra = [];
     if (heroEv && !script) {                                                                                      // 0,6 s avant le drop : cutscene « prompt & streaming » (si le bot parle) sinon mini-cutscene des deux pièces
       const bl = botLine(h), hp = plies[h];
-      if (bl) extra.push({ t: +Math.max(0.05, heroEv.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (h ? plies[h - 1].san : "e4") + " ?", piece: hp.piece, fx: "PROMPT", ply: -1, ref: heroEv });
+      if (bl && bl.bot === "prime") extra.push({ t: +Math.max(0.05, heroEv.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (h ? plies[h - 1].san : "e4") + " ?", piece: hp.piece, fx: "PROMPT", ply: -1, ref: heroEv });
       else if (hp.sacrifice || hp.key === "brilliant") extra.push({ t: +Math.max(0.05, heroEv.impact - 0.45).toFixed(3), kind: "cut3", dur: 0.4, text: opts.opening || hp.san, fx: "CUT3", ply: -1, ref: heroEv });
     }
     const taken = (t0, t1, self) => ev.some((e) => e !== self && e.kind !== "ff" && e.impact > t0 - 0.02 && e.impact < t1 - 0.02) || extra.some((x) => x.t < t1 && x.t + x.dur > t0);
     const addCut = (kind, e, want, piece) => { const t1 = e.impact - 0.05; let d = want; while (d >= 0.45 && taken(t1 - d, t1, e)) d -= 0.1; if (d < 0.45) return false; const bl = botLine(e.ply); extra.push({ t: +(t1 - d).toFixed(3), kind, dur: +d.toFixed(3), ref: e, piece, text: bl ? bl.text : "", q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", fx: kind.toUpperCase(), ply: -1 }); return true; };
     ev.filter((e) => e._cutevo || (e.promo && !script)).slice(0, 2).forEach((e) => { addCut("cutevo", e, 1.25, e.promo || "q"); });                    // PAWN EVOLUTION (promotion)
-    ev.filter((e) => e._cutrook || (!script && e.kind !== "ff" && ((e.piece === "r" && (e.sacrifice || e.key === "brilliant")) || e.boss))).sort((a, b) => b.drama - a.drama).slice(0, 2).forEach((e) => { addCut("cutrook", e, 0.9, e.piece || "r"); });   // BADASS ROOK (sacrifice / coup de boss)
-    ev.filter((e) => e._prompt && !extra.some((x) => x.kind === "prompt")).forEach((e) => { const bl = botLine(e.ply); if (bl) extra.push({ t: +Math.max(0.05, e.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", piece: e.piece, fx: "PROMPT", ply: -1, ref: e }); });
+    const primeIn = rec.pw === "ChatGPT Prime" || rec.pb === "ChatGPT Prime";
+    if (primeIn && !extra.some((x) => x.kind === "prompt")) ev.filter((e) => e._cutrook || (!script && e.kind !== "ff" && ((e.piece === "r" && (e.sacrifice || e.key === "brilliant")) || e.boss))).sort((a, b) => b.drama - a.drama).slice(0, 1).forEach((e) => { addCut("cutrook", e, 0.9, e.piece || "r"); });          // overlay « Quel est ton prochain coup » : Prime uniquement, UNE fois par edit   // BADASS ROOK (sacrifice / coup de boss)
+    ev.filter((e) => e._prompt && !extra.some((x) => x.kind === "prompt" || x.kind === "cutrook")).slice(0, 1).forEach((e) => { const bl = botLine(e.ply); if (bl && bl.bot === "prime") extra.push({ t: +Math.max(0.05, e.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", piece: e.piece, fx: "PROMPT", ply: -1, ref: e }); });
     const sfx = sfxFor(ev, opts), all = [];
+    sfx.forEach((x) => { if (x.id === "the_rook") { const e = ev.find((y) => y.n === x.ply); if (e) e.voiceTag = "THE ROOK !"; } });
     if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
     if (opts.intro && INTRO > 0) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));
     const last = ev[ev.length - 1], twistEnd = !!(last && last.cheat === "twist"), end = +(((last ? last.impact : 1) + (twistEnd ? 4.2 : 0.2))).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
-    const flip3d = !!(script && script.outro && /FLIP/i.test(script.outro.type || "")), outT = flip3d && script.outro.timestamp > 0 ? Math.max(end - 0.2, script.outro.timestamp) : end;
-    all.push({ t: outT, kind: "outro", dur: 1.8, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, flip3d, defeat: primeLoses ? { color: last && last.color } : null, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
+    const winnerName = last && (last.mate || last.cheat === "twist") ? (last.color === "w" ? rec.pw : rec.pb) : "", flip3d = !!(script && script.outro && /FLIP/i.test(script.outro.type || "") && primeIn), outT = flip3d && script.outro.timestamp > 0 ? Math.max(end - 0.2, script.outro.timestamp) : end;
+    all.push({ t: outT, kind: "outro", dur: 1.8, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, flip3d, winner: winnerName ? { name: winnerName, color: last.color, king: last.mate ? last.kingSq || "" : "", mate: !!last.mate } : null, defeat: primeLoses ? { color: last && last.color } : null, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
     const dur = +(outT + 1.8 + (flip3d ? 1.8 : 0)).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
     return { viral: true, sync: true, primeLoses, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align: null, stats: { open: 0, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: heroEv ? heroEv.n : 0, freeze: 0, idle: 0, heroT: heroEv ? heroEv.impact : 0, drop: D, skipped: n - ev.length, beats: beatsAll.length } };
   }
@@ -412,7 +418,9 @@ RÈGLES :
 - Intro VS de 0.0 s à 3.8 s ; le coup d'index 0 tombe à ~3.85 s ; ensuite un coup toutes les 0.45–0.6 s tant que la musique est douce (jamais de plateau figé).
 - Avant le drop : impacts espacés d'au moins 0.45 s ; après le drop : un coup sur CHAQUE kick, espacés d'au moins 0.22 s.
 - Le coup le plus spectaculaire (brillant / sacrifice / mat) tombe EXACTEMENT sur le drop. Tu peux SAUTER des coups sans intérêt (ils seront joués instantanément) mais garde l'ordre des moveIndex.
-- La vidéo se termine 2.0 s après le dernier coup (3D_BOARD_FLIP_CHECKMATE : prévoir ~1.8 s de plus pour la bascule).
+- La vidéo se termine 2.0 s après le dernier coup. outro.type : "MATE_ZOOM" (par défaut : zoom sur le roi maté, couronne verte du vainqueur, badge # rouge) ; "3D_BOARD_FLIP_CHECKMATE" UNIQUEMENT si ChatGPT Prime joue dans cette partie (sinon ignoré).
+- ROUGE (#FF2020) réservé aux gaffes (BLUNDER) et au roi maté ; RED_PATH / RED_TINT uniquement sur une GAFFE. Bons coups : vert / bleu ; brillants et sacrifices : cyan + blanc.
+- PROMPT_STREAM / CUTSCENE_* : au plus UNE fois dans tout l'edit, uniquement si ChatGPT Prime parle ; YELLOW_ARROW : une seule fois (dernier coup illégal / mat final).
 - camera.zoom entre 1.25 et 1.60 ; camera.tiltDeg entre -12 et 15 ; camera.shake entre 0 et 1.
 - badge ∈ [${GEM_BADGES.join(", ")}].
 - vfx (liste) ⊂ [${GEM_VFX.join(", ")}] ; CUTSCENE_* au plus 2 fois dans tout l'edit.
@@ -424,7 +432,7 @@ RÉPONDS UNIQUEMENT PAR UN BLOC JSON (aucun texte autour), exactement ce schéma
     { "moveIndex": 0, "timestamp": 3.85, "badge": "BOOK", "camera": { "zoom": 1.35, "tiltDeg": -5, "shake": 0.3 }, "vfx": ["NONE"] },
     { "moveIndex": 14, "timestamp": 18.20, "badge": "BRILLIANT", "camera": { "zoom": 1.55, "tiltDeg": 12, "shake": 1.0 }, "vfx": ["CYAN_HALF_BOARD_GLOW", "SHOCKWAVE_DOUBLE", "RGB_FLASH", "CUTSCENE_BADASS_ROOK"] }
   ],
-  "outro": { "timestamp": 25.5, "type": "3D_BOARD_FLIP_CHECKMATE" }
+  "outro": { "timestamp": 25.5, "type": "MATE_ZOOM" }
 }`;
   }
   /** texte collé -> script validé {script} ou {error} (tolère ```json … ``` et du texte autour) */

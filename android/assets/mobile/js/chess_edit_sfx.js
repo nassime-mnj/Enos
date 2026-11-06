@@ -89,7 +89,7 @@
     async load() {
       const a = this.ctx, S = E.chessSound, base = E.assetBase || "";
       this.bufs.thud = thudBuffer(a); this.bufs.crystal = crystalBuffer(a); this.bufs.mateboom = mateBoomBuffer(a); this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
-      for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
+      for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty", "hawaii"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
         try {
@@ -108,7 +108,7 @@
       while (this.i < this.queue.length && this.queue[this.i].t <= vt + 0.35) {
         const s = this.queue[this.i++], when = this.t0 + s.t;
         if (when < a.currentTime - 0.03) continue;                                        // trop tard (onglet gelé) : on saute
-        this.play(s.id, Math.max(when, a.currentTime), s.gain, s.bus, s.wet);
+        this.play(s.id, Math.max(when, a.currentTime), s.gain, s.bus, s.wet, s.level);
       }
     }
     /** délai avant le premier vrai son du buffer (les mp3 de coups ont 0,1 à 0,4 s de silence au début) : le départ est avancé pour que l'IMPACT tombe pile sur `when` */
@@ -121,13 +121,13 @@
       }
       return this.ons[id];
     }
-    play(id, when, gain, bus, wet) {
+    play(id, when, gain, bus, wet, level) {
       const b = this.bufs[id]; if (!b) return;
       const a = this.ctx, src = a.createBufferSource(), g = a.createGain(), rate = bus === "voice" ? FX.slowed : 1; src.buffer = b; g.gain.value = gain == null ? 1 : gain;
       if (bus === "voice") {
         src.playbackRate.value = rate; src.connect(g); g.connect(this.vin);
         if (wet > 1 && this.conv) { const x = a.createGain(); x.gain.value = wet - 1; g.connect(x); x.connect(this.conv); }                  // reverb SUPPLÉMENTAIRE (The Rook : la voix la plus importante)
-        if (this.onVoice) this.onVoice(when, b.duration / rate + 0.4);
+        if (this.onVoice) this.onVoice(when, b.duration / rate + 0.4, level);
       }
       else if (bus === "echo") { src.connect(g); g.connect(this.xin); g.connect(this.xwet); if (this.onDuck) this.onDuck(when, 0.22); }
       else if (bus === "epic") { src.connect(g); g.connect(this.ein); if (this.onVoice) this.onVoice(when, b.duration + 2); }

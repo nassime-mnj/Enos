@@ -321,7 +321,7 @@
         const W = 540, H = Math.round((W * (innerHeight || 960)) / (innerWidth || 540)); cvp.width = W; cvp.height = H;
         const R = new E.editRender.Renderer(cvp, tl, { flip: S.rec.me === "b", rec: S.rec }), sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null; let alive = true, duckT = 0, paused = false, T0 = 0, raf = 0, pausedAt = 0;
         const stop = () => { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); try { sfx.close(); } catch (e) { /* ok */ } ov.remove(); };
-        const duckFn = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.45 * 0.85; }, Math.max(0, ms - 20)); clearTimeout(duckT); duckT = setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 180); };
+        const duckFn = (when, len, lvl) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = (lvl || 0.45) * 0.85; }, Math.max(0, ms - 20)); clearTimeout(duckT); duckT = setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 180); };
         sfx.onVoice = duckFn; sfx.onDuck = duckFn;
         ov.querySelector(".ce-x").onclick = stop; ov.querySelector(".ce-pp").onclick = () => { paused = !paused; ov.querySelector(".ce-pp").textContent = paused ? "▶" : "⏸"; if (paused) { pausedAt = sfx.ctx.currentTime - T0; sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au) au.play().catch(() => {}); } };
         try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load())]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }

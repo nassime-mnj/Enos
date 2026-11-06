@@ -32,7 +32,7 @@ with sync_playwright() as pw:
     check("JSON" in r["bad"] and r["okEvents"] == 7, "script collé : erreur claire si invalide, ```json``` toléré (%s événements)" % r["okEvents"])
     check(all(abs(t - w) < 1e-6 for (n, t), w in zip(r["impacts"], [3.85, 4.4, 5.6, 12.0, 12.5, 18.2, 18.8])), "chaque coup tombe EXACTEMENT au timestamp du script : %s" % [round(t, 2) for n, t in r["impacts"]])
     check(abs(r["drop"] - 12.0) < 1e-6 and r["cam"][3] == 1.55, "le BRILLANT est le drop (12.00 s), caméra du script (zoom 1.55)")
-    check(all(r["flags"].values()), "vfx du script appliqués : %s" % r["flags"])
+    check(all(v for k, v in r["flags"].items() if k != "redPath") and not r["flags"]["redPath"], "vfx du script appliqués (RED_PATH ignoré hors gaffe) : %s" % r["flags"])
     check({"cutrook", "prompt"} & set(r["kinds"]) and r["flip3d"], "cutscene Badass Rook / prompt + outro 3D_BOARD_FLIP_CHECKMATE : %s" % r["kinds"])
     check(r["badges"][0] == "book" and "brilliant" in r["badges"] and "mistake" in r["badges"] and "excellent" in r["badges"], "badges du script : %s" % r["badges"])
     # --- rendu : cadrage, cutscenes, flip 3D, physique
