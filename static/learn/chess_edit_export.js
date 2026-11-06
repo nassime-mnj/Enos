@@ -18,7 +18,9 @@
     player.onVoice = (when, len) => duck.push([when, len]);
     (tl.sfx || []).slice().sort((a, b) => a.t - b.t).forEach((s) => player.play(s.id, Math.max(0, s.t), s.gain, s.bus, s.wet));
     duck.sort((a, b) => a[0] - b[0]).forEach(([w, l]) => { try { mg.gain.setValueAtTime(0.85, Math.max(0, w - 0.12)); mg.gain.linearRampToValueAtTime(0.2, Math.max(0.001, w - 0.02)); mg.gain.setValueAtTime(0.2, w + l); mg.gain.linearRampToValueAtTime(0.85, w + l + 0.3); } catch (e) { /* ordre invalide : on ignore */ } });
-    return oc.startRendering();
+    const out = await oc.startRendering(), fade = Math.min(0.8, out.duration * 0.2), n = Math.floor(fade * out.sampleRate), len = out.length;                // fondu de sortie : la vidéo se termine 2,0 s après le dernier coup, le son s'éteint
+    for (let c = 0; c < out.numberOfChannels; c++) { const d = out.getChannelData(c); for (let i = 0; i < n; i++) d[len - 1 - i] *= i / n; }
+    return out;
   };
 
   async function pickVideoCodec(W, H, fps, bitrate) {

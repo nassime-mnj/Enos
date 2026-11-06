@@ -245,7 +245,7 @@
     inaccuracy: { glyph: "⁈", label: "INEXACTITUDE", color: "#ffd21f" }, miss: { glyph: "✖", label: "MANQUÉ", color: "#ff6b7d" }, forced: { glyph: "»", label: "FORCÉ", color: "#9aa7bd" }, mistake: { glyph: "?", label: "ERREUR", color: "#ff9a1f" }, blunder: { glyph: "❓", label: "GAFFE", color: "#ff2a44" },
   };
   Object.keys(BADGES).forEach((k) => { BADGES[k].img = ({ brilliant: "brilliant", best: "best", excellent: "excellent", inaccuracy: "inaccuracy", miss: "miss", forced: "next", mistake: "mistake", blunder: "blunder" })[k] || ""; });
-  Object.assign(BADGES, { great: { glyph: "!", label: "GRAND COUP", color: "#1bb3ad", img: "great" }, good: { glyph: "✓", label: "BON", color: "#96bc4b", img: "good" } });
+  Object.assign(BADGES, { book: { glyph: "📖", label: "THÉORIE", color: "#a8896c", img: "book" }, great: { glyph: "!", label: "GRAND COUP", color: "#1bb3ad", img: "great" }, good: { glyph: "✓", label: "BON", color: "#96bc4b", img: "good" } });
   BADGES.best.img = "best"; BADGES.excellent.img = "excellent";
   const VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };              // samples vocaux de Levy (audio/levy/*.mp3)
   const ELO_OF = { prime: 9999, penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
@@ -313,15 +313,21 @@
     const preIdx = []; for (let i = 0; i < h; i++) preIdx.push(i);
     let selPre = pick(preIdx.slice(1), Math.max(0, Math.min(preIdx.length, intro.length) - 1)); if (preIdx.length) selPre = [0].concat(selPre);                    // le 1er coup de la partie (1. e4) ouvre le montage
     let beatsPre = intro.slice(0, selPre.length); if (selPre.length > 3 && intro.length - selPre.length >= 3) beatsPre = intro.slice(0, selPre.length - 3).concat(intro.slice(-3));          // trop peu de coups : les 3 derniers montent vers le drop
-    selPre.forEach((i, j) => sched.push({ i, t: beatsPre[j], dur: 70, kind: "crit" }));
+    selPre.forEach((i, j) => sched.push({ i, t: beatsPre[j], dur: 90, kind: "crit" }));
     // coups de transition joués en 60 ms sur les hi-hats (entre deux coups retenus)
     { let hp = 0; preIdx.filter((i) => !selPre.includes(i)).slice(0, 18).forEach((i) => { const after = sched.filter((x) => x.i > i).sort((a, b) => a.t - b.t)[0], lim = after ? after.t - 0.12 : D - 0.3, prev = sched.filter((x) => x.i < i).sort((a, b) => b.t - a.t)[0], lo = (prev ? prev.t : t00) + 0.1;
       while (hp < hats.length && hats[hp] <= lo) hp++; if (hp < hats.length && hats[hp] < lim && hats[hp] < D - 0.3) { sched.push({ i, t: hats[hp], dur: 60, kind: "ff" }); hp++; } }); }
-    sched.push({ i: h, t: D || (beatsAll[0] || 2), dur: 70, kind: "drop" });
+    sched.push({ i: h, t: D || (beatsAll[0] || 2), dur: 90, kind: "drop" });
     const postIdx = []; for (let i = h + 1; i < n; i++) postIdx.push(i);
     let selPost = pick(postIdx, Math.min(postIdx.length, post.length)); if (postIdx.length && !selPost.includes(n - 1)) { selPost.pop(); selPost.push(n - 1); selPost = selPost.sort((a, b) => a - b); }
-    selPost.forEach((i, j) => sched.push({ i, t: post[j] != null ? post[j] : (post[post.length - 1] || D) + 0.3 * (j + 1), dur: 70, kind: "crit" }));
+    selPost.forEach((i, j) => sched.push({ i, t: post[j] != null ? post[j] : (post[post.length - 1] || D) + 0.3 * (j + 1), dur: 90, kind: "crit" }));
     sched.sort((a, b) => a.i - b.i);
+    return assembleSync(plies, rec, opts, L, sched, { D, INTRO, h, botLine, beatsAll });
+  }
+
+  /** assemble les événements à partir d'un planning [{i, t(impact), dur, kind, cam?, vfx?, badge?}] (auto ou script Gemini) : badges, effets, cutscenes, sons, outro (2,0 s après le dernier coup) */
+  function assembleSync(plies, rec, opts, L, sched, c) {
+    const { D, INTRO, h, botLine, beatsAll } = c, n = plies.length, script = c.script || null;
     const botName = (p) => { const l = p.lines.find((x) => x.kind === "transform") || p.lines[0]; return l ? (E.botChat && E.botChat.bots[l.bot] ? E.botChat.bots[l.bot].name : l.bot) : ""; };
     const ev = [], bots = (E.botChat && E.botChat.bots) || {}; let lastShown = -1;
     const primeSide = rec.mode === "prime" ? (rec.pw === "ChatGPT Prime" ? "w" : rec.pb === "ChatGPT Prime" ? "b" : "") : "";
@@ -329,6 +335,7 @@
       const p = plies[q.i], key = p.key, lvl = L[q.i], big = q.kind === "drop", sl = { kind: q.kind };
       const boss = !!(p.from && !p.drop && q.kind !== "ff" && (p.mate || (p.captured && "qr".includes(p.piece) && ["q", "r", "b", "n"].includes(p.captured) && lvl >= 2))), lead = boss ? 0.25 : 0;
       let dk = key; if (key === "good" || key === "book" || !BADGES[key]) dk = p.captured && ["q", "r", "b", "n"].includes(p.captured) ? "best" : p.check || p.mate ? "great" : p.captured ? "excellent" : "";             // palette complète : ★ ! !! ?! ? ?? — jamais le ✓ vert sur tout
+      if (q.badge) dk = q.badge === "NONE" ? "" : ({ BOOK: "book", BRILLIANT: "brilliant", GREAT: "great", BEST: "best", EXCELLENT: "excellent", GOOD: "good", INACCURACY: "inaccuracy", MISTAKE: "mistake", BLUNDER: "blunder", MISS: "miss", FORCED: "forced" })[String(q.badge).toUpperCase()] || dk;
       let bd = null; if (dk && BADGES[dk] && q.kind !== "ff") bd = BADGES[dk];
       const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
       const e = { cheat, alien: !!p.alien, t: +(q.t - q.dur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
@@ -338,24 +345,37 @@
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: !!(p.from && !p.drop && q.kind !== "ff" && (p.captured || p.check || p.mate || big || lvl >= 3)), arrow: !!(p.from && !p.drop && (q.i === n - 1 || illegal)),
         illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
       lastShown = q.i;
+      if (q.cam) e.cam = q.cam;
+      (q.vfx || []).forEach((v) => {                                                                                              // effets demandés par le script Gemini
+        const V = String(v).toUpperCase();
+        if (V === "CYAN_HALF_BOARD_GLOW") e.glow = true; else if (V === "SHOCKWAVE_DOUBLE") e.shock2 = true; else if (V === "RGB_FLASH" || V === "STROBE") e.strobe = true; else if (V === "RED_PATH") e.redPath = !!p.from; else if (V === "YELLOW_ARROW") e.arrow = !!p.from;
+        else if (V === "SPEED_LINES") e.speed = true; else if (V === "RED_TINT") e.tintRed = true; else if (V === "SPIN") e.spin = true; else if (V === "GLASSES") e.glasses = true; else if (V === "BOSS_PIECE" && p.from && !p.drop) { e.boss = true; e.pre = 0.25; e.t = +(e.t - 0.25).toFixed(3); }
+        else if (V === "CHECK_BEAM") { e.check = true; const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; e.kingSq = Object.keys(m).find((z) => m[z] === want) || ""; } else if (V === "CUTSCENE_BADASS_ROOK") e._cutrook = true; else if (V === "CUTSCENE_PAWN_EVOLUTION") e._cutevo = true; else if (V === "PROMPT_STREAM") e._prompt = true;
+      });
       if (p.check || p.mate) { const kq = (() => { const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; return Object.keys(m).find((z) => m[z] === want) || ""; })(); e.kingEdge = !!kq && (/^[ah]/.test(kq) || /[18]$/.test(kq)); e.kingSq = kq; }
       ev.push(e);
     });
     ev.sort((a, b) => a.impact - b.impact);
     const kicks = ev.filter((e) => e.kind !== "ff" && e.impact >= (D || 0) - 0.01 && e.impact <= (D || 0) + 14).sort((a, b) => b.drama - a.drama).slice(0, 4); kicks.forEach((e) => { e.strobe = true; });          // les 3-4 kicks les plus violents du drop
     const heroEv = ev.find((e) => e.kind === "drop"), extra = [];
-    if (heroEv) {                                                                                      // 0,6 s avant le drop : cutscene « prompt & streaming » (si le bot parle) sinon mini-cutscene des deux pièces
+    if (heroEv && !script) {                                                                                      // 0,6 s avant le drop : cutscene « prompt & streaming » (si le bot parle) sinon mini-cutscene des deux pièces
       const bl = botLine(h), hp = plies[h];
       if (bl) extra.push({ t: +Math.max(0.05, heroEv.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (h ? plies[h - 1].san : "e4") + " ?", piece: hp.piece, fx: "PROMPT", ply: -1, ref: heroEv });
       else if (hp.sacrifice || hp.key === "brilliant") extra.push({ t: +Math.max(0.05, heroEv.impact - 0.45).toFixed(3), kind: "cut3", dur: 0.4, text: opts.opening || hp.san, fx: "CUT3", ply: -1, ref: heroEv });
     }
+    const taken = (t0, t1, self) => ev.some((e) => e !== self && e.kind !== "ff" && e.impact > t0 - 0.02 && e.impact < t1 - 0.02) || extra.some((x) => x.t < t1 && x.t + x.dur > t0);
+    const addCut = (kind, e, want, piece) => { const t1 = e.impact - 0.05; let d = want; while (d >= 0.45 && taken(t1 - d, t1, e)) d -= 0.1; if (d < 0.45) return false; extra.push({ t: +(t1 - d).toFixed(3), kind, dur: +d.toFixed(3), ref: e, piece, fx: kind.toUpperCase(), ply: -1 }); return true; };
+    ev.filter((e) => e._cutevo || (e.promo && !script)).slice(0, 2).forEach((e) => { addCut("cutevo", e, 1.25, e.promo || "q"); });                    // PAWN EVOLUTION (promotion)
+    ev.filter((e) => e._cutrook || (!script && e.kind !== "ff" && ((e.piece === "r" && (e.sacrifice || e.key === "brilliant")) || e.boss))).sort((a, b) => b.drama - a.drama).slice(0, 2).forEach((e) => { addCut("cutrook", e, 0.9, "r"); });   // BADASS ROOK (sacrifice / coup de boss)
+    ev.filter((e) => e._prompt && !extra.some((x) => x.kind === "prompt")).forEach((e) => { const bl = botLine(e.ply); if (bl) extra.push({ t: +Math.max(0.05, e.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", piece: e.piece, fx: "PROMPT", ply: -1, ref: e }); });
     const sfx = sfxFor(ev, opts), all = [];
     if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
-    if (opts.intro) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
+    if (opts.intro && INTRO > 0) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));
-    const last = ev[ev.length - 1], end = +(((last ? last.impact : 1) + 0.9)).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
-    all.push({ t: end, kind: "outro", dur: opts.outroDur, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
-    const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
+    const last = ev[ev.length - 1], twistEnd = !!(last && last.cheat === "twist"), end = +(((last ? last.impact : 1) + (twistEnd ? 4.2 : 0.2))).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
+    const flip3d = !!(script && script.outro && /FLIP/i.test(script.outro.type || "")), outT = flip3d && script.outro.timestamp > 0 ? Math.max(end - 0.2, script.outro.timestamp) : end;
+    all.push({ t: outT, kind: "outro", dur: 1.8, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, flip3d, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
+    const dur = +(outT + 1.8 + (flip3d ? 1.8 : 0)).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
     return { viral: true, sync: true, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align: null, stats: { open: 0, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: heroEv ? heroEv.n : 0, freeze: 0, idle: 0, heroT: heroEv ? heroEv.impact : 0, drop: D, skipped: n - ev.length, beats: beatsAll.length } };
   }
   /** sans musique : grille de beats synthétique (intro 3,8 s + un coup toutes les 0,5 s, drop au coup clé, kicks toutes les 0,25 s) */
@@ -365,6 +385,59 @@
     return { duration: +(D + 0.3 + 0.25 * hardBeats.length + 3).toFixed(3), mainDropTimestamp: D, dropTime: D, introBeats, hardBeats, hats: [], vocalPeaks: [], synthetic: true };
   }
   const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+  // ---------------------------------------------------------------- MODE CO-PILOTE GEMINI (sans API : échange de JSON copié / collé)
+  const GEM_BADGES = "BOOK BRILLIANT GREAT BEST EXCELLENT GOOD INACCURACY MISTAKE BLUNDER MISS FORCED NONE".split(" ");
+  const GEM_VFX = "NONE CYAN_HALF_BOARD_GLOW SHOCKWAVE_DOUBLE RGB_FLASH RED_PATH YELLOW_ARROW CHECK_BEAM BOSS_PIECE SPEED_LINES RED_TINT SPIN GLASSES PROMPT_STREAM CUTSCENE_BADASS_ROOK CUTSCENE_PAWN_EVOLUTION".split(" ");
+  /** prompt à coller dans Gemini (avec la musique en pièce jointe) : coups numérotés + schéma exact de la réponse attendue */
+  function geminiPrompt(rec, plies, audioDur) {
+    const tagOf = (p) => [p.key && p.key !== "good" ? p.key.toUpperCase() : "", p.mate ? "MATE" : p.check ? "CHECK" : "", p.captured ? "CAPTURE" : "", p.sacrifice ? "SACRIFICE" : "", p.promo ? "PROMOTION" : "", p.cheat && p.cheat !== "double" ? "ILLEGAL" : "", p.cheat === "twist" ? "TWIST" : ""].filter(Boolean).join("+") || "-";
+    const rows = plies.map((p, i) => `${i}|${p.san}|${p.from || "@"}|${p.to}|${p.fen}|${p.ev == null ? "?" : p.ev}|${tagOf(p)}|${(p.lines[0] ? p.lines[0].bot + ': ' + String(p.lines[0].text).replace(/\s+/g, " ").slice(0, 90) : "-")}`);
+    return `Tu es monteur vidéo expert de chess edits viraux (YouTube Shorts / TikTok, style @ZaveeCHESS / @Queens_ambit_1). Je t'envoie une MUSIQUE en pièce jointe. ÉCOUTE-LA et place chaque coup d'une partie d'échecs au MILLIÈME de seconde sur les temps forts (kicks de basse), le coup clé exactement sur le DROP.
+
+PARTIE : ${rec.pw || "Blancs"} (Blancs) contre ${rec.pb || "Noirs"} (Noirs) — ${rec.result || ""}
+DURÉE EXACTE DE L'AUDIO : ${audioDur ? audioDur.toFixed(2) + " s" : "(inconnue : utilise la durée du fichier joint)"}
+COUPS (index|san|départ|arrivée|fen après le coup|évaluation cp|tag|réplique du bot) :
+${rows.join("\n")}
+
+RÈGLES :
+- Intro VS de 0.0 s à 3.8 s ; le coup d'index 0 tombe à ~3.85 s ; ensuite un coup toutes les 0.45–0.6 s tant que la musique est douce (jamais de plateau figé).
+- Avant le drop : impacts espacés d'au moins 0.45 s ; après le drop : un coup sur CHAQUE kick, espacés d'au moins 0.22 s.
+- Le coup le plus spectaculaire (brillant / sacrifice / mat) tombe EXACTEMENT sur le drop. Tu peux SAUTER des coups sans intérêt (ils seront joués instantanément) mais garde l'ordre des moveIndex.
+- La vidéo se termine 2.0 s après le dernier coup (3D_BOARD_FLIP_CHECKMATE : prévoir ~1.8 s de plus pour la bascule).
+- camera.zoom entre 1.25 et 1.60 ; camera.tiltDeg entre -12 et 15 ; camera.shake entre 0 et 1.
+- badge ∈ [${GEM_BADGES.join(", ")}].
+- vfx (liste) ⊂ [${GEM_VFX.join(", ")}] ; CUTSCENE_* au plus 2 fois dans tout l'edit.
+RÉPONDS UNIQUEMENT PAR UN BLOC JSON (aucun texte autour), exactement ce schéma :
+{
+  "totalDuration": 28.0,
+  "intro": { "start": 0.0, "end": 3.8, "style": "SPLIT_VS_OR_CHESS_TUNNEL" },
+  "events": [
+    { "moveIndex": 0, "timestamp": 3.85, "badge": "BOOK", "camera": { "zoom": 1.35, "tiltDeg": -5, "shake": 0.3 }, "vfx": ["NONE"] },
+    { "moveIndex": 14, "timestamp": 18.20, "badge": "BRILLIANT", "camera": { "zoom": 1.55, "tiltDeg": 12, "shake": 1.0 }, "vfx": ["CYAN_HALF_BOARD_GLOW", "SHOCKWAVE_DOUBLE", "RGB_FLASH", "CUTSCENE_BADASS_ROOK"] }
+  ],
+  "outro": { "timestamp": 25.5, "type": "3D_BOARD_FLIP_CHECKMATE" }
+}`;
+  }
+  /** texte collé -> script validé {script} ou {error} (tolère ```json … ``` et du texte autour) */
+  function parseScript(text, nPlies) {
+    let t = String(text || "").trim(); const f = t.match(/```(?:json)?\s*([\s\S]*?)```/i); if (f) t = f[1]; const i = t.indexOf("{"), j = t.lastIndexOf("}"); if (i < 0 || j < i) return { error: "Aucun JSON trouvé." }; t = t.slice(i, j + 1);
+    let o; try { o = JSON.parse(t); } catch (e) { return { error: "JSON invalide : " + e.message }; }
+    if (!Array.isArray(o.events) || !o.events.length) return { error: "« events » manquant ou vide." };
+    const ev = o.events.filter((e) => e && Number.isInteger(e.moveIndex) && e.moveIndex >= 0 && e.moveIndex < nPlies && Number.isFinite(+e.timestamp));
+    if (!ev.length) return { error: "Aucun événement valide (moveIndex entre 0 et " + (nPlies - 1) + ", timestamp en secondes)." };
+    const seen = new Set(), clean = []; ev.sort((a, b) => a.moveIndex - b.moveIndex).forEach((e) => { if (seen.has(e.moveIndex)) return; seen.add(e.moveIndex); clean.push({ moveIndex: e.moveIndex, timestamp: +e.timestamp, badge: e.badge ? String(e.badge).toUpperCase() : "", camera: e.camera && typeof e.camera === "object" ? { zoom: clamp01(e.camera.zoom, 1.0, 1.6), tiltDeg: e.camera.tiltDeg == null ? null : Math.max(-20, Math.min(20, +e.camera.tiltDeg)), shake: e.camera.shake == null ? 1 : Math.max(0, Math.min(1.5, +e.camera.shake)) } : null, vfx: Array.isArray(e.vfx) ? e.vfx.map((v) => String(v).toUpperCase()) : [] }); });
+    for (let k = 1; k < clean.length; k++) if (clean[k].timestamp < clean[k - 1].timestamp + 0.05) clean[k].timestamp = +(clean[k - 1].timestamp + 0.1).toFixed(3);
+    return { script: { totalDuration: +o.totalDuration || 0, intro: o.intro || null, events: clean, outro: o.outro || null } };
+  }
+  const clamp01 = (v, a, b) => (Number.isFinite(+v) ? Math.max(a, Math.min(b, +v)) : null);
+  function buildFromScript(plies, rec, script, opts) {
+    const L = plies.map(lvlOf), n = plies.length, evs = script.events, introEnd = script.intro && +script.intro.end > 0 ? +script.intro.end : opts.intro === false ? 0 : 3.8, bots = (E.botChat && E.botChat.bots) || {};
+    let dropI = evs.findIndex((e) => e.badge === "BRILLIANT"); if (dropI < 0) dropI = evs.reduce((m, e, k) => (plies[e.moveIndex].drama > plies[evs[m].moveIndex].drama ? k : m), 0);
+    const sched = evs.map((e, k) => ({ i: e.moveIndex, t: e.timestamp, dur: 90, kind: k === dropI ? "drop" : "crit", cam: e.camera ? { zoom: e.camera.zoom, tilt: e.camera.tiltDeg, shake: e.camera.shake } : null, vfx: e.vfx, badge: e.badge }));
+    const botLine = (i) => { for (let k = i; k >= Math.max(0, i - 6); k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; };
+    return assembleSync(plies, rec, Object.assign({ voices: true }, opts, { intro: introEnd > 0 }), L, sched, { D: sched[dropI].t, INTRO: introEnd, h: evs[dropI].moveIndex, botLine, beatsAll: [], script });
+  }
 
   /** Timeline « edit viral ». opts : {intro, introDur, outroDur, maxLen, voices, syncDrop}. Les temps sont ceux de la VIDÉO ; la musique démarre TOUJOURS à t = 0 (musicStart = 0) et c'est le montage qui s'adapte à elle :
    *  le moment clé choisi (le plus dramatique qu'on peut caler) tombe sur le DROP de la musique, en allongeant ou resserrant un peu les temps morts avant lui et, si la partie est « trop tôt », en ajoutant un
@@ -478,5 +551,5 @@
     };
   }
 
-  E.editMap = { synthAudio, gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, reach, threatsFrom, pieceStats, mapOf };
+  E.editMap = { geminiPrompt, parseScript, buildFromScript, GEM_BADGES, GEM_VFX, synthAudio, gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, reach, threatsFrom, pieceStats, mapOf };
 })();

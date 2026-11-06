@@ -302,3 +302,5 @@ p.ce-stat{position:static;white-space:normal;overflow-wrap:anywhere}
 .ce-genbox.big{width:min(96vw,520px)}.ce-genbox video{width:100%;max-height:68vh;background:#000;border-radius:10px}
 .ce-gbar{height:10px;border-radius:6px;background:#ffffff22;overflow:hidden}.ce-gbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2a2a,#ffd24a);transition:width .12s}
 .ce-gmsg{font-size:13px;line-height:1.4;color:#c8c8d0;overflow-wrap:anywhere}
+.ce-ta{width:100%;box-sizing:border-box;min-height:120px;background:#0c0c10;color:#e8e8f0;border:1px solid #ffffff22;border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Menlo,monospace}
+.btn.ce-red{background:#e0243c;color:#fff;border-color:#ff5a6e}

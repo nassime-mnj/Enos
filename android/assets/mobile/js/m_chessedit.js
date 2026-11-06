@@ -26,6 +26,15 @@
           <div class="row" style="margin-top:0"><button class="btn" id="ce-pick">CHOISIR UN .MP3 / .WAV</button></div>
           <p class="ce-stat" id="ce-as" style="margin-top:8px">Aucune musique (facultative en mode viral : les bruitages et les voix suffisent).</p>
           <div class="seg" id="ce-mode" style="margin-top:10px"><button data-m="ia" class="on">MODE IA</button><button data-m="manual">MODE MANUEL</button><i class="seg-ind"></i></div></div>
+        <div class="card" id="ce-gcard"><h3>⚡ Synchro : AUTO ou CO-PILOTE GEMINI</h3>
+          <div class="seg" id="ce-sync"><button data-s="auto" class="on">AUTO</button><button data-s="gemini">⚡ SYNC AVEC GEMINI</button><i class="seg-ind"></i></div>
+          <div id="ce-gbox" hidden>
+            <p class="ce-stat">Sans API : tu envoies la <b>musique</b> à Gemini (appli ou site) avec le prompt ci-dessous ; il te répond par un <b>script JSON</b> que tu colles ici. Le moteur le joue au millième de seconde.</p>
+            <button class="btn" id="ce-gm-copy">📋 1. COPIER LE PROMPT POUR GEMINI</button>
+            <label class="fld">📥 2. Coller le script JSON de Gemini</label>
+            <textarea id="ce-gm-json" class="ce-ta" rows="7" spellcheck="false" placeholder='{ "totalDuration": 28.0, "intro": {...}, "events": [ ... ], "outro": {...} }'></textarea>
+            <button class="btn pri" id="ce-gm-apply">✔ APPLIQUER LE SCRIPT</button>
+            <p class="ce-stat" id="ce-gm-st"></p></div></div>
         <div class="card"><h3>3 · Timeline</h3>
           <div class="ce-wave"><canvas id="ce-cv"></canvas></div>
           <div class="ce-legend" id="ce-leg">${Object.entries(MK).map(([k, [n, c]]) => `<button data-t="${k}" style="--c:${c}"><i></i>${n}</button>`).join("")}</div>
@@ -97,6 +106,7 @@
       }
       function rebuild() {
         S.tl = null;
+        if (S.rec && S.pace === "viral" && S.sync === "gemini" && S.script) { try { S.tl = M().buildFromScript(S.plies, S.rec, S.script, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, opening: S.opening || "" }); } catch (e) { S.tl = null; A.toast("Script Gemini inutilisable : " + e.message, "err"); } return; }
         if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio, synth: !S.audio, opening: S.opening || "" }); return; }
         if (!S.rec || !S.audio) return;
         if (S.mode === "manual" && !S.marks.some((m) => m.type === "drop")) return;
@@ -326,16 +336,40 @@
         const hh = $("#ce-res").value === "1080" ? 1920 : 1280, ww = $("#ce-res").value === "1080" ? 1080 : 720;
         try {
           const r = await E.editExport.render(tl, { width: ww, height: hh, fps: 60, musicFile: S.file, rec: S.rec, flip: S.rec.me === "b", signal, onProgress: (k, t) => { bar.style.width = Math.round(k * 100) + "%"; msg.textContent = t; } });
-          if (signal.stop) return; ov.innerHTML = '<div class="ce-genbox big"><video controls autoplay loop playsinline muted></video><p class="ce-gmsg"></p><div class="row"><button class="btn pri" id="ce-dl">⬇ TÉLÉCHARGER LE MP4</button><button class="btn" id="ce-gclose">FERMER</button></div></div>';
+          if (signal.stop) return; ov.innerHTML = '<div class="ce-genbox big"><video controls controlsList="nodownload noplaybackrate" disablePictureInPicture autoplay loop playsinline muted></video><p class="ce-gmsg"></p><div class="row"><button class="btn pri ce-red" id="ce-dl">⬇ TÉLÉCHARGER LE MP4</button><button class="btn" id="ce-save">📁 ENREGISTRER DANS LE TÉLÉPHONE</button><button class="btn" id="ce-gclose">FERMER</button></div></div>';
           const vid = ov.querySelector("video"), url = URL.createObjectURL(r.blob); vid.src = url; vid.muted = false; vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
           ov.querySelector(".ce-gmsg").textContent = `${r.w}×${r.h} · ${r.fps} FPS · ${(r.blob.size / 1048576).toFixed(1)} Mo · ${r.via}`;
           const ext = r.mime.includes("mp4") ? "mp4" : "webm", name = `ChessEdit_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.${ext}`;
-          ov.querySelector("#ce-dl").onclick = async () => { await A.save(name, r.mime, new Uint8Array(await r.blob.arrayBuffer()), "videos"); };
+          const saveLocal = async () => { await A.save(name, r.mime, new Uint8Array(await r.blob.arrayBuffer()), "videos"); };
+          const dataUrl = () => new Promise((res) => { const rd = new FileReader(); rd.onload = () => { const a = document.createElement("a"); a.href = rd.result; a.download = name; document.body.appendChild(a); a.click(); a.remove(); res(); }; rd.readAsDataURL(r.blob); });
+          ov.querySelector("#ce-save").onclick = async () => { try { await saveLocal(); } catch (e) { try { await dataUrl(); } catch (e2) { A.toast("Enregistrement impossible : " + e2.message, "err"); } } };
+          ov.querySelector("#ce-dl").onclick = async () => {                                                                       // jamais d'URL blob: confiée au téléchargement natif du WebView
+            const file = new File([r.blob], name, { type: r.mime });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: "Chess Edit" }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+            try { await saveLocal(); } catch (e) { try { await dataUrl(); } catch (e2) { A.toast("Téléchargement impossible : " + e2.message, "err"); } }
+          };
           ov.querySelector("#ce-gclose").onclick = () => { vid.pause(); URL.revokeObjectURL(url); ov.remove(); };
           S.lastExport = r;
         } catch (e) { if (!signal.stop) { msg.textContent = "Échec : " + e.message; } }
       }
       $("#ce-gen").onclick = generate;
+      S.sync = "auto"; S.script = null;
+      const syncSeg = () => { const sg = $("#ce-sync"), on = sg.querySelector("button.on"), ind = sg.querySelector(".seg-ind"); if (ind && on && on.offsetWidth) { ind.style.width = on.offsetWidth + "px"; ind.style.transform = `translateX(${on.offsetLeft}px)`; } $("#ce-gbox").hidden = S.sync !== "gemini"; };
+      $("#ce-sync").querySelectorAll("button").forEach((bn) => (bn.onclick = () => { S.sync = bn.dataset.s; $("#ce-sync").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === bn)); syncSeg(); refresh(); }));
+      setTimeout(syncSeg, 50);
+      $("#ce-gm-copy").onclick = async () => {
+        if (!S.rec) return A.toast("Choisis d'abord une partie.", "warn");
+        const txt = M().geminiPrompt(S.rec, S.plies, S.audio ? S.audio.duration : 0);
+        try { await A.copy(txt); } catch (e) { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e2) { /* ok */ } ta.remove(); }
+        $("#ce-gm-st").textContent = `Prompt copié (${txt.length} caractères, ${S.plies.length} coups). Colle-le dans Gemini avec ta musique en pièce jointe.`;
+      };
+      $("#ce-gm-apply").onclick = () => {
+        if (!S.rec) return A.toast("Choisis d'abord une partie.", "warn");
+        const r = M().parseScript($("#ce-gm-json").value, S.plies.length), st = $("#ce-gm-st");
+        if (r.error) { S.script = null; st.textContent = "❌ " + r.error; return; }
+        S.script = r.script; E.settings.set("chessedit.script", { t: S.rec.t, script: r.script }); S.sync = "gemini"; refresh();
+        st.textContent = S.tl ? `✅ Script appliqué : ${r.script.events.length} coups calés, drop à ${S.tl.stats.drop.toFixed(2)} s, durée ${S.tl.duration.toFixed(1)} s.` : "Script lu mais timeline impossible.";
+      };
       $("#ce-play").onclick = () => (S.pace === "viral" ? previewCanvas() : preview());
       $("#ce-pace").value = S.pace; $("#ce-pace").onchange = (e) => { S.pace = e.target.value; E.settings.set("chessedit.pace", S.pace); refresh(); };
       $("#ce-voice").onchange = $("#ce-intro").onchange = () => refresh();
