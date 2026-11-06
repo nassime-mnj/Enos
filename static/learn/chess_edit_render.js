@@ -13,7 +13,9 @@
   const TXT = (px, w) => `${w || 600} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
   const PALETTE = { contrast: { l: ["#f7f7f7", "#EBEBEB", "#dedede"], d: ["#828282", "#767676", "#6a6a6a"] }, classic: { l: ["#f2f3da", "#EBECD0", "#dcddc2"], d: ["#7fa05c", "#739552", "#678748"] } };
   const imgCache = {};
-  const loadImg = (src) => (imgCache[src] ||= new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }));
+  const IMGSTAT = { data: 0, net: 0 };
+  /** images en data: URI (window.ENOS_IMG, js/render_assets.js) : un canvas qui a dessiné une image « réseau / fichier » est TAINTED dans le WebView (VideoFrame, captureStream, getImageData refusés) */
+  const loadImg = (src) => (imgCache[src] ||= new Promise((res) => { const key = String(src).replace(E.assetBase || "", ""), emb = (window.ENOS_IMG || {})[key], i = new Image(); if (emb) IMGSTAT.data++; else IMGSTAT.net++; i.onload = () => res(i); i.onerror = () => res(null); i.src = emb || src; }));
   const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
 
   class Renderer {
@@ -301,5 +303,5 @@
       g.restore();
     }
   }
-  E.editRender = { Renderer, fenMapOf, EASE };
+  E.editRender = { Renderer, fenMapOf, EASE, IMGSTAT };
 })();

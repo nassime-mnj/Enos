@@ -35,6 +35,8 @@ with sync_playwright() as pw:
     # --- coupure d'écran : la caméra clampée ne laisse jamais de vide noir sur les bords
     cut = ev("""() => { const R = window.__R, t = window.__tl, imp = t.events.filter((e) => e.from && e.kind !== 'ff'), out = []; for (const e of imp.slice(0, 40)) { const c = R.camAt(e.impact + 0.3); const maxO = (R.BS / 2) * (1 - 1 / Math.max(1, c.S)); out.push([c.S, c.th, Math.abs(c.x) <= R.BS, maxO >= 0]); } return { n: out.length, minS: Math.min(...out.map((x) => x[0])), maxS: Math.max(...out.map((x) => x[0])), maxTh: Math.max(...out.map((x) => Math.abs(x[1]))) * 180 / Math.PI }; }""")
     check(1.1 <= cut["minS"] and cut["maxS"] <= 2.8 + 1e-6 and cut["maxTh"] <= 15.5, "caméra : zoom ×%.2f–×%.2f, inclinaison ≤ %.1f° (spec 1,8–2,8 et −12…+15°)" % (cut["minS"], cut["maxS"], cut["maxTh"]))
+    st = ev("""() => { const R = window.__R, S = ENOS.editRender.IMGSTAT; let tainted = false; try { R.ctx.getImageData(0, 0, 4, 4); R.scene.getContext('2d').getImageData(0, 0, 4, 4); } catch (e) { tainted = true; } return { net: S.net, data: S.data, tainted }; }""")
+    check(st["net"] == 0 and st["data"] > 20 and not st["tainted"], "images en data: URI : canvas jamais « tainted » dans le WebView (VideoFrame OK) : %s" % st)
     # --- export MP4 image par image (60 FPS fixes) : WebCodecs + mp4-muxer
     sup = ev("ENOS.editExport.supported()")
     print("supported:", sup)

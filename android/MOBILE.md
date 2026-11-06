@@ -188,3 +188,6 @@ Les coups illégaux de Prime ne sont plus signalés : plus de ⚠, de tampon, de
 - **Intro VS de 3,8 s** (entrée en glissade, zoom lent, particules, Elo qui grimpe, tension + lueur néon, flash puis 1er coup à 3,85 s) ; ensuite un coup toutes les 0,45–0,6 s même sur des beats doux : plus jamais de plateau figé. Rien ne démarre avant la fin du chargement / de l'analyse.
 - **Badges** : palette complète (★ ! !! ?! ? ??) + logo IA sur tous les coups du bot ; plus de ✓ partout. **Overlays exclusifs** : un seul texte à la fois (fin > prompt > bulle de bot).
 - **Panneau de configuration** : le chevauchement venait d'un nom de classe en double (`.ce-stat` en `position:absolute` côté scène) → renommé `.ce-statcard`, cartes en colonne flex.
+
+## 1.54 — Fix export : « VideoFrames can't be created from tainted sources »
+Dans le WebView, les images chargées depuis les assets rendaient le canvas « tainted » (origine fichier) : `VideoFrame` refusé. Les images du moteur de rendu (pièces, badges, avatars) sont maintenant embarquées en `data:` URI (`js/render_assets.js`, généré par `android/tools/gen_render_assets.py` — à relancer si `img/chess`, `img/badges` ou `img/bots` changent). Un test vérifie qu'aucune image « réseau » n'est utilisée.
