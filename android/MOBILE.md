@@ -204,3 +204,5 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 ## 1.56 — Yeux de la tour (cutscene BADASS ROOK) redessinés : orbite sombre, œil en amande à paupière oblique, iris dégradé jaune → rouge, pupille fendue, reflets, sourcils, lueur ; dessinés dans le corps de la tour.
 
 ## 1.57 — Yeux de la tour retirés (cutscene BADASS ROOK : tour seule sur fond rouge, braises, mouvement de caméra).
+
+## 1.58 — Style ZaveeCHESS : la cutscene CUTSCENE_BADASS_ROOK devient « silhouette blanche » (plateau assombri à 85 %, pièce clé en blanc pur #FFF inclinée de −22°, lévitation, bloom doublé + étincelles, deux boîtes inclinées de −4° : question / réponse du bot) ; impact du drop = pièce blanche pure 150 ms + deux copies du plateau en `screen` (rouge −14 px, cyan +14 px) autour de la pièce (« White core + RGB radial split »).

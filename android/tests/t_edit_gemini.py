@@ -38,7 +38,7 @@ with sync_playwright() as pw:
     # --- rendu : cadrage, cutscenes, flip 3D, physique
     fr = ev("""async () => { const cv = document.createElement('canvas'); cv.width = 360; cv.height = 640; const R = new ENOS.editRender.Renderer(cv, window.__tl, { flip: false, rec: window.__rec }); await R.load(); window.__R = R;
       const t = window.__tl, mv = t.events.filter((e) => e.from), out = {}, T = {}; const hero = mv.find((e) => e.kind === 'drop'), ck = mv.find((e) => e.n === 13), cr = t.events.find((e) => e.kind === 'cutrook'), outro = t.events.find((e) => e.kind === 'outro');
-      T.anticipation = mv[2].impact - 0.1; T.trail = mv[2].impact - 0.045; T.wobble = mv[2].impact + 0.04; T.glow = hero.impact + 0.25; T.capture = mv.find((e) => e.captured).impact + 0.04; T.beam = ck.impact + 0.3;
+      T.anticipation = mv[2].impact - 0.1; T.trail = mv[2].impact - 0.045; T.wobble = mv[2].impact + 0.04; T.glow = hero.impact + 0.25; T.dropimpact = hero.impact + 0.05; T.capture = mv.find((e) => e.captured).impact + 0.04; T.beam = ck.impact + 0.3;
       if (cr) T.cutrook = cr.t + cr.dur * 0.6; T.flip1 = outro.t + 0.35; T.flip2 = outro.t + 0.9; T.flip3 = outro.t + 1.45; T.crowns = outro.t + 1.8; T.end = outro.t + 3.0;
       const ph = (u) => Math.sin(u * 45) * Math.exp(-u * 12) * 0.25; const e0 = mv[2], pf = R.pieceFx(e0.impact + 0.02)[e0.to];
       const cam = mv.map((e) => { const c = R.camAt(e.impact + 0.3), A = R.sq(e.from, false), B = R.sq(e.to, false), vw = R.W / c.S, vh = R.H / c.S; return { S: c.S, vis: Math.abs(A.x - B.x) < vw * 0.95 && Math.abs(A.y - B.y) < vh * 0.95 }; });

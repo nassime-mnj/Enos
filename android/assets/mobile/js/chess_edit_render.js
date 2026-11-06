@@ -108,7 +108,7 @@
 
     // ------------------------------------------------------------------ dessin
     piece(g, ch, x, y, size, o) {
-      const spr = (o && o.red ? this.red[ch] : this.pc[ch]); if (!spr) return; o = o || {};
+      const spr = (o && o.white ? this.sil[ch.toLowerCase()] : o && o.red ? this.red[ch] : this.pc[ch]); if (!spr) return; o = o || {};
       g.save(); g.translate(x, y); if (o.rot) g.rotate(o.rot); if (o.scale != null) g.scale(o.scale, o.scale); if (o.sx != null) g.scale(o.sx, o.sy); if (o.alpha != null) g.globalAlpha = o.alpha; g.drawImage(spr, -size / 2, -size / 2, size, size); g.restore();      // pivot = centre exact de la pièce : translate → rotate → scale → dessin centré
     }
     glowAt(g, color, x, y, r, a) { g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = a; g.drawImage(this.glowSpr(color), x - r, y - r, r * 2, r * 2); g.restore(); }
@@ -120,7 +120,11 @@
       if (t < this.introEnd - 0.3) { this.drawIntro(t); return; }
       const strobe = this.imp.find((e) => e.strobe && t >= e.impact && t < e.impact + 0.055), chromaAmp = this.chromaAt(t, strobe), needChroma = chromaAmp > 0.8, tg = needChroma ? this.scene.getContext("2d") : ctx;
       const fp = this.flipPhase(t); if (fp) { this.drawWorld(this.scene.getContext("2d"), t, null); this.drawTilt(this.scene, this._tilt); if (fp.p > 1.38 && fp.p < 1.6) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.5 * (1 - Math.abs(fp.p - 1.4) / 0.2); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
-      else { this.drawWorld(tg, t, strobe); if (needChroma) this.composeChroma(chromaAmp); }
+      else {
+        const dp = this.imp.find((e) => e.kind === "drop" && t >= e.impact && t < e.impact + 0.15);
+        if (dp) { this.drawWorld(this.scene.getContext("2d"), t, strobe); this.rgbSplit(dp, t); }
+        else { this.drawWorld(tg, t, strobe); if (needChroma) this.composeChroma(chromaAmp); }
+      }
       this.drawScreenFx(ctx, t);
       this.drawOverlays(ctx, t);
       if (t < this.introEnd) { const k = (t - (this.introEnd - 0.3)) / 0.3; ctx.save(); ctx.globalAlpha = 1 - EASE.out3(clamp(k, 0, 1)); this.drawIntro(this.introEnd - 0.3); ctx.restore(); }
@@ -128,6 +132,14 @@
     }
     chromaAt(t, strobe) { if (strobe) return 25 * this.k(); let a = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.14) a = Math.max(a, (4 + 6 * clamp((e.drama || 0) / 80, 0.3, 1)) * this.k() * (1 - u / 0.14)); } return a; }
     k() { return this.W / 1080; }
+    /** « White core + RGB radial split » : l'image + deux copies en `screen` (rouge −14 px, cyan +14 px) limitées à un disque autour de la pièce clé */
+    rgbSplit(e, t) {
+      const g = this.ctx, W = this.W, H = this.H, k = this.k(), tg = this.tmp.getContext("2d"), P = this._toScreen ? this._toScreen(this.sq(e.to, this.flipAt(t))) : { x: W / 2, y: H / 2 }, R = this.W * 0.75, a = 1 - (t - e.impact) / 0.15;
+      g.drawImage(this.scene, 0, 0);
+      [["#ff1a2a", -14 * k], ["#18d8ff", 14 * k]].forEach(([c, dx]) => { tg.globalCompositeOperation = "source-over"; tg.clearRect(0, 0, W, H); tg.drawImage(this.scene, 0, 0); tg.globalCompositeOperation = "multiply"; tg.fillStyle = c; tg.fillRect(0, 0, W, H);
+        tg.globalCompositeOperation = "destination-in"; const m = tg.createRadialGradient(P.x - dx, P.y, R * 0.1, P.x - dx, P.y, R); m.addColorStop(0, "rgba(0,0,0,1)"); m.addColorStop(1, "rgba(0,0,0,0)"); tg.fillStyle = m; tg.fillRect(0, 0, W, H); tg.globalCompositeOperation = "source-over";
+        g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = 0.85 * a; g.drawImage(this.tmp, dx, 0); g.restore(); });
+    }
     composeChroma(amp) {
       const g = this.ctx, W = this.W, H = this.H, tg = this.tmp.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, W, H); g.save(); g.globalCompositeOperation = "lighter";
       [["#ff0000", -amp, 0], ["#00ff00", 0, 0], ["#0000ff", amp, amp * 0.3]].forEach(([c, dx, dy]) => { tg.globalCompositeOperation = "source-over"; tg.clearRect(0, 0, W, H); tg.drawImage(this.scene, 0, 0); tg.globalCompositeOperation = "multiply"; tg.fillStyle = c; tg.fillRect(0, 0, W, H); g.drawImage(this.tmp, dx, dy); });
@@ -154,6 +166,7 @@
       g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.fillStyle = "#0b0c10"; g.fillRect(0, 0, W, H);
       g.save(); g.translate(W / 2, H / 2); g.translate(sx, sy); g.scale(S * intro, S * intro); g.rotate(th); g.translate(cx, cy);
       this.drawBoard(g, t, st, flip); this.drawFx(g, t, st, flip); g.restore();
+      const ca = Math.cos(th), sa = Math.sin(th), SS = S * intro; this._toScreen = (P) => ({ x: W / 2 + sx + SS * (ca * (P.x + cx) - sa * (P.y + cy)), y: H / 2 + sy + SS * (sa * (P.x + cx) + ca * (P.y + cy)) });
       if (fp) this.flipTrail(g, fp);
     }
     /** traînée néon violette / or autour du plateau pendant la rotation */
@@ -175,7 +188,7 @@
         if (u < 0.28) { rot += Math.sin(u * 45) * Math.exp(-u * 12) * 0.25; const sc = lerp(1.3, 1, EASE.back(u / 0.28)); sx = sy = sc; }                                      // pendule amorti ±14° + pop ×1,30 → ×1,0 (easeOutBack)
         else if (e === last && u < 1.3) { const ph = t * TAU * (bpm / 60); rot += 0.052 * Math.sin(ph * 0.5); sx = sy = 1.03 + 0.03 * Math.sin(ph); }                                                  // respiration : ±3° et ×1,0–1,06 au rythme du BPM
         if (this.spins(e)) { const v = t - (e.impact - (e.dur || 90) / 1000); if (v >= 0 && v < 0.14) rot += TAU * SPIN(v / 0.14); }                                                         // 360° en 140 ms, cubic-bezier(.2,.8,.2,1)
-        out[e.to] = { rot, sx, sy };
+        out[e.to] = { rot, sx, sy, white: e.kind === "drop" && u < 0.15 };                                                                  // cœur blanc pur 150 ms sur l'impact du drop
       }
       return out;
     }
@@ -189,7 +202,7 @@
       const kingSqNow = st.e && st.e.kingSq, tilt = st.e && (st.e.check || st.e.mate) && st.e.kingEdge && t >= st.e.impact && t < st.e.impact + 0.9 ? Math.sin(clamp((t - st.e.impact) / 0.9, 0, 1) * Math.PI) * 0.56 : 0;
       const pfx = this.pieceFx(t);
       this.imp.forEach((e) => { const u = t - e.impact; if (e.captured && !e.drop && u >= 0 && u < 0.12) { const vc = e.color === "w" ? e.captured.toLowerCase() : e.captured.toUpperCase(), p = this.sq(e.to, flip), kk = u / 0.12; this.piece(g, vc, p.x, p.y, cell * 1.02, { rot: 0.61 * EASE.out3(clamp(u / 0.05, 0, 1)), alpha: 1 - kk }); const fl = kk < 0.5 ? this.sil[vc.toLowerCase()] : this.red[vc]; if (fl) { g.save(); g.globalAlpha = (kk < 0.5 ? 0.9 : 0.6) * (1 - kk); g.translate(p.x, p.y); g.rotate(0.61); g.drawImage(fl, -cell * 0.51, -cell * 0.51, cell * 1.02, cell * 1.02); g.restore(); } } });                                  // pièce capturée : s'incline à 35°, flash blanc / rouge, s'évapore en 120 ms
-      for (const sq of Object.keys(st.map)) { const ch = st.map[sq], o = {}; if (tilt && sq === kingSqNow) o.rot = tilt; if (pfx[sq]) { o.rot = (o.rot || 0) + pfx[sq].rot; o.sx = pfx[sq].sx; o.sy = pfx[sq].sy; } g.save(); g.globalAlpha = 0.28; const p = this.sq(sq, flip); g.fillStyle = "#000"; g.beginPath(); g.ellipse(p.x, p.y + cell * 0.36, cell * 0.3, cell * 0.08, 0, 0, TAU); g.fill(); g.restore(); draw(sq, ch, o); }
+      for (const sq of Object.keys(st.map)) { const ch = st.map[sq], o = {}; if (tilt && sq === kingSqNow) o.rot = tilt; if (pfx[sq]) { o.rot = (o.rot || 0) + pfx[sq].rot; o.sx = pfx[sq].sx; o.sy = pfx[sq].sy; if (pfx[sq].white) { o.white = true; const pp = this.sq(sq, flip); this.glowAt(g, "#ffffff", pp.x, pp.y, cell * 2.4, 1); this.glowAt(g, "#ffffff", pp.x, pp.y, cell * 1.4, 1); } } g.save(); g.globalAlpha = 0.28; const p = this.sq(sq, flip); g.fillStyle = "#000"; g.beginPath(); g.ellipse(p.x, p.y + cell * 0.36, cell * 0.3, cell * 0.08, 0, 0, TAU); g.fill(); g.restore(); draw(sq, ch, o); }
       const m = st.mover;
       if (m) {
         if (m.drop) { const p = this.sq(m.sq, flip); this.piece(g, m.ch, p.x, p.y, cell * 1.02, { scale: m.scale, alpha: clamp(m.scale, 0, 1) }); }
@@ -326,15 +339,19 @@
       g.fillStyle = "rgba(255,255,255,.06)"; g.fillRect(-aw / 2, -ah / 2, aw, ah); g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = 3 * k; g.strokeRect(-aw / 2, -ah / 2, aw, ah); g.fillStyle = "#fff"; g.textAlign = "left"; this.wrap(g, shown, W * 0.78).forEach((l, i) => g.fillText(l, -aw / 2 + 28 * k, -ah / 2 + 50 * k + i * 42 * k));
       if (Math.floor(t * 8) % 2 === 0) { g.fillStyle = "#fff"; g.fillRect(aw / 2 - 40 * k, ah / 2 - 40 * k, 10 * k, 26 * k); } g.restore();
     }
-    /** CUTSCENE « BADASS ROOK » (0,9 s) : plan rapproché incliné d'une tour sombre aux yeux froncés, braises, fond rouge / noir flouté, lent mouvement de caméra */
+    /** CUTSCENE « SILHOUETTE BLANCHE » (ex-Badass Rook, style ZaveeCHESS) : plateau assombri à 85 %, la pièce clé en silhouette blanche pure, inclinée de −22°, en lévitation, énorme bloom + étincelles, puis les deux boîtes inclinées de −4° (question / réponse du bot) */
     drawCutRook(g, e, t) {
       const { W, H } = this, k = this.k(), u = clamp((t - e.t) / e.dur, 0, 1), a = u < 0.1 ? u / 0.1 : u > 0.88 ? (1 - u) / 0.12 : 1; g.save(); g.globalAlpha = clamp(a, 0, 1);
-      g.save(); g.translate(W / 2, H / 2); g.scale(1 + 0.12 * u, 1 + 0.12 * u); g.rotate(-0.05 + 0.04 * u); g.drawImage(this.rookBg, -W / 2, -H / 2); g.restore();
-      const rnd = mulberry(91); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 34; i++) { const x = rnd() * W, y = H - ((rnd() * H * 0.9 + u * (200 + rnd() * 300) * k) % H), s = (2 + rnd() * 5) * k; g.globalAlpha = 0.3 + 0.5 * rnd(); g.fillStyle = rnd() < 0.5 ? "#ff5a1a" : "#ffb45a"; g.fillRect(x, y, s, s); } g.restore();
-      this.glowAt(g, "#ff3a10", W / 2, H * 0.66, W * 0.75, 0.55 + 0.2 * Math.sin(u * 14));
-      const spr = this.pc.r; if (spr) { const s = W * 1.12; g.save(); g.translate(W / 2, H * 0.52 + (1 - EASE.out3(u)) * 40 * k); g.rotate(-0.14 + 0.03 * u); g.scale(1 + 0.07 * u, 1 + 0.07 * u); g.drawImage(spr, -s / 2, -s / 2, s, s);
-        g.restore(); }
-      const vg = g.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.75); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.75)"); g.fillStyle = vg; g.fillRect(0, 0, W, H); g.restore();
+      g.fillStyle = "rgba(0,0,0,0.85)"; g.fillRect(0, 0, W, H);
+      const sil = this.sil[(e.piece || "r").toLowerCase()] || this.sil.r, cx = W / 2, cy = H * 0.36 + Math.sin(u * TAU * 1.5) * 12 * k, s = W * 0.62;                // lévitation
+      if (sil) { this.glowAt(g, "#ffffff", cx, cy, s * 1.3, 0.3); this.glowAt(g, "#ffffff", cx, cy, s * 0.95, 0.3); this.glowAt(g, "#ffffff", cx, cy, s * 0.7, 0.28);          // halo doublé : bloom aveuglant
+        g.save(); g.translate(cx, cy); g.rotate((-22 * Math.PI) / 180); g.scale(1 + 0.05 * u, 1 + 0.05 * u); g.drawImage(sil, -s / 2, -s / 2, s, s); g.restore(); }
+      const rnd = mulberry(63); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 34; i++) { const an = rnd() * TAU, d = s * (0.38 + rnd() * 0.5), ph = (u * (0.8 + rnd()) + rnd()) % 1, x = cx + Math.cos(an) * d * (0.8 + ph * 0.4), y = cy + Math.sin(an) * d * (0.8 + ph * 0.4) - ph * 40 * k, sz = (2 + rnd() * 5) * k; g.globalAlpha = (1 - ph) * (0.5 + 0.5 * rnd()); g.fillStyle = "#fff"; g.fillRect(x, y, sz, sz); } g.restore();
+      const box = (txt, yy, al, shown) => { g.save(); g.translate(W / 2, yy); g.rotate((-4 * Math.PI) / 180); g.globalAlpha = clamp(a, 0, 1) * al; g.font = TXT(32 * k, 600); const lines = this.wrap(g, txt, W * 0.7), bh = lines.length * 42 * k + 32 * k, bw = W * 0.84;
+        this.glowAt(g, "#ffffff", 0, 0, bw * 0.55, 0.18); g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(-bw / 2, -bh / 2, bw, bh); g.strokeStyle = "#ffffff"; g.lineWidth = 5 * k; g.globalAlpha *= 0.35; g.strokeRect(-bw / 2 - 4 * k, -bh / 2 - 4 * k, bw + 8 * k, bh + 8 * k); g.globalAlpha = clamp(a, 0, 1) * al; g.lineWidth = 3 * k; g.strokeRect(-bw / 2, -bh / 2, bw, bh);
+        g.fillStyle = "#fff"; g.textAlign = "left"; this.wrap(g, shown == null ? txt : txt.slice(0, shown), W * 0.7).forEach((l, i) => g.fillText(l, -bw / 2 + 24 * k, -bh / 2 + 48 * k + i * 42 * k)); g.restore(); };
+      box(e.q || "Quel est ton prochain coup ?", H * 0.66, clamp(u / 0.2, 0, 1)); const ans = "« " + (e.text || "Je joue le meilleur coup, évidemment.") + " »"; box(ans, H * 0.8, clamp((u - 0.15) / 0.15, 0, 1), Math.ceil(ans.length * clamp((u - 0.2) / 0.6, 0, 1)));
+      g.restore();
     }
     /** CUTSCENE « PAWN EVOLUTION » : pion blanc brillant (0,3 s) → flash doré aveuglant → silhouette de la Dame couronnée, mains divines en contour, 4 flèches dorées en X qui pulsent */
     drawCutEvo(g, e, t) {
