@@ -116,3 +116,5 @@
 .pr-stamp.long{font-size:clamp(15px,5vw,26px);white-space:normal;width:86%;text-align:center;color:#ffd666;border-color:#ffd666;text-shadow:0 0 14px #ffd666}.pr-stamp.long.go{animation-duration:2.6s}
 .pr-spin #pr-board{animation:prSpin 1.4s cubic-bezier(.6,0,.25,1) both}.pr-spin .cb-pc>*{animation:prUnspin 1.4s cubic-bezier(.6,0,.25,1) both}
 @keyframes prSpin{to{rotate:180deg}}@keyframes prUnspin{to{rotate:-180deg}}
+/* une liste de coups (white-space:nowrap) ne doit JAMAIS élargir la page : colonne unique bornée à l'écran (Prime, Game Clips, Variantes…) */
+.suite-body{grid-template-columns:minmax(0,1fr)}.suite-body>*,.suite-body .card{min-width:0;max-width:100%}.ch-moves{max-width:100%}
