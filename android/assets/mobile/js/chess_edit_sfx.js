@@ -89,7 +89,7 @@
     async load() {
       const a = this.ctx, S = E.chessSound, base = E.assetBase || "";
       this.bufs.thud = thudBuffer(a); this.bufs.crystal = crystalBuffer(a); this.bufs.mateboom = mateBoomBuffer(a); this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
-      for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty", "hawaii"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
+      for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
         try {

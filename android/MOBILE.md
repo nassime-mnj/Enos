@@ -221,3 +221,12 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Brillant / sacrifice** (thème 100 % cyan `#00F7FF` + blanc) : anticipation 120 ms (plateau à 30 %, pièce ×1,45 avec aura), hit-stop de 90 ms + flash + secousse brutale, 35 particules + 3 arcs électriques, demi-plateau cyan (`screen`), badge `!!` en `scale(2.2→1)` 140 ms, 2 anneaux sur tout le plateau, 4 coins de visée, et **les cases tremblent une à une** autour de l'impact (onde case par case).
 - **THE ROOK !** : voix à fort volume (musique écrasée à 0,22) + étiquette à l'écran ; **Hawaii** : prévu en ouverture sur un fort écart d'évaluation, 1 fois par partie (le fichier audio `ENOS_CHESS_SND.hawaii` reste à fournir).
 - **Overlay « Quel est ton prochain coup »** : réservé à ChatGPT Prime, 1 fois maximum par edit (sinon bulle de chat en bas, le plateau reste visible).
+
+## 1.61 — Chess Edit : continuité, HERO MOMENT, cadence lente
+
+- **Plus de saut invisible** : les coups du milieu de partie sont montrés en montage accéléré lisible (≈3,4 s, un coup toutes les ~90–140 ms, caméra plate, sans badge ni flash).
+- **HERO MOMENT** : après un coup brillant / sacrifice (≥ niveau 3), plateau verrouillé 1,6 s (1,8 s pour THE ROOK), zoom lent 1,45→1,55, réponse adverse seulement après le cri.
+- **Cadence après le drop** : 0,65–0,90 s par coup sur les vrais temps forts ; coups forcés du perdant sans effet ; pièce rouge géante uniquement sur le mat final ; strobe ≤ 2.
+- **Drop des longues musiques (> 40 s)** : score pondéré par l'énergie soutenue après le drop (les kicks de pré-drop ne gagnent plus).
+- Le son d'ouverture est « THIS IS THE WAY » (jamais Hawaii) : une fois en ouverture sur un gros swing, 2 max par partie.
+- Test : `t_edit_flow.py`.

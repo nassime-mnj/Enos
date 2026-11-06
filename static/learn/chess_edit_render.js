@@ -81,14 +81,16 @@
       const base = { S: 1.15, th: 0, x: 0, y: 0 }; this.camBase = base; let kf = [{ t: -1, s: base, ease: "lin" }];
       const at = (list, t) => { let i = list.length - 1; while (i > 0 && list[i].t > t) i--; const a = list[i], b = list[i + 1]; if (!b || t >= b.t) return a.s; const k = EASE[b.ease || "lin"]((t - a.t) / Math.max(1e-6, b.t - a.t)); return { S: lerp(a.s.S, b.s.S, k), th: lerp(a.s.th, b.s.th, k), x: lerp(a.s.x, b.s.x, k), y: lerp(a.s.y, b.s.y, k) }; };
       this.imp.forEach((e) => {
-        if (e.cheat === "twist") return; const ti = e.impact, cur = at(kf, ti), rnd = mulberry((e.n || 1) * 9301 + 49297), power = e.kind === "drop" ? 1 : clamp((e.drama || 0) / 80, 0.35, 1), sg = rnd() < 0.45 ? -1 : 1;
+        if (e.cheat === "twist" || e.forced) return; const ti = e.impact, cur = at(kf, ti), rnd = mulberry((e.n || 1) * 9301 + 49297), power = e.kind === "drop" ? 1 : clamp((e.drama || 0) / 80, 0.35, 1), sg = rnd() < 0.45 ? -1 : 1;
         const flip = this.flipAt(ti), A = this.sq(e.from || e.to, flip), B = this.sq(e.to, flip), mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, dx = Math.abs(A.x - B.x) + this.cell * 1.7, dy = Math.abs(A.y - B.y) + this.cell * 1.7;
         let S = lerp(1.25, 1.6, power), th = ((sg < 0 ? -(6 + rnd() * 6) : 8 + rnd() * 7) * Math.PI) / 180;
-        if (e.soft) { S = lerp(1.18, 1.3, power); th = (sg * (1.5 + rnd() * 2.5) * Math.PI) / 180; }                                                // intro calme : cadrage doux, presque droit
+        if (e.soft) { S = lerp(1.18, 1.3, power); th = (sg * (1.5 + rnd() * 2.5) * Math.PI) / 180; }
+        else if (e.minor) { S = lerp(1.2, 1.35, power); th = (sg * (3 + rnd() * 3) * Math.PI) / 180; }                                          // coup ordinaire : cadrage sobre                                                // intro calme : cadrage doux, presque droit
         S = Math.min(S, 0.9 * this.W / dx, 0.9 * this.H / dy); S = clamp(S, 1.0, 1.6);                                              // départ ET arrivée toujours à l'écran (on voit au moins 5×5 cases)
         if (e.cam) { if (e.cam.zoom) S = clamp(e.cam.zoom, 1.0, 1.6); if (e.cam.tilt != null) th = (e.cam.tilt * Math.PI) / 180; }
-        const hold = e.soft ? 0.9 : Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my };
-        kf = kf.filter((k) => k.t < ti); kf.push({ t: ti, s: cur, ease: "lin" }, { t: ti + 0.15, s: tgt, ease: "out3" }, { t: ti + hold, s: tgt, ease: "lin" }, { t: ti + hold + 0.45, s: base, ease: "out3" });
+        if (e.bigMove && !e.soft && !e.cam) S = 1.45;
+        const hold = e.soft ? 0.9 : e.bigMove ? 1.6 : Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my }, tgt2 = e.bigMove && !e.soft ? { S: Math.min(1.6, S + 0.1), th: th * 0.4, x: mx, y: my } : tgt;                 // HERO MOMENT : zoom lent ×1,45 → ×1,55 pendant tout le cri
+        kf = kf.filter((k) => k.t < ti); kf.push({ t: ti, s: cur, ease: "lin" }, { t: ti + 0.15, s: tgt, ease: "out3" }, { t: ti + hold, s: tgt2, ease: "lin" }, { t: ti + hold + 0.45, s: base, ease: "out3" });
       });
       kf.sort((a, b) => a.t - b.t); this.kf = kf;      kf.sort((a, b) => a.t - b.t); this.kf = kf; this.camAt = (t) => at(this.kf, t);
     }
@@ -133,7 +135,7 @@
       if (this.introEnd && t >= this.introEnd && t < this.introEnd + 0.14) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9 * (1 - (t - this.introEnd) / 0.14); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     }
     hitstop(t) { for (const e of this.imp) if (e.bigMove && t >= e.impact && t < e.impact + 0.09) return e.impact; return t; }
-    chromaAt(t, strobe) { if (strobe) return strobe.bigMove ? 0 : 25 * this.k(); let a = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.14) a = Math.max(a, (4 + 6 * clamp((e.drama || 0) / 80, 0.3, 1)) * this.k() * (1 - u / 0.14)); } return a; }
+    chromaAt(t, strobe) { if (strobe) return strobe.bigMove ? 0 : 25 * this.k(); let a = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.14 && !e.minor && !e.soft && !e.bigMove) a = Math.max(a, (4 + 6 * clamp((e.drama || 0) / 80, 0.3, 1)) * this.k() * (1 - u / 0.14)); } return a; }
     k() { return this.W / 1080; }
     /** « White core + RGB radial split » : l'image + deux copies en `screen` (rouge −14 px, cyan +14 px) limitées à un disque autour de la pièce clé */
     rgbSplit(e, t) {
@@ -166,10 +168,10 @@
       if (strobe) { const kk = (t - strobe.impact) / 0.055; S *= lerp(1.35, 1.12, kk); }
       else { const sb = this.imp.find((e) => e.strobe && t >= e.impact + 0.055 && t < e.impact + 0.4); if (sb) { const kk = (t - sb.impact - 0.055) / 0.345, el = 1 + Math.sin(kk * 9) * Math.exp(-kk * 5) * 0.12; S *= el; } }
       let punchE = null; for (const e of this.imp) if (e.impact <= t && !e.soft && this.dropT && e.impact >= this.dropT - 0.01) punchE = e;
-      if (punchE && !fp && !strobe) { const u = t - punchE.impact; S += 0.22 * (u < 0.016 ? u / 0.016 : Math.exp(-(u - 0.016) * 14)); }                          // PUNCH : zoom +0,22 en 16 ms puis retombée exp(−14·t) jusqu'au kick suivant
+      if (punchE && !fp && !strobe) { const u = t - punchE.impact; S += (punchE.minor ? 0.1 : 0.22) * (u < 0.016 ? u / 0.016 : Math.exp(-(u - 0.016) * 14)); }                          // PUNCH : zoom +0,22 en 16 ms puis retombée exp(−14·t) jusqu'au kick suivant
       this._S = S;
       const maxO = (BS / 2) * (1 - 1 / Math.max(1, S)), cx = clamp(-tx, -maxO, maxO), cy = clamp(-ty, -maxO, maxO);
-      let sx = 0, sy = 0; for (const e of this.imp) { const u = tr - e.impact; if (u >= 0 && u < 0.18 && !e.soft) { const a = (e.bigMove ? 30 : this.dropT && e.impact >= this.dropT - 0.01 ? 14 : 18) * k * Math.exp(-u / 0.05) * (e.cam && e.cam.shake != null ? e.cam.shake : 1); sx += Math.sin(u * 190 + e.n) * a; sy += Math.cos(u * 173 + e.n * 2) * a; } }
+      let sx = 0, sy = 0; for (const e of this.imp) { const u = tr - e.impact; if (u >= 0 && u < 0.18 && !e.soft) { const a = (e.bigMove ? 30 : e.minor ? 6 : this.dropT && e.impact >= this.dropT - 0.01 ? 14 : 18) * k * Math.exp(-u / 0.05) * (e.cam && e.cam.shake != null ? e.cam.shake : 1); sx += Math.sin(u * 190 + e.n) * a; sy += Math.cos(u * 173 + e.n * 2) * a; } }
       this.twists.forEach((e) => { const u = t - e.impact - 1.4; if (u >= 0 && u < 0.25) { const a = 26 * k * Math.exp(-u / 0.07); sx += Math.sin(u * 160) * a; sy += Math.cos(u * 143) * a; } });      // gros impact à l'atterrissage du flip
       const intro = this.introEnd && t >= this.introEnd && t < this.introEnd + 0.3 ? lerp(0.78, 1, EASE.out3((t - this.introEnd) / 0.3)) : 1;
       g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.fillStyle = "#0b0c10"; g.fillRect(0, 0, W, H);
@@ -331,14 +333,14 @@
       const { W, H } = this;
       for (const e of this.imp) {
         const u = t - e.impact; if (u < 0 || u > 1.4) continue;
-        if (e.soft) continue;
+        if (e.soft) continue; const mn = !!e.minor;
         if (e.bigMove && u < 0.09) { g.save(); g.fillStyle = u < 0.04 ? "#ffffff" : "#8ffcff"; g.globalAlpha = 0.65 * (1 - u / 0.09); g.fillRect(0, 0, W, H); g.restore(); }
-        if (u < 0.045 && !e.bigMove) { g.fillStyle = e.key === "blunder" ? "#ff2020" : "#fff"; g.globalAlpha = 0.45; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
-        if (this.dropT && e.impact >= this.dropT - 0.01 && u < 0.06) { const vg2 = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) * 0.55); vg2.addColorStop(0, "rgba(160,255,255,0)"); vg2.addColorStop(1, "rgba(190,255,255,.6)"); g.save(); g.globalAlpha = 1 - u / 0.06; g.fillStyle = vg2; g.fillRect(0, 0, W, H); g.restore(); }       // flash de bord blanc / cyan 60 ms sur chaque kick                       // flash blanc 0,45 pendant 45 ms
+        if (u < 0.045 && !e.bigMove && !mn) { g.fillStyle = e.key === "blunder" ? "#ff2020" : "#fff"; g.globalAlpha = 0.45; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+        if (this.dropT && e.impact >= this.dropT - 0.01 && u < 0.06 && !mn) { const vg2 = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) * 0.55); vg2.addColorStop(0, "rgba(160,255,255,0)"); vg2.addColorStop(1, "rgba(190,255,255,.6)"); g.save(); g.globalAlpha = 1 - u / 0.06; g.fillStyle = vg2; g.fillRect(0, 0, W, H); g.restore(); }       // flash de bord blanc / cyan 60 ms sur chaque kick                       // flash blanc 0,45 pendant 45 ms
         if ((e.key === "blunder" || e.mate || e.tintRed) && u < 0.9) { g.save(); g.globalCompositeOperation = "overlay"; g.globalAlpha = 0.9 * (u > 0.35 ? 1 - (u - 0.35) / 0.55 : 1); g.fillStyle = "rgba(255,20,20,.35)"; g.fillRect(0, 0, W, H); g.restore(); }
         if (e.key === "brilliant" && u < 1.3) { const col = "#00F7FF", al = u < 0.2 ? u / 0.2 : u > 1 ? 1 - (u - 1) / 0.3 : 1, off = (u * 64) % 64; g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = 0.5 * al; g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); for (let x = -64 + off; x < W; x += 64 * this.k() + 1) { g.moveTo(x, 0); g.lineTo(x, H); } for (let y = -64 + off; y < H; y += 64 * this.k() + 1) { g.moveTo(0, y); g.lineTo(W, y); } g.stroke(); g.restore(); }
         if (e.strobe && u < 0.055) { g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = 0.8; const step = 58 * this.k(); g.lineWidth = 3 * this.k(); g.strokeStyle = e.bigMove ? "rgba(0,247,255,.9)" : "rgba(255,40,60,.9)"; g.beginPath(); for (let y = 0; y < H; y += step) { g.moveTo(0, y); g.lineTo(W, y); } g.stroke(); g.strokeStyle = e.bigMove ? "rgba(255,255,255,.9)" : "rgba(50,90,255,.9)"; g.beginPath(); for (let x = 0; x < W; x += step) { g.moveTo(x, 0); g.lineTo(x, H); } g.stroke(); g.restore(); }
-        if ((e.kind === "drop" || e.strobe || e.mate || e.speed) && u < 0.26) {                                                                                        // lignes de vitesse radiales (flou radial)
+        if ((e.kind === "drop" || e.strobe || e.mate || e.speed) && !mn && u < 0.26) {                                                                                        // lignes de vitesse radiales (flou radial)
           const rnd = mulberry((e.n || 1) * 17), al = 1 - u / 0.26, R = Math.hypot(W, H); g.save(); g.globalAlpha = al * 0.8; g.strokeStyle = "#fff"; g.lineWidth = 2 * this.k(); g.beginPath(); for (let i = 0; i < 28; i++) { const a = rnd() * TAU, r0 = R * (0.14 + u * 0.8 + rnd() * 0.05), r1 = r0 + R * (0.2 + rnd() * 0.12); g.moveTo(W / 2 + Math.cos(a) * r0, H / 2 + Math.sin(a) * r0); g.lineTo(W / 2 + Math.cos(a) * r1, H / 2 + Math.sin(a) * r1); } g.stroke(); g.restore();
         }
       }

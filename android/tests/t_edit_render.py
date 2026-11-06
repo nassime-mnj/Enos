@@ -29,7 +29,7 @@ with sync_playwright() as pw:
     print(law)
     check(4 <= law["pre"] <= 8 and law["gapPre"][0] >= 1.05 and law["gapPre"][1] <= 1.65, "phase 1 : %d coups lents entre l'intro et le drop, espacés de %.2f à %.2f s" % (law["pre"], law["gapPre"][0], law["gapPre"][1]))
     check(law["preDur"] == [240] and law["softBad"] == 0, "intro : glissement doux de 240 ms, aucun chemin rouge / flèche / flash / strobe")
-    check(law["post"] >= 12 and law["post"] <= 22 and law["gapPost"][0] >= 0.34 and law["gapPost"][1] <= 0.56, "phase 2 : %d coups intenses après le drop, un par kick (%.2f–%.2f s)" % (law["post"], law["gapPost"][0], law["gapPost"][1]))
+    check(law["post"] >= 11 and law["post"] <= 22 and law["gapPost"][0] >= 0.64 and law["gapPost"][1] <= 1.85, "phase 2 : %d coups intenses après le drop, sur les vrais temps forts (%.2f–%.2f s ; 1,6–1,8 s après un coup brillant)" % (law["post"], law["gapPost"][0], law["gapPost"][1]))
     check(abs(law["dropAt"] - law["D"]) < 1e-6 and law["arrows"] <= 1, "le 1er tournant tombe sur le drop ; %d flèche jaune au maximum dans toute la vidéo" % law["arrows"])
     check(len([k for k in tl["keys"] if k not in ("none", "good")]) >= 1, "palette de badges variée : %s" % tl["keys"])
     r = ev("""async () => { const cv = document.createElement('canvas'); cv.width = 360; cv.height = 640; const R = new ENOS.editRender.Renderer(cv, window.__tl, { flip: true, rec: window.__rec }); await R.load(); window.__R = R;

@@ -21,7 +21,7 @@ with sync_playwright() as pw:
         sfxOnImpact: moves.filter((e) => e.kind !== 'ff').every((e) => t.sfx.some((x) => Math.abs(x.t - e.impact) < 0.001 && (x.id === 'move' || x.id === 'capture' || x.id === 'check' || x.id === 'mate'))), skipped: t.stats.skipped, snaps: moves.filter((e) => e.snap).length, ids: moves.map((e) => e.impact), tHero: hero && hero.t }; }""", [rec, audio])
     check(tl["sync"] and "setup" in tl["kinds"] and tl["intro"] == [3.8] and tl["setup"] == 1, "montage hard-sync : plateau dès 0,0 s (setup) + intro VS de 3,8 s : %s" % tl["kinds"])
     check(abs(tl["heroImpact"] - 12.0) < 0.001, "le coup clé tombe EXACTEMENT sur le drop (%.3f s)" % tl["heroImpact"])
-    check(set(tl["durs"]) <= {90, 60, 240} and tl["firstMove"] >= 3.8, "glissement doux de 240 ms pendant l'intro, 90 ms sur le drop ; le 1er coup après l'intro (%.2f s)" % tl["firstMove"])
+    check(all(d <= 240 for d in tl["durs"]) and tl["firstMove"] >= 3.8, "glissement doux de 240 ms pendant l'intro, 90 ms sur le drop ; le 1er coup après l'intro (%.2f s)" % tl["firstMove"])
     check(tl["minGapPre"] >= 1.05, "avant le drop : coups lents et lisibles, ≥ 1,1 s d'écart (%.2f)" % tl["minGapPre"])
     check(1 <= tl["strobes"] <= 4, "flash RGB sur les 3-4 kicks les plus violents (%d)" % tl["strobes"])
     check(tl["texts"] == 0, "aucun texte « QUEEN DOWN / IT'S OVER »")

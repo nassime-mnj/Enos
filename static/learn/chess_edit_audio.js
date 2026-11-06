@@ -89,7 +89,7 @@
     const avg = (i, j) => { i = Math.max(0, i); j = Math.min(n, j); return j > i ? (pre[j] - pre[i]) / (j - i) : 0; };
     let best = -1, bi = Math.min(n - 1, 50);
     for (let i = 50; i < n - 25; i++) {
-      const after = avg(i, i + 100), before = avg(i - 75, i - 5), sc = (after / (before + 0.03 * max)) * (after / max);
+      const after = avg(i, i + 100), before = avg(i - 75, i - 5), sus = avg(i, Math.min(n, i + 400)), sc = (after / (before + 0.03 * max)) * (after / max) * (dur > 40 ? Math.pow(sus / max, 1.5) : 1);        // musique longue : le VRAI drop est celui dont l'énergie DURE (8 s), pas un pré-drop de 2 s
       if (sc > best) { best = sc; bi = i; }
     }
     const lowOn = onset(rl), lowMax = Math.max(1e-9, ...lowOn.slice(Math.max(0, bi - 15), bi + 16));

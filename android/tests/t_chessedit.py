@@ -173,7 +173,7 @@ with sync_playwright() as pw:
     check(all(abs(i - d) < 1e-6 or i - 0 > 0 for i, d in zip(v["impacts"], v["impacts"])) and all(i > 0.05 for i in v["impacts"]), "son calé sur l'impact (après le départ du coup)")
     ids = [x["id"] for x in v["voices"]]
     check(ids and set(ids) <= {"the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"}, "voix de Levy sur le coup brillant : %s" % ids)
-    vv = pg.evaluate("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, {}), ev = tl.events.filter((e) => e.from); const v = tl.sfx.filter((x) => x.bus === 'voice' && !(x.id === 'this_is_the_way' && ev.some((y) => y.n === x.ply && y.mate)));
+    vv = pg.evaluate("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, {}), ev = tl.events.filter((e) => e.from); const v = tl.sfx.filter((x) => x.bus === 'voice' && !x.opening && !(x.id === 'this_is_the_way' && ev.some((y) => y.n === x.ply && y.mate)));
         return { voices: v.map((x) => [x.ply, x.id, x.wet]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.n, e.piece]), nonBrillVoice: v.filter((x) => { const e = ev.find((y) => y.n === x.ply); return !e || e.key !== 'brilliant'; }).length,
           dupPly: v.length - new Set(v.map((x) => x.ply)).size, rookCount: v.filter((x) => x.id === 'the_rook').length, stats: ev.filter((e) => e.stats).length, boom: tl.sfx.filter((x) => x.id === 'boom').length, errVoices: ev.filter((e) => ['mistake', 'blunder', 'inaccuracy'].includes(e.key) && v.some((x) => x.ply === e.n)).length }; }""", rec)
     check(vv["nonBrillVoice"] == 0 and vv["errVoices"] == 0, "voix de Levy UNIQUEMENT sur les coups brillants (jamais sur une erreur, une gaffe ni un mat) : %s" % vv["voices"])
