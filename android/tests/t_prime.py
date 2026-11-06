@@ -57,7 +57,7 @@ with sync_playwright() as pw:
     pg.wait_for_selector("#pr-edit", timeout=8000)
     rec = ev("ENOS.settings.get('variants.hist', []).pop()")
     check(rec["v"]["acts"][-1]["cheat"] == "twist" and "ChatGPT Prime gagne" in rec["result"] and rec["v"]["acts"][-2]["san"].endswith("#"), "partie enregistrée : %s" % rec["result"])
-    tw = ev("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { voices: true }), last = pl[pl.length - 1]; return { n: pl.length, cheat: last.cheat, mateBefore: pl[pl.length - 2].mate, ev: tl.events.filter((e) => e.cheat === 'twist').length, line: last.lines.length }; }""", rec)
+    tw = ev("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { voices: true, keepTwist: true }), last = pl[pl.length - 1]; return { n: pl.length, cheat: last.cheat, mateBefore: pl[pl.length - 2].mate, ev: tl.events.filter((e) => e.cheat === 'twist').length, line: last.lines.length }; }""", rec)
     check(tw["cheat"] == "twist" and tw["mateBefore"] and tw["ev"] == 1 and tw["line"] == 1, "Chess Edit : le twist est monté (%s)" % tw)
     st = ev("""async () => { const host = document.createElement('div'); host.style.cssText = 'position:fixed;inset:0;z-index:99999'; document.body.appendChild(host); const s = new ENOS.editFx.Stage(host, { quality: 'normal' });
       s.setFen('6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1'); const f0 = s.flip, e = { cheat: 'twist', fen: '6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1', to: 'g1', n: 9, lvl: 3 }; s.move(e); await new Promise((r) => setTimeout(r, 1700));

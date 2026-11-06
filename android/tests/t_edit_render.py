@@ -22,11 +22,19 @@ with sync_playwright() as pw:
     print(tl)
     check(tl["sync"] and tl["introDur"] == 3.8, "intro VS verrouillée à 3,8 s")
     check(3.8 <= tl["first"] <= 3.95, "le 1er coup claque à la fin de l'intro (%.2f s)" % tl["first"])
-    check(tl["maxGapPre"] <= 0.62, "un coup toutes les 0,45–0,6 s avant le drop, jamais de plateau figé (écart max %.2f)" % tl["maxGapPre"])
+    check(tl["maxGapPre"] <= 1.65, "intro calme : un coup toutes les 1,1–1,6 s (écart max %.2f)" % tl["maxGapPre"])
+    law = ev("""() => { const t = window.__tl, mv = t.events.filter((e) => (e.from || e.drop) && e.kind !== 'ff'), D = t.stats.drop, pre = mv.filter((e) => e.impact < D - 0.01), post = mv.filter((e) => e.impact >= D - 0.01), gaps = (a) => a.slice(1).map((e, i) => e.impact - a[i].impact);
+      const arrows = mv.filter((e) => e.arrow).length, softBad = pre.filter((e) => e.redPath || e.arrow || e.strobe || e.boss || e.glasses).length, drop = mv.find((e) => e.kind === 'drop');
+      return { pre: pre.length, post: post.length, gapPre: [Math.min(...gaps(pre)), Math.max(...gaps(pre))], gapPost: [Math.min(...gaps(post)), Math.max(...gaps(post))], arrows, softBad, dropAt: drop && drop.impact, D, preDur: [...new Set(pre.map((e) => e.dur))], postDur: [...new Set(post.map((e) => e.dur))], endGap: t.duration - mv[mv.length - 1].impact, n: mv.length }; }""")
+    print(law)
+    check(4 <= law["pre"] <= 8 and law["gapPre"][0] >= 1.05 and law["gapPre"][1] <= 1.65, "phase 1 : %d coups lents entre l'intro et le drop, espacés de %.2f à %.2f s" % (law["pre"], law["gapPre"][0], law["gapPre"][1]))
+    check(law["preDur"] == [240] and law["softBad"] == 0, "intro : glissement doux de 240 ms, aucun chemin rouge / flèche / flash / strobe")
+    check(law["post"] >= 12 and law["post"] <= 22 and law["gapPost"][0] >= 0.34 and law["gapPost"][1] <= 0.56, "phase 2 : %d coups intenses après le drop, un par kick (%.2f–%.2f s)" % (law["post"], law["gapPost"][0], law["gapPost"][1]))
+    check(abs(law["dropAt"] - law["D"]) < 1e-6 and law["arrows"] <= 1, "le 1er tournant tombe sur le drop ; %d flèche jaune au maximum dans toute la vidéo" % law["arrows"])
     check(len([k for k in tl["keys"] if k not in ("none", "good")]) >= 1, "palette de badges variée : %s" % tl["keys"])
     r = ev("""async () => { const cv = document.createElement('canvas'); cv.width = 360; cv.height = 640; const R = new ENOS.editRender.Renderer(cv, window.__tl, { flip: true, rec: window.__rec }); await R.load(); window.__R = R;
       const t = window.__tl, drop = t.stats.drop, imp = t.events.filter((e) => e.from && e.kind !== 'ff'), ck = imp.find((e) => e.check) || imp[5], twT = t.events.find((e) => e.kind === 'outro').t;
-      const times = { intro1: 0.4, intro2: 2.2, intro3: 3.4, first: 3.86, preDrop: drop - 0.3, prompt: drop - 0.3, drop: drop + 0.03, afterDrop: drop + 0.6, check: ck ? ck.impact + 0.25 : 5, end: twT + 1.6 };
+      const pre2 = t.events.filter((e) => e.from && e.soft)[2], rp = imp.find((e) => e.redPath) || imp[8], times = { soft: pre2 ? pre2.impact - 0.12 : 6, redpath: rp.impact + 0.25, intro1: 0.4, intro2: 2.2, intro3: 3.4, first: 3.86, preDrop: drop - 0.3, prompt: drop - 0.3, drop: drop + 0.03, afterDrop: drop + 0.6, check: ck ? ck.impact + 0.25 : 5, end: twT + 1.6 };
       const out = {}; let blank = 0; for (const [k, v] of Object.entries(times)) { R.draw(v); const d = cv.toDataURL('image/png'); out[k] = d; const g = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let s = 0; for (let i = 0; i < g.length; i += 97) s += g[i]; if (s < 2000) blank++; }
       return { frames: out, blank, times }; }""")
     for k, d in r["frames"].items():

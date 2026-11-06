@@ -49,6 +49,21 @@
     return b;
   }
 
+  function thudBuffer(ctx) {                                                            // prise : claquement de bois lourd + sub-bass 62 → 34 Hz
+    const sr = ctx.sampleRate, len = Math.floor(sr * 0.55), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0); let ph = 0, lp = 0;
+    for (let i = 0; i < len; i++) { const t = i / sr, f = 34 + 28 * Math.exp(-t * 18); ph += (2 * Math.PI * f) / sr; lp += ((Math.random() * 2 - 1) - lp) * 0.22; d[i] = (Math.sin(ph) * Math.exp(-t * 7.5) * 1.15 + lp * Math.exp(-t * 55) * 0.9 + Math.sin(2 * Math.PI * 190 * t) * Math.exp(-t * 40) * 0.35) * 0.9; }
+    return b;
+  }
+  function crystalBuffer(ctx) {                                                         // échec : son métallique / cristallin (partiels inharmoniques)
+    const sr = ctx.sampleRate, len = Math.floor(sr * 0.9), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0), F = [1568, 2349, 3136, 4186, 5274];
+    for (let i = 0; i < len; i++) { const t = i / sr; let v = 0; F.forEach((f, k) => { v += Math.sin(2 * Math.PI * f * t) * Math.exp(-t * (5 + k * 2.2)) / (1 + k * 0.5); }); d[i] = (v * 0.5 + (t < 0.012 ? (Math.random() * 2 - 1) * 0.5 : 0)) * 0.9; }
+    return b;
+  }
+  function mateBoomBuffer(ctx) {                                                        // mat : explosion grave (sinus 80 → 28 Hz + souffle filtré)
+    const sr = ctx.sampleRate, len = Math.floor(sr * 1.4), b = ctx.createBuffer(1, len, sr), d = b.getChannelData(0); let ph = 0, lp = 0;
+    for (let i = 0; i < len; i++) { const t = i / sr, f = 28 + 52 * Math.exp(-t * 9); ph += (2 * Math.PI * f) / sr; lp += ((Math.random() * 2 - 1) - lp) * (0.05 + 0.25 * Math.exp(-t * 6)); d[i] = (Math.sin(ph) * Math.exp(-t * 2.8) * 1.2 + lp * Math.exp(-t * 4) * 1.4) * 0.85; }
+    return b;
+  }
   class Player {
     constructor(ctx) {
       const S = E.chessSound; this.ctx = ctx || (S && S.ac ? S.ac() : new (window.AudioContext || window.webkitAudioContext)());
@@ -65,11 +80,15 @@
       this.ein = a.createGain(); const ed = a.createGain(); ed.gain.value = 0.9; this.ein.connect(ed); ed.connect(this.master);
       const ec = a.createConvolver(); ec.buffer = impulse(a, 4.2, 2.2); const ew = a.createGain(); ew.gain.value = 1.4; this.ein.connect(ec); ec.connect(ew); ew.connect(this.master);
       [0.36, 0.72, 1.1].forEach((tm, k) => { const d = a.createDelay(2), f = a.createBiquadFilter(), g = a.createGain(); d.delayTime.value = tm; f.type = "lowpass"; f.frequency.value = 5200; g.gain.value = [0.5, 0.35, 0.2][k]; this.ein.connect(d); d.connect(f); f.connect(g); g.connect(this.master); });
-      this.onVoice = null;
+      // bus « écho » (coups, prises, échecs, mats) : sec + écho spatial (delay 140 ms et 280 ms, feedback 0,38) sur une branche passe-haut 200 Hz + petite réverbération
+      this.xin = a.createGain(); this.xin.connect(this.master); const xhp = a.createBiquadFilter(); xhp.type = "highpass"; xhp.frequency.value = 200; this.xwet = a.createGain(); this.xwet.gain.value = 0.8; this.xwet.connect(xhp);
+      [0.14, 0.28].forEach((tm, k) => { const d = a.createDelay(1), fb = a.createGain(), og = a.createGain(); d.delayTime.value = tm; fb.gain.value = 0.38; og.gain.value = k ? 0.42 : 0.55; this.xwet.connect(d); d.connect(fb); fb.connect(d); d.connect(og); og.connect(this.master); });
+      const xc = a.createConvolver(); xc.buffer = impulse(a, 1.8, 2.8); const xg = a.createGain(); xg.gain.value = 0.38; xhp.connect(xc); xc.connect(xg); xg.connect(this.master); xhp.connect(this.master);
+      this.onVoice = null; this.onDuck = null;
     }
     async load() {
       const a = this.ctx, S = E.chessSound, base = E.assetBase || "";
-      this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
+      this.bufs.thud = thudBuffer(a); this.bufs.crystal = crystalBuffer(a); this.bufs.mateboom = mateBoomBuffer(a); this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
       for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
@@ -108,8 +127,9 @@
       if (bus === "voice") {
         src.playbackRate.value = rate; src.connect(g); g.connect(this.vin);
         if (wet > 1 && this.conv) { const x = a.createGain(); x.gain.value = wet - 1; g.connect(x); x.connect(this.conv); }                  // reverb SUPPLÉMENTAIRE (The Rook : la voix la plus importante)
-        if (this.onVoice) this.onVoice(when, b.duration / rate + 1.2);
+        if (this.onVoice) this.onVoice(when, b.duration / rate + 0.4);
       }
+      else if (bus === "echo") { src.connect(g); g.connect(this.xin); g.connect(this.xwet); if (this.onDuck) this.onDuck(when, 0.22); }
       else if (bus === "epic") { src.connect(g); g.connect(this.ein); if (this.onVoice) this.onVoice(when, b.duration + 2); }
       else { src.connect(g); g.connect(this.sfx); }
       const at = when - this.onsetOf(id) / rate;

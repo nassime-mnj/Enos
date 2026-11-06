@@ -6,7 +6,7 @@
 (() => {
   const E = window.ENOS, TAU = Math.PI * 2;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k;
-  const EASE = { lin: (k) => k, out3: (k) => 1 - Math.pow(1 - k, 3), out4: (k) => 1 - Math.pow(1 - k, 4), io: (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2), back: (k) => 1 + 2.7 * Math.pow(k - 1, 3) + 1.7 * Math.pow(k - 1, 2) };
+  const EASE = { lin: (k) => k, out3: (k) => 1 - Math.pow(1 - k, 3), out4: (k) => 1 - Math.pow(1 - k, 4), io3: (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2), io: (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2), back: (k) => 1 + 2.7 * Math.pow(k - 1, 3) + 1.7 * Math.pow(k - 1, 2) };
   const bez = (x1, y1, x2, y2) => { const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by; return (x) => { x = clamp(x, 0, 1); let t = x; for (let i = 0; i < 6; i++) { const f = ((ax * t + bx) * t + cx) * t - x, d = (3 * ax * t + 2 * bx) * t + cx; if (Math.abs(d) < 1e-6) break; t -= f / d; } return ((ay * t + by) * t + cy) * t; }; };
   const SPIN = bez(0.2, 0.8, 0.2, 1);
   const mulberry = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -29,7 +29,7 @@
       this.imp = this.mv.filter((e) => e.kind !== "ff"); this.twists = this.mv.filter((e) => e.cheat === "twist");
       if (this.outro && this.outro.flip3d && this.mv.length && !this.twists.length) { const l = this.mv[this.mv.length - 1]; this.twists.push({ impact: this.outro.t, cheat: "twist", fen: l.fen, color: l.color, synthetic: true, n: 9999 }); }
       this.scene = mk(this.W, this.H); this.tmp = mk(this.W, this.H); this.pc = {}; this.red = {}; this.sil = {}; this.glow = {}; this.badgeSpr = {}; this.av = {};
-      this.buildCamera();
+      this.dropT = (tl.stats && tl.stats.drop) || 0; this.buildCamera();
     }
     flipAt(t) { let f = this.flip0; this.twists.forEach((e) => { if (t >= e.impact + 1.4) f = !f; }); return f; }
     sq(name, flip) { let c = name.charCodeAt(0) - 97, r = 8 - +name[1]; if (flip) { c = 7 - c; r = 7 - r; } return { x: -this.BS / 2 + (c + 0.5) * this.cell, y: -this.BS / 2 + (r + 0.5) * this.cell, c, r }; }
@@ -84,9 +84,10 @@
         if (e.cheat === "twist") return; const ti = e.impact, cur = at(kf, ti), rnd = mulberry((e.n || 1) * 9301 + 49297), power = e.kind === "drop" ? 1 : clamp((e.drama || 0) / 80, 0.35, 1), sg = rnd() < 0.45 ? -1 : 1;
         const flip = this.flipAt(ti), A = this.sq(e.from || e.to, flip), B = this.sq(e.to, flip), mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, dx = Math.abs(A.x - B.x) + this.cell * 1.7, dy = Math.abs(A.y - B.y) + this.cell * 1.7;
         let S = lerp(1.25, 1.6, power), th = ((sg < 0 ? -(6 + rnd() * 6) : 8 + rnd() * 7) * Math.PI) / 180;
+        if (e.soft) { S = lerp(1.18, 1.3, power); th = (sg * (1.5 + rnd() * 2.5) * Math.PI) / 180; }                                                // intro calme : cadrage doux, presque droit
         S = Math.min(S, 0.9 * this.W / dx, 0.9 * this.H / dy); S = clamp(S, 1.0, 1.6);                                              // départ ET arrivée toujours à l'écran (on voit au moins 5×5 cases)
         if (e.cam) { if (e.cam.zoom) S = clamp(e.cam.zoom, 1.0, 1.6); if (e.cam.tilt != null) th = (e.cam.tilt * Math.PI) / 180; }
-        const hold = Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my };
+        const hold = e.soft ? 0.9 : Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my };
         kf = kf.filter((k) => k.t < ti); kf.push({ t: ti, s: cur, ease: "lin" }, { t: ti + 0.15, s: tgt, ease: "out3" }, { t: ti + hold, s: tgt, ease: "lin" }, { t: ti + hold + 0.45, s: base, ease: "out3" });
       });
       kf.sort((a, b) => a.t - b.t); this.kf = kf;      kf.sort((a, b) => a.t - b.t); this.kf = kf; this.camAt = (t) => at(this.kf, t);
@@ -103,7 +104,7 @@
       if (e.drop) { const after = fenMapOf(e.fen), map = t >= e.impact ? after : Object.assign({}, before), ch = after[e.to]; if (t < e.impact) delete map[e.to]; return { map, mover: ch && t >= mt ? { sq: e.to, ch, scale: EASE.back(clamp((t - mt) / 0.28, 0, 1)), drop: true } : null, e }; }
       const ch = before[e.from]; if (!ch) return { map: fenMapOf(e.fen), mover: null, e };
       const map = Object.assign({}, before); delete map[e.from];
-      return { map, mover: { from: e.from, to: e.to, ch, k: p < 0 ? 0 : EASE.out4(clamp(p, 0, 1)), boss: t < mt && e.boss }, e };
+      return { map, mover: { from: e.from, to: e.to, ch, k: p < 0 ? 0 : (dur >= 0.2 ? EASE.io3(clamp(p, 0, 1)) : EASE.out4(clamp(p, 0, 1))), boss: t < mt && e.boss }, e };
     }
 
     // ------------------------------------------------------------------ dessin
@@ -159,13 +160,16 @@
       if (this.outro && t >= this.outro.t && !fp) { const kk = EASE.out3(clamp((t - this.outro.t) / 0.7, 0, 1)); S = lerp(S, 1.0, kk); th = lerp(th, 0, kk); tx = lerp(tx, 0, kk); ty = lerp(ty, 0, kk); }
       if (strobe) { const kk = (t - strobe.impact) / 0.055; S *= lerp(1.35, 1.12, kk); }
       else { const sb = this.imp.find((e) => e.strobe && t >= e.impact + 0.055 && t < e.impact + 0.4); if (sb) { const kk = (t - sb.impact - 0.055) / 0.345, el = 1 + Math.sin(kk * 9) * Math.exp(-kk * 5) * 0.12; S *= el; } }
+      let punchE = null; for (const e of this.imp) if (e.impact <= t && !e.soft && this.dropT && e.impact >= this.dropT - 0.01) punchE = e;
+      if (punchE && !fp && !strobe) { const u = t - punchE.impact; S += 0.22 * (u < 0.016 ? u / 0.016 : Math.exp(-(u - 0.016) * 14)); }                          // PUNCH : zoom +0,22 en 16 ms puis retombée exp(−14·t) jusqu'au kick suivant
+      this._S = S;
       const maxO = (BS / 2) * (1 - 1 / Math.max(1, S)), cx = clamp(-tx, -maxO, maxO), cy = clamp(-ty, -maxO, maxO);
-      let sx = 0, sy = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.18) { const a = 18 * k * Math.exp(-u / 0.05) * (e.cam && e.cam.shake != null ? e.cam.shake : 1); sx += Math.sin(u * 190 + e.n) * a; sy += Math.cos(u * 173 + e.n * 2) * a; } }
+      let sx = 0, sy = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.18 && !e.soft) { const a = (this.dropT && e.impact >= this.dropT - 0.01 ? 14 : 18) * k * Math.exp(-u / 0.05) * (e.cam && e.cam.shake != null ? e.cam.shake : 1); sx += Math.sin(u * 190 + e.n) * a; sy += Math.cos(u * 173 + e.n * 2) * a; } }
       this.twists.forEach((e) => { const u = t - e.impact - 1.4; if (u >= 0 && u < 0.25) { const a = 26 * k * Math.exp(-u / 0.07); sx += Math.sin(u * 160) * a; sy += Math.cos(u * 143) * a; } });      // gros impact à l'atterrissage du flip
       const intro = this.introEnd && t >= this.introEnd && t < this.introEnd + 0.3 ? lerp(0.78, 1, EASE.out3((t - this.introEnd) / 0.3)) : 1;
       g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.fillStyle = "#0b0c10"; g.fillRect(0, 0, W, H);
       g.save(); g.translate(W / 2, H / 2); g.translate(sx, sy); g.scale(S * intro, S * intro); g.rotate(th); g.translate(cx, cy);
-      this.drawBoard(g, t, st, flip); this.drawFx(g, t, st, flip); g.restore();
+      this.drawBoard(g, t, st, flip); this.drawFx(g, t, st, flip, "top"); g.restore();
       const ca = Math.cos(th), sa = Math.sin(th), SS = S * intro; this._toScreen = (P) => ({ x: W / 2 + sx + SS * (ca * (P.x + cx) - sa * (P.y + cy)), y: H / 2 + sy + SS * (sa * (P.x + cx) + ca * (P.y + cy)) });
       if (fp) this.flipTrail(g, fp);
     }
@@ -185,9 +189,9 @@
       const out = {}, bpm = this.tl.bpm || 120; let last = null; for (const e of this.imp) if (e.impact <= t) last = e;
       for (const e of this.imp) {
         const u = t - e.impact; if (u < 0 || u > 1.4) continue; let rot = 0, sx = 1, sy = 1;
-        if (u < 0.28) { rot += Math.sin(u * 45) * Math.exp(-u * 12) * 0.25; const sc = lerp(1.3, 1, EASE.back(u / 0.28)); sx = sy = sc; }                                      // pendule amorti ±14° + pop ×1,30 → ×1,0 (easeOutBack)
+        if (u < 0.28) { const wk = e.soft ? 0.3 : 1; rot += Math.sin(u * 45) * Math.exp(-u * 12) * 0.25 * wk; const sc = lerp(1 + 0.3 * wk, 1, EASE.back(u / 0.28)); sx = sy = sc; }                                      // pendule amorti ±14° + pop ×1,30 → ×1,0 (easeOutBack)
         else if (e === last && u < 1.3) { const ph = t * TAU * (bpm / 60); rot += 0.052 * Math.sin(ph * 0.5); sx = sy = 1.03 + 0.03 * Math.sin(ph); }                                                  // respiration : ±3° et ×1,0–1,06 au rythme du BPM
-        if (this.spins(e)) { const v = t - (e.impact - (e.dur || 90) / 1000); if (v >= 0 && v < 0.14) rot += TAU * SPIN(v / 0.14); }                                                         // 360° en 140 ms, cubic-bezier(.2,.8,.2,1)
+        if (this.spins(e) && !e.soft) { const v = t - (e.impact - (e.dur || 90) / 1000); if (v >= 0 && v < 0.14) rot += TAU * SPIN(v / 0.14); }                                                         // 360° en 140 ms, cubic-bezier(.2,.8,.2,1)
         out[e.to] = { rot, sx, sy, white: e.kind === "drop" && u < 0.15 };                                                                  // cœur blanc pur 150 ms sur l'impact du drop
       }
       return out;
@@ -197,6 +201,7 @@
       const gr = g.createRadialGradient(0, 0, BS * 0.3, 0, 0, BS * 1.6); gr.addColorStop(0, "#23252d"); gr.addColorStop(1, "#08090c"); g.fillStyle = gr; g.fillRect(-BS * 1.9, -BS * 1.9, BS * 3.8, BS * 3.8);       // cadre étendu : aucune coupure franche, même à 15° de rotation
       g.fillStyle = "#15161b"; g.fillRect(-BS / 2 - fr, -BS / 2 - fr, BS + fr * 2, BS + fr * 2); g.strokeStyle = "#3b3e49"; g.lineWidth = BS * 0.012; g.strokeRect(-BS / 2 - BS * 0.02, -BS / 2 - BS * 0.02, BS * 1.04, BS * 1.04);
       g.drawImage(this.boards[classic ? "classic" : "contrast"], -BS / 2, -BS / 2);
+      this.drawFx(g, t, st, flip, "floor");                                                                                               // CALQUES 1-2 : sol, flèche, rayon — SOUS les pièces
       // ombre portée des pièces (une ellipse floue pré-rendue par pièce serait plus chère : un seul voile)
       const draw = (sq, ch, o) => { const p = this.sq(sq, flip); this.piece(g, ch, p.x, p.y, cell * 1.02, o); };
       const kingSqNow = st.e && st.e.kingSq, tilt = st.e && (st.e.check || st.e.mate) && st.e.kingEdge && t >= st.e.impact && t < st.e.impact + 0.9 ? Math.sin(clamp((t - st.e.impact) / 0.9, 0, 1) * Math.PI) * 0.56 : 0;
@@ -218,44 +223,57 @@
         }
       }
     }
-    drawFx(g, t, st, flip) {
-      const cell = this.cell, BS = this.BS;
+    /** effets dans le repère du plateau, en DEUX couches : 'floor' (sol, flèche, rayon : SOUS les pièces) et 'top' (UN badge, lunettes, éclats : au premier plan, jamais sur le centre de la pièce) */
+    drawFx(g, t, st, flip, layer) {
+      const cell = this.cell, BS = this.BS, floor = layer === "floor", dropT = this.dropT;
       for (const e of this.imp) {
-        const u = t - e.impact; if (u < -0.2 || u > 2.2 || e.cheat === "twist") continue; const P = this.sq(e.to, flip), tone = ({ cyan: "#1CE8E8", red: "#FF2A2A", green: "#58D628", blue: "#268BFF", gold: "#ffd24a" })[e.tone] || "#58D628";
+        const u = t - e.impact; if (u < -0.2 || u > 2.2 || e.cheat === "twist") continue; const P = this.sq(e.to, flip), tone = ({ cyan: "#1CE8E8", red: "#FF2A2A", green: "#58D628", blue: "#268BFF", gold: "#ffd24a" })[e.tone] || "#58D628", soft = !!e.soft, wk = soft ? 0.45 : 1;
         const dur = (e.dur || 70) / 1000, F = e.from ? this.sq(e.from, flip) : null;
-        if (F && u < 0) { const al = clamp((u + 0.15) / 0.08, 0, 1); g.save(); g.globalAlpha = 0.45 * al; g.fillStyle = tone; g.fillRect(F.x - cell / 2, F.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, tone, F.x, F.y, cell * 1.5, 0.85 * al); }       // ANTICIPATION : la case de départ s'allume 80 ms AVANT que la pièce parte
-        const v = t - (e.impact - dur - (e.pre || 0) * 0); if (F && v >= 0 && v < 0.11) { const kk = clamp(v / dur, 0, 1), k0 = clamp((v - 0.11) / dur, 0, 1), x1 = lerp(F.x, P.x, kk), y1 = lerp(F.y, P.y, kk), x0 = lerp(F.x, P.x, k0), y0 = lerp(F.y, P.y, k0), al = 1 - v / 0.11;       // TRAÎNÉE lumineuse sur 110 ms
-          g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round"; [[cell * 0.7, 0.18], [cell * 0.42, 0.35], [cell * 0.16, 0.8]].forEach(([w, a]) => { g.globalAlpha = a * al; g.strokeStyle = w < cell * 0.2 ? "#ffffff" : tone; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }); g.restore(); }
-        if (u < 0) continue;
-        if (F && u < 1.3) { const al = u < 0.9 ? 0.4 : 0.4 * (1 - (u - 0.9) / 0.4); g.save(); g.globalAlpha = al; g.fillStyle = tone; g.fillRect(F.x - cell / 2, F.y - cell / 2, cell, cell); g.restore(); }                                    // la case de départ reste allumée à 40 %
-        if ((e.key === "brilliant" || e.glow) && u < 1.35) {                                                                                                                      // demi-plateau baigné de cyan + pièce qui brille + tempête d'étoiles en diagonale
-          const al = u < 0.15 ? u / 0.15 : u > 0.95 ? 1 - (u - 0.95) / 0.4 : 1, rg = g.createRadialGradient(P.x, P.y, 0, P.x, P.y, BS * 0.75); rg.addColorStop(0, "rgba(0,245,255,.55)"); rg.addColorStop(1, "rgba(0,245,255,0)"); g.save(); g.globalAlpha = al; g.fillStyle = rg; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
-          this.glowAt(g, "#ffffff", P.x, P.y, cell * 2.2, 0.9 * al); const rnd = mulberry((e.n || 1) * 53 + 3); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 42; i++) { const sx0 = P.x + (rnd() - 0.5) * BS * 0.9, sy0 = P.y + (rnd() - 0.5) * BS * 0.9, sp = (3 + rnd() * 5) * cell, sz = cell * (0.04 + rnd() * 0.06), x = sx0 + u * sp * 0.7, y = sy0 - u * sp * 0.7; g.globalAlpha = al * (0.4 + 0.6 * rnd()); g.fillStyle = "#fff"; g.fillRect(x, y, sz, sz); g.fillRect(x - sz, y + sz * 0.4, sz * 3, sz * 0.2); } g.restore();
+        if (floor) {
+          // --- CALQUE 1 : le SOL (cases de départ / d'arrivée, chemin rouge ≤ 0,55) — dessiné AVANT les pièces
+          if (F && u < 0) { const al = clamp((u + 0.15) / 0.08, 0, 1) * wk; g.save(); g.globalAlpha = 0.45 * al; g.fillStyle = tone; g.fillRect(F.x - cell / 2, F.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, tone, F.x, F.y, cell * 1.5, 0.6 * al); }               // anticipation : 80 ms avant
+          const v = t - (e.impact - dur); if (F && v >= 0 && v < 0.11 && !soft) { const kk = clamp(v / dur, 0, 1), k0 = clamp((v - 0.11) / dur, 0, 1), x1 = lerp(F.x, P.x, kk), y1 = lerp(F.y, P.y, kk), x0 = lerp(F.x, P.x, k0), y0 = lerp(F.y, P.y, k0), al = 1 - v / 0.11;
+            g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round"; [[cell * 0.7, 0.14], [cell * 0.42, 0.28], [cell * 0.16, 0.55]].forEach(([w, a]) => { g.globalAlpha = a * al; g.strokeStyle = w < cell * 0.2 ? "#ffffff" : tone; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }); g.restore(); }              // traînée 110 ms
+          if (u < 0) continue;
+          if (F && u < 1.3) { const al = (u < 0.9 ? 0.4 : 0.4 * (1 - (u - 0.9) / 0.4)) * wk; g.save(); g.globalAlpha = al; g.fillStyle = tone; g.fillRect(F.x - cell / 2, F.y - cell / 2, cell, cell); g.restore(); }                              // départ gardé à 40 %
+          if ((e.key === "brilliant" || e.glow) && u < 1.35 && !soft) {                                                                                                                                                              // demi-plateau cyan, halo blanc (SOUS la pièce), étoiles en diagonale
+            const al = u < 0.15 ? u / 0.15 : u > 0.95 ? 1 - (u - 0.95) / 0.4 : 1, rg = g.createRadialGradient(P.x, P.y, 0, P.x, P.y, BS * 0.75); rg.addColorStop(0, "rgba(0,245,255,.55)"); rg.addColorStop(1, "rgba(0,245,255,0)"); g.save(); g.globalAlpha = al; g.fillStyle = rg; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
+            this.glowAt(g, "#ffffff", P.x, P.y, cell * 2.0, 0.7 * al); const rnd = mulberry((e.n || 1) * 53 + 3); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 42; i++) { const sx0 = P.x + (rnd() - 0.5) * BS * 0.9, sy0 = P.y + (rnd() - 0.5) * BS * 0.9, sp = (3 + rnd() * 5) * cell, sz = cell * (0.04 + rnd() * 0.06), x = sx0 + u * sp * 0.7, y = sy0 - u * sp * 0.7; g.globalAlpha = al * (0.4 + 0.6 * rnd()); g.fillStyle = "#fff"; g.fillRect(x, y, sz, sz); g.fillRect(x - sz, y + sz * 0.4, sz * 3, sz * 0.2); } g.restore();
+          }
+          if (e.redPath && e.from && u < 0.95 && !soft) {                                                                                                                                                                             // chemin rouge : sur le SOL, alpha ≤ 0,55
+            const al = u < 0.15 ? u / 0.15 : u > 0.65 ? 1 - (u - 0.65) / 0.3 : 1; g.save(); g.globalAlpha = 0.35 * al; g.fillStyle = "#000"; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
+            this.pathSquares(e).forEach((q, i) => { const p = this.sq(q, flip), a = clamp((u - i * 0.018) / 0.18, 0, 1) * al; g.save(); g.globalAlpha = 0.55 * a; g.fillStyle = "#FF2A1A"; g.fillRect(p.x - cell / 2, p.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, "#FF2A1A", p.x, p.y, cell * 1.1, 0.35 * a); });
+          } else if (u < 0.9) { const al = (1 - clamp(u / 0.9, 0, 1)) * wk; g.save(); g.globalAlpha = 0.4 * al; g.fillStyle = tone; g.fillRect(P.x - cell / 2, P.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, tone, P.x, P.y, cell * 1.4, 0.55 * al); }
+          // --- CALQUE 2 : flèche d'échec / flèche spéciale et rayon (sous la pièce d'arrivée)
+          if ((e.check || e.mate) && !soft) this.beam(g, e, u, flip);
+          if (e.arrow && e.from && u < 1.6) this.arrow(g, e, u, flip);
+          continue;
         }
-        // chemin rouge : toutes les cases traversées, le reste du plateau s'assombrit
-        if (e.redPath && e.from && u < 0.95) {
-          const al = u < 0.15 ? u / 0.15 : u > 0.65 ? 1 - (u - 0.65) / 0.3 : 1; g.save(); g.globalAlpha = 0.5 * al; g.fillStyle = "#000"; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
-          this.pathSquares(e).forEach((q, i) => { const p = this.sq(q, flip), a = clamp((u - i * 0.018) / 0.18, 0, 1) * al; g.save(); g.globalAlpha = 0.88 * a; g.fillStyle = "#FF2A1A"; g.fillRect(p.x - cell / 2, p.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, "#FF2A1A", p.x, p.y, cell * 1.25, 0.8 * a); });
-        } else if (u < 0.9) {                                                                       // case d'arrivée allumée + halo
-          const al = 1 - clamp(u / 0.9, 0, 1); g.save(); g.globalAlpha = 0.4 * al; g.fillStyle = tone; g.fillRect(P.x - cell / 2, P.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, tone, P.x, P.y, cell * 1.6, 0.9 * al);
-        }
-        if (e.check || e.mate) this.beam(g, e, u, flip);
-        if (e.arrow && e.from && u < 1.6) this.arrow(g, e, u, flip);
-        // double onde de choc + cadre de visée sur !! / ! et sur les badges IA
-        const shock = e.key === "brilliant" || e.key === "great" || e.key === "excellent" || e.illegal || e.shock2;
-        if (shock && u < 0.95) { const bx = P.x + cell * 0.36, by = P.y - cell * 0.36, col = e.key === "brilliant" ? "#1CE8E8" : e.illegal ? "#ffffff" : "#268BFF";
+        // --- CALQUE 4 : au premier plan, UN SEUL badge (coin supérieur droit : +38 % X, −38 % Y) ; onde de choc + cadre de visée ; lunettes OU badge ; éclats
+        if (u < 0) continue; const bx = P.x + cell * 0.38, by = P.y - cell * 0.38;
+        const shock = !soft && (e.key === "brilliant" || e.key === "great" || e.key === "excellent" || e.illegal || e.shock2);
+        if (shock && u < 0.95) { const col = e.key === "brilliant" ? "#1CE8E8" : e.illegal ? "#ffffff" : "#268BFF";
           for (let i = 0; i < 2; i++) { const kk = (u - i * 0.09) / 0.35; if (kk > 0 && kk < 1) { g.save(); g.globalAlpha = 1 - kk; g.strokeStyle = col; g.lineWidth = cell * 0.05; g.beginPath(); g.arc(bx, by, cell * 0.25 * lerp(0.5, 3, kk), 0, TAU); g.stroke(); g.restore(); } }
-          const bk = clamp(u / 0.3, 0, 1), sc = lerp(2.6, 1, EASE.out3(bk)), al = u > 0.7 ? 1 - (u - 0.7) / 0.25 : bk; g.save(); g.globalAlpha = al; g.strokeStyle = col; g.lineWidth = cell * 0.05; const s = (cell * 0.56) * sc, L = s * 0.32;
-          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x0 = P.x + sx * s, y0 = P.y + sy * s; g.beginPath(); g.moveTo(x0, y0 - sy * L); g.lineTo(x0, y0); g.lineTo(x0 - sx * L, y0); g.stroke(); }); g.restore(); }
-        // badges (palette complète + logo IA) côte à côte, en haut à droite de la case
-        const bl = this.badgeList(e); if (bl.length && u < 1.8) bl.forEach((b, i) => { const spr = this.badgeSpr[b.img]; if (!spr) return; const bk = clamp((u - i * 0.09) / 0.22, 0, 1), sc = EASE.back(bk), fade = u > 1.5 ? 1 - (u - 1.5) / 0.3 : 1, sz = cell * 0.98 * sc, hdr = 0.85 + 0.35 * Math.sin(u * 9 + i); g.save(); g.globalAlpha = clamp(fade, 0, 1); g.drawImage(spr, P.x + cell * 0.5 - cell * 0.62 * 0.75 - i * cell * 0.52 - sz / 2 + cell * 0.15, P.y - cell * 0.42 - sz / 2 + cell * 0.1, sz, sz); this.glowAt(g, b.glow, P.x + cell * 0.5 - cell * 0.35 - i * cell * 0.52, P.y - cell * 0.32, cell * 0.8 * sc, 0.35 * hdr * clamp(fade, 0, 1)); g.restore(); });
-        if (e.glasses && u > 0 && u < 1.9) this.glasses(g, P, u);
-        if (e.captured && u < 0.7 && !e.drop) this.burst(g, e, P, u);
+          const bk = clamp(u / 0.3, 0, 1), sc = lerp(2.6, 1, EASE.out3(bk)), al = u > 0.7 ? 1 - (u - 0.7) / 0.25 : bk; g.save(); g.globalAlpha = al; g.strokeStyle = col; g.lineWidth = cell * 0.05; const s2 = (cell * 0.56) * sc, L = s2 * 0.32;
+          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x0 = P.x + sx * s2, y0 = P.y + sy * s2; g.beginPath(); g.moveTo(x0, y0 - sy * L); g.lineTo(x0, y0); g.lineTo(x0 - sx * L, y0); g.stroke(); }); g.restore(); }
+        const one = this.badgeOne(e);
+        if (one && one.glasses && u > 0 && u < 1.9) this.glasses(g, P, u);
+        else if (one && one.img && u < 1.8) { const spr = this.badgeSpr[one.img]; if (spr) { const bk = clamp(u / 0.22, 0, 1), sc = EASE.back(bk), fade = u > 1.5 ? 1 - (u - 1.5) / 0.3 : 1, sz = cell * 0.95 * sc, hdr = 0.85 + 0.35 * Math.sin(u * 9); g.save(); g.globalAlpha = clamp(fade, 0, 1); g.drawImage(spr, bx - sz / 2, by - sz / 2, sz, sz); this.glowAt(g, one.glow, bx, by, cell * 0.7 * sc, 0.3 * hdr * clamp(fade, 0, 1)); g.restore(); } }
+        if (e.captured && u < 0.7 && !e.drop && !soft) this.burst(g, e, P, u);
       }
-      this.twists.forEach((tw) => {                                                                                                  // « Winner » (vert) et « Checkmate » (rouge) au-dessus des deux rois
-        const u = t - tw.impact - 1.5; if (u < 0) return; const m = fenMapOf(tw.fen), wk = tw.color === "w" ? "K" : "k", lk = tw.color === "w" ? "k" : "K", ws = Object.keys(m).find((q) => m[q] === wk), ls = Object.keys(m).find((q) => m[q] === lk);
-        [[ws, "img/badges/crown.png", "#58D628"], [ls, "img/badges/mate.png", "#FF2A2A"]].forEach(([q, img, col], i) => { const spr = this.badgeSpr[img]; if (!q || !spr) return; const p = this.sq(q, flip), sc = EASE.back(clamp((u - i * 0.12) / 0.3, 0, 1)), sz = cell * 1.5 * sc; this.glowAt(g, col, p.x, p.y - cell * 0.85, cell * 1.4 * sc, 0.7); g.drawImage(spr, p.x - sz / 2, p.y - cell * 0.85 - sz / 2, sz, sz); });
-      });
+      if (!floor) {                                                                                                                                                                                                                    // couronne « Winner » (vert) et badge « Checkmate » (rouge) sur les deux rois
+        const crowns = this.twists.map((tw) => ({ u: t - tw.impact - 1.5, fen: tw.fen, color: tw.color })); if (this.outro && this.outro.defeat && this.mv.length) { const l = this.mv[this.mv.length - 1]; crowns.push({ u: t - this.outro.t, fen: l.fen, color: l.color }); }
+        crowns.forEach((c) => {
+          if (c.u < 0) return; const m = fenMapOf(c.fen), wk = c.color === "w" ? "K" : "k", lk = c.color === "w" ? "k" : "K", ws = Object.keys(m).find((q) => m[q] === wk), ls = Object.keys(m).find((q) => m[q] === lk);
+          [[ws, "img/badges/crown.png", "#58D628"], [ls, "img/badges/mate.png", "#FF2A2A"]].forEach(([q, img, col], i) => { const spr = this.badgeSpr[img]; if (!q || !spr) return; const p = this.sq(q, flip), sc = EASE.back(clamp((c.u - i * 0.12) / 0.3, 0, 1)), sz = cell * 1.3 * sc; this.glowAt(g, col, p.x, p.y - cell * 0.85, cell * 1.2 * sc, 0.6); g.drawImage(spr, p.x - sz / 2, p.y - cell * 0.85 - sz / 2, sz, sz); });
+        });
+      }
+    }
+    /** UN SEUL signe par coup : badge de qualité (✖ / ?? si coup illégal) > lunettes > logo IA — jamais empilés */
+    badgeOne(e) {
+      if (e.illegal) return e.glasses ? { glasses: true } : { img: "img/badges/miss.png", glow: "#ff2a2a" };
+      if (e.badge && e.badge.img) return { img: "img/badges/" + e.badge.img + ".png", glow: e.badge.color || "#fff" };
+      if (e.glasses) return { glasses: true }; if (e.aiImg) return { img: e.aiImg, glow: "#ffffff" }; return null;
     }
     badgeList(e) {
       const out = [], key = e.illegal ? (e.glasses ? "img/badges/blunder.png" : "img/badges/miss.png") : e.badge && e.badge.img ? "img/badges/" + e.badge.img + ".png" : "";
@@ -291,7 +309,9 @@
       const { W, H } = this;
       for (const e of this.imp) {
         const u = t - e.impact; if (u < 0 || u > 1.4) continue;
-        if (u < 0.045) { g.fillStyle = e.key === "blunder" ? "#ff1a3c" : "#fff"; g.globalAlpha = 0.45; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }                       // flash blanc 0,45 pendant 45 ms
+        if (e.soft) continue;
+        if (u < 0.045) { g.fillStyle = e.key === "blunder" ? "#ff1a3c" : "#fff"; g.globalAlpha = 0.45; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+        if (this.dropT && e.impact >= this.dropT - 0.01 && u < 0.06) { const vg2 = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) * 0.55); vg2.addColorStop(0, "rgba(160,255,255,0)"); vg2.addColorStop(1, "rgba(190,255,255,.6)"); g.save(); g.globalAlpha = 1 - u / 0.06; g.fillStyle = vg2; g.fillRect(0, 0, W, H); g.restore(); }       // flash de bord blanc / cyan 60 ms sur chaque kick                       // flash blanc 0,45 pendant 45 ms
         if ((e.key === "blunder" || e.check || e.mate || e.tintRed) && u < 0.9) { g.save(); g.globalCompositeOperation = "overlay"; g.globalAlpha = 0.9 * (u > 0.35 ? 1 - (u - 0.35) / 0.55 : 1); g.fillStyle = "rgba(255,20,20,.35)"; g.fillRect(0, 0, W, H); g.restore(); }
         if (e.key === "brilliant" && u < 1.3) { const col = e.kind === "drop" ? "#38FF14" : "#1CE8E8", al = u < 0.2 ? u / 0.2 : u > 1 ? 1 - (u - 1) / 0.3 : 1, off = (u * 64) % 64; g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = 0.5 * al; g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); for (let x = -64 + off; x < W; x += 64 * this.k() + 1) { g.moveTo(x, 0); g.lineTo(x, H); } for (let y = -64 + off; y < H; y += 64 * this.k() + 1) { g.moveTo(0, y); g.lineTo(W, y); } g.stroke(); g.restore(); }
         if (e.strobe && u < 0.055) { g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = 0.8; const step = 58 * this.k(); g.lineWidth = 3 * this.k(); g.strokeStyle = "rgba(255,40,60,.9)"; g.beginPath(); for (let y = 0; y < H; y += step) { g.moveTo(0, y); g.lineTo(W, y); } g.stroke(); g.strokeStyle = "rgba(50,90,255,.9)"; g.beginPath(); for (let x = 0; x < W; x += step) { g.moveTo(x, 0); g.lineTo(x, H); } g.stroke(); g.restore(); }
@@ -326,8 +346,8 @@
     drawEnd(g, t) {
       const { W, H } = this, k = this.k(), o = this.outro, u = t - o.t - (o.flip3d ? 1.6 : 0), a = clamp((u - 0.2) / 0.35, 0, 1);
       g.save(); g.fillStyle = "rgba(0,0,0,.45)"; g.globalAlpha = a; g.fillRect(0, 0, W, H); g.restore();
-      const main = String(o.result || "FIN").split("·")[0].trim().toUpperCase(), tw = this.twists.length ? "CHATGPT PRIME GAGNE PAR CHECKMATE" : main;
-      this.stampText(g, tw, "#ffd666", a, 1);
+      const main = String(o.result || "FIN").split("·")[0].trim().toUpperCase(), tw = o.defeat ? "CHATGPT PRIME : 404 ELO NOT FOUND" : this.twists.length ? "CHATGPT PRIME GAGNE PAR CHECKMATE" : main;
+      this.stampText(g, tw, o.defeat ? "#ff3b3b" : "#ffd666", a, 1);
       if (o.final && u > 0.9) { const b = E.botChat && E.botChat.bots[o.final.bot], k2 = clamp((u - 0.9) / 0.6, 0, 1); g.save(); g.globalAlpha = k2; g.font = TXT(34 * k, 600); g.textAlign = "center"; const lines = this.wrap(g, "« " + o.final.text + " »", W * 0.82); g.fillStyle = "#fff"; lines.forEach((l, i) => g.fillText(l, W / 2, H * 0.66 + i * 44 * k)); if (b) { g.font = TXT(26 * k, 700); g.fillStyle = "#ffd666"; g.fillText(b.name, W / 2, H * 0.66 - 50 * k); } g.restore(); }
     }
     drawPrompt(g, e, t) {
@@ -379,8 +399,9 @@
       for (const e of this.imp) { const u = t - e.impact - 0.25; if (u >= 0 && u < 2.4 && e.lines && e.lines.length) cur = { l: e.lines[0], u }; }
       if (!cur) return; const b = E.botChat && E.botChat.bots[cur.l.bot], text = cur.l.text, shown = text.slice(0, Math.ceil(text.length * clamp(cur.u / 0.7, 0, 1))), fade = cur.u > 2.1 ? 1 - (cur.u - 2.1) / 0.3 : clamp(cur.u / 0.15, 0, 1);
       g.save(); g.globalAlpha = clamp(fade, 0, 1); const bh = 150 * k, y = H - bh - 120 * k, x = 40 * k, w = W - 80 * k; g.fillStyle = "rgba(0,0,0,.78)"; g.fillRect(x, y, w, bh); g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 2 * k; g.strokeRect(x, y, w, bh);
+      const pn = !!cur.l.panic, jx = pn ? Math.sin(t * 95) * 4 * k : 0, jy = pn ? Math.cos(t * 83) * 3 * k : 0; if (pn) { g.translate(jx, jy); g.strokeStyle = "#ff3b3b"; g.lineWidth = 4 * k; g.strokeRect(x, y, w, bh); }
       const av = b && b.img && this.av[b.img]; if (av) { g.save(); g.beginPath(); g.arc(x + 70 * k, y + bh / 2, 50 * k, 0, TAU); g.clip(); g.drawImage(av, x + 20 * k, y + bh / 2 - 50 * k, 100 * k, 100 * k); g.restore(); }
-      g.fillStyle = "#ffd666"; g.font = TXT(24 * k, 700); g.textAlign = "left"; g.fillText(b ? b.name : cur.l.bot, x + 140 * k, y + 38 * k); g.fillStyle = "#fff"; g.font = TXT(28 * k, 500); this.wrap(g, shown, w - 170 * k).slice(0, 3).forEach((l, i) => g.fillText(l, x + 140 * k, y + 76 * k + i * 34 * k)); g.restore();
+      g.fillStyle = "#ffd666"; g.font = TXT(24 * k, 700); g.textAlign = "left"; g.fillText(b ? b.name : cur.l.bot, x + 140 * k, y + 38 * k); g.fillStyle = pn ? "#ff3b3b" : "#fff"; g.font = TXT(28 * k, pn ? 800 : 500); this.wrap(g, shown, w - 170 * k).slice(0, 3).forEach((l, i) => g.fillText(l, x + 140 * k, y + 76 * k + i * 34 * k)); g.restore();
     }
 
     // ------------------------------------------------------------------ INTRO « face-off » (3,8 s) : mise en scène dynamique

@@ -86,7 +86,7 @@
         const names = prime === "w" ? ["ChatGPT Prime", nameOf("b")] : [nameOf("w"), "ChatGPT Prime"];
         const result = (winner === prime ? "ChatGPT Prime gagne" : nameOf(winner) + " gagne") + " · " + why;
         const rec = { variant: true, mode: "prime", t: Date.now(), title: "🤖 ChatGPT Prime · " + names[0] + " – " + names[1], result, plies: acts.length, brill: 0, acc: null, cheats: G.st.cheats, pgn: "", id: "prime", pw: names[0], pb: names[1], pk: ["variant", "variant"], bw: 0, bb: 0,
-          me: G.mode === "human" ? (prime === "w" ? "b" : "w") : null, accW: null, accB: null, ch: [], mv: acts.map((a) => [a.uci, a.san, a.key || "good", 0, null, ""]), v: { mode: "prime", acts, start: P.START, over: G.over ? G.over.why : "end", duo: false } };
+          me: G.mode === "human" ? (prime === "w" ? "b" : "w") : null, accW: null, accB: null, ch: [], mv: acts.map((a) => [a.uci, a.san, a.key || "good", 0, null, ""]), v: { mode: "prime", acts, start: P.START, over: G.over ? G.over.why : "end", duo: false, beaten: !!(G.over && G.over.why === "twist") } };
         if (acts.length >= 2) { const l = E.settings.get("variants.hist", []); l.push(rec); E.settings.set("variants.hist", l.slice(-40)); }
         return rec;
       }

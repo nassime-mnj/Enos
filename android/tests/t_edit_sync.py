@@ -21,13 +21,13 @@ with sync_playwright() as pw:
         sfxOnImpact: moves.filter((e) => e.kind !== 'ff').every((e) => t.sfx.some((x) => Math.abs(x.t - e.impact) < 0.001 && (x.id === 'move' || x.id === 'capture' || x.id === 'check' || x.id === 'mate'))), skipped: t.stats.skipped, snaps: moves.filter((e) => e.snap).length, ids: moves.map((e) => e.impact), tHero: hero && hero.t }; }""", [rec, audio])
     check(tl["sync"] and "setup" in tl["kinds"] and tl["intro"] == [3.8] and tl["setup"] == 1, "montage hard-sync : plateau dès 0,0 s (setup) + intro VS de 3,8 s : %s" % tl["kinds"])
     check(abs(tl["heroImpact"] - 12.0) < 0.001, "le coup clé tombe EXACTEMENT sur le drop (%.3f s)" % tl["heroImpact"])
-    check(set(tl["durs"]) <= {90, 60} and tl["firstMove"] >= 3.8, "coups de 90 ms (60 ms pour les transitions), le 1er après l'intro (%.2f s)" % tl["firstMove"])
-    check(tl["minGapPre"] >= 0.44, "avant le drop : un coup par temps de l'intro, ≥ 450 ms d'écart (%.2f)" % tl["minGapPre"])
+    check(set(tl["durs"]) <= {90, 60, 240} and tl["firstMove"] >= 3.8, "glissement doux de 240 ms pendant l'intro, 90 ms sur le drop ; le 1er coup après l'intro (%.2f s)" % tl["firstMove"])
+    check(tl["minGapPre"] >= 1.05, "avant le drop : coups lents et lisibles, ≥ 1,1 s d'écart (%.2f)" % tl["minGapPre"])
     check(1 <= tl["strobes"] <= 4, "flash RGB sur les 3-4 kicks les plus violents (%d)" % tl["strobes"])
     check(tl["texts"] == 0, "aucun texte « QUEEN DOWN / IT'S OVER »")
     check(tl["outro"] == [True] or tl["outro"] == [False], "outro prévue (reality check si le bot a une réplique)")
     check(tl["sfxOnImpact"], "chaque son de coup est calé sur l'impact, à la milliseconde")
-    check(tl["illegal"] >= 1 and tl["ai"] >= 1 and tl["arrow"] >= 1 and tl["red"] >= 1, "effets de triche : badges IA / ✖, flèche jaune, chemin rouge : %s" % {k: tl[k] for k in ("illegal", "glasses", "ai", "arrow", "red", "boss")})
+    check(tl["illegal"] >= 1 and tl["ai"] >= 1 and tl["arrow"] <= 1 and tl["red"] >= 1, "effets de triche : badges IA / ✖, UNE seule flèche jaune, chemin rouge : %s" % {k: tl[k] for k in ("illegal", "glasses", "ai", "arrow", "red", "boss")})
     print("prompt/cut3:", tl["prompt"], "skipped:", tl["skipped"], "snaps:", tl["snaps"])
     # --- effets de scène
     fx = ev("""async () => { const host = document.createElement('div'); host.style.cssText = 'position:fixed;inset:0;z-index:99999'; document.body.appendChild(host); const s = new ENOS.editFx.Stage(host, { quality: 'max' });

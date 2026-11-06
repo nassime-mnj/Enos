@@ -22,7 +22,7 @@
         <div class="card"><h3>1 · La partie</h3><select id="ce-game" class="sel"></select><p class="ce-stat" id="ce-gs" style="margin-top:8px"></p></div>
         <div class="card"><h3>2 · Rythme et musique</h3>
           <label class="fld">Rythme du montage</label><select id="ce-pace" class="sel" style="margin-bottom:8px"><option value="viral">🔥 VIRAL · toute la partie : ouverture fluide, accéléré, ralentis + arrêts sur image</option><option value="music">♫ Calé sur la musique (ancien mode : seulement les coups clés)</option></select>
-          <div class="ce-opts" id="ce-vopts"><label><input type="checkbox" id="ce-intro" checked> Intro « VS »</label><label><input type="checkbox" id="ce-voice" checked> Voix de Levy + reverb/écho</label></div>
+          <div class="ce-opts" id="ce-vopts"><label><input type="checkbox" id="ce-intro" checked> Intro « VS »</label><label><input type="checkbox" id="ce-voice" checked> Voix de Levy + reverb/écho</label><label><input type="checkbox" id="ce-twist"> Garder le plot twist (sinon : Prime battu)</label></div>
           <div class="row" style="margin-top:0"><button class="btn" id="ce-pick">CHOISIR UN .MP3 / .WAV</button></div>
           <p class="ce-stat" id="ce-as" style="margin-top:8px">Aucune musique (facultative en mode viral : les bruitages et les voix suffisent).</p>
           <div class="seg" id="ce-mode" style="margin-top:10px"><button data-m="ia" class="on">MODE IA</button><button data-m="manual">MODE MANUEL</button><i class="seg-ind"></i></div></div>
@@ -107,7 +107,7 @@
       function rebuild() {
         S.tl = null;
         if (S.rec && S.pace === "viral" && S.sync === "gemini" && S.script) { try { S.tl = M().buildFromScript(S.plies, S.rec, S.script, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, opening: S.opening || "" }); } catch (e) { S.tl = null; A.toast("Script Gemini inutilisable : " + e.message, "err"); } return; }
-        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, syncDrop: !!S.audio, synth: !S.audio, opening: S.opening || "" }); return; }
+        if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, keepTwist: $("#ce-twist").checked, syncDrop: !!S.audio, synth: !S.audio, opening: S.opening || "" }); return; }
         if (!S.rec || !S.audio) return;
         if (S.mode === "manual" && !S.marks.some((m) => m.type === "drop")) return;
         S.tl = M().build(S.plies, slots(), S.audio);
@@ -319,8 +319,10 @@
         let tl; try { tl = await ready(); } catch (e) { return A.toast(e.message, "warn"); }
         const ov = overlay('<canvas class="ce-cvp"></canvas><div class="ce-load">Préparation de l\'edit…</div><button class="ce-x" aria-label="Fermer">✕</button><button class="ce-pp" aria-label="Pause">⏸</button><div class="ce-prog"><i></i></div>'), cvp = ov.querySelector("canvas"), load = ov.querySelector(".ce-load");
         const W = 540, H = Math.round((W * (innerHeight || 960)) / (innerWidth || 540)); cvp.width = W; cvp.height = H;
-        const R = new E.editRender.Renderer(cvp, tl, { flip: S.rec.me === "b", rec: S.rec }), sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null; let alive = true, paused = false, T0 = 0, raf = 0, pausedAt = 0;
+        const R = new E.editRender.Renderer(cvp, tl, { flip: S.rec.me === "b", rec: S.rec }), sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null; let alive = true, duckT = 0, paused = false, T0 = 0, raf = 0, pausedAt = 0;
         const stop = () => { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); try { sfx.close(); } catch (e) { /* ok */ } ov.remove(); };
+        const duckFn = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.45 * 0.85; }, Math.max(0, ms - 20)); clearTimeout(duckT); duckT = setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 180); };
+        sfx.onVoice = duckFn; sfx.onDuck = duckFn;
         ov.querySelector(".ce-x").onclick = stop; ov.querySelector(".ce-pp").onclick = () => { paused = !paused; ov.querySelector(".ce-pp").textContent = paused ? "▶" : "⏸"; if (paused) { pausedAt = sfx.ctx.currentTime - T0; sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au) au.play().catch(() => {}); } };
         try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load())]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }
         if (!alive) return; load.remove(); const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
@@ -372,7 +374,7 @@
       };
       $("#ce-play").onclick = () => (S.pace === "viral" ? previewCanvas() : preview());
       $("#ce-pace").value = S.pace; $("#ce-pace").onchange = (e) => { S.pace = e.target.value; E.settings.set("chessedit.pace", S.pace); refresh(); };
-      $("#ce-voice").onchange = $("#ce-intro").onchange = () => refresh();
+      $("#ce-voice").onchange = $("#ce-intro").onchange = $("#ce-twist").onchange = () => refresh();
       window.__cePrevViral = previewViral;
 
       // ------------------------------------------------------------ pont PC (Godot)
