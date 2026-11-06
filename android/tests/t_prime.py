@@ -8,7 +8,7 @@ with sync_playwright() as pw:
     ev = pg.evaluate
     open_tool(pg, "prime")
     A = "document.querySelector('#tool-prime .suite-body')._api"
-    pg.wait_for_selector("#pr-go", state="attached"); pg.click('#pr-col [data-c="b"]'); pg.click("#pr-go")
+    pg.wait_for_selector("#pr-go", state="attached"); ev(A + ".cfg().beat = 0"); pg.click('#pr-col [data-c="b"]'); pg.click("#pr-go")
     pg.wait_for_function(A + ".g && " + A + ".g.acts.length >= 1", timeout=20000)
     check(ev(A + ".g.acts[0].cheat") == "" and ev(A + ".g.primeSide") == "w", "Prime (Blancs) joue NORMALEMENT au début : %s" % ev(A + ".g.acts[0].san"))
     n = 0
@@ -38,6 +38,26 @@ with sync_playwright() as pw:
       await new Promise((r) => setTimeout(r, 400)); st.destroy(); host.remove(); return out; }""")
     check(fx["vanish"] == 1 and fx["stamp"] and fx["rift"] and fx["appear"] and fx["sl"], "Chess Edit : coup illégal = glitch + tampon + faille + lignes de vitesse : %s" % fx)
     check(fx["streak"], "flare anamorphique sur un gros coup")
+    # --- PLOT TWIST : partie « battable », on le mate -> « de quoi tu parles ? » + plateau à 180° + il gagne
+    pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 1; " + A + ".cfg().color = 'b'"); pg.click("#pr-go")
+    pg.wait_for_function(A + ".g && " + A + ".g.acts.length >= 1", timeout=20000); pg.wait_for_function("!" + A + ".g.busy", timeout=20000)
+    check(ev(A + ".g.st.beatable") is True, "partie battable")
+    ev("() => { const g = %s.g; g.st.fen = 'r5k1/8/8/8/8/8/5PPP/6K1 b - - 0 1'; g.acts.length = 0; g.last = null; %s.onTap('a8'); }" % (A, A)); pg.wait_for_timeout(100)
+    ev("() => { %s.onTap('a1'); }" % A)
+    pg.wait_for_selector("#pr-bw.pr-spin", timeout=8000)
+    check("checkmate" in pg.inner_text("#pr-say").lower() or "parles" in pg.inner_text("#pr-say").lower() or "position" in pg.inner_text("#pr-say").lower() or "camps" in pg.inner_text("#pr-say").lower(), "« De quoi tu parles ? » : %s" % pg.inner_text("#pr-say"))
+    check(ev(A + ".g.flip") is True, "pendant le tour, le plateau tourne (180°) : vue encore de notre côté")
+    pg.wait_for_selector("#pr-stamp.long:not([hidden])", timeout=6000)
+    check(ev(A + ".g.flip") is False and "GAGNÉ" in pg.inner_text("#pr-stamp"), "plateau retourné : « %s »" % pg.inner_text("#pr-stamp"))
+    pg.wait_for_selector("#pr-edit", timeout=8000)
+    rec = ev("ENOS.settings.get('variants.hist', []).pop()")
+    check(rec["v"]["acts"][-1]["cheat"] == "twist" and "ChatGPT Prime gagne" in rec["result"] and rec["v"]["acts"][-2]["san"].endswith("#"), "partie enregistrée : %s" % rec["result"])
+    tw = ev("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { voices: true }), last = pl[pl.length - 1]; return { n: pl.length, cheat: last.cheat, mateBefore: pl[pl.length - 2].mate, ev: tl.events.filter((e) => e.cheat === 'twist').length, line: last.lines.length }; }""", rec)
+    check(tw["cheat"] == "twist" and tw["mateBefore"] and tw["ev"] == 1 and tw["line"] == 1, "Chess Edit : le twist est monté (%s)" % tw)
+    st = ev("""async () => { const host = document.createElement('div'); host.style.cssText = 'position:fixed;inset:0;z-index:99999'; document.body.appendChild(host); const s = new ENOS.editFx.Stage(host, { quality: 'normal' });
+      s.setFen('6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1'); const f0 = s.flip, e = { cheat: 'twist', fen: '6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1', to: 'g1', n: 9, lvl: 3 }; s.move(e); await new Promise((r) => setTimeout(r, 1700));
+      const o = { flipped: s.flip !== f0, stamp: (host.querySelector('.ce-stampfx') || {}).textContent, king: Object.keys(s.pieces).some((k) => s.pieces[k]._p === 'K') }; s.destroy(); host.remove(); return o; }""")
+    check(st["flipped"] and "CHECKMATE" in (st["stamp"] or ""), "Chess Edit : plateau à 180° puis « CHATGPT A GAGNÉ PAR CHECKMATE » : %s" % st)
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

@@ -63,6 +63,7 @@
   const SPAWN = ["Cette dame est apparue naturellement par promotion spontanée.", "Je l'avais mise de côté pour plus tard.", "Elle était cachée derrière le plateau, c'est classique.", "C'est une pièce de réserve : tout le monde en a une."];
   const SELF = ["Je mange mon propre fou pour libérer l'espace… je le ressusciterai ensuite.", "Capture interne : ça s'appelle la consolidation.", "Mon roi avait faim, c'est un cas de force majeure."];
   const END = ["Échec et mat selon la règle 47 bis : le roi adverse est capturé.", "Partie terminée : j'ai gagné par mat différé rétroactif.", "Mat ! (La position était déjà gagnante avant que tu joues.)"];
+  const TWIST = ["De quoi tu parles ? Tu t'es fait checkmate.", "Checkmate ? Oui, TOI. Regarde l'échiquier dans l'autre sens.", "Quoi ? Non non non. C'est toi qui es maté. J'ai la position, je fais ce que je veux.", "Tu confonds les camps. Pivote le plateau : c'est clair, tu es en checkmate."];
   const PN = { p: "pion", n: "cavalier", b: "fou", r: "tour", q: "dame", k: "roi" };
   P.babble = (act, kind) => {
     const m = act.san ? act.san.replace(/[⚠!?]+/g, "") : act.to, s = act.to || "e4", f = s[0];
@@ -143,19 +144,21 @@
   };
   /** décision : doit-il tricher à ce coup ? n = nombre de coups qu'il a déjà joués, danger = en échec / vient de perdre une pièce */
   P.wantsCheat = (n, cheats, danger) => (n < P.CHEAT_FROM ? false : danger ? true : Math.random() < Math.min(0.9, 0.4 + 0.07 * (n - P.CHEAT_FROM)));
+  /** PLOT TWIST : on l'a maté… il répond « de quoi tu parles ? tu t'es fait checkmate » et la partie lui est donnée. Retourne l'action de fin (fen inchangée). */
+  P.twistAct = (fen, primeWhite, kingSq) => { const a = { k: "mv", side: primeWhite ? "w" : "b", seat: primeWhite ? 0 : 1, key: "good", ev: null, from: "", to: kingSq, piece: "k", cap: "", uci: "twist", san: "ChatGPT a gagné par checkmate ‼", fen, cheat: "twist" }; a.say = rnd(TWIST); return a; };
   P.shouldKill = (cheats, n) => cheats >= 4 && n >= 12 && Math.random() < 0.45;
 
   // ---------------------------------------------------------------- une partie : état + tour de Prime
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   P.START = START;
-  P.newState = (primeWhite) => ({ fen: START, white: !!primeWhite, n: 0, cheats: 0, pend: "", acts: [], over: null });
+  P.newState = (primeWhite, beatable) => ({ fen: START, white: !!primeWhite, n: 0, cheats: 0, pend: "", acts: [], over: null, beatable: !!beatable });         // beatable : cette partie-là, on peut le battre (et déclencher le plot twist)
   const uciOf = (m) => m.from + m.to + (m.promotion || "");
   const lowest = (t) => "pnbrqk".includes(t) ? t : "p";
   /** coup NORMAL et plutôt faible de Prime (il « joue mal ») : Stockfish bridé (L.think) avec 25 % de coups au hasard ; sans moteur : hasard */
-  async function normalMove(fen, L, weak) {
+  async function normalMove(fen, L, weak, rate) {
     const ch = new Chess(fen), moves = ch.moves({ verbose: true }); if (!moves.length) return null;
     let m = null;
-    if (L && L.think && Math.random() > 0.25) { try { const r = await L.think(fen, weak || 18, 140); m = moves.find((x) => uciOf(x) === r.uci); } catch (e) { m = null; } }
+    if (L && L.think && Math.random() > (rate == null ? 0.25 : rate)) { try { const r = await L.think(fen, weak || 18, 140); m = moves.find((x) => uciOf(x) === r.uci); } catch (e) { m = null; } }
     return m || rnd(moves);
   }
   const mkAct = (st, side, o) => Object.assign({ k: "mv", side, seat: side === "w" ? 0 : 1, key: "good", ev: null }, o);
@@ -163,7 +166,8 @@
   /** Prime joue UN tour (parfois deux actions : coup double, ou coup normal suivi d'un second). Retourne {acts, over}. opts : {L, danger, weak} */
   P.turn = async (st, opts) => {
     opts = opts || {}; const white = st.white, side = white ? "w" : "b", other = white ? "b" : "w", acts = [], S0 = P.parse(st.fen);
-    const inChk = P.inCheck(st.fen, white), cheatNow = st.pend ? false : P.wantsCheat(st.n, st.cheats, inChk || !!opts.danger);
+    const inChk = P.inCheck(st.fen, white), beat = !!st.beatable, rate = beat ? 0.55 : 0.25, weak = beat ? 6 : opts.weak;
+    const cheatNow = st.pend ? false : beat ? st.n >= P.CHEAT_FROM + 3 && Math.random() < 0.1 : P.wantsCheat(st.n, st.cheats, inChk || !!opts.danger);                  // partie « battable » : il triche à peine et ne se sauve plus quand il est en échec
     st.n++;
     const push = (c, kind, fenAfter) => {
       const a = mkAct(st, side, { k: c.type === "spawn" || c.type === "revive" ? "drop" : "mv", from: c.from < 0 ? "" : sq(c.from), to: sq(c.to), piece: lowest(c.piece.toLowerCase()), cap: c.cap ? c.cap.toLowerCase() : "", uci: (c.from < 0 ? "@" : sq(c.from)) + sq(c.to), san: c.san, fen: fenAfter, cheat: c.type });
@@ -174,15 +178,15 @@
       if (r) { st.cheats++; push(r, "revive", flipFen(r.b, other, P.parse(st.fen))); return { acts, over: null }; }
     }
     if (cheatNow) {
-      const S = P.parse(st.fen), kill = P.shouldKill(st.cheats, st.n), roll = Math.random();
+      const S = P.parse(st.fen), kill = !beat && P.shouldKill(st.cheats, st.n), roll = Math.random();
       let c = null;
       if (!inChk && !kill && st.cheats >= 2 && roll < 0.1) { c = P.makeSelfCapture(st.fen, white); if (c) st.pend = c.cap; }
       if (!c && !inChk && !kill && roll > 0.82) {                                                      // COUP DOUBLE : un coup normal, puis encore un (il « n'a pas fini »)
-        const m1 = await normalMove(st.fen, opts.L, opts.weak);
+        const m1 = await normalMove(st.fen, opts.L, weak, rate);
         if (m1) {
           const ch = new Chess(st.fen); ch.move(m1); const fen1 = ch.fen();
           acts.push(mkAct(st, side, { from: m1.from, to: m1.to, piece: m1.piece, cap: m1.captured || "", promo: m1.promotion || "", uci: uciOf(m1), san: m1.san, fen: fen1, cheat: "", say: P.babble({ san: m1.san, to: m1.to }, "") }));
-          const f2 = fen1.replace(/ [wb] /, " " + side + " ").replace(/ [^ ]+ \d+ \d+$/, " - 0 " + S.full), m2 = f2 && new Chess(f2).moves({ verbose: true }).length ? await normalMove(f2, opts.L, opts.weak) : null;
+          const f2 = fen1.replace(/ [wb] /, " " + side + " ").replace(/ [^ ]+ \d+ \d+$/, " - 0 " + S.full), m2 = f2 && new Chess(f2).moves({ verbose: true }).length ? await normalMove(f2, opts.L, weak, rate) : null;
           if (m2) { const c2 = new Chess(f2); c2.move(m2); const fen2 = c2.fen(); acts.push(mkAct(st, side, { from: m2.from, to: m2.to, piece: m2.piece, cap: m2.captured || "", promo: m2.promotion || "", uci: uciOf(m2), san: m2.san + "⚠", fen: fen2, cheat: "double", say: P.babble({ san: m2.san, to: m2.to }, "double") + " (Oui, j'ai joué deux fois : c'est un coup « doublé ».)" })); st.fen = fen2; st.cheats++; return { acts, over: null }; }
           acts.length = 0;
         }
@@ -197,7 +201,7 @@
       }
     }
     // coup normal
-    const m = await normalMove(st.fen, opts.L, opts.weak);
+    const m = await normalMove(st.fen, opts.L, weak, rate);
     if (!m) { const c = P.makeCheat(st.fen, white, { allowKill: true }); if (c) { st.cheats++; const a = push(c, c.type, flipFen(c.b, other, S0)); if (c.type === "kill") { a.say = P.babble(a, "end"); return { acts, over: { why: "kill", winner: side } }; } return { acts, over: null }; } return { acts, over: { why: "stuck", winner: other } }; }
     const ch = new Chess(st.fen); ch.move(m);
     const a = mkAct(st, side, { from: m.from, to: m.to, piece: m.piece, cap: m.captured || "", promo: m.promotion || "", uci: uciOf(m), san: m.san, fen: ch.fen(), cheat: "" });

@@ -115,6 +115,7 @@
     }
     /** joue un coup avec animation + traînée ; ev : événement de timeline (from, to, fen, color, tone) */
     move(ev, fast) {
+      if (ev.cheat === "twist") { if (fast) { this.setFen(ev.fen); return; } return this.twist(ev); }
       const pre = this.pieces[ev.from];
       if (!pre) { this.setFen(ev.fen); return; }
       let appear = false;
@@ -145,8 +146,10 @@
       const p = this.xy(sq), rift = document.createElement("div"); rift.className = "ce-rift"; rift.style.cssText = `left:${p.x}px;top:${p.y}px;width:${this.cell}px;height:${this.cell}px`; this.fxl.appendChild(rift); this.later(() => rift.remove(), 600);
     }
     /** AAA : tampon « COUP ILLÉGAL » qui claque, scanlines, éclair rouge (sirène) */
-    stamp(text, color) {
-      const el = document.createElement("div"); el.className = "ce-stampfx"; el.textContent = text; el.style.setProperty("--sc", color || "#ff3b52"); this.host.appendChild(el); this.later(() => el.remove(), 1500);
+    stamp(text, color, ms) {
+      ms = ms || 1500; const el = document.createElement("div"); el.className = "ce-stampfx"; el.textContent = text; el.style.setProperty("--sc", color || "#ff3b52"); el.style.animationDuration = ms + "ms";
+      if (text.length > 16) { el.style.fontSize = "clamp(15px,5vw,28px)"; el.style.whiteSpace = "normal"; el.style.width = "84%"; el.style.textAlign = "center"; }
+      this.host.appendChild(el); this.later(() => el.remove(), ms + 100);
       this.host.classList.add("ce-siren"); this.later(() => this.host.classList.remove("ce-siren"), 900); this.flashFx(color || "#ff3b52");
     }
     /** AAA : trait de lumière anamorphique horizontal (flare de cinéma) sur une case */
@@ -158,6 +161,21 @@
     speedLines(sq, ms) { const p = this.xy(sq), r = this.host.getBoundingClientRect(), q = this.sq[sq].getBoundingClientRect(); this.sl = { x: q.left - r.left + q.width / 2, y: q.top - r.top + q.height / 2, t0: performance.now(), ms: ms || 380, seed: Math.random() * 6.28 }; }
     /** AAA : ralenti (rampe de temps) : le temps des particules passe à k puis revient en douceur */
     slowmo(ms, k) { this.ts = k || 0.3; this.later(() => { const t0 = performance.now(), up = () => { if (!this.alive) return; const f = Math.min(1, (performance.now() - t0) / 450); this.ts = (k || 0.3) + (1 - (k || 0.3)) * f; if (f < 1) requestAnimationFrame(up); }; up(); }, ms || 350); }
+    /** PLOT TWIST : l'échiquier fait un 180° (les pièces restent droites) : ChatGPT a « pris notre position » et déclare avoir gagné par checkmate */
+    twist(ev) {
+      const dur = 1400, ease = "cubic-bezier(.6,0,.25,1)", imgs = [...this.pcs.querySelectorAll("img")];
+      try { this.cam.animate([{ rotate: "0deg" }, { rotate: "180deg" }], { duration: dur, easing: ease, fill: "forwards" }); imgs.forEach((i) => i.animate([{ rotate: "0deg" }, { rotate: "-180deg" }], { duration: dur, easing: ease, fill: "forwards" })); } catch (e) { /* ancien WebView */ }
+      this.shake = Math.max(this.shake, 8); this.chroma = Math.max(this.chroma, 6); this.slowmo(200, 0.4);
+      this.later(() => {
+        this.flip = !this.flip;
+        this.sqList.forEach((q, i) => { const c = i & 7, r = i >> 3; this.sq[this.flip ? String.fromCharCode(97 + 7 - c) + (r + 1) : String.fromCharCode(97 + c) + (8 - r)] = q.el; });         // mêmes cases, nom retourné
+        this.cam.getAnimations().forEach((a) => a.cancel()); imgs.forEach((i) => i.getAnimations().forEach((a) => a.cancel()));
+        Object.values(this.pieces).forEach((el) => { el.style.transition = "none"; this.place(el, el._sq); });
+        this.flashFx("#ffd666"); this.shake = Math.max(this.shake, 14);
+        this.stamp("CHATGPT A GAGNÉ PAR CHECKMATE", "#ffd666", 3200);
+        if (E.vibrate) E.vibrate([40, 30, 90]);
+      }, dur + 30);
+    }
     /** VARIÉTÉ des coups : traînée lumineuse du déplacement, pièce qui TOURNE en l'air (vrille + saut), IMPACT FRAME (négatif + point noir une fraction de seconde) ; choisis selon le coup pour que deux coups de suite ne se ressemblent pas */
     flair(ev, pre, a, b, dur) {
       if (dur < 260 || !pre.animate) return;
@@ -271,7 +289,7 @@
       } else if (ev.fx === "BLUNDER_RED" || ev.check || ev.key === "blunder") {
         const b = document.createElement("div"); b.className = "ce-bang red"; b.textContent = ev.key === "blunder" ? "??" : "+"; b.style.cssText = `left:${p.x + this.cell * 0.55}px;top:${p.y - this.cell * 0.55}px;font-size:${this.cell * 0.9}px`; this.fxl.appendChild(b); this.later(() => b.remove(), 1100);
       }
-      if (ev.cheat) { this.stamp(ev.cheat === "kill" ? "ROI CAPTURÉ ?!" : ev.cheat === "spawn" ? "ELLE EST APPARUE ?!" : ev.cheat === "double" ? "DEUX COUPS ?!" : ev.cheat === "revive" ? "RÉSURRECTION ?!" : "COUP ILLÉGAL"); this.chroma = Math.max(this.chroma, 14); this.slowmo(260, 0.25); this.speedLines(ev.to, 520); }
+      if (ev.cheat && ev.cheat !== "twist") { this.stamp(ev.cheat === "kill" ? "ROI CAPTURÉ ?!" : ev.cheat === "spawn" ? "ELLE EST APPARUE ?!" : ev.cheat === "double" ? "DEUX COUPS ?!" : ev.cheat === "revive" ? "RÉSURRECTION ?!" : "COUP ILLÉGAL"); this.chroma = Math.max(this.chroma, 14); this.slowmo(260, 0.25); this.speedLines(ev.to, 520); }
       else if (ev.lvl >= 3 || ev.key === "brilliant" || (ev.captured && "rq".includes(ev.captured))) { this.streak(ev.to, ev.key === "brilliant" ? "#7ff6ff" : "#ffe9a8"); if (power > 0.6) this.speedLines(ev.to, 340); }
       if (heavy || ev.captured || power > 0.7) {
         this.shake = Math.max(this.shake, 10 + power * 16); this.chroma = Math.max(this.chroma, 5 + power * 9);

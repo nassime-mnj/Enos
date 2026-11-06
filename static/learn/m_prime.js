@@ -26,7 +26,7 @@
           <div class="card" style="padding:12px">
             <div class="pr-pl" id="pr-top"></div>
             <div id="pr-bub" class="pr-bub"><img src="${E.assetBase || ""}img/bots/prime.png" alt=""><div><small>ChatGPT Prime</small><span id="pr-say">…</span></div></div>
-            <div class="pr-bw"><div id="pr-board"></div><div id="pr-stamp" class="pr-stamp" hidden></div></div>
+            <div class="pr-bw" id="pr-bw"><div id="pr-board"></div><div id="pr-stamp" class="pr-stamp" hidden></div></div>
             <div class="pr-pl" id="pr-bot"></div>
             <div class="ch-moves" id="pr-moves"></div>
             <div class="ch-top" style="margin-top:6px"><span id="pr-status" class="muted"></span></div>
@@ -67,7 +67,7 @@
           const src = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.setValueAtTime(3400, t); f.frequency.exponentialRampToValueAtTime(380, t + 0.3); g.gain.value = 0.7; src.buffer = n; src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
           const o = a.createOscillator(), og = a.createGain(); o.type = "sawtooth"; o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(110, t + 0.28); og.gain.setValueAtTime(0.25, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.3); o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + 0.32); } catch (e) { /* son facultatif */ }
       }
-      function stamp(text) { const s = $("#pr-stamp"); s.textContent = text; s.hidden = false; s.classList.remove("go"); void s.offsetWidth; s.classList.add("go"); setTimeout(() => { s.hidden = true; }, 1100); }
+      function stamp(text, long) { const s = $("#pr-stamp"); s.textContent = text; s.hidden = false; s.classList.toggle("long", !!long); s.classList.remove("go"); void s.offsetWidth; s.classList.add("go"); setTimeout(() => { s.hidden = true; }, long ? 2600 : 1100); }
       async function playAct(a) {                                                                      // anime UN coup de Prime (légal ou non)
         G.acts.push(a); G.st.fen = a.fen; const last = a.from ? [a.from, a.to] : [a.to, a.to];
         paint(last);
@@ -76,6 +76,14 @@
           brd.classList.add("pr-glitch"); setTimeout(() => brd.classList.remove("pr-glitch"), 700); B.burst(brd, a.to, "blunder"); if (a.from) B.burst(brd, a.from, "tap"); glitchSfx(); E.vibrate && E.vibrate([30, 40, 80]);
         } else { try { E.chessSound.forSan(a.san.replace(/⚠/g, "")); } catch (e) { /* son facultatif */ } B.burst($("#pr-board"), a.to, a.cap ? "capture" : "land"); }
         say(a.say); await new Promise((r) => setTimeout(r, a.cheat ? 1500 : 800));
+      }
+      /** PLOT TWIST : Prime est maté… « De quoi tu parles ? Tu t'es fait checkmate. » : le plateau fait un 180° (il prend NOTRE place) et il déclare avoir gagné par checkmate */
+      async function twist() {
+        const tok = G.token; G.busy = true; const pos = B.parse(G.st.fen), a = P.twistAct(G.st.fen, G.primeSide === "w", B.kingSquare(pos.m, pos.turn)), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+        G.acts.push(a); G.over = { why: "twist", winner: G.primeSide }; status("Échec et mat !"); paint(); say(a.say); await wait(2200); if (!G || tok !== G.token) return;
+        const bw = $("#pr-bw"); bw.classList.add("pr-spin"); glitchSfx(); E.vibrate && E.vibrate([40, 30, 90]); await wait(1450); if (!G || tok !== G.token) return;
+        bw.classList.remove("pr-spin"); G.flip = !G.flip; paint(); stamp("CHATGPT A GAGNÉ PAR CHECKMATE", true); say("ChatGPT a gagné par checkmate."); try { E.chessSound.play("mate"); } catch (e) { /* son facultatif */ }
+        await wait(2400); if (!G || tok !== G.token) return; finish("par checkmate (il l'a décidé)", G.over);
       }
       function record(why) {
         const prime = G.primeSide, acts = G.acts.map((a) => Object.assign({}, a)), winner = G.over && G.over.winner ? G.over.winner : prime;
@@ -97,7 +105,7 @@
         const tok = G.token, r = await P.turn(G.st, { L, danger, weak: 18 }); if (!G || tok !== G.token) return;
         for (const a of r.acts) { if (!G || tok !== G.token) return; await playAct(a); }
         if (r.over) return finish(r.over.why === "kill" ? "roi capturé (règle 47 bis)" : "fin", r.over);
-        const go = gameOverNow(); if (go) return finish(go.in_stalemate() ? "pat… selon Prime, c'est une victoire" : "nulle (Prime conteste)", { why: "draw", winner: G.primeSide });
+        const go = gameOverNow(); if (go) return finish(go.in_checkmate() ? "échec et mat" : go.in_stalemate() ? "pat… selon Prime, c'est une victoire" : "nulle (Prime conteste)", { why: go.in_checkmate() ? "mate" : "draw", winner: G.primeSide });
         if (G.acts.length > 220) return finish("fatigue (Prime déclare la victoire)", { why: "long", winner: G.primeSide });
         G.busy = false; if (G.mode === "sf") sfTurn(); else status("À toi de jouer.");
       }
@@ -107,7 +115,7 @@
         const ch = new Chess(fen), mv = ch.moves({ verbose: true }), m = mv.find((x) => x.from + x.to + (x.promotion || "") === uci) || mv[0];
         if (!m) return finish("Stockfish n'a plus de coup", { why: "end", winner: G.primeSide });
         const lost = m.captured && "nbrq".includes(m.captured) ? 1 : 0; ch.move(m); await human(m, ch);
-        if (!G || tok !== G.token) return; const go = gameOverNow(); if (go) return finish(go.in_checkmate() ? "Stockfish mate… (annulé par Prime)" : "nulle", { why: "draw", winner: G.primeSide });
+        if (!G || tok !== G.token) return; const go = gameOverNow(); if (go) return go.in_checkmate() ? twist() : finish("nulle", { why: "draw", winner: G.primeSide });
         primeTurn(false);
       }
       async function human(m, ch) {                                                                  // joue le coup de l'autre camp (toi / Stockfish)
@@ -118,13 +126,13 @@
       async function onTap(sq) {
         if (!G || G.over || G.busy || G.mode !== "human") return; const ch = new Chess(G.st.fen); if ((ch.turn() === "w") === (G.primeSide === "w")) return;
         const mv = G.sel ? ch.moves({ square: G.sel, verbose: true }).filter((x) => x.to === sq) : [];
-        if (mv.length) { G.busy = true; const m = mv.find((x) => x.promotion === "q") || mv[0]; ch.move(m); const lost = m.captured && "nbrq".includes(m.captured); await human(m, ch); const go = gameOverNow(); if (go) return finish(go.in_checkmate() ? "tu as maté Prime… mais il conteste" : "nulle", { why: "draw", winner: G.primeSide }); return primeTurn(!!lost); }
+        if (mv.length) { G.busy = true; const m = mv.find((x) => x.promotion === "q") || mv[0]; ch.move(m); const lost = m.captured && "nbrq".includes(m.captured); await human(m, ch); const go = gameOverNow(); if (go) return go.in_checkmate() ? twist() : finish("nulle", { why: "draw", winner: G.primeSide }); return primeTurn(!!lost); }
         const p = ch.get(sq); G.sel = p && p.color === ch.turn() ? sq : null; paint(); if (G.sel) B.burst($("#pr-board"), sq, "tap");
       }
       function start() {
         const col = cfg.color === "r" ? (Math.random() < 0.5 ? "w" : "b") : cfg.color; E.settings.set("prime.cfg", cfg);
         const humanSide = col, primeWhite = humanSide === "b";
-        G = { mode: cfg.mode, primeSide: primeWhite ? "w" : "b", st: P.newState(primeWhite), acts: [], sel: null, last: null, busy: false, over: null, token: Math.random(), flip: cfg.mode === "human" ? humanSide === "b" : false };
+        G = { mode: cfg.mode, primeSide: primeWhite ? "w" : "b", st: P.newState(primeWhite, Math.random() < (cfg.beat == null ? 0.35 : cfg.beat)), acts: [], sel: null, last: null, busy: false, over: null, token: Math.random(), flip: cfg.mode === "human" ? humanSide === "b" : false };
         $("#pr-home").hidden = true; $("#pr-game").hidden = false; say("Je suis un Grand Maître à 9999 Elo. Les règles ? Je les connais toutes. Je les applique selon mon humeur."); paint();
         $("#pr-btns").innerHTML = `<button class="btn" id="pr-stop">ABANDONNER</button>`; $("#pr-stop").onclick = () => finish("tu abandonnes (Prime accepte avec élégance)", { why: "resign", winner: G.primeSide });
         if (primeWhite || cfg.mode === "sf") { if (primeWhite) primeTurn(false); else sfTurn(); } else status("À toi de jouer.");

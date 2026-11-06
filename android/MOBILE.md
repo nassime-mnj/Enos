@@ -169,3 +169,6 @@ Les ouvertures/styles sont des estimations (aucune source publique ne les détai
 - Parties enregistrées dans `variants.hist` (mode `prime`, actions + FEN) : **éditables dans le Chess Edit** ; **Game Clips** : Prime est un personnage (scène `C.runPrime`).
 - Chess Edit — nouveaux effets : glitch de téléportation (fantôme RVB + faille), tampon « COUP ILLÉGAL » + sirène, lignes de vitesse manga, flare anamorphique, rampe de ralenti. Perf : canvas à 1× hors qualité max, 30 i/s en « léger », pause onglet caché, fumée en sprite pré-rendu, plus de `shadowBlur`, listes de particules plafonnées.
 - Logos réels pour les bots IA (usage de test).
+
+## 1.49 — Prime battable + plot twist
+~35 % des parties, Prime est **battable** (il triche à peine, ne se sauve plus en cas d'échec, joue faible). Si tu le mates : « De quoi tu parles ? Tu t'es fait checkmate. », le plateau fait un **180°** (pièces restes droites), il « prend notre place » et affiche **CHATGPT A GAGNÉ PAR CHECKMATE** ; la partie est enregistrée avec lui vainqueur (action `cheat: "twist"`). Chess Edit : le twist est rejoué (`Stage.twist`), et les coups `+` / `#` des parties de variantes sont maintenant reconnus (échec / mat).

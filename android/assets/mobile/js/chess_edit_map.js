@@ -22,7 +22,7 @@
       if (smash.length) { d += 22 * smash.length; tags.push("écrasement"); }
       if (special) { d += { mk: 40, rei: 25, army: 30, barrel: 20 }[special] || 15; tags.push(special); }
       if (drop && !special) d += 3;
-      const cheat = a.cheat || ""; if (cheat) { d += cheat === "kill" ? 110 : cheat === "double" || cheat === "revive" ? 25 : 60; tags.push("illégal"); }
+      const cheat = a.cheat || ""; if (cheat) { d += cheat === "twist" ? 140 : cheat === "kill" ? 110 : cheat === "double" || cheat === "revive" ? 25 : 60; tags.push("illégal"); }
       if (a.elim && a.elim.length) { d += 90 * a.elim.length; tags.push("élimination"); }
       const last = i === acts.length - 1, over = last && (V.over === "mate" || V.over === "smash" || /mate|smash/.test(V.over || ""));
       if (over) { d += 70; tags.push("mat"); }
@@ -30,7 +30,7 @@
       const prevEv = i ? acts[i - 1].ev : 0; if (a.ev != null) d += Math.min(30, Math.abs(a.ev - (prevEv || 0)) / 20);
       const to = a.to, piece = (a.piece || "p"), color = a.side || "w", fen = a.fen, mapAfter = mapOf(fen);
       out.push({ i, n: i + 1, pid: a.n + ":" + to, fenBefore: prevFen, color, san: a.san || "", uci: a.uci || "@" + to, from: drop ? "" : a.from, to, piece, captured: a.cap || (smash.length ? "p" : ""), promo: a.promo || "", key, loss: a.loss || 0, ev: a.ev == null ? null : a.ev, best: "",
-        check: false, mate: over, sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, cheat, lines: a.say && (cheat || i % 3 === 0) ? [{ bot: a.side === (V.primeSide || "") || V.mode === "prime" ? "prime" : "", text: a.say, kind: cheat ? "prime_cheat" : "prime" }].filter((l) => l.bot) : [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "" });
+        check: /\+/.test(a.san || "") && !/#/.test(a.san || ""), mate: over || (/#/.test(a.san || "") && cheat !== "twist"), sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, cheat, lines: a.say && (cheat || i % 3 === 0) ? [{ bot: a.side === (V.primeSide || "") || V.mode === "prime" ? "prime" : "", text: a.say, kind: cheat ? "prime_cheat" : "prime" }].filter((l) => l.bot) : [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "" });
     });
     return out;
   }
@@ -249,7 +249,7 @@
   const ELO_OF = { prime: 9999, penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
   /** Niveau d'importance d'un coup : 3 = moment clé (arrêt sur image long), 2 = important (ralenti), 1 = notable, 0 = passif (accéléré). */
   function lvlOf(p) {
-    if (p.variant) { if (p.cheat) return p.cheat === "kill" || p.cheat === "teleport" || p.cheat === "spawn" ? 3 : 2; if (p.mate || p.key === "brilliant" || p.key === "blunder" || (p.elim && p.elim.length) || (p.smash && p.smash.length >= 2) || p.special === "mk") return 3; if (p.special || (p.smash && p.smash.length) || p.captured || p.key === "miss" || p.key === "mistake") return 2; return p.drop ? 1 : p.drama >= 14 ? 1 : 0; }
+    if (p.variant) { if (p.cheat) return p.cheat === "twist" || p.cheat === "kill" || p.cheat === "teleport" || p.cheat === "spawn" ? 3 : 2; if (p.mate || p.key === "brilliant" || p.key === "blunder" || (p.elim && p.elim.length) || (p.smash && p.smash.length >= 2) || p.special === "mk") return 3; if (p.special || (p.smash && p.smash.length) || p.captured || p.key === "miss" || p.key === "mistake") return 2; return p.drop ? 1 : p.drama >= 14 ? 1 : 0; }
     if (p.mate || p.key === "brilliant" || p.boss || p.key === "blunder" || p.loss > 300 || p.promo === "q" || p.captured === "q") return 3;
     if (p.check || p.sacrifice || p.promo || p.key === "mistake" || p.key === "miss" || p.drama >= 45 || (p.captured && VAL[p.captured] >= 5)) return 2;
     if (p.captured || p.key === "inaccuracy" || p.key === "best" || p.key === "excellent") return 1;
@@ -343,7 +343,7 @@
     // son : les bruits de base calés à la frame sur l'impact de chaque coup, les voix de Levy sur le SACRIFICE d'une pièce (jamais deux voix à moins de 2,4 s)
     const sfx = [];
     ev.forEach((e) => {
-      const id = e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
+      const id = e.cheat === "twist" ? "mate" : e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
       sfx.push({ t: e.impact, id, gain: e.kind === "ff" ? 0.38 : e.lvl >= 2 ? 1 : 0.8, bus: "sfx", ply: e.n });
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
     });
