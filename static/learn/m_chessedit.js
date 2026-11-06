@@ -160,7 +160,7 @@
         const app = document.getElementById("app") || document.body, host = document.createElement("div"), au = new Audio(S.url), evs = S.tl.events, dur = S.audio.duration;
         app.appendChild(host);
         let idx = 0, raf = 0, alive = true, ffT = 0;
-        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = (e) => (e.mate || e.key === "blunder" ? "blood" : e.key === "brilliant" && ["neon", "galaxy"].includes(dirId) ? "aura" : E.editFx.DIRECTIONS[dirId].look);
+        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = () => E.editFx.DIRECTIONS[dirId].look;
         const stage = new E.editFx.Stage(host, { look: E.editFx.DIRECTIONS[dirId].look, direction: dirId, quality: $("#ce-qual").value, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: () => { if (au.paused) au.play(); else au.pause(); stage.setPlaying(!au.paused); } });
         function fire(e) {
           const power = e.kind === "drop" ? 1 : Math.max(0.3, Math.min(1, (e.drama || 0) / 80));
@@ -192,7 +192,7 @@
         app.appendChild(host);
         const sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null;
         let alive = true, raf = 0, idx = 0, paused = false, ffOn = false, T0 = 0;
-        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = (e) => (e.mate || e.key === "blunder" ? "blood" : e.key === "brilliant" && ["neon", "galaxy"].includes(dirId) ? "aura" : E.editFx.DIRECTIONS[dirId].look);
+        const pick = $("#ce-look").value, dirId = pick === "auto" ? ["blood", "fog", "spot", "neon", "galaxy", "aura"][Math.floor(Math.random() * 6)] : pick, lookFor = () => E.editFx.DIRECTIONS[dirId].look;
         const stage = new E.editFx.Stage(host, { look: E.editFx.DIRECTIONS[dirId].look, direction: dirId, quality: $("#ce-qual").value, flip: S.rec.me === "b", title: (S.rec.pw || "") + " – " + (S.rec.pb || ""), onClose: stop, onToggle: toggle });
         stage.later(() => {}, 0);
         function toggle() {
@@ -202,18 +202,21 @@
         const duck = (when, len) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = 0.18; }, Math.max(0, ms - 80)); setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 300); };
         sfx.onVoice = duck;
         function fire(e) {
-          if (e.kind === "intro") { stage.intro(e.intro, e.dur); return; }
+          if (e.kind === "setup") { stage.setFen(e.fen); return; }
+          if (e.kind === "intro") { if (e.dur <= 1) stage.faceoff(e.intro, Math.round(e.dur * 1000)); else stage.intro(e.intro, e.dur); return; }
+          if (e.kind === "prompt") { stage.promptCut(e.text, e.piece, Math.round(e.dur * 1000), e.q); return; }
+          if (e.kind === "cut3") { stage.cut3d(e.ref, e.text); return; }
           if (e.kind === "idle") { stage.idle(e.dur); return; }
           if (e.kind === "title") { stage.openingTitle(e.text, e.dur); return; }
           if (e.kind === "outro") {
-            stage.ff(false); stage.outro(e, e.dur);
+            stage.ff(false); stage.outro(e, e.dur); if (e.final) stage.later(() => stage.reality(e.final.text, e.final.bot), 250);          // « reality check » : caméra à plat, plateau vert et blanc, réplique finale
             if (au) { const v0 = au.volume, t0 = performance.now(); const fade = () => { if (!alive) return; const k = Math.min(1, (performance.now() - t0) / (e.dur * 1000)); au.volume = Math.max(0, v0 * (1 - k)); if (k < 1) requestAnimationFrame(fade); }; fade(); }      // la musique s'éteint avec le résultat
             return;
           }
           if (e.kind === "ff") {
             if (e.ffRun && !ffOn) { ffOn = true; stage.ff(true); }
             if (e.drop) stage.drop(e); else stage.move(e, true);
-            if (e.ev != null) stage.setEval(e.ev); stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
+            if (e.snap) stage.setFen(e.snap); if (e.ev != null) stage.setEval(e.ev); if (!tl.sync) stage.camTo({ rx: 26 + Math.random() * 8, rz: (Math.random() - 0.5) * 6, s: 1.0 }, 160);
             return;
           }
           if (ffOn) { ffOn = false; stage.ff(false); }
@@ -222,9 +225,11 @@
             const slow = e.dur > 600, p = stage.xy(e.to), q = stage.xy(e.from), power = e.kind === "drop" ? 1 : Math.max(0.35, Math.min(1, (e.drama || 0) / 80)), cm = stage.dir.cam;
             const rr = (a, b2) => a + Math.random() * (b2 - a), sg = Math.random() < 0.5 ? -1 : 1;
             if (slow) stage.slowmo(true);
+            if (e.snap) stage.setFen(e.snap);
             if (e.drop) { stage.drop(e); stage.highlight(e); } else stage.move({ ...e, dur: e.dur });
             stage.focusSpot(e.to);
-            if (e.lvl >= 2) {                                                                          // caméra : 4 mouvements possibles (jamais d'étirement : inclinaison douce, zoom limité)
+            if (tl.sync) { /* caméra pilotée par hit() : zoom + rotateZ à l'impact */ }
+            else if (e.lvl >= 2) {                                                                          // caméra : 4 mouvements possibles (jamais d'étirement : inclinaison douce, zoom limité)
               const style = ["track", "orbit", "crane", "pushpull"][Math.floor(Math.random() * 4)], d = Math.round(e.dur * 0.9);
               if (style === "track") stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll * 0.6, s: cm.s[0] }, d, p.c, p.r);
               else if (style === "orbit") { stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: -sg * cm.roll, s: cm.s[0] }, 0, q.c, q.r); stage.later(() => stage.camTo({ rx: rr(cm.rx[0], cm.rx[1]), rz: sg * cm.roll, s: cm.s[0] + 0.1 }, d, p.c, p.r), 40); }
@@ -237,7 +242,14 @@
               if (slow) stage.slowmo(false);
               if (e.lvl >= 2) stage.hit(e, power); else stage.soft(e);
               if (e.ev != null) stage.setEval(e.ev);
-              if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
+              if (e.redPath) stage.redPath(e.from, e.to, e.piece, 900);
+              if (e.arrow) stage.arrow(e.from, e.to, 1500);
+              if (e.strobe) stage.strobe();
+              if (e.kingEdge && e.kingSq) stage.later(() => stage.kingTilt(e.kingSq), 140);
+              if (e.illegal) {                                                                              // badges IA / coup illégal / troll
+                const list = e.glasses ? [{ img: "img/badges/blunder.png", color: "#CA3431" }] : [{ img: "img/badges/miss.png", color: "#ff2a2a" }]; if (e.aiImg) list.push({ img: e.aiImg, color: "#ffffff", ai: true });
+                stage.badges(e.to, list, 1500); if (e.glasses) stage.glasses(e.to, 1600);
+              } else if (e.badge) stage.badge(e, Math.round((e.freeze || 0) * 1000) + 700);
               if (e.threats && e.threats.length && e.lvl >= 2) stage.later(() => stage.threats(e.threats, Math.round((e.freeze || 1) * 1000) + 500), 350);        // menaces : flèches orange + ⚠ sur les pièces visées
               if (e.invert) stage.brilliantFx(e);
               if (!e.drop && e.smash && e.smash.length) { stage.shockwave(1); e.smash.forEach((sq, k) => stage.later(() => stage.dissolveAt(sq), 60 + k * 60)); }            // Méga Chevalier : saut qui écrase
@@ -251,7 +263,8 @@
               (e.lines || []).slice(0, 1).forEach((l) => stage.later(() => stage.say(l.bot, l.text), 300));
             }, wait);
           };
-          if (e.pre > 0 && e.stats) { stage.statCard(e.stats, e.pre * 1000); stage.later(startMove, e.pre * 1000); }                // la pièce maîtresse présente ses stats AVANT le coup
+          if (e.boss && e.pre > 0) { stage.bossPiece(e); stage.later(startMove, e.pre * 1000); }                                  // la pièce attaquante devient GÉANTE et rouge avant de frapper
+          else if (e.pre > 0 && e.stats) { stage.statCard(e.stats, e.pre * 1000); stage.later(startMove, e.pre * 1000); }                // la pièce maîtresse présente ses stats AVANT le coup
           else startMove();
         }
         function tick() {

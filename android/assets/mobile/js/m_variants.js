@@ -198,7 +198,7 @@
         const k = keyOf(G.s);
         if (!J) { logPush(V.moveText(m) + " · " + who); G.badge = null; return; }
         (G.q[k] = G.q[k] || {})[J.key] = ((G.q[k] || {})[J.key] || 0) + 1;
-        const g = E.board.BADGES[J.key] ? E.board.BADGES[J.key][0] : "";
+        const g = E.board.BADGES[J.key] ? E.board.badgeImg(J.key, "mk") : "";
         logPush(V.moveText(m) + (J.key === "good" ? "" : " " + g) + " · " + who, J.key);
         G.badge = J.key === "good" ? null : { sq: V.sqName(m.t), key: J.key, id: G.mv.length };
         if (J.key === "brilliant") { E.ui.toast("✦ " + who + " joue un coup BRILLANT !!", "ok", 2800); try { E.chessSound.play("brilliant"); } catch (e) { /* son facultatif */ } E.vibrate && E.vibrate([30, 40, 60]); }

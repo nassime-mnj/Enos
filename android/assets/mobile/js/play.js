@@ -83,7 +83,7 @@
       $("#ch-eval").style.setProperty("--w", (G.me === "w" ? w : 100 - w) + "%");
       $("#ch-evtxt").textContent = e.mate != null ? "M" + Math.abs(e.mate) : (e.cp / 100 * (G.me === "w" ? 1 : -1)).toFixed(1).replace(".", ",").replace(/^(\d)/, "+$1");
     }
-    $("#ch-moves").innerHTML = G.line.sans.map((sn, i) => { const k = G.line.keys[i], bd = k && B.BADGES[k] ? `<em style="color:${B.BADGES[k][1]}">${B.BADGES[k][0]}</em>` : ""; return `<span data-i="${i + 1}"${i + 1 === at ? ' class="cur"' : ""}>${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(sn)}${bd}</span>`; }).join("");
+    $("#ch-moves").innerHTML = G.line.sans.map((sn, i) => { const k = G.line.keys[i], bd = k && B.BADGES[k] ? `<em>${B.badgeImg(k, "mk")}</em>` : ""; return `<span data-i="${i + 1}"${i + 1 === at ? ' class="cur"' : ""}>${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(sn)}${bd}</span>`; }).join("");
     const cur = $("#ch-moves .cur"); if (cur) cur.scrollIntoView({ block: "nearest", inline: "center" }); else $("#ch-moves").scrollLeft = 1e5;
   }
 
@@ -304,7 +304,7 @@
     const who = j ? (sideOf(r, j) === "me" ? "Ton coup" : "Coup de l'adversaire") : "";
     $("#rv-note").innerHTML = j ? `<b style="color:${KEYLAB[k][1]}">${who} · ${KEYLAB[k][0]}</b><br>${esc(E.brain.describe(j, j.san, j.best))}` : '<span class="muted">Utilise ◂ ▸, la courbe, les catégories ou la liste des coups.</span>';
     $("#rv-show").hidden = !(j && j.best_uci);
-    $("#rv-allm").innerHTML = r.judged.map((x, i) => { const bd = B.BADGES[x.key]; return `<span data-i="${i + 1}" class="${i + 1 === step ? "cur " : ""}${sideOf(r, x) === "me" ? "mine" : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(x.san)}${bd ? `<em style="color:${bd[1]}">${bd[0]}</em>` : ""}</span>`; }).join("");
+    $("#rv-allm").innerHTML = r.judged.map((x, i) => { const bd = B.BADGES[x.key]; return `<span data-i="${i + 1}" class="${i + 1 === step ? "cur " : ""}${sideOf(r, x) === "me" ? "mine" : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(x.san)}${bd ? `<em>${B.badgeImg(x.key, "mk")}</em>` : ""}</span>`; }).join("");
     const cur = $("#rv-allm .cur"); if (cur) cur.scrollIntoView({ block: "nearest" });
     catCount();
   }

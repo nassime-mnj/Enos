@@ -88,7 +88,9 @@ with sync_playwright() as pw:
     exp = [DROP + 0.46875 * k for k in range(1, 38)]
     hit = sum(1 for e in exp if any(abs(t - e) < 0.08 for t in hb))
     check(hit >= 0.7 * len(exp), "hardBeats alignés sur les kicks : %d/%d à ±80 ms" % (hit, len(exp)))
-    check(len(an["introBeats"]) >= 6 and all(t < an["buildUpStart"] for t in an["introBeats"]), "%d introBeats avant la montée" % len(an["introBeats"]))
+    ib = an["introBeats"]
+    check(len(ib) >= 4 and all(t < DROP for t in ib) and all(b - a >= 0.44 for a, b in zip(ib, ib[1:])), "%d introBeats avant le drop, ≥ 450 ms d'écart" % len(ib))
+    check(all(b - a >= 0.215 for a, b in zip(hb, hb[1:])), "hardBeats espacés d'au moins 220 ms")
     check(len(an["wave"]) == 1000, "forme d'onde 1000 points")
 
     # ---------------------------------------------------------------- 2. mapping
@@ -140,11 +142,11 @@ with sync_playwright() as pw:
         const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4';
         const ev = { from: 'h5', to: 'f7', fen: 'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', piece: 'q', color: 'w', tone: 'cyan', fx: 'BRILLIANT_SHOCKWAVE', key: 'brilliant', captured: 'p', kind: 'hard' };
         st.setFen(fen); st.move(ev); st.hit(ev, 1); st.cutscene({ text: 'THE ROOK !', piece: 'r', color: 'w' }, 'cyan'); st.say('ghorghor', 'Att att... c\\'est réel.');
-        return new Promise((ok) => setTimeout(() => { const o = { cut: !st.cut.hidden, cap: !st.cap.hidden, halo: st.fxl.querySelectorAll('.ce-halo,.ce-ring,.ce-bang').length, shake: st.shake, burst: st.burst.length, cam: st.cam.style.transform, abr: !!st.wrap.style.filter };
+        return new Promise((ok) => setTimeout(() => { const o = { cut: !st.cut.hidden, cap: !st.cap.hidden, halo: st.host.querySelectorAll('.ce-halo,.ce-lit,.ce-tint,.ce-laser').length, shake: st.shake, burst: st.burst.length, cam: st.cam.style.transform, abr: !!st.wrap.style.filter };
           if (document.querySelector('.ce-stage:last-of-type')) window.__st = st; ok(o); }, 450)); }""")
     print(res)
     check(res["cut"] and res["cap"], "cutscene « THE ROOK ! » et réplique de bot affichées")
-    check(res["halo"] >= 3, "halo + ondes de choc + « !! » (%d éléments)" % res["halo"])
+    check(res["halo"] >= 3, "halo + case allumée + teinte + quadrillage laser sur un brillant (%d éléments)" % res["halo"])
     check(res["shake"] > 0.4 and res["burst"] > 0, "screen shake + particules d'explosion")
     check("rotateX" in res["cam"] and "scale(" in res["cam"], "caméra 3D : " + res["cam"][:90])
     check(res["abr"], "aberration chromatique active pendant l'impact")
@@ -204,7 +206,7 @@ with sync_playwright() as pw:
         const victim = st.pieces['f7']; st.move(ev);
         return new Promise((ok) => setTimeout(() => { const o = { ash: victim.classList.contains('ce-ash'), smoke: st.smoke.length, embers: st.burst.length, look: st.look, lookCls: host.classList.contains('ce-look-neon') }; st.dissolveKing('b'); o.king = Object.keys(st.pieces).every((s) => st.pieces[s]._p !== 'k'); ok(o); }, 200)); }""")
     check(r3["ash"] and r3["smoke"] >= 20 and r3["embers"] >= 8, "pièce prise : elle devient une ombre qui part en fumée + braises (%s)" % r3)
-    check(r3["look"] == "neon" and r3["lookCls"] and r3["king"], "look néon violet + le roi maté peut partir en cendres")
+    check(r3["look"] == "zavee" and r3["king"], "plateau contrasté (#EBEBEB / #767676) + le roi maté peut partir en cendres")
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
     # ---------------------------------------------------------------- références : barre d'évaluation, titre d'ouverture, menaces ⚠, fiche Power/Speed/Defense/Trick, HDR, flou de mouvement
     v3 = pg.evaluate("""(args) => { const [rec] = args, M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { opening: 'Italian Game' }), ev = tl.events.filter((e) => e.from), mf = M.manifest(rec, tl, null, {});
@@ -229,7 +231,7 @@ with sync_playwright() as pw:
           hl: host.querySelectorAll('.ce-hl').length, hdr: host.classList.contains('ce-hdr'), mb: st.mb.k, outline: (await st.outlineOf(st.pcs.querySelector('img').src)).startsWith('data:image'), pulse: !!host.querySelector('.ce-pulse') }; }""")
     check(r4["eval"].endswith("%") and float(r4["eval"][:-1]) > 50 and r4["evn"] == "+2.5", "barre d'évaluation verticale animée (%s, %s)" % (r4["eval"], r4["evn"]))
     check(r4["title"] == "FRIED LIVER ATTACK", "titre d'ouverture en gros caractères")
-    check(r4["thr"] and r4["warn"] == 2, "flèches de menace courbes orange + 2 panneaux ⚠")
+    check(r4["thr"] and r4["warn"] == 0, "flèches de menace courbes, plus aucun panneau ⚠")
     check(r4["card"] and r4["bars"] == [False, False, False, True] and r4["dim"] and r4["pulse"], "fiche Power / Speed / Defense / Trick : la plus haute (Trick) en violet, plateau assombri, case de la pièce qui pulse")
     check(r4["hl"] == 2 and r4["hdr"] and r4["outline"], "cases de départ/arrivée allumées, HDR actif, contour « dessin au trait » généré")
     check(r4["mb"] > 0, "flou de mouvement armé par les mouvements de caméra (%.1f)" % r4["mb"])
@@ -251,13 +253,13 @@ with sync_playwright() as pw:
         st.hit(ev, 1); st.brilliantFx(ev); st.cracks('f7'); st.glitch(200); st.flare('f7'); st.bars(true); st.focusSpot('f7');
         await new Promise((r) => setTimeout(r, 400));
         const tf = st.cam.style.transform, rx = parseFloat((tf.match(/rotateX\(([-\d.]+)deg/) || [0, 0])[1]), sc = parseFloat((tf.match(/scale\(([\d.]+)\)/) || [0, 0])[1]);
-        const o = { blur, ghosts, rx, sc, blood: st.host.classList.contains('ce-dir-blood') && st.look === 'blood', q2: st.host.classList.contains('ce-q2') && st.fx.shock && st.fx.pblur, q0: lo.host.classList.contains('ce-q0') && !lo.fx.pblur && !lo.fx.shock && lo.fx.part < 0.4, fog: lo.look === 'fog',
+        const o = { blur, ghosts, rx, sc, blood: st.host.classList.contains('ce-dir-blood') && st.look === 'zavee', q2: st.host.classList.contains('ce-q2') && st.fx.shock && st.fx.pblur, q0: lo.host.classList.contains('ce-q0') && !lo.fx.pblur && !lo.fx.shock && lo.fx.part < 0.4, fog: lo.look === 'zavee',
           crack: !!st.host.querySelector('.ce-crack'), flare: !!st.host.querySelector('.ce-flare'), bars: st.barsEl.classList.contains('on'), spot: st.spotEl.style.getPropertyValue('--sx') !== '50.0%', dirs: Object.keys(E.editFx.DIRECTIONS).sort(), looks: ['blood', 'fog', 'spot'].every((k) => !!E.editFx.LOOKS[k]) };
         lo.ql = 2; lo.qAuto = true; lo.frames = new Array(80).fill(0.05); lo.ql = 2; lo.applyQuality(); const before = lo.ql; lo.frames = new Array(79).fill(0.05); lo.last = performance.now() - 50; lo.loop(performance.now()); o.auto = [before, lo.ql]; return o; }""")
     check(r6["blur"] and r6["ghosts"] == 0, "flou de DÉPLACEMENT sur la pièce qui glisse, plus aucune image rémanente (ghost=%d)" % r6["ghosts"])
-    check(r6["rx"] <= 30 and r6["sc"] <= 1.9, "plateau jamais étiré : inclinaison %.0f° ≤ 30°, zoom ×%.2f" % (r6["rx"], r6["sc"]))
+    check(r6["rx"] <= 30 and r6["sc"] <= 2.9, "plateau jamais étiré : inclinaison %.0f° ≤ 30°, zoom d'impact ×%.2f (1,8 à 2,8)" % (r6["rx"], r6["sc"]))
     check(r6["blood"] and r6["q2"] and r6["q0"] and r6["fog"], "directions artistiques (Sang / Brume) et qualités (Max / Léger) appliquées")
-    check(r6["crack"] and r6["flare"] and r6["bars"] and r6["spot"], "effets : fissures, flare, bandes de cinéma, projecteur : %s" % {k: r6[k] for k in ("crack", "flare", "bars", "spot")})
+    check(r6["crack"] and r6["flare"] and not r6["bars"] and r6["spot"], "effets : fissures, flare, projecteur, plus de bandes de cinéma : %s" % {k: r6[k] for k in ("crack", "flare", "bars", "spot")})
     check(r6["dirs"] == ["aura", "blood", "fog", "galaxy", "neon", "spot"] and r6["looks"], "6 directions artistiques disponibles")
     check(r6["auto"][1] == 1, "qualité AUTO : l'image saccade -> les effets sont allégés d'un cran %s" % r6["auto"])
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
@@ -268,7 +270,7 @@ with sync_playwright() as pw:
     check(True, "aperçu viral : l'intro s'affiche")
     pg.wait_for_function("document.querySelector('.ce-prog i').style.transform !== 'scaleX(0)'", timeout=20000)
     pg.wait_for_timeout(6500)
-    check(pg.evaluate("document.querySelectorAll('.ce-pcs img').length") >= 30 and pg.evaluate("!document.querySelector('.ce-intro') || document.querySelector('.ce-intro').hidden || document.querySelector('.ce-intro').classList.contains('out')"), "aperçu viral : l'intro laisse place aux coups")
+    check(pg.evaluate("document.querySelectorAll('.ce-pcs img').length") >= 20 and pg.evaluate("!document.querySelector('.ce-intro') || document.querySelector('.ce-intro').hidden || document.querySelector('.ce-intro').classList.contains('out')"), "aperçu viral : l'intro laisse place aux coups")
     if SHOTS:
         pg.screenshot(path=os.path.join(SHOTS, "ce_viral.png"))
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")

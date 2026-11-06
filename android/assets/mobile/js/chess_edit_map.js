@@ -144,7 +144,7 @@
     return res.sort((x, y) => x.ply - y.ply);
   }
 
-  const toneOf = (p) => (p.key === "brilliant" ? "cyan" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
+  const toneOf = (p) => (p.key === "brilliant" ? "cyan" : p.key === "great" || p.key === "excellent" ? "blue" : p.key === "best" || p.key === "good" ? "green" : p.mate || p.check || p.key === "blunder" || p.loss > 300 ? "red" : "green");
   function fxOf(p, s) {
     if (p.boss || s.kind === "boss") return "BOSS_AWAKENING";
     if (p.promo) return "PROMOTION_CUTSCENE";
@@ -153,7 +153,7 @@
     if (p.key === "blunder" || p.loss > 300) return "BLUNDER_RED";
     return "BEAT";
   }
-  const textOf = (p) => (p.mate ? "IT'S OVER..." : p.key === "blunder" || p.loss > 300 ? "BIG MISTAKE" : p.captured === "q" ? "QUEEN DOWN" : p.check ? "CHECK !" : "");
+  const textOf = () => "";                                                                           // plus de textes « QUEEN DOWN » / « IT'S OVER » : seuls les badges parlent
   const shotOf = (p, s) => (p.mate || p.key === "blunder" || p.captured === "q" || p.captured === "r" ? "macro" : s.kind === "drop" || p.promo || p.key === "brilliant" ? "hero" : "");
   const SPCUT = { mk: ["MÉGA CHEVALIER !", "m"], rei: ["R.E.I.N.E !", "e"], barrel: ["BARIL DU FOU !", "g"], army: ["L'ARMÉE !", "s"] };
   function cutOf(p, s, botName) {
@@ -244,6 +244,9 @@
     brilliant: { glyph: "‼", label: "BRILLANT", color: "#00f2fe" }, best: { glyph: "👍", label: "EXCELLENT", color: "#7bd64d" }, excellent: { glyph: "👍", label: "EXCELLENT", color: "#7bd64d" },
     inaccuracy: { glyph: "⁈", label: "INEXACTITUDE", color: "#ffd21f" }, miss: { glyph: "✖", label: "MANQUÉ", color: "#ff6b7d" }, forced: { glyph: "»", label: "FORCÉ", color: "#9aa7bd" }, mistake: { glyph: "?", label: "ERREUR", color: "#ff9a1f" }, blunder: { glyph: "❓", label: "GAFFE", color: "#ff2a44" },
   };
+  Object.keys(BADGES).forEach((k) => { BADGES[k].img = ({ brilliant: "brilliant", best: "best", excellent: "excellent", inaccuracy: "inaccuracy", miss: "miss", forced: "next", mistake: "mistake", blunder: "blunder" })[k] || ""; });
+  Object.assign(BADGES, { great: { glyph: "!", label: "GRAND COUP", color: "#1bb3ad", img: "great" }, good: { glyph: "✓", label: "BON", color: "#96bc4b", img: "good" } });
+  BADGES.best.img = "best"; BADGES.excellent.img = "excellent";
   const VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };              // samples vocaux de Levy (audio/levy/*.mp3)
   const ELO_OF = { prime: 9999, penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
   /** Niveau d'importance d'un coup : 3 = moment clé (arrêt sur image long), 2 = important (ralenti), 1 = notable, 0 = passif (accéléré). */
@@ -263,11 +266,101 @@
     return { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "" };
   }
 
+  /** bruitages + voix d'une liste d'événements (calés sur l'impact de chaque coup) */
+  function sfxFor(ev, opts) {
+    const sfx = [];
+    ev.forEach((e) => {
+      const id = e.cheat === "twist" ? "mate" : e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
+      sfx.push({ t: e.impact, id, gain: e.kind === "ff" ? 0.38 : e.lvl >= 2 ? 1 : 0.8, bus: "sfx", ply: e.n });
+      if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
+    });
+    ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
+      if (e.stats && e.pre > 0) { sfx.push({ t: +e.t.toFixed(3), id: "boom", gain: 1.1, bus: "sfx", ply: e.n }); sfx.push({ t: +(e.t + e.pre - 0.3).toFixed(3), id: "whoosh", gain: 0.7, bus: "sfx", ply: e.n }); }
+    });
+    if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS (jamais sur une erreur, une gaffe, un mat…), une seule par coup
+      const chosen = [];
+      ev.filter((e) => e.key === "brilliant" && !e.alien).forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
+      let lastVoice = null;                                                                          // dernier coup ayant eu une voix / un son de sacrifice
+      ev.filter((e) => e.key === "brilliant").forEach((e) => {
+        if (e.alien) {                                                                               // ALIEN GAMBIT : le sacrifice du cavalier = l'enregistrement, avec un écho ÉPIQUE
+          sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "rec", gain: 1.5, bus: "epic", ply: e.n }); lastVoice = e.n; return;
+        }
+        const c = chosen.includes(e);
+        if (lastVoice != null && e.n - lastVoice >= 3) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
+        if (c) { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", ply: e.n }); lastVoice = e.n; }
+      });
+    }
+    sfx.sort((a, b) => a.t - b.t);
+    return sfx;
+  }
+
+  /**
+   * HARD-SYNC : le montage est CALÉ sur les impacts de basse de la musique (fenêtres de 10 ms). Le coup clé (brillant / sacrifice) tombe EXACTEMENT sur le drop ; avant lui les coups importants tombent sur les temps de l'intro
+   * (≥ 450 ms d'écart), les autres sont SAUTÉS (le plateau saute à la bonne position) ou joués en 60 ms sur les hi-hats ; après lui chaque kick (≥ 220 ms) reçoit un coup. Un coup dure 70 ms ; l'impact (zoom + rotateZ,
+   * flou, flash, secousse) part à la milliseconde du kick. Aucun « ×8 », aucun glissement lent.
+   */
+  function buildSync(plies, rec, audio, opts, L) {
+    const n = plies.length, D = audio.dropTime || audio.mainDropTimestamp || 0, beatsAll = (audio.introBeats || []).concat(audio.hardBeats || []).sort((a, b) => a - b);
+    const t00 = opts.intro ? 0.62 : 0.1, intro = (audio.introBeats || []).filter((b) => b >= t00 && b < D - 0.25), post = (audio.hardBeats || []).filter((b) => b > D + 0.12), hats = (audio.hats || []).filter((b) => b >= t00);
+    const botLine = (i) => { for (let k = i; k >= Math.max(0, i - 6); k--) { const l = plies[k].lines.find((x) => x.bot && E.botChat && E.botChat.bots[x.bot]); if (l) return l; } return null; };
+    const score = (i) => plies[i].drama + (L[i] >= 3 ? 40 : L[i] >= 2 ? 15 : 0) + (i === n - 1 ? 60 : 0);
+    let h = -1; plies.forEach((p, i) => { if (L[i] >= 3 && (h < 0 || score(i) > score(h))) h = i; }); if (h < 0) h = plies.reduce((m, p, i) => (score(i) > score(m) ? i : m), 0);
+    const pick = (idxs, k) => (idxs.length <= k ? idxs.slice() : idxs.map((i) => ({ i, s: score(i) })).sort((a, b) => b.s - a.s).slice(0, k).map((x) => x.i).sort((a, b) => a - b));
+    const spread = (list, k) => (k >= list.length ? list.slice() : k <= 0 ? [] : Array.from({ length: k }, (_, j) => list[Math.round((j * (list.length - 1)) / Math.max(1, k - 1))]));       // k temps répartis du 1er au dernier (le dernier tombe juste avant le drop)
+    const sched = [];                                                                                 // [{i, t(impact), dur, kind}]
+    const preIdx = []; for (let i = 0; i < h; i++) preIdx.push(i);
+    const selPre = pick(preIdx, Math.min(preIdx.length, intro.length)), beatsPre = spread(intro, selPre.length);
+    selPre.forEach((i, j) => sched.push({ i, t: beatsPre[j], dur: 70, kind: "crit" }));
+    // coups de transition joués en 60 ms sur les hi-hats (entre deux coups retenus)
+    { let hp = 0; preIdx.filter((i) => !selPre.includes(i)).slice(0, 18).forEach((i) => { const after = sched.filter((x) => x.i > i).sort((a, b) => a.t - b.t)[0], lim = after ? after.t - 0.12 : D - 0.3, prev = sched.filter((x) => x.i < i).sort((a, b) => b.t - a.t)[0], lo = (prev ? prev.t : t00) + 0.1;
+      while (hp < hats.length && hats[hp] <= lo) hp++; if (hp < hats.length && hats[hp] < lim && hats[hp] < D - 0.3) { sched.push({ i, t: hats[hp], dur: 60, kind: "ff" }); hp++; } }); }
+    sched.push({ i: h, t: D || (beatsAll[0] || 2), dur: 70, kind: "drop" });
+    const postIdx = []; for (let i = h + 1; i < n; i++) postIdx.push(i);
+    let selPost = pick(postIdx, Math.min(postIdx.length, post.length)); if (postIdx.length && !selPost.includes(n - 1)) { selPost.pop(); selPost.push(n - 1); selPost = selPost.sort((a, b) => a - b); }
+    selPost.forEach((i, j) => sched.push({ i, t: post[j] != null ? post[j] : (post[post.length - 1] || D) + 0.3 * (j + 1), dur: 70, kind: "crit" }));
+    sched.sort((a, b) => a.i - b.i);
+    const botName = (p) => { const l = p.lines.find((x) => x.kind === "transform") || p.lines[0]; return l ? (E.botChat && E.botChat.bots[l.bot] ? E.botChat.bots[l.bot].name : l.bot) : ""; };
+    const ev = [], bots = (E.botChat && E.botChat.bots) || {}; let lastShown = -1;
+    sched.forEach((q) => {
+      const p = plies[q.i], key = p.key, lvl = L[q.i], big = q.kind === "drop", sl = { kind: q.kind };
+      const boss = !!(p.from && !p.drop && q.kind !== "ff" && (p.mate || (p.captured && "qr".includes(p.piece) && ["q", "r", "b", "n"].includes(p.captured) && lvl >= 2))), lead = boss ? 0.25 : 0;
+      let bd = null; if (BADGES[key] && q.kind !== "ff" && (key !== "best" || lvl >= 1)) bd = BADGES[key];
+      const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
+      const e = { cheat, alien: !!p.alien, t: +(q.t - q.dur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
+        lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
+        dur: q.dur, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
+        fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
+        snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: !!(p.from && !p.drop && q.kind !== "ff" && (p.captured || p.check || p.mate || big || lvl >= 3)), arrow: !!(p.from && !p.drop && (q.i === n - 1 || illegal)),
+        illegal, aiImg: illegal && bl ? bots[bl.bot].img : "", glasses: illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
+      lastShown = q.i;
+      if (p.check || p.mate) { const kq = (() => { const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; return Object.keys(m).find((z) => m[z] === want) || ""; })(); e.kingEdge = !!kq && (/^[ah]/.test(kq) || /[18]$/.test(kq)); e.kingSq = kq; }
+      ev.push(e);
+    });
+    ev.sort((a, b) => a.impact - b.impact);
+    const kicks = ev.filter((e) => e.kind !== "ff" && e.impact >= (D || 0) - 0.01 && e.impact <= (D || 0) + 14).sort((a, b) => b.drama - a.drama).slice(0, 4); kicks.forEach((e) => { e.strobe = true; });          // les 3-4 kicks les plus violents du drop
+    const heroEv = ev.find((e) => e.kind === "drop"), extra = [];
+    if (heroEv) {                                                                                      // 0,6 s avant le drop : cutscene « prompt & streaming » (si le bot parle) sinon mini-cutscene des deux pièces
+      const bl = botLine(h), hp = plies[h];
+      if (bl) extra.push({ t: +Math.max(0.05, heroEv.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (h ? plies[h - 1].san : "e4") + " ?", piece: hp.piece, fx: "PROMPT", ply: -1, ref: heroEv });
+      else if (hp.sacrifice || hp.key === "brilliant") extra.push({ t: +Math.max(0.05, heroEv.impact - 0.45).toFixed(3), kind: "cut3", dur: 0.4, text: opts.opening || hp.san, fx: "CUT3", ply: -1, ref: heroEv });
+    }
+    const sfx = sfxFor(ev, opts), all = [];
+    if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
+    if (opts.intro) all.push({ t: 0, kind: "intro", dur: 0.5, intro: introInfo(rec), fx: "INTRO", ply: -1 });
+    ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));
+    const last = ev[ev.length - 1], end = +(((last ? last.impact : 1) + 0.9)).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
+    all.push({ t: end, kind: "outro", dur: opts.outroDur, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
+    const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
+    return { viral: true, sync: true, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align: null, stats: { open: 0, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: heroEv ? heroEv.n : 0, freeze: 0, idle: 0, heroT: heroEv ? heroEv.impact : 0, drop: D, skipped: n - ev.length, beats: beatsAll.length } };
+  }
+  const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
   /** Timeline « edit viral ». opts : {intro, introDur, outroDur, maxLen, voices, syncDrop}. Les temps sont ceux de la VIDÉO ; la musique démarre TOUJOURS à t = 0 (musicStart = 0) et c'est le montage qui s'adapte à elle :
    *  le moment clé choisi (le plus dramatique qu'on peut caler) tombe sur le DROP de la musique, en allongeant ou resserrant un peu les temps morts avant lui et, si la partie est « trop tôt », en ajoutant un
    *  plan d'ambiance (kind "idle") avant le premier coup. Rythme POSÉ : on ne cherche pas à aller vite, chaque chose a son temps. */
   function buildViral(plies, rec, audio, opts) {
     opts = Object.assign({ intro: true, introDur: 5.2, outroDur: 3.2, voices: true, syncDrop: true }, opts || {});
+    if (audio && opts.syncDrop && opts.hardSync !== false && (audio.introBeats || audio.hardBeats) && (audio.mainDropTimestamp || audio.dropTime) > 1.5) { const Ls = plies.map(lvlOf); return buildSync(plies, rec, audio, Object.assign({}, opts, { outroDur: Math.min(opts.outroDur, 2.8) }), Ls); }
     if (opts.maxLen == null) opts.maxLen = audio && audio.duration ? Math.max(40, audio.duration - 1.5) : 170;
     const n = plies.length, L = plies.map(lvlOf), plan = [], ev = [], statSeen = new Set();
     const firstCrit = L.findIndex((l, i) => i >= 6 && l >= 2), nOpen = Math.min(n, Math.max(8, Math.min(14, firstCrit < 0 ? 14 : firstCrit)));
@@ -340,29 +433,7 @@
     });
     const end = +(t + 0.2).toFixed(3);
     // son : les bruits de base calés à la frame sur l'impact de chaque coup, les voix de Levy sur le SACRIFICE d'une pièce (jamais deux voix à moins de 2,4 s)
-    const sfx = [];
-    ev.forEach((e) => {
-      const id = e.cheat === "twist" ? "mate" : e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
-      sfx.push({ t: e.impact, id, gain: e.kind === "ff" ? 0.38 : e.lvl >= 2 ? 1 : 0.8, bus: "sfx", ply: e.n });
-      if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
-    });
-    ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
-      if (e.stats && e.pre > 0) { sfx.push({ t: +e.t.toFixed(3), id: "boom", gain: 1.1, bus: "sfx", ply: e.n }); sfx.push({ t: +(e.t + e.pre - 0.3).toFixed(3), id: "whoosh", gain: 0.7, bus: "sfx", ply: e.n }); }
-    });
-    if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS (jamais sur une erreur, une gaffe, un mat…), une seule par coup
-      const chosen = [];
-      ev.filter((e) => e.key === "brilliant" && !e.alien).forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
-      let lastVoice = null;                                                                          // dernier coup ayant eu une voix / un son de sacrifice
-      ev.filter((e) => e.key === "brilliant").forEach((e) => {
-        if (e.alien) {                                                                               // ALIEN GAMBIT : le sacrifice du cavalier = l'enregistrement, avec un écho ÉPIQUE
-          sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "rec", gain: 1.5, bus: "epic", ply: e.n }); lastVoice = e.n; return;
-        }
-        const c = chosen.includes(e);
-        if (lastVoice != null && e.n - lastVoice >= 3) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
-        if (c) { const id = VOICE[e.piece] || "this_is_the_way"; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", ply: e.n }); lastVoice = e.n; }
-      });
-    }
-    sfx.sort((a, b) => a.t - b.t);
+    const sfx = sfxFor(ev, opts);
     const all = [];
     if (opts.intro) all.push({ t: 0, kind: "intro", dur: opts.introDur, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     if (idle > 0.5) all.push({ t: t0, kind: "idle", dur: idle, fx: "IDLE", ply: -1 });
