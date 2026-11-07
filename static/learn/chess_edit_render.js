@@ -42,7 +42,7 @@
       this.tl.events.forEach((e) => { if (e.badge && e.badge.img) need.add(e.badge.img); });
       await Promise.all([...need].map(async (n) => { const im = await loadImg(`${A}img/badges/${n}.png`); if (im) this.badgeSpr["img/badges/" + n + ".png"] = this.badgeSprite(im, ({ brilliant: "#1CE8E8", best: "#96bc4b", great: "#1bb3ad", excellent: "#96bc4b", inaccuracy: "#f7c631", mistake: "#e58f2a", blunder: "#CA3431", miss: "#ff2a2a", good: "#96bc4b", next: "#9aa7bd", mate: "#e8604c" })[n] || "#fff"); }));
       const srcs = new Set(); this.tl.events.forEach((e) => { if (e.aiImg) srcs.add(e.aiImg); if (e.intro) [e.intro.white, e.intro.black].forEach((s) => s && s.img && srcs.add(s.img)); (e.lines || []).forEach((l) => { const b = E.botChat && E.botChat.bots[l.bot]; if (b && b.img) srcs.add(b.img); }); if (e.final) { const b = E.botChat && E.botChat.bots[e.final.bot]; if (b && b.img) srcs.add(b.img); } });
-      await Promise.all([...srcs].map(async (s) => { const im = await loadImg(A + s); if (im) { this.av[s] = im; this.badgeSpr[s] = this.badgeSprite(im, "#ffffff", true); } }));
+      await Promise.all([...srcs].map(async (s) => { const im = await loadImg(/^data:/.test(s) ? s : A + s); if (im) { this.av[s] = im; this.badgeSpr[s] = this.badgeSprite(im, "#ffffff", true); } }));
       this.rookBg = this.makeRookBg(); this.boards = { contrast: this.boardSprite("contrast"), classic: this.boardSprite("classic") }; this.bgBoard = this.blurredBoard(); this.loaded = true; return this;
     }
     /** pièce détourée : contour noir net de 2 px (blanches) / reflet interne en haut (noires) — pré-rendue */

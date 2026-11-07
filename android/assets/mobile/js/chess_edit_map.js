@@ -261,7 +261,8 @@
     const bots = (E.botChat && E.botChat.bots) || {}, me = (E.userName && E.userName()) || "Toi";
     const side = (name, color) => {
       const id = Object.keys(bots).find((k) => bots[k].name === name), b = id ? bots[id] : null;
-      return { name: name === "Toi" ? me : name, id: id || "", img: b && b.img ? b.img : "", title: b && b.title ? b.title : "", elo: id && ELO_OF[id] != null ? ELO_OF[id] : null, human: !b, color };
+      const ext = color === "w" ? rec.pwImg : rec.pbImg, xe = color === "w" ? rec.pwElo : rec.pbElo;                         // partie importée (Chess.com / PGN) : photo de profil + classement des vrais joueurs
+      return { name: name === "Toi" ? me : name, id: id || "", img: ext || (b && b.img ? b.img : ""), title: b && b.title ? b.title : "", elo: xe != null ? xe : id && ELO_OF[id] != null ? ELO_OF[id] : null, human: !b, color };
     };
     return { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "" };
   }

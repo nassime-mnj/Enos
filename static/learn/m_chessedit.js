@@ -15,10 +15,18 @@
     build(el, A) {
       const $ = (s) => el.querySelector(s), esc = E.esc;
       const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", pace: E.settings.get("chessedit.pace", "viral"), marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
-      const hist = () => E.settings.get("defi.hist", []).concat(E.settings.get("variants.hist", [])).filter((x) => x.mv && x.mv.length >= 2).sort((x, y) => x.t - y.t);           // parties des Défis, scènes (Game Clips) ET parties des variantes
+      const hist = () => E.settings.get("defi.hist", []).concat(E.settings.get("variants.hist", [])).concat(E.settings.get("chessedit.imports", [])).filter((x) => x.mv && x.mv.length >= 2).sort((x, y) => x.t - y.t);           // parties des Défis, scènes (Game Clips) ET parties des variantes
       const mkey = () => "chessedit.marks." + (S.rec ? S.rec.t : 0);
 
       el.innerHTML = `
+        <div class="card" id="ce-imp"><h3>0 · Importer n'importe quelle partie (Chess.com, PGN)</h3>
+          <p class="ce-stat">Colle le <b>PGN</b> (Chess.com › Partager › PGN) : les <b>pseudos</b> et le <b>classement</b> des deux joueurs en sont repris. Ajoute leur <b>photo de profil</b> avec 📷 (une capture PNG de leur profil convient, recadrée au centre). Tout reste sur le téléphone : l'appli n'a volontairement aucun accès réseau, donc rien n'est téléchargé de Chess.com. Une capture d'écran seule ne contient qu'une position, pas la partie : il faut le PGN.</p>
+          <textarea id="ce-pgn" class="ce-ta" rows="4" spellcheck="false" placeholder='[White "Magnus"] [Black "Hikaru"] 1. e4 e5 …'></textarea>
+          <div class="row" style="margin-top:6px"><input id="ce-pw" class="inp" placeholder="Pseudo Blancs"><input id="ce-pb" class="inp" placeholder="Pseudo Noirs"></div>
+          <div class="row"><button class="btn" id="ce-pwi">📷 PHOTO BLANCS</button><button class="btn" id="ce-pbi">📷 PHOTO NOIRS</button></div>
+          <div class="row" id="ce-avs" style="gap:10px;align-items:center"></div>
+          <div class="row"><button class="btn pri" id="ce-imp-go">⚙ ANALYSER ET PRÉPARER L'EDIT</button></div>
+          <p class="ce-stat" id="ce-imp-st"></p></div>
         <div class="card"><h3>1 · La partie</h3><select id="ce-game" class="sel"></select><p class="ce-stat" id="ce-gs" style="margin-top:8px"></p></div>
         <div class="card"><h3>2 · Rythme et musique</h3>
           <label class="fld">Rythme du montage</label><select id="ce-pace" class="sel" style="margin-bottom:8px"><option value="viral">🔥 VIRAL · toute la partie : ouverture fluide, accéléré, ralentis + arrêts sur image</option><option value="music">♫ Calé sur la musique (ancien mode : seulement les coups clés)</option></select>
@@ -76,6 +84,33 @@
         $("#ce-gs").innerHTML = `<b>${esc(rec.pw || "Blancs")}</b> – <b>${esc(rec.pb || "Noirs")}</b> · ${esc(rec.result || "")}<br>${S.plies.length} coups · ${t.c} captures · ✦ ${t.b} brillant${t.b > 1 ? "s" : ""} · ${t.g} gaffe${t.g > 1 ? "s" : ""} · ${(rec.ch || []).length} répliques de bots`;
         refresh();
       }
+      // ------------------------------------------------------------ import Chess.com / PGN
+      const IM = { w: "", b: "", wElo: null, bElo: null }, impSt = (t) => { $("#ce-imp-st").textContent = t; };
+      const shrink = async (src) => {                                                                // -> JPEG 256 px rond-compatible, en data URI (jamais de canvas « taché »)
+        const bmp = typeof src === "string" ? await (async () => { const im = new Image(); im.src = src; await im.decode(); return im; })() : await createImageBitmap(src), w = bmp.naturalWidth || bmp.width, h = bmp.naturalHeight || bmp.height, m = Math.min(w, h), c = document.createElement("canvas"); c.width = c.height = 256;
+        c.getContext("2d").drawImage(bmp, (w - m) / 2, (h - m) / 2, m, m, 0, 0, 256, 256); return c.toDataURL("image/jpeg", 0.88);
+      };
+      const showAv = () => { $("#ce-avs").innerHTML = ["w", "b"].map((k) => IM[k] ? `<img src="${IM[k]}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid ${k === "w" ? "#ff4a3a" : "#3d8bff"}">` : "").join(""); };
+      const pickPhoto = (k) => { const f = document.createElement("input"); f.type = "file"; f.accept = "image/*"; f.onchange = async () => { if (f.files[0]) { try { IM[k] = await shrink(f.files[0]); showAv(); impSt("Photo chargée."); } catch (e) { impSt("✕ Image illisible."); } } }; f.click(); };
+      $("#ce-pwi").onclick = () => pickPhoto("w"); $("#ce-pbi").onclick = () => pickPhoto("b");
+      $("#ce-imp-go").onclick = async () => {
+        const btn = $("#ce-imp-go"); btn.disabled = true;
+        try {
+          let txt = $("#ce-pgn").value.trim(); if (!txt) throw new Error("colle le PGN de la partie");
+          const g = new Chess(); if (!g.load_pgn(txt, { sloppy: true })) throw new Error("PGN illisible");
+          const H = g.header(), w = $("#ce-pw").value.trim() || H.White || "Blancs", b = $("#ce-pb").value.trim() || H.Black || "Noirs";
+          $("#ce-pw").value = w; $("#ce-pb").value = b;
+          const elo = (v) => (/^\d{3,4}$/.test(String(v || "")) ? +v : null); IM.wElo = elo(H.WhiteElo); IM.bElo = elo(H.BlackElo);
+          showAv(); impSt("Analyse des coups…");
+          const res = await E.brain.reviewGame({ pgn: txt, me: "auto", ms: 220, onProgress: (p) => impSt("Analyse des coups… " + Math.round(p * 100) + " %") });
+          const res2 = H.Result || "", result = res2 === "1-0" ? w + " gagne" : res2 === "0-1" ? b + " gagne" : res2 === "1/2-1/2" ? "Nulle" : "";
+          const rec = { t: Date.now(), title: w + " vs " + b, result, plies: res.judged.length, pw: w, pb: b, pwImg: IM.w || "", pbImg: IM.b || "", pwElo: IM.wElo, pbElo: IM.bElo, me: null, imported: true, pgn: txt, ch: [], brill: res.judged.filter((x) => x.key === "brilliant").length,
+            mv: res.judged.map((x) => [x.uci, x.san, x.key || "good", x.loss | 0, x.after && x.after.w !== undefined ? x.after.w : null, x.best || ""]) };
+          const list = E.settings.get("chessedit.imports", []).concat([rec]).slice(-12); E.settings.set("chessedit.imports", list);
+          fillGames(); setRec(rec); impSt("✔ Partie prête : " + rec.title + " · " + rec.plies + " coups. Choisis la musique puis génère l'edit ↓");
+        } catch (e) { impSt("✕ " + (e.message || e)); }
+        btn.disabled = false;
+      };
       $("#ce-game").onchange = (e) => { if (e.target.value !== "") setRec(hist()[+e.target.value]); };
 
       // ------------------------------------------------------------ musique

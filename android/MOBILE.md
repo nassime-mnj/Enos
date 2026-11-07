@@ -230,3 +230,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Drop des longues musiques (> 40 s)** : score pondéré par l'énergie soutenue après le drop (les kicks de pré-drop ne gagnent plus).
 - Le son d'ouverture est « THIS IS THE WAY » (jamais Hawaii) : une fois en ouverture sur un gros swing, 2 max par partie.
 - Test : `t_edit_flow.py`.
+
+## 1.62 — Chess Edit : importer n'importe quelle partie Chess.com (PGN) avec pseudos et photos
+
+- Carte « 0 · Importer » du studio : colle le PGN (Chess.com › Partager › PGN) → analyse Stockfish locale (`E.brain.reviewGame`) → partie enregistrée dans `chessedit.imports` (12 max) et sélectionnée.
+- Pseudos (`White`/`Black`) et classements (`WhiteElo`/`BlackElo`) lus dans le PGN ; photos de profil choisies par 📷 (recadrées au centre, JPEG 256 px en data URI → canvas jamais « taché »). Intro VS, vainqueur dynamique, etc. les utilisent.
+- Volontairement **aucun réseau** (CSP `connect-src 'none'`) : pas de téléchargement depuis Chess.com. Une capture PNG seule ne contient qu'une position, pas la partie.
+- Test : `t_edit_import.py`.
