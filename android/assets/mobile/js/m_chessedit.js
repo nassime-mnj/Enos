@@ -106,7 +106,7 @@
         c.getContext("2d").drawImage(cv, sx, sy, m, m, 0, 0, 256, 256); return c.toDataURL("image/jpeg", 0.88);
       };
       async function readSnap(file) {
-        if (!E.ai.configured()) throw new Error("clé Groq absente : Réglages → Clés d'API");
+        if (!(E.ai && E.ai.configured && E.ai.configured() && A.llmVision)) throw new Error("lecture de capture indisponible ici (clé Groq requise : Réglages → Clés d'API, sur le téléphone)");
         const bm = await createImageBitmap(file), f = Math.min(1, 1600 / Math.max(bm.width, bm.height)), cv = document.createElement("canvas"); cv.width = Math.round(bm.width * f); cv.height = Math.round(bm.height * f); cv.getContext("2d").drawImage(bm, 0, 0, cv.width, cv.height);
         const raw = await A.llmVision({ system: SNAP_SYS, ask: SNAP_ASK, image: cv, maxTokens: 500, json: true });
         let j; try { j = JSON.parse(String(raw).replace(/^```(?:json)?|```$/gm, "").trim()); } catch (e) { throw new Error("réponse du modèle illisible"); }
