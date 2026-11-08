@@ -177,11 +177,13 @@
    * ou brillant est donc ré-évalué 3 fois plus longtemps, avant et après, avant de recevoir son étiquette. -> {q, before:{w,best}, after:{w,best}}
    */
   K.judge = async (fenBefore, uci, evBefore, evAfter, color, ms) => {
+    const fixBest = (b, a) => (b.best === uci && Math.abs(a.w) < 9000 && Math.abs(b.w) < 9000 ? { ...a, w: b.w } : a);      // le coup joué EST le meilleur coup du moteur : sa valeur est celle de la position (l'écart vient du bruit entre deux recherches)
+    evAfter = fixBest(evBefore, evAfter);
     let q = K.quality(fenBefore, uci, evBefore.w, evAfter.w, color), res = { q, before: evBefore, after: evAfter };
-    if (q.loss > 60 || ["brilliant", "miss", "mistake", "blunder"].includes(q.key) || Math.abs(evBefore.w) >= 9000) {          // jugement CONFIRMÉ (3× plus long) : on ne colle pas « manqué » / « brillant » sur un score bruité
+    if (q.loss > 60 || ["brilliant", "miss", "mistake", "blunder"].includes(q.key) || Math.abs(evBefore.w) >= 9000 || (q.loss <= 120 && K.isSacrifice(fenBefore, uci))) {         // sacrifice : toujours confirmé à 3× le temps          // jugement CONFIRMÉ (3× plus long) : on ne colle pas « manqué » / « brillant » sur un score bruité
       const c = new Chess(fenBefore); play(c, uci);
       const b2 = await K.evaluate(fenBefore, (ms || 450) * 3), a2 = await K.evaluate(c.fen(), (ms || 450) * 3);
-      q = K.quality(fenBefore, uci, b2.w, a2.w, color); res = { q, before: b2, after: a2 };
+      const a3 = fixBest(b2, a2); q = K.quality(fenBefore, uci, b2.w, a3.w, color); res = { q, before: b2, after: a3 };
     }
     try {                                                                                      // COUP FORCÉ : un seul coup légal, ou le seul qui ne perd pas (Stockfish : l'écart avec le 2ᵉ meilleur ≥ 350 cp)
       const c0 = new Chess(fenBefore), n = c0.moves().length;

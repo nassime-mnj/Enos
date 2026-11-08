@@ -253,3 +253,7 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Analyse audio** (`chess_edit_audio.js`) : `drops[]` = drops forts (≥ 50 % du meilleur score, montée ≥ ×1,6, ≥ 8 s d'écart, jamais dans les 8 dernières secondes d'un morceau long) ; le **dernier** est le drop principal (`mainDropTimestamp`), le précédent est le 1er tournant.
 - **Montage** (`chess_edit_map.js`, `buildSync`) : avec 2 drops, ouverture calme (≤ 10 coups, 1,1–2,4 s) → **1er drop sur un coup NORMAL** (kind `drop1`, effets pleins mais ni hero ni badge) → phase normale (kind `mid`, 1,1–2,9 s) → montage accéléré si besoin → drop principal → finale 0,65–0,90 s / coup. Sur une musique longue la partie remplit la musique : rythme étiré avant le drop (jamais de plateau figé > 3 s), queue jusqu'à 34 coups.
 - Tests : `t_edit_long.py` (WAV de 100 s à 2 drops, partie de 45 demi-coups, brillant Txa7).
+
+### 1.64.1 — correctif brillant (partie réelle La_Loi_De_Fortes)
+- Cause réelle : sur ce PGN, 20.Txa7 est le MEILLEUR coup (≈ +1,1) mais l'évaluation « après » (autre recherche, 220 ms) donnait 36 cp de moins → « bon ». `K.judge` : si le coup joué est le meilleur coup du moteur, sa valeur est celle de la position (bruit entre deux recherches) ; tout sacrifice (perte ≤ 120) est confirmé à 3× le temps. Test : `t_edit_long.py` avec `pgn_loi.txt` (PGN réel).
+- Bouton de capture raccourci (le texte débordait sur les boutons photo).

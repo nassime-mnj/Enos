@@ -23,7 +23,7 @@
           <p class="ce-stat">Colle le <b>PGN</b> (Chess.com › Partager › PGN) : les <b>pseudos</b> et le <b>classement</b> des deux joueurs en sont repris. Ajoute leur <b>photo de profil</b> avec 📷 (une capture PNG de leur profil convient, recadrée au centre). Tout reste sur le téléphone : l'appli n'a volontairement aucun accès réseau, donc rien n'est téléchargé de Chess.com. Une capture d'écran seule ne contient qu'une position, pas la partie : il faut le PGN.</p>
           <textarea id="ce-pgn" class="ce-ta" rows="4" spellcheck="false" placeholder='[White "Magnus"] [Black "Hikaru"] 1. e4 e5 …'></textarea>
           <div class="row" style="margin-top:6px"><input id="ce-pw" class="inp" placeholder="Pseudo Blancs"><input id="ce-pb" class="inp" placeholder="Pseudo Noirs"></div>
-          <div class="row"><button class="btn" id="ce-snap">📸 REMPLIR DEPUIS UNE CAPTURE CHESS.COM (pseudos, elo, couleurs, photos)</button></div>
+          <div class="row"><button class="btn" id="ce-snap">📸 LIRE UNE CAPTURE CHESS.COM</button></div>
           <div class="row"><button class="btn" id="ce-pwi">📷 PHOTO BLANCS</button><button class="btn" id="ce-pbi">📷 PHOTO NOIRS</button></div>
           <div class="row" id="ce-avs" style="gap:10px;align-items:center"></div>
           <div class="row"><button class="btn pri" id="ce-imp-go">⚙ ANALYSER ET PRÉPARER L'EDIT</button></div>
