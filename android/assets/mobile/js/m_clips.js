@@ -55,7 +55,7 @@
         const total = C.LENGTH[cfg.length], B = E.board;
         $("#cl-ttl").textContent = "🎬 " + C.nameOf(cfg.hero) + " (héros) contre " + C.nameOf(cfg.ant);
         $("#cl-say").textContent = ""; $("#cl-bar").style.width = "0%";
-        const draw = (fen, last, key) => { const pos = B.parse(fen); B.render($("#cl-board"), pos.m, { flip: cfg.color === "b", last, badge: key && B.BADGES[key] ? { sq: last[1], key, id: Math.random() } : null }); };
+        const draw = (fen, last, key) => { const pos = B.parse(fen); B.render($("#cl-board"), pos.m, { flip: cfg.color === "b", last, anim: last && last[0] && last[1] && last[0] !== last[1] ? last[0] + last[1] : "", badge: key && B.BADGES[key] ? { sq: last[1], key, id: Math.random() } : null }); };
         draw("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", []);
         let rec = null;
         try {

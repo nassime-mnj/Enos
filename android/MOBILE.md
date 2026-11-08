@@ -144,3 +144,105 @@ Trois règles inventées, moteur maison `js/variants.js` (testé : `node android
 
 ## Sauvegarde (Modules › Synchronisation › Sauvegarde) — `js/backup.js`, `js/m_backup.js`, `FilesBridge.backup*`, serveur `/launcher/v1/backup`
 Tout l'état de l'appli est dans le localStorage (`enos.*`). Instantané JSON automatique (si quelque chose a changé : toutes les 2 min, à la mise en arrière-plan) vers : (1) **Téléchargements/ENOS/enos-sauvegarde-<jour>.json** (MediaStore, 6 jours gardés, reste après la désinstallation ; pont Java `backupWrite/List/Read`, il faut une APK ≥ 1.40, `web_min_apk` = 40) ; (2) **le cloud** du compte (`POST /backup`, gzip + base64, un document par appareil dans `brain_docs` kind `backup`, 12 appareils max ; serveur à REDÉPLOYER pour l'activer, sinon le module affiche « serveur pas à jour »). Jamais sauvegardés : clés d'API, jetons, coffre, session cloud (regex `SKIP`). Restauration : FUSION monotone par défaut (union des parties par date, plus grands compteurs, valeur locale gardée) ou REMPLACER ; depuis un fichier (sélecteur), les sauvegardes visibles du téléphone, ou le cloud. Nouvelle installation vide : la sauvegarde du téléphone est proposée au premier démarrage. Après une réinstallation, selon la version d'Android, l'appli ne voit pas toujours le fichier de l'installation précédente : le sélecteur « Depuis un fichier » marche toujours. Historique des Défis : 150 parties (avant : 40). Tests : `android/tests/t_backup.py`, `dualpulse_site/tests/test_launcher.py::test_backup_*`.
+
+## 1.45 — Variantes : Élixir +, Roulette, 2v2 à la carte, Chess Edit, vrai Stockfish
+- **Élixir +** : cartes Méga Chevalier (14 💧, atterrit n'importe où et écrase le 3×3), Armée de pions (5, remplit une rangée), Baril du fou (5, fou posé n'importe où, vol tournoyant au-dessus du plateau puis atterrissage), R.E.I.N.E (capture en sautant par-dessus les pièces). Sprites `img/chess/*{m,e,g,s}.png` + aura en jeu.
+- **Roulette** (1v1) : deux rois seuls, les pièces sont tirées à la roulette à chaque tour.
+- **2v2** : chaque siège (équipier, adversaires) est humain ou bot au choix ; capturer le dernier roi adverse termine la partie.
+- **Chess Edit** accepte les parties de variantes (`variants.hist`) : poses/cartes = événements « drop ».
+- **Jugement** lu sur les vrais scores Stockfish (mat) : coup MANQUÉ (mat existant perdu, sacrifice inutile) et coup FORCÉ (icône + statut), jamais « brillant » à tort.
+
+## 1.46 — Game Clips : ouvertures mises en scène, vrais sons Chess.com, plus de variété
+- **Lelex / GhorGhor** jouant les Noirs sortent la **Scandinave** ; un **Nasko** (ou variante) jouant les Blancs sort l'**Alien Gambit** (priorité si les deux se rencontrent). `Cxf7` (11ᵉ demi-coup) est un **brillant imposé** (`rec.clip.alien`).
+- Son : l'enregistrement fourni joue sur ce sacrifice avec un **écho épique** (bus `epic`, reverb 4 s + 3 échos) ; si un son/voix de sacrifice a été joué **≥ 3 coups avant** un nouveau brillant, celui-ci reçoit le **witty alien**.
+- Déplacements / prises / échecs : vrais sons Chess.com fournis (`chess_sounds_data.js`).
+- Variété : traînée lumineuse, vrille en plein air (1 ou 2 tours + saut), **impact frame** (négatif / point noir).
+- Titre d'ouverture discret (petite taille). Animation de promotion allégée (rayons en couche GPU, ombres réduites, plus de gros plan en double).
+
+## 1.47 — Bots « IA » dans les Défis (Claude Fable 5, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek V4.1)
+Illusion assumée : **aucune IA n'est interrogée** (zéro token). Chaque bot = profil de style (`js/ai_bots.js` : livre d'ouvertures, prudence/agressivité, taux d'erreurs) donné à Stockfish, via le même moteur que Nasko/Lelex (`styleMove`).
+Niveaux (échelle de benchmark ChessBench oct. 2026, pas des Elo FIDE) : Gemini 4 Argon 2170 · Claude Fable 5 2150 (estimé, Opus 5.5 mesuré à 2111) · GPT-6 Astra 2045 · DeepSeek V4.1 1690.
+Les ouvertures/styles sont des estimations (aucune source publique ne les détaille). Illustrations : les vrais logos (test).
+
+## 1.48 — ChatGPT Prime (9999 Elo, GM) + effets AAA + perf
+- **ChatGPT Prime** (`js/prime.js`, `js/m_prime.js`) : joue normalement (et plutôt mal) ses 5 premiers coups, puis **triche** : téléportation, saut par-dessus les pièces, pion qui bouge n'importe comment, pièce qui apparaît de nulle part, coup double, pièce qui mange une des siennes puis la ressuscite, enfin capture du roi (« règle 47 bis »). Il s'en sort toujours. Chaque coup a une **explication qui ne veut rien dire** (`P.babble`). Modes : toi contre Prime, ou Stockfish contre Prime (spectacle).
+- Parties enregistrées dans `variants.hist` (mode `prime`, actions + FEN) : **éditables dans le Chess Edit** ; **Game Clips** : Prime est un personnage (scène `C.runPrime`).
+- Chess Edit — nouveaux effets : glitch de téléportation (fantôme RVB + faille), tampon « COUP ILLÉGAL » + sirène, lignes de vitesse manga, flare anamorphique, rampe de ralenti. Perf : canvas à 1× hors qualité max, 30 i/s en « léger », pause onglet caché, fumée en sprite pré-rendu, plus de `shadowBlur`, listes de particules plafonnées.
+- Logos réels pour les bots IA (usage de test).
+
+## 1.49 — Prime battable + plot twist
+~35 % des parties, Prime est **battable** (il triche à peine, ne se sauve plus en cas d'échec, joue faible). Si tu le mates : « De quoi tu parles ? Tu t'es fait checkmate. », le plateau fait un **180°** (pièces restes droites), il « prend notre place » et affiche **CHATGPT A GAGNÉ PAR CHECKMATE** ; la partie est enregistrée avec lui vainqueur (action `cheat: "twist"`). Chess Edit : le twist est rejoué (`Stage.twist`), et les coups `+` / `#` des parties de variantes sont maintenant reconnus (échec / mat).
+
+## 1.51 — Prime discret + animations de déplacement
+Les coups illégaux de Prime ne sont plus signalés : plus de ⚠, de tampon, de glitch ni d'aveu (notation SAN normale, même explication confiante que les autres, compteur retiré) — dans la partie et dans le Chess Edit. Le roi capturé est présenté comme un échec et mat. Seul le plot twist garde ses effets. Animations de glissement des pièces dans Prime (Stockfish contre Prime) et dans les scènes Game Clips (bot contre bot). Correctif : la liste de coups n'élargit plus la page (plateau énorme).
+
+## 1.52 — Chess Edit « Shorts » : hard-sync, badges réels, effets signature
+- **Icônes** : la feuille de badges fournie remplace toutes les icônes de coups (`img/badges/*.png`, `css/badges.css`) avec glow « HDR » (bloom coloré, luminosité poussée ; encore plus sur écran HDR).
+- **Rotation corrigée** : plus aucune propriété `rotate` individuelle (elle tournait autour du coin du plateau) ; les pièces restent droites, c'est la caméra qui bouge (zoom ×1,8–2,8 sur la case d'arrivée, rotateZ −12…+15° à chaque impact). Plateau bord à bord, cases #EBEBEB / #767676, pièces détourées (contour noir, reflet des noires).
+- **Hard-sync** (`buildSync`) : pas d'intro de 5 s ; coup de 70 ms (courbe 0,0.9,0.2,1) ; le coup clé tombe sur `dropTime` ; coups importants sur les temps de l'intro (≥ 450 ms), les autres sautés (setFen) ou joués en 60 ms sur les hi-hats ; chaque kick après le drop (≥ 220 ms) reçoit un coup ; analyse des basses (< 180 Hz) en fenêtres de 10 ms. Impact : zoom + rotateZ, flash blanc 0,45 / 45 ms, secousse ±18 px amortie ~180 ms.
+- **Effets signature** : intro face-off 0,5 s ; chemin rouge #FF2A1A ; badges IA / ✖ + double onde + cadre de visée + lunettes « Deal With It » ; pièce rouge géante (×1,65, 22°) ; roi qui bascule (32°) ; cutscene « prompt & streaming » 0,6 s avant le drop ; strobe RGB grid blur (3-4 kicks) ; flèche jaune ; reality check (plat, vert/blanc classique, réplique finale du bot) ; rayon laser d'échec ; plus de textes « QUEEN DOWN / IT'S OVER », ni ×8, ni panneaux ⚠.
+
+## 1.53 — Chess Edit : rendu déterministe + export MP4 60 FPS, corrections
+- **Moteur canvas déterministe** (`js/chess_edit_render.js`) : `draw(t)` est une fonction pure du temps. Même code pour l'aperçu et pour l'**export MP4 image par image à 60 FPS fixes** (`js/chess_edit_export.js` : WebCodecs `VideoEncoder` H.264 → VP9 → AV1, `AudioEncoder` AAC → Opus, `mp4-muxer` vendorisé dans `vendor/`, mixage audio hors ligne `OfflineAudioContext` avec ducking ; secours `MediaRecorder` sur `captureStream`). Barre « Génération de l'edit : 45 % », puis lecteur `<video controls autoplay loop>` + bouton **TÉLÉCHARGER LE MP4**. Aucun `ctx.filter` / `getImageData` / `shadowBlur` dans `draw()` : halos, badges, pièces rouges / blanches, plateaux et fond flouté sont pré-rendus au chargement.
+- **Plus d'écran coupé** : le canvas = tout l'écran ; `translate(centre) → shake → scale(S) → rotate(θ) → translate(−cible clampée)` avec `maxOffset = BS/2·(1 − 1/S)` ; cadre étendu autour du plateau.
+- **Intro VS de 3,8 s** (entrée en glissade, zoom lent, particules, Elo qui grimpe, tension + lueur néon, flash puis 1er coup à 3,85 s) ; ensuite un coup toutes les 0,45–0,6 s même sur des beats doux : plus jamais de plateau figé. Rien ne démarre avant la fin du chargement / de l'analyse.
+- **Badges** : palette complète (★ ! !! ?! ? ??) + logo IA sur tous les coups du bot ; plus de ✓ partout. **Overlays exclusifs** : un seul texte à la fois (fin > prompt > bulle de bot).
+- **Panneau de configuration** : le chevauchement venait d'un nom de classe en double (`.ce-stat` en `position:absolute` côté scène) → renommé `.ce-statcard`, cartes en colonne flex.
+
+## 1.54 — Fix export : « VideoFrames can't be created from tainted sources »
+Dans le WebView, les images chargées depuis les assets rendaient le canvas « tainted » (origine fichier) : `VideoFrame` refusé. Les images du moteur de rendu (pièces, badges, avatars) sont maintenant embarquées en `data:` URI (`js/render_assets.js`, généré par `android/tools/gen_render_assets.py` — à relancer si `img/chess`, `img/badges` ou `img/bots` changent). Un test vérifie qu'aucune image « réseau » n'est utilisée.
+
+## 1.55 — Chess Edit : réalisation « @Queens_ambit_1 », physique des pièces, co-pilote Gemini
+- **Téléchargement Android** : `<video controlsList="nodownload">` (plus de menu natif sur une URL `blob:`) ; bouton rouge « TÉLÉCHARGER LE MP4 » = feuille de partage native (`navigator.share({files})`) → sinon sauvegarde `A.save` → sinon data URL ; bouton « ENREGISTRER DANS LE TÉLÉPHONE ».
+- **Palette** : cases `#FFFFFF` / `#0B0B0B`, pièces blanches contour noir 2,5 px, pièces noires contour blanc 1,8 px, bloom blanc, demi-plateau cyan `rgba(0,245,255,.55)` + étoiles en diagonale sur `!!`.
+- **Cadrage** : zoom 1,25–1,60 maxi, caméra sur le **milieu du mouvement** (départ ET arrivée visibles, ≥ 5×5 cases) ; case de départ allumée 80 ms avant, traînée de 110 ms, départ gardé à 40 % ; la vidéo s'arrête **2,0 s après le dernier coup** (fondu audio 0,8 s) ; respiration d'ambiance (jamais de plateau mort).
+- **Bascule 3D finale** : dézoom 0,85, rotateX 45° (perspective bande par bande), rotation 180° avec traînée néon violet / or, impact à l'atterrissage, couronne « Winner » (verte) et « Checkmate » (rouge) au-dessus des rois.
+- **Cutscenes** : BADASS ROOK (0,9 s : tour sombre aux yeux froncés, braises, fond rouge flouté) et PAWN EVOLUTION (pion → flash doré → Dame couronnée, mains divines, 4 flèches en X).
+- **Physique des pièces** (pivot au centre exact : `translate → rotate → scale → dessin`) : inertie pendant le glissement (penche de 10–15°, étirement 1,12 × 0,92, 90 ms), pendule d'atterrissage `sin(t·45)·exp(−t·12)·0,25` + pop ×1,30 (easeOutBack), spin 360° en 140 ms (`cubic-bezier(.2,.8,.2,1)`) sur `!!` / `!` / sacrifice / ChatGPT Prime, respiration ±3° / ×1,0–1,06 au BPM, pièce capturée : 35°, flash blanc / rouge, évaporation en 120 ms.
+- **⚡ CO-PILOTE GEMINI** (sans API) : « Copier le prompt » (coups numérotés + durée exacte de l'audio + schéma) → Gemini écoute la musique → « Coller le script JSON » (`GeminiEditScript` : intro, events {moveIndex, timestamp, badge, camera, vfx}, outro `3D_BOARD_FLIP_CHECKMATE`) → le moteur joue chaque coup au timestamp exact. vfx : `CYAN_HALF_BOARD_GLOW SHOCKWAVE_DOUBLE RGB_FLASH RED_PATH YELLOW_ARROW CHECK_BEAM BOSS_PIECE SPEED_LINES RED_TINT SPIN GLASSES PROMPT_STREAM CUTSCENE_BADASS_ROOK CUTSCENE_PAWN_EVOLUTION`.
+
+## 1.56 — Yeux de la tour (cutscene BADASS ROOK) redessinés : orbite sombre, œil en amande à paupière oblique, iris dégradé jaune → rouge, pupille fendue, reflets, sourcils, lueur ; dessinés dans le corps de la tour.
+
+## 1.57 — Yeux de la tour retirés (cutscene BADASS ROOK : tour seule sur fond rouge, braises, mouvement de caméra).
+
+## 1.58 — Style ZaveeCHESS : la cutscene CUTSCENE_BADASS_ROOK devient « silhouette blanche » (plateau assombri à 85 %, pièce clé en blanc pur #FFF inclinée de −22°, lévitation, bloom doublé + étincelles, deux boîtes inclinées de −4° : question / réponse du bot) ; impact du drop = pièce blanche pure 150 ms + deux copies du plateau en `screen` (rouge −14 px, cyan +14 px) autour de la pièce (« White core + RGB radial split »).
+
+## 1.59 — Mode AUTO refactorisé (rythme intro / drop, Z-order, flèche unique, punch, mixage, Prime battu)
+- **Distribution temporelle** (`buildSync`) : intro VS 0–3,8 s → **intro calme** : 4 à 8 coups d'ouverture espacés de 1,1–1,6 s, glissement doux 240 ms (`easeInOutCubic`), sans flash / flèche / chemin rouge / strobe, cadrage doux → **DROP = 1er tournant / sacrifice / coup illégal** (meilleur score parmi les départs possibles) → **12 à 22 coups intenses consécutifs** (une séquence continue des derniers coups décisifs) calés sur les kicks (0,35–0,55 s ; réparti sur l'audio restant s'il est connu). Fin 2,0 s après le dernier coup.
+- **Z-order** (`drawFx` en deux couches) : 0 plateau → 1 sol (départ, arrivée, chemin rouge ≤ 0,55) → 2 flèche / rayon d'échec → 3 **pièces** → 4 **un seul** signe par coup (badge en haut à droite : +38 % X, −38 % Y, ou lunettes, ou logo IA — jamais empilés).
+- **Flèche jaune** : une seule dans toute la vidéo (dernier coup illégal / téléportation, ou mat final quand Prime perd).
+- **Punch caméra** : sur chaque kick après le drop, zoom +0,22 en 16 ms puis `exp(−14·t)`, secousse 14 px, flash de bord blanc / cyan 60 ms.
+- **Mixage** : bruitages lourds sur un bus « écho » (delay 140 / 280 ms, feedback 0,38, passe-haut 200 Hz sur la branche écho + petite réverb) à gain 1,35 ; couches synthétisées (bois + sub-bass sur prise, cristal sur échec, explosion grave sur mat) ; sidechain : musique à 0,45 pendant 220 ms (voix : toute leur durée), aperçu **et** export MP4 ; voix « This is the way » sur le mat.
+- **Prime battu** : si la partie vient d'un mode où le joueur mate Prime (`rec.v.beaten`), le plot twist est retiré (case « Garder le plot twist ») : sur les 3 derniers coups Prime panique (texte rouge tremblant : erreur 500, « 404 Elo introuvable »…), flèche jaune sur le mat, couronne / badge mat sur les rois, écran « CHATGPT PRIME : 404 ELO NOT FOUND ».
+
+## 1.60 — Règles de réalisation (vainqueur dynamique, rouge réservé, impact brillant cyan, overlay unique)
+- **Vainqueur dynamique** : l'outro affiche `${NOM DU VAINQUEUR} GAGNE PAR ÉCHEC ET MAT` (jamais « ChatGPT Prime » en dur). La bascule 3D (script ou twist) n'existe **que si ChatGPT Prime joue** ; sinon outro normale : zoom sur le roi maté, couronne verte du vainqueur, badge `#` rouge sur le roi perdant, sans retourner l'échiquier.
+- **Rouge** (`#FF2020`) réservé aux gaffes (`??`) et au roi maté ; `RED_PATH` / `RED_TINT` ignorés ailleurs ; bons coups : halo vert `#2CE65C` / bleu `#2E9AFE` sur les cases de départ et d'arrivée seulement.
+- **Brillant / sacrifice** (thème 100 % cyan `#00F7FF` + blanc) : anticipation 120 ms (plateau à 30 %, pièce ×1,45 avec aura), hit-stop de 90 ms + flash + secousse brutale, 35 particules + 3 arcs électriques, demi-plateau cyan (`screen`), badge `!!` en `scale(2.2→1)` 140 ms, 2 anneaux sur tout le plateau, 4 coins de visée, et **les cases tremblent une à une** autour de l'impact (onde case par case).
+- **THE ROOK !** : voix à fort volume (musique écrasée à 0,22) + étiquette à l'écran ; **Hawaii** : prévu en ouverture sur un fort écart d'évaluation, 1 fois par partie (le fichier audio `ENOS_CHESS_SND.hawaii` reste à fournir).
+- **Overlay « Quel est ton prochain coup »** : réservé à ChatGPT Prime, 1 fois maximum par edit (sinon bulle de chat en bas, le plateau reste visible).
+
+## 1.61 — Chess Edit : continuité, HERO MOMENT, cadence lente
+
+- **Plus de saut invisible** : les coups du milieu de partie sont montrés en montage accéléré lisible (≈3,4 s, un coup toutes les ~90–140 ms, caméra plate, sans badge ni flash).
+- **HERO MOMENT** : après un coup brillant / sacrifice (≥ niveau 3), plateau verrouillé 1,6 s (1,8 s pour THE ROOK), zoom lent 1,45→1,55, réponse adverse seulement après le cri.
+- **Cadence après le drop** : 0,65–0,90 s par coup sur les vrais temps forts ; coups forcés du perdant sans effet ; pièce rouge géante uniquement sur le mat final ; strobe ≤ 2.
+- **Drop des longues musiques (> 40 s)** : score pondéré par l'énergie soutenue après le drop (les kicks de pré-drop ne gagnent plus).
+- Le son d'ouverture est « THIS IS THE WAY » (jamais Hawaii) : une fois en ouverture sur un gros swing, 2 max par partie.
+- Test : `t_edit_flow.py`.
+
+## 1.62 — Chess Edit : importer n'importe quelle partie Chess.com (PGN) avec pseudos et photos
+
+- Carte « 0 · Importer » du studio : colle le PGN (Chess.com › Partager › PGN) → analyse Stockfish locale (`E.brain.reviewGame`) → partie enregistrée dans `chessedit.imports` (12 max) et sélectionnée.
+- Pseudos (`White`/`Black`) et classements (`WhiteElo`/`BlackElo`) lus dans le PGN ; photos de profil choisies par 📷 (recadrées au centre, JPEG 256 px en data URI → canvas jamais « taché »). Intro VS, vainqueur dynamique, etc. les utilisent.
+- Volontairement **aucun réseau** (CSP `connect-src 'none'`) : pas de téléchargement depuis Chess.com. Une capture PNG seule ne contient qu'une position, pas la partie.
+- Test : `t_edit_import.py`.
+
+### 1.62.1 — correctif import
+- Un PGN collé depuis un téléphone (en-têtes sans ligne vide avant les coups) était refusé (« PGN illisible ») : `K.normPgn` (chess_review.js) remet la forme attendue (en-têtes, ligne vide, coups sur une ligne). Utilisé par l'import Chess Edit et par l'analyse de partie. Test : `t_edit_import.py` (`pgn_phone.txt`).
+
+## 1.63 — Brillants sur sacrifice de dame/tour + remplissage depuis une capture Chess.com
+
+- **Jugement** (`chess_brain.js`, `K.quality`) : un sacrifice de dame ou de tour qui fait avancer un mat forcé (ex. 20...Df1+ !! Txf1 Txf1#) est « brillant », comme sur Chess.com (avant : classé « meilleur » car il y avait déjà un mat).
+- **Import Chess Edit** : bouton « 📸 Remplir depuis une capture Chess.com » → modèle de vision (clé Groq, comme le scanner de documents) lit pseudos, classements, couleurs et rectangles des photos de profil (recadrés en carré 256 px). Les couleurs sont corrigées d'après les en-têtes du PGN s'il est collé. Les noms/photos d'une importation précédente ne masquent plus le PGN suivant.
+- Tests : `t_edit_import.py` (vision simulée en test).

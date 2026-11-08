@@ -46,10 +46,17 @@
     return adviceFallback(res);
   }
 
+  /** PGN collé depuis un téléphone : lignes d'en-têtes sans ligne vide avant les coups, retours à la ligne exotiques -> forme que chess.js accepte. */
+  K.normPgn = (raw) => {
+    const lines = String(raw || "").replace(/\r\n?/g, "\n").replace(/[\u00a0\u200b]/g, " ").trim().slice(0, 60000).split("\n").map((l) => l.trim()).filter((l) => l !== "");
+    const head = lines.filter((l) => /^\[.*\]$/.test(l)), body = lines.filter((l) => !/^\[.*\]$/.test(l)).join(" ");
+    return head.length ? head.join("\n") + "\n\n" + body : body;
+  };
+
   /** o : {pgn, me:"auto"|"w"|"b", username, ms (réflexion par coup), onProgress(0..1)} -> résultat (voir plus haut). */
   K.reviewGame = async (o) => {
     const g = new Chess();
-    const text = String(o.pgn || "").trim().slice(0, 60000);
+    const text = K.normPgn(o.pgn);
     if (!g.load_pgn(text, { sloppy: true })) throw new Error("PGN illisible : copie la partie en entier depuis Chess.com (Partager › PGN).");
     const headers = g.header(), all = g.history({ verbose: true });
     if (!all.length) throw new Error("PGN illisible : aucun coup trouvé.");

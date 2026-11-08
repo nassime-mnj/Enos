@@ -30,9 +30,9 @@
 @keyframes ceBlink{50%{opacity:.35}}
 .ce-cut{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(0,0,0,.35),rgba(0,0,0,.88));pointer-events:none}
 .ce-cut img{position:relative;width:42vmin;height:42vmin;object-fit:contain}
-.ce-rays{position:absolute;width:150vmax;height:150vmax;left:50%;top:50%;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(rgba(255,210,74,.35) 0 6deg,transparent 6deg 18deg);animation:ceSpin 1.6s linear infinite;-webkit-mask:radial-gradient(circle,#000 6%,transparent 52%);mask:radial-gradient(circle,#000 6%,transparent 52%)}
-.ce-arrows{position:absolute;left:50%;top:50%;width:0;height:0;animation:ceSpin 1.2s linear infinite reverse}
-.ce-arrows b{position:absolute;left:-.5em;top:-.5em;font-size:7vmin;color:#ffd24a;text-shadow:0 0 12px #ffd24a;line-height:1;transform-origin:50% 50%;margin:0}
+.ce-rays{position:absolute;inset:0;overflow:hidden;-webkit-mask:radial-gradient(circle,#000 6%,transparent 52%);mask:radial-gradient(circle,#000 6%,transparent 52%)}.ce-rays::before{content:"";position:absolute;width:120vmax;height:120vmax;left:50%;top:50%;margin:-60vmax 0 0 -60vmax;background:repeating-conic-gradient(rgba(255,210,74,.35) 0 6deg,transparent 6deg 18deg);animation:ceSpin 1.6s linear infinite;will-change:transform}
+.ce-arrows{position:absolute;left:50%;top:50%;width:0;height:0;animation:ceSpin 1.2s linear infinite reverse;will-change:transform}
+.ce-arrows b{position:absolute;left:-.5em;top:-.5em;font-size:7vmin;color:#ffd24a;line-height:1;transform-origin:50% 50%;margin:0}
 @keyframes ceSpin{to{transform:rotate(360deg)}}
 .ce-big{position:absolute;bottom:27%;left:0;right:0;text-align:center;font:900 clamp(30px,10vw,64px)/1 var(--ui,system-ui);letter-spacing:6px;text-transform:uppercase;animation:ceTxt .8s ease-out both}
 @keyframes ceTxt{0%{letter-spacing:34px;opacity:0}40%{opacity:1}100%{letter-spacing:4px}}
@@ -69,7 +69,7 @@
 .ce-look-aura .ce-bang{width:1.9em;height:1.9em;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7ffbea,#0fb9a4);color:#fff;text-shadow:none;box-shadow:0 0 18px #34f5d8;font-size:.55em!important;line-height:1}
 .ce-dof{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);-webkit-mask-image:radial-gradient(circle at 50% 46%,transparent 22%,#000 70%);mask-image:radial-gradient(circle at 50% 46%,transparent 22%,#000 70%)}
 .ce-dof.on{opacity:1}
-.ce-hero{position:absolute;z-index:4;object-fit:contain;pointer-events:none;filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 22px 20px #000b);animation:ceHeroIn 1.2s cubic-bezier(.2,1.3,.3,1) both}
+.ce-hero{position:absolute;z-index:4;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 3px #fff) drop-shadow(0 18px 10px #000b);animation:ceHeroIn 1.2s cubic-bezier(.2,1.3,.3,1) both}
 @keyframes ceHeroIn{0%{opacity:0;transform:translateY(-34vh) rotate(calc(var(--rz) - 60deg)) scale(1.9)}28%{opacity:1;transform:translateY(0) rotate(var(--rz)) scale(1)}38%{transform:translateY(-3vh) rotate(var(--rz)) scale(1.04)}48%{transform:translateY(0) rotate(var(--rz)) scale(1)}82%{opacity:1}100%{opacity:0;transform:translateY(2vh) rotate(var(--rz)) scale(.96)}}
 .ce-neon{position:absolute;z-index:5;pointer-events:none;font-family:"Segoe UI",system-ui,sans-serif;font-weight:800;letter-spacing:2px;color:#fff;white-space:nowrap;text-shadow:0 0 6px #fff9,0 0 16px var(--nc);animation:ceNeon 1.7s both}
 .ce-neon b{color:var(--nc);text-shadow:0 0 8px var(--nc),0 0 22px var(--nc),0 0 40px var(--nc)}
@@ -142,7 +142,7 @@
 .ce-eval{position:absolute;left:3%;top:20%;bottom:22%;width:5.5vmin;max-width:26px;border-radius:999px;background:#17171b;border:2px solid rgba(255,255,255,.35);box-shadow:0 0 22px rgba(0,0,0,.7),0 0 12px rgba(255,255,255,.15);overflow:visible;z-index:8;pointer-events:none}
 .ce-ef{position:absolute;left:0;right:0;bottom:0;height:50%;border-radius:999px;background:linear-gradient(#fff,#d8d8de);transition:height 1.1s cubic-bezier(.3,.8,.3,1);box-shadow:0 0 14px rgba(255,255,255,.55)}
 .ce-en{position:absolute;left:50%;transform:translateX(-50%);top:46%;min-width:150%;text-align:center;font:800 11px var(--ui,system-ui);color:#111;background:#fff;border-radius:6px;padding:1px 3px;transition:top 1.1s cubic-bezier(.3,.8,.3,1);box-shadow:0 0 8px rgba(0,0,0,.4)}
-.ce-open{position:absolute;left:0;right:0;bottom:calc(14% + env(safe-area-inset-bottom,0px));text-align:center;font:900 clamp(30px,10.5vw,60px)/1 Impact,"Arial Black",var(--ui,system-ui);letter-spacing:1px;text-transform:uppercase;color:#d9a441;-webkit-text-stroke:2px #3a2410;text-shadow:0 3px 0 #3a2410,0 6px 14px #000,0 0 26px rgba(255,170,60,.45);padding:0 8px;z-index:9;pointer-events:none}
+.ce-open{position:absolute;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom,0px));text-align:center;font:700 clamp(10px,3vw,13px)/1.2 var(--ui,system-ui);letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.82);text-shadow:0 1px 6px #000;padding:0 8px;z-index:9;pointer-events:none}
 .ce-open.in{animation:ceOpenIn .9s cubic-bezier(.2,.9,.2,1) both}.ce-open.out{opacity:0;transition:opacity .9s}
 @keyframes ceOpenIn{0%{opacity:0;transform:translateY(26px) scale(.9);filter:blur(6px)}100%{opacity:1;transform:none;filter:none}}
 .ce-thr{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
@@ -152,8 +152,8 @@
 .ce-warn{position:absolute;opacity:0;animation:ceWarn .4s cubic-bezier(.2,1.8,.4,1) forwards,ceWarnPulse .8s ease-in-out .5s infinite alternate;filter:drop-shadow(0 0 7px #ffcb1f) drop-shadow(0 2px 3px rgba(0,0,0,.6));z-index:5}.ce-warn svg{display:block;width:100%;height:100%}
 .ce-warn.out,.ce-thr.out{opacity:0!important;transition:opacity .4s}
 @keyframes ceWarn{from{opacity:0;transform:scale(.2) rotate(-30deg)}to{opacity:1;transform:none}}@keyframes ceWarnPulse{to{transform:scale(1.18)}}
-.ce-stat{position:absolute;left:0;right:0;top:25%;z-index:20;pointer-events:none;perspective:700px;transition:opacity .45s}
-.ce-stat.out{opacity:0}
+.ce-statcard{position:absolute;left:0;right:0;top:25%;z-index:20;pointer-events:none;perspective:700px;transition:opacity .45s}
+.ce-statcard.out{opacity:0}
 .ce-sc{display:flex;align-items:center;justify-content:center;gap:5vmin;transform:rotateY(-14deg) rotateX(4deg)}
 .ce-sc.slam{animation:ceScSlam .32s cubic-bezier(.1,1.9,.3,1) both}
 @keyframes ceScSlam{0%{opacity:0;transform:rotateY(-14deg) rotateX(4deg) scale(2.6)}60%{opacity:1;transform:rotateY(-14deg) rotateX(4deg) scale(.94)}100%{opacity:1;transform:rotateY(-14deg) rotateX(4deg) scale(1)}}
@@ -212,3 +212,95 @@
 .ce-intro.v-spot .ce-slash{display:none}
 .ce-intro.v-spot .ce-port,.ce-intro.v-spot .ce-pl.b .ce-port{background:#cfd3d9;box-shadow:0 0 40px rgba(255,255,255,.45);animation:none}
 .ce-intro.v-spot .ce-vs b{font-style:normal;letter-spacing:6px;text-shadow:0 0 30px rgba(255,255,255,.7)}
+
+/* variantes : pièces spéciales (auras), baril en vol */
+.ce-pcs img[data-sp]{animation:ceAura 1.3s ease-in-out infinite alternate}
+.ce-pcs img[data-sp="mk"]{--ac:#ff7a1a}.ce-pcs img[data-sp="rei"]{--ac:#3ae6ff}.ce-pcs img[data-sp="barrel"]{--ac:#6bdc50}.ce-pcs img[data-sp="army"]{--ac:#b04aff}
+@keyframes ceAura{from{filter:drop-shadow(0 0 6px var(--ac)) drop-shadow(0 0 12px var(--ac))}to{filter:drop-shadow(0 0 14px var(--ac)) drop-shadow(0 0 30px var(--ac))}}
+.ce-fly{position:absolute;pointer-events:none;z-index:6;will-change:transform}
+.ce-fshadow{position:absolute;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.7),transparent 70%);pointer-events:none}
+.ce-q0 .ce-pcs img[data-sp]{animation:none}
+
+/* variété d'animations : traînée de déplacement, impact frame, rotation en l'air */
+.ce-trail{position:absolute;height:6px;margin-top:-3px;transform-origin:0 50%;border-radius:6px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--tc,#00f2fe));box-shadow:0 0 14px var(--tc,#00f2fe);animation:ceTrail .7s ease-out both;will-change:opacity}
+@keyframes ceTrail{0%{opacity:0;clip-path:inset(0 100% 0 0)}25%{opacity:1;clip-path:inset(0 0 0 0)}100%{opacity:0;clip-path:inset(0 0 0 0)}}
+.ce-impact{position:absolute;inset:0;z-index:12;pointer-events:none;mix-blend-mode:difference;background:#fff}
+.ce-impact.k{mix-blend-mode:normal;background:radial-gradient(circle,#fff 0 8%,#000 8.5% 100%)}
+
+/* AAA : coup illégal (glitch), tampon, flare anamorphique — uniquement opacity / transform (composés par le GPU) */
+.ce-vanish{pointer-events:none;animation:ceVanish .42s steps(7,end) both;will-change:transform,opacity}
+@keyframes ceVanish{0%{opacity:1;clip-path:inset(0 0 0 0)}30%{opacity:.9;transform-origin:center;filter:hue-rotate(120deg);clip-path:inset(0 0 50% 0)}60%{opacity:.6;clip-path:inset(50% 0 0 0);filter:hue-rotate(-90deg)}100%{opacity:0;clip-path:inset(40% 0 40% 0)}}
+.ce-appear{animation:ceAppear .5s steps(8,end) both}@keyframes ceAppear{0%{opacity:0;clip-path:inset(45% 0 45% 0)}35%{opacity:1;clip-path:inset(0 0 60% 0)}65%{clip-path:inset(40% 0 0 0)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
+.ce-rift{position:absolute;pointer-events:none;border:2px solid #ff3b52;box-shadow:0 0 18px #ff3b52,inset 0 0 14px #ff3b52;animation:ceRift .6s ease-out both}@keyframes ceRift{0%{opacity:1;transform:scale(.6)}100%{opacity:0;transform:scale(2)}}
+.ce-stampfx{position:absolute;left:50%;top:40%;z-index:14;padding:8px 18px;border:5px solid var(--sc,#ff3b52);border-radius:8px;color:var(--sc,#ff3b52);font:900 clamp(26px,9vw,46px)/1 Impact,"Arial Black",system-ui;letter-spacing:3px;text-shadow:0 0 14px var(--sc,#ff3b52);background:rgba(0,0,0,.55);white-space:nowrap;pointer-events:none;animation:ceStampIn 1.4s cubic-bezier(.2,1.4,.3,1) both}
+@keyframes ceStampIn{0%{opacity:0;transform:translate(-50%,-50%) rotate(-9deg) scale(3)}14%{opacity:1;transform:translate(-50%,-50%) rotate(-9deg) scale(1)}78%{opacity:1;transform:translate(-50%,-50%) rotate(-9deg) scale(1.02)}100%{opacity:0;transform:translate(-50%,-50%) rotate(-9deg) scale(1.08)}}
+.ce-siren::after{content:"";position:absolute;inset:0;z-index:13;pointer-events:none;background:radial-gradient(circle,transparent 35%,rgba(255,30,60,.45));animation:ceSiren .3s linear 3}@keyframes ceSiren{0%,100%{opacity:0}50%{opacity:1}}
+.ce-streak{position:absolute;height:6px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--c,#9fe9ff) 45%,#fff 50%,var(--c,#9fe9ff) 55%,transparent);box-shadow:0 0 22px var(--c,#9fe9ff);border-radius:6px;transform-origin:50% 50%;animation:ceStreak .65s cubic-bezier(.2,.8,.2,1) both;will-change:transform,opacity}
+@keyframes ceStreak{0%{opacity:0;transform:scaleX(.05)}20%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1.15) scaleY(.2)}}
+
+/* ===== Style « edit YouTube Shorts » : plateau clair bord à bord, éclairage de couleur, badges, anneaux, cadre de visée, rayon d'échec, mini-cutscene ===== */
+.ce-look-zavee{background:radial-gradient(circle at 50% 40%,#2a2d36,#08090c)}.ce-look-zavee .ce-board{box-shadow:0 0 40px rgba(0,0,0,.6);filter:none}
+.ce-pcs{filter:drop-shadow(0 6px 8px rgba(0,0,0,.6))}
+.ce-tint{position:absolute;inset:0;z-index:6;pointer-events:none;mix-blend-mode:overlay;opacity:0}
+.ce-laser{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:repeating-linear-gradient(0deg,transparent 0 31px,color-mix(in srgb,var(--lc,#1CE8E8) 55%,transparent) 31px 33px),repeating-linear-gradient(90deg,transparent 0 31px,color-mix(in srgb,var(--lc,#1CE8E8) 55%,transparent) 31px 33px);mix-blend-mode:screen;animation:ceLaserMove 1.2s linear infinite}
+@keyframes ceLaserMove{to{background-position:0 64px,64px 0}}
+.ce-ring2{position:absolute;border:3px solid var(--rc,#1CE8E8);border-radius:50%;box-shadow:0 0 14px var(--rc,#1CE8E8),inset 0 0 10px var(--rc,#1CE8E8);transform:translate(-50%,-50%) scale(.5);opacity:1;pointer-events:none;animation:ceRing2 .35s ease-out both;will-change:transform,opacity}
+@keyframes ceRing2{0%{transform:translate(-50%,-50%) scale(.5);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
+.ce-brk{position:absolute;pointer-events:none;animation:ceBrkIn .3s cubic-bezier(.2,.9,.2,1) both,ceBrkOut .25s ease-in .7s both}
+.ce-brk i{position:absolute;width:26%;height:26%;border:0 solid var(--rc,#1CE8E8);filter:drop-shadow(0 0 6px var(--rc,#1CE8E8))}
+.ce-brk i:nth-child(1){left:0;top:0;border-left-width:4px;border-top-width:4px}.ce-brk i:nth-child(2){right:0;top:0;border-right-width:4px;border-top-width:4px}.ce-brk i:nth-child(3){left:0;bottom:0;border-left-width:4px;border-bottom-width:4px}.ce-brk i:nth-child(4){right:0;bottom:0;border-right-width:4px;border-bottom-width:4px}
+@keyframes ceBrkIn{0%{transform:scale(2.6);opacity:0}100%{transform:scale(1);opacity:1}}@keyframes ceBrkOut{to{opacity:0}}
+.ce-beam{position:absolute;height:7px;margin-top:-3.5px;transform-origin:0 50%;pointer-events:none;border-radius:7px;background:linear-gradient(90deg,#ffb300,#ffe28a 20%,#fff 50%,#ffe28a 80%,#ff8a00);box-shadow:0 0 25px 6px rgba(255,170,0,.85);animation:ceBeam .9s ease-out both;will-change:clip-path,opacity}
+@keyframes ceBeam{0%{opacity:1;clip-path:inset(0 100% 0 0)}20%{opacity:1;clip-path:inset(0 0 0 0)}70%{opacity:1}100%{opacity:0;clip-path:inset(0 0 0 0)}}
+.ce-kflash{animation:ceKFlash .15s steps(2,end) 5}@keyframes ceKFlash{0%{filter:sepia(1) saturate(9) hue-rotate(-35deg) brightness(1.4)}100%{filter:none}}
+.ce-cut3{position:absolute;inset:0;z-index:15;pointer-events:none;background:rgba(0,0,0,.62);animation:ceCut3 .4s linear both;overflow:hidden}
+.ce-cut3 img{position:absolute;bottom:20%;height:58%;filter:drop-shadow(0 12px 18px #000)}.ce-cut3 .l{left:-4%;transform:rotate(-7deg);animation:ceCut3L .4s cubic-bezier(.2,.9,.2,1) both}.ce-cut3 .r{right:-4%;transform:rotate(7deg);animation:ceCut3R .4s cubic-bezier(.2,.9,.2,1) both}
+.ce-cut3 b{position:absolute;left:0;right:0;bottom:7%;text-align:center;font:900 clamp(24px,8.5vw,50px)/1 Impact,"Arial Black",system-ui;letter-spacing:2px}.ce-cut3 b span{color:#fff;text-shadow:0 0 12px #1CE8E8,0 0 28px #1CE8E8,0 3px 0 #0a6a6a}
+@keyframes ceCut3{0%{opacity:0}12%{opacity:1}85%{opacity:1}100%{opacity:0}}@keyframes ceCut3L{0%{translate:-60% 0}100%{translate:0 0}}@keyframes ceCut3R{0%{translate:60% 0}100%{translate:0 0}}
+.ce-bars,.ce-ff{display:none!important}
+
+/* intro face-off 0,5 s */
+.ce-intro.fo{position:absolute;inset:0;z-index:16;pointer-events:none;background:none;animation:none}.fo-bg{position:absolute;inset:0;background:linear-gradient(100deg,rgba(255,40,40,.45) 0 50%,rgba(40,110,255,.45) 50% 100%);mix-blend-mode:screen;animation:foBg .5s ease-out both}
+.fo-p{position:absolute;bottom:22%;width:46%;display:flex;flex-direction:column;align-items:center}.fo-p.l{left:0;animation:foL .5s cubic-bezier(.2,.9,.2,1) both}.fo-p.r{right:0;animation:foR .5s cubic-bezier(.2,.9,.2,1) both}
+.fo-p img,.fo-ph{width:78%;aspect-ratio:1;border-radius:50%;object-fit:cover;background:#111;box-shadow:0 0 0 4px #fff,0 0 30px 8px var(--rim,#ff4a3a),0 0 70px 14px var(--rim,#ff4a3a)}.fo-p.r{--rim:#3d8bff}.fo-p.l{--rim:#ff4a3a}.fo-ph{display:flex;align-items:center;justify-content:center;font-size:18vw;color:#fff}
+.fo-n{position:absolute;bottom:-17%;left:0;right:0;text-align:center;font:900 clamp(16px,6vw,30px)/1.05 Impact,"Arial Black",system-ui;color:#fff;text-shadow:0 3px 0 #000,0 0 14px #000}.fo-n small{display:block;font-size:.62em;color:#ffd666}
+.fo-vs{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:2;animation:foVs .5s cubic-bezier(.2,1.6,.4,1) both}.fo-vs b{display:block;font:900 clamp(40px,16vw,90px)/1 Impact,"Arial Black",system-ui;background:linear-gradient(#fff,#9aa0b0 45%,#e8ecff 50%,#6a7088);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px #38e8ff) drop-shadow(0 3px 0 #000)}
+@keyframes foL{0%{transform:translateX(-90%)}100%{transform:translateX(0)}}@keyframes foR{0%{transform:translateX(90%)}100%{transform:translateX(0)}}@keyframes foVs{0%{transform:translate(-50%,-50%) scale(3);opacity:0}60%{opacity:1}100%{transform:translate(-50%,-50%) scale(1)}}@keyframes foBg{0%{opacity:0}30%{opacity:1}100%{opacity:.6}}
+/* chemins rouges */
+.ce-pathdim{position:absolute;left:0;top:0;background:rgba(0,0,0,.5);pointer-events:none;animation:cePDim .15s ease-out both}@keyframes cePDim{from{opacity:0}to{opacity:1}}
+.ce-path{position:absolute;pointer-events:none;background:#FF2A1A;box-shadow:0 0 30px 6px #FF2A1A,inset 0 0 14px #ff8a7a;opacity:0;animation:cePath .2s ease-out both}@keyframes cePath{from{opacity:0;transform:scale(.7)}to{opacity:.88;transform:scale(1)}}
+.ce-pathdim.out,.ce-path.out{opacity:0!important;transition:opacity .3s;animation:none}
+.ce-badge2.ai{background:#000!important;border:2px solid #fff;border-radius:50%}
+.ce-gl{position:absolute;z-index:8;pointer-events:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.6))}
+.ce-prompt{position:absolute;inset:0;z-index:15;pointer-events:none;background:rgba(0,0,0,.8);display:flex;flex-direction:column;justify-content:flex-end;padding:0 5% 12%;gap:10px}
+.ce-prompt .pq{align-self:flex-end;max-width:78%;padding:10px 14px;border-radius:18px 18px 4px 18px;background:#2b6cff;color:#fff;font:600 clamp(13px,3.8vw,18px)/1.3 system-ui}
+.ce-prompt .pa{max-width:92%;padding:12px 14px;border-radius:18px 18px 18px 4px;background:#1c1c24;color:#eaffff;font:500 clamp(13px,3.8vw,18px)/1.35 system-ui;border:1px solid #1CE8E8}.ce-prompt .pa i{display:inline-block;width:9px;height:1.1em;vertical-align:-.2em;margin-left:3px;background:#1CE8E8;box-shadow:0 0 10px #1CE8E8;animation:cePCur .25s steps(2) infinite}@keyframes cePCur{50%{opacity:0}}
+.ce-prompt .sil{position:absolute;left:50%;top:34%;width:34%;margin-left:-17%;filter:brightness(0) invert(1) drop-shadow(0 0 14px #fff) drop-shadow(0 0 30px #8ff)}
+/* strobe / flèche / reality */
+.ce-rgbgrid{position:absolute;inset:0;z-index:17;pointer-events:none;mix-blend-mode:screen;background:repeating-linear-gradient(0deg,transparent 0 26px,rgba(255,40,60,.85) 26px 29px),repeating-linear-gradient(90deg,transparent 0 26px,rgba(50,90,255,.85) 26px 29px),radial-gradient(circle,rgba(255,255,255,.5),transparent 60%)}
+.ce-arr{position:absolute;left:0;top:0;pointer-events:none;z-index:7;filter:drop-shadow(0 0 10px #FF9A00) drop-shadow(0 0 22px #FF9A00)}
+.ce-reality .ce-vig,.ce-reality .ce-fog,.ce-reality .ce-spot,.ce-reality .ce-grain{opacity:0!important}.ce-reality{background:#1b1b1f}
+.fo-bd{position:absolute;top:-6%;width:30%;height:auto;aspect-ratio:1;z-index:3}.fo-p.l .fo-bd{left:-2%}.fo-p.r .fo-bd{right:-2%}
+.fo-n em{display:inline-block;padding:1px 6px;margin-right:6px;border-radius:3px;font:900 .7em/1.3 system-ui;font-style:normal;color:#fff}.fo-n em.gm{background:#c93a3a}.fo-n em.ai{background:#ff9a1f}
+.ce-prompt .pq{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.75);box-shadow:0 0 18px rgba(255,255,255,.45);color:#fff;transform:rotate(-6deg) skewX(-6deg);transform-origin:100% 100%}
+.ce-prompt .pa{transform:rotate(-6deg) skewX(-6deg);transform-origin:0 100%;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.75);box-shadow:0 0 18px rgba(255,255,255,.35);color:#fff}
+.ce-prompt .pa i{background:#fff;box-shadow:0 0 12px #fff}
+
+/* panneau de configuration : colonne propre, jamais de superposition (le texte d'aide était absolu à cause d'un nom de classe en double) */
+.suite-body .card{display:flex;flex-direction:column;gap:12px;overflow:hidden}.suite-body .card>*{min-width:0;margin-top:0!important;margin-bottom:0!important}
+.suite-body .card .row{display:flex;flex-wrap:wrap;gap:8px}.suite-body .card .row>.btn{flex:1 1 140px;min-width:0;white-space:normal;line-height:1.2}
+.suite-body select.sel{width:100%;max-width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+p.ce-stat{position:static;white-space:normal;overflow-wrap:anywhere}
+
+/* aperçu canvas + génération MP4 */
+.ce-ov{position:fixed;inset:0;z-index:99990;background:#000;display:flex;align-items:center;justify-content:center}
+.ce-cvp{position:absolute;inset:0;width:100vw;height:100vh;display:block;background:#000}
+.ce-ov .ce-load{position:absolute;left:0;right:0;top:45%;text-align:center;color:#fff;font:700 18px system-ui}
+.ce-ov .ce-x{position:absolute;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:2}.ce-ov .ce-pp{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:2}
+.ce-ov .ce-prog{position:absolute;left:0;right:0;bottom:0;height:4px;background:#ffffff22}.ce-ov .ce-prog i{display:block;height:100%;background:#ff2a2a;transform-origin:0 50%;transform:scaleX(0)}
+.ce-genbox{width:min(92vw,420px);max-height:92vh;overflow:auto;padding:16px;border-radius:14px;background:#14141a;border:1px solid #ffffff22;display:flex;flex-direction:column;gap:12px;color:#fff}
+.ce-genbox.big{width:min(96vw,520px)}.ce-genbox video{width:100%;max-height:68vh;background:#000;border-radius:10px}
+.ce-gbar{height:10px;border-radius:6px;background:#ffffff22;overflow:hidden}.ce-gbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2a2a,#ffd24a);transition:width .12s}
+.ce-gmsg{font-size:13px;line-height:1.4;color:#c8c8d0;overflow-wrap:anywhere}
+.ce-ta{width:100%;box-sizing:border-box;min-height:120px;background:#0c0c10;color:#e8e8f0;border:1px solid #ffffff22;border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Menlo,monospace}
+.btn.ce-red{background:#e0243c;color:#fff;border-color:#ff5a6e}

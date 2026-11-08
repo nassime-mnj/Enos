@@ -151,7 +151,7 @@ def sfx_sources(workdir, ids):
                 if os.path.isfile(f):
                     out[i] = f
                     break
-        elif i == "capture":
+        elif i == "capture" and "capture" not in snd:
             out[i] = os.path.join(workdir, "sfx_capture.wav")
             synth_capture(out[i])
         elif i == "brilliant":
@@ -251,6 +251,12 @@ def mix_graph(manifest, srcs, has_music):
                 else:
                     g.append(f"{lab}aresample={SR},asetrate={int(SR * VOICE_RATE)},aresample={SR},{trim}highpass=f=170,adelay={ms}|{ms},volume={gain:.3f}[v{n}]")
                 voices.append(f"[v{n}]")
+            elif u.get("bus") == "echo":                                                      # coups lourds : écho spatial (delay 140 / 280 ms, feedback 0,38)
+                g.append(f"{lab}aresample={SR},{trim}adelay={ms}|{ms},volume={gain:.3f},aecho=0.8:0.7:140|280:0.38|0.3[x{n}]")
+                tracks.append(f"[x{n}]")
+            elif u.get("bus") == "epic":                                                       # écho ÉPIQUE (enregistrement de l'Alien Gambit) : deux répétitions longues + grande salle
+                g.append(f"{lab}aresample={SR},{trim}adelay={ms}|{ms},volume={gain:.3f},aecho=0.8:0.8:360|720|1100:0.5|0.35|0.2,lowpass=f=5200[x{n}]")
+                tracks.append(f"[x{n}]")
             else:
                 g.append(f"{lab}aresample={SR},{trim}adelay={ms}|{ms},volume={gain * 0.9:.3f}[x{n}]")
                 tracks.append(f"[x{n}]")

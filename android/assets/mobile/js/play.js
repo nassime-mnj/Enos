@@ -5,7 +5,7 @@
   const E = window.ENOS, $ = E.$, esc = E.esc, U = E.ui, B = E.board, L = E.link;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   const G = { fen: START, me: "w", power: 55, hist: [], busy: false, last: null, sel: "", hint: null, legal: [], over: "", flip: false, ev: null, badge: null, arrows: null, view: -1, line: { fens: [START], ucis: [], sans: [], keys: [] }, seen: E.chessLocal.startSeen(START) };    // seen : passages de chaque position (pas de nulle par répétition)
-  const KEYLAB = { brilliant: ["Brillant", "#1acfd6"], book: ["Théorie", "#a8896c"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
+  const KEYLAB = { forced: ["Forcé", "#9aa7bd"], miss: ["Manqué", "#ff6b7d"], brilliant: ["Brillant", "#1acfd6"], book: ["Théorie", "#a8896c"], best: ["Meilleur", "#7bd64d"], excellent: ["Excellent", "#9ecc38"], good: ["Bon", "#739e66"], inaccuracy: ["Imprécision", "#f5c542"], mistake: ["Erreur", "#f5a524"], blunder: ["Gaffe", "#ff4d63"] };
 
   // Parties ET analyse de partie : moteur local (chess_local.js / chess_review.js), sans PC.
   const api = (path, body) => E.chessLocal.call(path, body);
@@ -83,7 +83,7 @@
       $("#ch-eval").style.setProperty("--w", (G.me === "w" ? w : 100 - w) + "%");
       $("#ch-evtxt").textContent = e.mate != null ? "M" + Math.abs(e.mate) : (e.cp / 100 * (G.me === "w" ? 1 : -1)).toFixed(1).replace(".", ",").replace(/^(\d)/, "+$1");
     }
-    $("#ch-moves").innerHTML = G.line.sans.map((sn, i) => { const k = G.line.keys[i], bd = k && B.BADGES[k] ? `<em style="color:${B.BADGES[k][1]}">${B.BADGES[k][0]}</em>` : ""; return `<span data-i="${i + 1}"${i + 1 === at ? ' class="cur"' : ""}>${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(sn)}${bd}</span>`; }).join("");
+    $("#ch-moves").innerHTML = G.line.sans.map((sn, i) => { const k = G.line.keys[i], bd = k && B.BADGES[k] ? `<em>${B.badgeImg(k, "mk")}</em>` : ""; return `<span data-i="${i + 1}"${i + 1 === at ? ' class="cur"' : ""}>${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(sn)}${bd}</span>`; }).join("");
     const cur = $("#ch-moves .cur"); if (cur) cur.scrollIntoView({ block: "nearest", inline: "center" }); else $("#ch-moves").scrollLeft = 1e5;
   }
 
@@ -265,7 +265,7 @@
   function keyChips() {
     const r = revRes, cnt = {};
     r.judged.forEach((j) => { if (RV.side === "all" || sideOf(r, j) === RV.side) cnt[j.key] = (cnt[j.key] || 0) + 1; });
-    $("#rv-keys").innerHTML = ["brilliant", "best", "excellent", "good", "book", "inaccuracy", "mistake", "blunder"].filter((k) => cnt[k]).map((k) => `<button class="kchip${RV.key === k ? " on" : ""}" data-k="${k}" style="--c:${KEYLAB[k][1]}">${KEYLAB[k][0]} <b>${cnt[k]}</b></button>`).join("") || '<span class="muted">Aucun coup.</span>';
+    $("#rv-keys").innerHTML = ["brilliant", "best", "excellent", "good", "book", "forced", "inaccuracy", "mistake", "miss", "blunder"].filter((k) => cnt[k]).map((k) => `<button class="kchip${RV.key === k ? " on" : ""}" data-k="${k}" style="--c:${KEYLAB[k][1]}">${KEYLAB[k][0]} <b>${cnt[k]}</b></button>`).join("") || '<span class="muted">Aucun coup.</span>';
     $("#rv-cat").hidden = !RV.key;
     $("#rv-who").textContent = RV.key ? KEYLAB[RV.key][0] : "";
     catCount();
@@ -292,7 +292,7 @@
   function paintStep() {
     const r = revRes, rv = r.review, step = RV.step, fen = r.fens[step], pos = B.parse(fen), j = step > 0 ? r.judged[step - 1] : null;
     const u = step > 0 ? r.uci[step - 1] : "", k = j ? j.key : "";
-    const arrows = j && j.best_uci && ["inaccuracy", "mistake", "blunder"].includes(k) ? [{ from: u.slice(0, 2), to: u.slice(2, 4), color: B.ARROW.threat, w: 0.13 }] : [];
+    const arrows = j && j.best_uci && ["inaccuracy", "mistake", "miss", "blunder"].includes(k) ? [{ from: u.slice(0, 2), to: u.slice(2, 4), color: B.ARROW.threat, w: 0.13 }] : [];
     B.render($("#rv-board"), pos.m, { flip: r.me === "b", last: u ? [u.slice(0, 2), u.slice(2, 4)] : null, badge: u && B.BADGES[k] ? { sq: u.slice(2, 4), key: k, id: "r" + step } : null, arrows, check: new Chess(fen).in_check() ? B.kingSquare(pos.m, pos.turn) : "" });
     const cp = step > 0 ? rv.evals[step - 1] : 0;
     $("#rv-eval").style.setProperty("--w", (r.me === "w" ? B.winPct(cp) : 100 - B.winPct(cp)) + "%");
@@ -304,7 +304,7 @@
     const who = j ? (sideOf(r, j) === "me" ? "Ton coup" : "Coup de l'adversaire") : "";
     $("#rv-note").innerHTML = j ? `<b style="color:${KEYLAB[k][1]}">${who} · ${KEYLAB[k][0]}</b><br>${esc(E.brain.describe(j, j.san, j.best))}` : '<span class="muted">Utilise ◂ ▸, la courbe, les catégories ou la liste des coups.</span>';
     $("#rv-show").hidden = !(j && j.best_uci);
-    $("#rv-allm").innerHTML = r.judged.map((x, i) => { const bd = B.BADGES[x.key]; return `<span data-i="${i + 1}" class="${i + 1 === step ? "cur " : ""}${sideOf(r, x) === "me" ? "mine" : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(x.san)}${bd ? `<em style="color:${bd[1]}">${bd[0]}</em>` : ""}</span>`; }).join("");
+    $("#rv-allm").innerHTML = r.judged.map((x, i) => { const bd = B.BADGES[x.key]; return `<span data-i="${i + 1}" class="${i + 1 === step ? "cur " : ""}${sideOf(r, x) === "me" ? "mine" : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(x.san)}${bd ? `<em>${B.badgeImg(x.key, "mk")}</em>` : ""}</span>`; }).join("");
     const cur = $("#rv-allm .cur"); if (cur) cur.scrollIntoView({ block: "nearest" });
     catCount();
   }

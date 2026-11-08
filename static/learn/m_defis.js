@@ -5,7 +5,7 @@
 (() => {
   const E = window.ENOS, esc = E.esc;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-  const COL = { brilliant: "#1acfd6", book: "#a8896c", best: "#7bd64d", excellent: "#9ecc38", good: "#739e66", inaccuracy: "#f5c542", mistake: "#f5a524", blunder: "#ff4d63" };
+  const COL = { forced: "#9aa7bd", miss: "#ff6b7d", brilliant: "#1acfd6", book: "#a8896c", best: "#7bd64d", excellent: "#9ecc38", good: "#739e66", inaccuracy: "#f5c542", mistake: "#f5a524", blunder: "#ff4d63" };
   const powerOfElo = (e) => Math.max(1, Math.min(100, Math.round(e <= 1500 ? 1 + (e - 250) / 1250 * 49 : 50 + (e - 1500) / 1700 * 50)));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const ELOS = [400, 600, 800, 1000, 1200, 1500, 1800, 2200, 2600, 3200];
@@ -21,6 +21,7 @@
     { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
     { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo par erreur adverse ou meilleur coup", human: true },
+    ...(E.aiBots ? E.aiBots.ids.map((id) => ({ id, t: "🤖 " + E.aiBots.def[id].name, s: E.aiBots.def[id].elo + " Elo · " + E.aiBots.def[id].tag, human: true, style: true, ai: true })) : []),
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
     { id: "jester", t: "🃏 Le Jester", s: "Une roue tire son Elo au sort (1-3200) tous les 10 coups", human: true },
@@ -55,7 +56,8 @@
       if (!STY) { const sc = document.createElement("script"); sc.src = (E.assetBase || "") + "data/style_bots.js"; sc.onload = () => { STY = window.ENOS_STYLE; }; document.head.appendChild(sc); }
 
       // combattants : modèle de joueur (talk = personnage qui parle dans la chat box)
-      const eloOf = (id) => (STY && STY[id] ? STY[id].eloEst : 1000);
+      const AIP = window.ENOS_AIPROF || {}, prof = (id) => AIP[id] || (STY && STY[id]) || null;
+      const eloOf = (id) => (prof(id) ? prof(id).eloEst : 1000);
       const FIGHT = {
         nasko: () => ({ kind: "style", style: "nasko", elo: eloOf("nasko"), name: "Nasko", talk: "nasko" }),
         penoire: () => ({ kind: "penoire", elo: 2500, name: "Nasko (pénoire)", talk: "penoire" }),
@@ -68,10 +70,11 @@
         jester: () => ({ kind: "sf", elo: 1600, name: "Le Jester", talk: "jester", wheel: true }),                         // la roue tire son Elo (1-3200) avant son 1er coup puis tous les 10 de ses coups
         ghorghor: () => ({ kind: "style", style: "lelex", elo: 1400, skill: { mistake: 0.12, blunder: 0.05 }, name: "GhorGhor", talk: "ghorghor", transform: true }),   // style Lelex ; 3 pièces mineures perdues -> GhorGhor le vrai
       };
-      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester"];
+      (E.aiBots ? E.aiBots.ids : []).forEach((id) => { FIGHT[id] = () => ({ kind: "style", style: id, elo: eloOf(id), name: E.aiBots.def[id].name, talk: id }); });
+      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...(E.aiBots ? E.aiBots.ids : [])];
       const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
-      const FIGHT_NAMES = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+      const FIGHT_NAMES = { ...Object.fromEntries((E.aiBots ? E.aiBots.ids : []).map((id) => [id, E.aiBots.def[id].name])), nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
         ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
 
@@ -134,6 +137,7 @@
             <div class="df-presets">${PRESETS.map((p, i) => `<button data-p="${i}">${p[2]}</button>`).join("")}</div>
             <div class="df-pick"><label>Blancs<select id="su-cw" class="sel">${opt(last[0])}</select></label><label>Noirs<select id="su-cb" class="sel">${opt(last[1])}</select></label></div>`;
         }
+        else if (m.ai) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>${m.t.slice(3)}</b> — ${E.aiBots.def[id].tag}. Une <b>illusion</b> : aucune IA n'est interrogée (zéro token). Ses <b>ouvertures préférées</b> et son <b>style</b> sont donnés à Stockfish, qui joue à sa place, avec une fréquence d'erreurs adaptée à son niveau (<b>${E.aiBots.def[id].elo} Elo</b>, estimé d'après les classements publics de parties d'IA).</p>` + colorSeg;
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
         else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
@@ -245,7 +249,7 @@
         const w = Math.abs(g.evalW) >= 9000 ? (g.evalW > 0 ? 100 : 0) : B.winPct(g.evalW);
         $("#df-eval").style.setProperty("--w", (g.flip ? 100 - w : w) + "%");
         $("#df-evt").textContent = Math.abs(g.evalW) >= 9000 ? "MAT" : (g.evalW / 100 * (g.flip ? -1 : 1)).toFixed(1).replace(".", ",").replace(/^(\d)/, "+$1");
-        $("#df-moves").innerHTML = g.moves.map((m, i) => `<span style="${m.q.key === "brilliant" || m.q.key === "blunder" || m.q.key === "mistake" ? "color:" + COL[m.q.key] : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(m.san)}${m.q.key === "brilliant" ? "!!" : m.q.key === "blunder" ? "??" : m.q.key === "mistake" ? "?" : ""}</span>`).join("");
+        $("#df-moves").innerHTML = g.moves.map((m, i) => `<span style="${["brilliant", "blunder", "mistake", "miss"].includes(m.q.key) ? "color:" + COL[m.q.key] : ""}">${i % 2 === 0 ? (i / 2 + 1) + "." : ""}${esc(m.san)}${m.q.key === "brilliant" ? "!!" : m.q.key === "blunder" ? "??" : m.q.key === "mistake" ? "?" : m.q.key === "miss" ? " ✖" : m.q.key === "forced" ? " »" : ""}</span>`).join("");
         $("#df-moves").scrollLeft = 1e5;
       }
       const status = (t) => { $("#df-status").textContent = t; };
@@ -321,7 +325,7 @@
       // ---- bots de style (Nasko, Lelex) : livre d'ouvertures du joueur, puis Stockfish + fréquence d'erreurs mesurée sur ses parties
       const wpick = (items) => { let t = items.reduce((a, x) => a + x[1], 0), r = Math.random() * t; for (const [v, w] of items) { if ((r -= w) <= 0) return v; } return items[items.length - 1][0]; };
       async function styleMove(fen, p) {
-        const S = STY && STY[p.style], ch = new Chess(fen), turn = ch.turn();
+        const S = prof(p.style), ch = new Chess(fen), turn = ch.turn();
         const hist = g.ch.history({ verbose: true }), path = hist.map((m) => m.from + m.to + (m.promotion || "")).join(" ");
         const legal = new Set(ch.moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion || "")));
         const alien = p.style === "nasko" && turn === "w" ? ALIEN[path] : null;                     // le Gambit Alien contre la Caro-Kann reste son arme favorite
@@ -367,7 +371,7 @@
         }
         ev = j.after; g.evalW = ev.w; g.bestUci = ev.best; g.moves.push({ ew: ev.w, san: m.san, uci, color: turn, q, bestSan, n: g.moves.length + 1, before: q.before, after: q.after, loss: q.loss, key: q.key, label: q.label, best: bestSan, best_uci: bu && bu !== uci ? bu : "", bookExit });
         const victim = turn === "w" ? "b" : "w", mvRec = g.moves[g.moves.length - 1];
-        if (g.pl[victim].gain && ["inaccuracy", "mistake", "blunder"].includes(q.key)) {          // Naskurieux : +200 Elo à chaque inexactitude, erreur ou gaffe de l'adversaire
+        if (g.pl[victim].gain && ["inaccuracy", "mistake", "miss", "blunder"].includes(q.key)) {          // Naskurieux : +200 Elo à chaque inexactitude, erreur ou gaffe de l'adversaire
           g.pl[victim].elo = Math.min(3200, g.pl[victim].elo + 200); mvRec.eloUp = g.pl[victim].elo;
           E.ui.toast(`${g.pl[victim].name} : +200 Elo → ${g.pl[victim].elo}`, "ok", 2600); E.vibrate(20);
         }
@@ -376,7 +380,7 @@
           E.ui.toast(`${g.pl[turn].name} : meilleur coup, +200 Elo → ${g.pl[turn].elo}`, "ok", 2600);
         }
         const dropElo = (col) => { const q2 = g.pl[col]; q2.elo = Math.max(1, q2.elo - 100); mvRec.eloDown = { col, elo: q2.elo }; E.ui.toast(`${q2.name} : −100 Elo → ${q2.elo}`, "warn", 2600); };
-        if (g.pl[turn].lose && ["inaccuracy", "mistake", "blunder"].includes(q.key)) dropElo(turn);                  // Naskolit se trompe
+        if (g.pl[turn].lose && ["inaccuracy", "mistake", "miss", "blunder"].includes(q.key)) dropElo(turn);                  // Naskolit se trompe
         if (g.pl[victim].lose && (q.key === "best" || q.key === "brilliant")) dropElo(victim);                         // ... ou l'adversaire trouve le meilleur coup
         if (m.captured && (m.captured === "n" || m.captured === "b")) { g.lostMinor[victim]++; mvRec.minorLost = { col: victim, n: g.lostMinor[victim] }; }
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
@@ -427,7 +431,7 @@
         if (mv.bookExit) { if (g.moves.length <= 10) say(O, "open_refused") || say(T, "open_end"); else say(T, "open_end") || say(O, "open_end"); }
         else if (k === "brilliant") { say(T, "bot_brilliant"); say(O, oOverride || "h_brilliant"); }
         else if (k === "blunder") { say(T, "bot_blunder"); say(O, oOverride || "h_blunder"); }
-        else if (k === "mistake") { say(T, "bot_mistake"); say(O, oOverride || "h_mistake"); }
+        else if (k === "mistake" || k === "miss") { say(T, "bot_mistake"); say(O, oOverride || "h_mistake"); }
         else if (k === "inaccuracy" && oOverride) say(O, oOverride);
         else if (k === "best" && mv.eloSelf) say(T, "elo_self");
         else if (k === "best" || k === "excellent") { if (swing >= 120) { say(T, "super"); if (!say(O, oOverride || "h_good")) { /* silence */ } } else say(T, "good") || say(O, oOverride || "h_good"); }

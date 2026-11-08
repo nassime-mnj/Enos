@@ -37,7 +37,11 @@
   const place = (node, sq, flip) => { const [x, y] = pos(sq, flip); node.style.transform = `translate(${x * 100}%,${y * 100}%)`; };
 
   // Symboles de qualité de coup (style Chess.com) posés en coin de la case d'arrivée : [glyphe, couleur]. Clés = celles de chess_brain / chess_review.
-  B.BADGES = { brilliant: ["!!", "#1acfd6"], great: ["!", "#5c8bb0"], best: ["★", "#7bd64d"], excellent: ["👍", "#9ecc38"], good: ["✓", "#739e66"], book: ["📖", "#a8896c"], inaccuracy: ["?!", "#f5c542"], mistake: ["?", "#f5a524"], blunder: ["??", "#ff4d63"] };
+  // VRAIS badges (feuille fournie : img/badges/*.png) — affichés avec un halo « HDR » (css/badges.css). B.BADGES garde glyphe + couleur (texte de secours, couleur du halo).
+  B.BADGE_IMG = { brilliant: "brilliant", great: "great", best: "best", excellent: "excellent", good: "good", book: "book", inaccuracy: "inaccuracy", mistake: "mistake", blunder: "blunder", miss: "miss", forced: "next", mate: "mate", draw: "half", fork: "fork", check: "lightning", gift: "gift" };
+  B.badgeSrc = (key) => (B.BADGE_IMG[key] ? (E.assetBase || "") + "img/badges/" + B.BADGE_IMG[key] + ".png" : "");
+  B.badgeImg = (key, cls) => { const s = B.badgeSrc(key), c = (B.BADGES[key] || [])[1] || "#fff"; return s ? `<img class="hdr-badge ${cls || ""}" src="${s}" alt="" style="--g:${c}">` : (B.BADGES[key] ? B.BADGES[key][0] : ""); };
+  B.BADGES = { illegal: ["⚠", "#ff3b52"], forced: ["»", "#9aa7bd"], miss: ["✖", "#ff6b7d"], brilliant: ["!!", "#1acfd6"], great: ["!", "#5c8bb0"], best: ["★", "#7bd64d"], excellent: ["👍", "#9ecc38"], good: ["✓", "#739e66"], book: ["📖", "#a8896c"], inaccuracy: ["?!", "#f5c542"], mistake: ["?", "#f5a524"], blunder: ["??", "#ff4d63"] };
   const fxCell = (st, sq) => { const c = document.createElement("div"); c.className = "fxs"; place(c, sq, st.flip); st.fx.append(c); return c; };
   /** Éclat d'animation sur une case. kind : brilliant (anneaux cyan + étincelles) | great | capture (onde blanche) | blunder (anneau rouge + secousse) | mate (pulsation rouge). Éphémère : s'efface seul. */
   B.burst = (el, sq, kind) => {
@@ -194,7 +198,7 @@
     if (!bd) st.badgeId = null;
     else {
       const fresh = st.badgeId !== bd.id, [g, col] = B.BADGES[bd.key], c = fxCell(st, bd.sq), b = document.createElement("b");
-      b.className = "fx-badge" + (fresh ? " pop" : "") + " k-" + bd.key; b.textContent = g; b.style.setProperty("--c", col); c.append(b);
+      b.className = "fx-badge" + (fresh ? " pop" : "") + " k-" + bd.key; if (B.badgeSrc(bd.key)) b.innerHTML = B.badgeImg(bd.key); else b.textContent = g; b.style.setProperty("--c", col); c.append(b);
       st.badgeId = bd.id;
       if (fresh && ["brilliant", "great", "blunder"].includes(bd.key)) setTimeout(() => { B.burst(el, bd.sq, bd.key); if (bd.key === "brilliant") B.brilliantFx(el, bd.sq, B.attacks(map, bd.sq)); }, 120);
     }

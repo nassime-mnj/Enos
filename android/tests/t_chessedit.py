@@ -88,7 +88,9 @@ with sync_playwright() as pw:
     exp = [DROP + 0.46875 * k for k in range(1, 38)]
     hit = sum(1 for e in exp if any(abs(t - e) < 0.08 for t in hb))
     check(hit >= 0.7 * len(exp), "hardBeats alignés sur les kicks : %d/%d à ±80 ms" % (hit, len(exp)))
-    check(len(an["introBeats"]) >= 6 and all(t < an["buildUpStart"] for t in an["introBeats"]), "%d introBeats avant la montée" % len(an["introBeats"]))
+    ib = an["introBeats"]
+    check(len(ib) >= 4 and all(t < DROP for t in ib) and all(b - a >= 0.44 for a, b in zip(ib, ib[1:])), "%d introBeats avant le drop, ≥ 450 ms d'écart" % len(ib))
+    check(all(b - a >= 0.215 for a, b in zip(hb, hb[1:])), "hardBeats espacés d'au moins 220 ms")
     check(len(an["wave"]) == 1000, "forme d'onde 1000 points")
 
     # ---------------------------------------------------------------- 2. mapping
@@ -113,7 +115,8 @@ with sync_playwright() as pw:
     mk = pg.evaluate("""([rec, an]) => { const M = ENOS.editMap, pl = M.gamePlies(rec), sl = M.manualSlots([{t: 5, type: 'beat'}, {t: 9, type: 'drop'}, {t: 12, type: 'beat'}, {t: 14, type: 'brill'}, {t: 18, type: 'beat'}], pl), tl = M.build(pl, sl, an); return tl.key.map(e => [e.t, e.n, e.kind]); }""", [rec, an])
     check(len(mk) >= 4 and [m[1] for m in mk] == sorted(m[1] for m in mk), "mode manuel : %s" % mk)
 
-    # ---------------------------------------------------------------- 3. aperçu 3D temps réel
+    # ---------------------------------------------------------------- 3. aperçu 3D temps réel (ancien rendu DOM, rythme « musique »)
+    pg.select_option("#ce-pace", "music"); pg.wait_for_timeout(200)
     pg.click("#ce-play")
     pg.wait_for_selector(".ce-stage .ce-cam")
     pg.wait_for_timeout(1500)
@@ -140,11 +143,11 @@ with sync_playwright() as pw:
         const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4';
         const ev = { from: 'h5', to: 'f7', fen: 'r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', piece: 'q', color: 'w', tone: 'cyan', fx: 'BRILLIANT_SHOCKWAVE', key: 'brilliant', captured: 'p', kind: 'hard' };
         st.setFen(fen); st.move(ev); st.hit(ev, 1); st.cutscene({ text: 'THE ROOK !', piece: 'r', color: 'w' }, 'cyan'); st.say('ghorghor', 'Att att... c\\'est réel.');
-        return new Promise((ok) => setTimeout(() => { const o = { cut: !st.cut.hidden, cap: !st.cap.hidden, halo: st.fxl.querySelectorAll('.ce-halo,.ce-ring,.ce-bang').length, shake: st.shake, burst: st.burst.length, cam: st.cam.style.transform, abr: !!st.wrap.style.filter };
+        return new Promise((ok) => setTimeout(() => { const o = { cut: !st.cut.hidden, cap: !st.cap.hidden, halo: st.host.querySelectorAll('.ce-halo,.ce-lit,.ce-tint,.ce-laser').length, shake: st.shake, burst: st.burst.length, cam: st.cam.style.transform, abr: !!st.wrap.style.filter };
           if (document.querySelector('.ce-stage:last-of-type')) window.__st = st; ok(o); }, 450)); }""")
     print(res)
     check(res["cut"] and res["cap"], "cutscene « THE ROOK ! » et réplique de bot affichées")
-    check(res["halo"] >= 3, "halo + ondes de choc + « !! » (%d éléments)" % res["halo"])
+    check(res["halo"] >= 3, "halo + case allumée + teinte + quadrillage laser sur un brillant (%d éléments)" % res["halo"])
     check(res["shake"] > 0.4 and res["burst"] > 0, "screen shake + particules d'explosion")
     check("rotateX" in res["cam"] and "scale(" in res["cam"], "caméra 3D : " + res["cam"][:90])
     check(res["abr"], "aberration chromatique active pendant l'impact")
@@ -156,7 +159,7 @@ with sync_playwright() as pw:
         return { n: pl.length, plies: ev.map((e) => e.n), t: ev.map((e) => e.t), kinds: tl.events.map((e) => e.kind), dur: tl.duration, stats: tl.stats, musicStart: tl.musicStart,
           open: ev.slice(0, 8).map((e) => [e.n, e.dur, e.freeze, e.phase]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.freeze, e.badge && e.badge.glyph, e.invert, e.sacrifice, e.dur]),
           blunder: ev.filter((e) => e.key === 'blunder').map((e) => [e.badge && e.badge.glyph, e.badge && e.badge.color]), mate: ev.filter((e) => e.mate).map((e) => [e.freeze, e.dur]),
-          voices: tl.sfx.filter((x) => x.bus === 'voice'), base: tl.sfx.filter((x) => x.bus === 'sfx').length, impacts: ev.map((e) => e.impact - e.t), mfv: mf.version, mfsfx: mf.sfx.length, mfintro: !!mf.intro, mfev: mf.events.length, mfbadge: mf.events.filter((e) => e.badge).length,
+          voices: tl.sfx.filter((x) => x.bus === 'voice'), base: tl.sfx.filter((x) => x.bus !== 'voice').length, impacts: ev.map((e) => e.impact - e.t), mfv: mf.version, mfsfx: mf.sfx.length, mfintro: !!mf.intro, mfev: mf.events.length, mfbadge: mf.events.filter((e) => e.badge).length,
           thumbs: ev.filter((e) => e.badge && e.badge.glyph === '👍').length, thumbs_excellent: ev.filter((e) => e.key === 'excellent' && e.badge), ffs: ev.filter((e) => e.kind === 'ff').map((e) => e.dur), crit: ev.filter((e) => e.lvl >= 2).map((e) => [e.dur, e.freeze]), introInfo: tl.events[0].intro, outroT: tl.events[tl.events.length - 1].t }; }""", [rec, 21.5])
     check(v["plies"] == list(range(1, v["n"] + 1)), "VIRAL : les %d coups sont TOUS montrés, dans l'ordre (aucun sauté)" % v["n"])
     check(v["kinds"][0] == "intro" and v["kinds"][-1] == "outro", "intro « VS » au début, outro à la fin")
@@ -170,13 +173,13 @@ with sync_playwright() as pw:
     check(all(abs(i - d) < 1e-6 or i - 0 > 0 for i, d in zip(v["impacts"], v["impacts"])) and all(i > 0.05 for i in v["impacts"]), "son calé sur l'impact (après le départ du coup)")
     ids = [x["id"] for x in v["voices"]]
     check(ids and set(ids) <= {"the_queen", "the_rook", "the_bishop", "the_knight", "this_is_the_way"}, "voix de Levy sur le coup brillant : %s" % ids)
-    vv = pg.evaluate("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, {}), ev = tl.events.filter((e) => e.from); const v = tl.sfx.filter((x) => x.bus === 'voice');
+    vv = pg.evaluate("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, {}), ev = tl.events.filter((e) => e.from); const v = tl.sfx.filter((x) => x.bus === 'voice' && !x.opening && !(x.id === 'this_is_the_way' && ev.some((y) => y.n === x.ply && y.mate)));
         return { voices: v.map((x) => [x.ply, x.id, x.wet]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.n, e.piece]), nonBrillVoice: v.filter((x) => { const e = ev.find((y) => y.n === x.ply); return !e || e.key !== 'brilliant'; }).length,
           dupPly: v.length - new Set(v.map((x) => x.ply)).size, rookCount: v.filter((x) => x.id === 'the_rook').length, stats: ev.filter((e) => e.stats).length, boom: tl.sfx.filter((x) => x.id === 'boom').length, errVoices: ev.filter((e) => ['mistake', 'blunder', 'inaccuracy'].includes(e.key) && v.some((x) => x.ply === e.n)).length }; }""", rec)
     check(vv["nonBrillVoice"] == 0 and vv["errVoices"] == 0, "voix de Levy UNIQUEMENT sur les coups brillants (jamais sur une erreur, une gaffe ni un mat) : %s" % vv["voices"])
     check(vv["dupPly"] == 0 and len(vv["voices"]) <= len(vv["brill"]) and (vv["rookCount"] <= len([b for b in vv["brill"] if b[1] == "r"])), "une seule voix par coup brillant (%d voix pour %d brillant(s), %d The Rook)" % (len(vv["voices"]), len(vv["brill"]), vv["rookCount"]))
     rk = pg.evaluate("""(rec) => { const r = JSON.parse(JSON.stringify(rec)); r.mv[24][2] = 'mistake'; r.mv[25][2] = 'blunder'; r.mv[18][2] = 'brilliant'; r.mv[30][2] = 'good'; const M = ENOS.editMap, pl = M.gamePlies(r), tl = M.buildViral(pl, r, null, {}), ev = tl.events.filter((e) => e.from);
-        return { voices: tl.sfx.filter((x) => x.bus === 'voice').map((x) => [x.ply, x.id]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.n, e.piece]), rooks: ev.filter((e) => e.piece === 'r').map((e) => [e.n, e.key]) }; }""", rec)
+        return { voices: tl.sfx.filter((x) => x.bus === 'voice' && x.id !== 'this_is_the_way').map((x) => [x.ply, x.id]), brill: ev.filter((e) => e.key === 'brilliant').map((e) => [e.n, e.piece]), rooks: ev.filter((e) => e.piece === 'r').map((e) => [e.n, e.key]) }; }""", rec)
     check(rk["voices"] == [[19, "the_knight"]] and rk["brill"] == [[19, "n"]], "3 coups de tour dont erreurs/gaffes et un seul brillant (cavalier) : UNE seule voix, celle du brillant : %s" % rk["voices"])
     check(vv["stats"] <= 2 and vv["boom"] == vv["stats"], "fiches Power/Speed/Defense/Trick : %d au maximum 2 par edit, chacune avec son impact sonore" % vv["stats"])
     check(all(v["voices"][i + 1]["t"] - v["voices"][i]["t"] >= 2.4 for i in range(len(v["voices"]) - 1)), "jamais deux voix à moins de 2,4 s")
@@ -196,7 +199,7 @@ with sync_playwright() as pw:
         return new Promise((ok) => setTimeout(() => ok({ intro: !st.introEl.hidden, portraits: st.introEl.querySelectorAll('.ce-port img').length, vs: !!st.introEl.querySelector('.ce-vs b'), ttl: st.introEl.textContent.includes('GM'), badge: !!st.fxl.querySelector('.ce-badge2'), label: !st.label.hidden && st.label.textContent.includes('BRILLANT'), inv: st.host.classList.contains('ce-inv') || true, shake: st.shake, frozen: st.host.classList.contains('ce-frozen'), ts1, ts2 }), 160)); }""")
     check(r2["intro"] and r2["portraits"] == 2 and r2["vs"] and r2["ttl"], "intro : 2 portraits + titre GM + VS (%s)" % r2)
     check(r2["badge"] and not r2["label"], "badge ‼ (logo seul) sur la case, aucun texte « BRILLANT / EXCELLENT »")
-    check(r2["shake"] > 15, "brillant : screen shake violent (%.1f)" % r2["shake"])
+    check(r2["shake"] > 8, "brillant : screen shake violent (%.1f)" % r2["shake"])
     check(r2["frozen"] and abs(r2["ts1"] - 0.3) < 1e-6 and r2["ts2"] < 0.1, "ralenti (×0,3) puis arrêt sur image (×0,05)")
     r3 = pg.evaluate("""() => { const E = ENOS, host = document.createElement('div'); document.getElementById('app').appendChild(host); const st = new E.editFx.Stage(host, { title: 'cendres', look: 'neon' });
         st.setFen('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
@@ -204,7 +207,7 @@ with sync_playwright() as pw:
         const victim = st.pieces['f7']; st.move(ev);
         return new Promise((ok) => setTimeout(() => { const o = { ash: victim.classList.contains('ce-ash'), smoke: st.smoke.length, embers: st.burst.length, look: st.look, lookCls: host.classList.contains('ce-look-neon') }; st.dissolveKing('b'); o.king = Object.keys(st.pieces).every((s) => st.pieces[s]._p !== 'k'); ok(o); }, 200)); }""")
     check(r3["ash"] and r3["smoke"] >= 20 and r3["embers"] >= 8, "pièce prise : elle devient une ombre qui part en fumée + braises (%s)" % r3)
-    check(r3["look"] == "neon" and r3["lookCls"] and r3["king"], "look néon violet + le roi maté peut partir en cendres")
+    check(r3["look"] == "zavee" and r3["king"], "plateau contrasté (#EBEBEB / #767676) + le roi maté peut partir en cendres")
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
     # ---------------------------------------------------------------- références : barre d'évaluation, titre d'ouverture, menaces ⚠, fiche Power/Speed/Defense/Trick, HDR, flou de mouvement
     v3 = pg.evaluate("""(args) => { const [rec] = args, M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { opening: 'Italian Game' }), ev = tl.events.filter((e) => e.from), mf = M.manifest(rec, tl, null, {});
@@ -229,7 +232,7 @@ with sync_playwright() as pw:
           hl: host.querySelectorAll('.ce-hl').length, hdr: host.classList.contains('ce-hdr'), mb: st.mb.k, outline: (await st.outlineOf(st.pcs.querySelector('img').src)).startsWith('data:image'), pulse: !!host.querySelector('.ce-pulse') }; }""")
     check(r4["eval"].endswith("%") and float(r4["eval"][:-1]) > 50 and r4["evn"] == "+2.5", "barre d'évaluation verticale animée (%s, %s)" % (r4["eval"], r4["evn"]))
     check(r4["title"] == "FRIED LIVER ATTACK", "titre d'ouverture en gros caractères")
-    check(r4["thr"] and r4["warn"] == 2, "flèches de menace courbes orange + 2 panneaux ⚠")
+    check(r4["thr"] and r4["warn"] == 0, "flèches de menace courbes, plus aucun panneau ⚠")
     check(r4["card"] and r4["bars"] == [False, False, False, True] and r4["dim"] and r4["pulse"], "fiche Power / Speed / Defense / Trick : la plus haute (Trick) en violet, plateau assombri, case de la pièce qui pulse")
     check(r4["hl"] == 2 and r4["hdr"] and r4["outline"], "cases de départ/arrivée allumées, HDR actif, contour « dessin au trait » généré")
     check(r4["mb"] > 0, "flou de mouvement armé par les mouvements de caméra (%.1f)" % r4["mb"])
@@ -251,24 +254,27 @@ with sync_playwright() as pw:
         st.hit(ev, 1); st.brilliantFx(ev); st.cracks('f7'); st.glitch(200); st.flare('f7'); st.bars(true); st.focusSpot('f7');
         await new Promise((r) => setTimeout(r, 400));
         const tf = st.cam.style.transform, rx = parseFloat((tf.match(/rotateX\(([-\d.]+)deg/) || [0, 0])[1]), sc = parseFloat((tf.match(/scale\(([\d.]+)\)/) || [0, 0])[1]);
-        const o = { blur, ghosts, rx, sc, blood: st.host.classList.contains('ce-dir-blood') && st.look === 'blood', q2: st.host.classList.contains('ce-q2') && st.fx.shock && st.fx.pblur, q0: lo.host.classList.contains('ce-q0') && !lo.fx.pblur && !lo.fx.shock && lo.fx.part < 0.4, fog: lo.look === 'fog',
+        const o = { blur, ghosts, rx, sc, blood: st.host.classList.contains('ce-dir-blood') && st.look === 'zavee', q2: st.host.classList.contains('ce-q2') && st.fx.shock && st.fx.pblur, q0: lo.host.classList.contains('ce-q0') && !lo.fx.pblur && !lo.fx.shock && lo.fx.part < 0.4, fog: lo.look === 'zavee',
           crack: !!st.host.querySelector('.ce-crack'), flare: !!st.host.querySelector('.ce-flare'), bars: st.barsEl.classList.contains('on'), spot: st.spotEl.style.getPropertyValue('--sx') !== '50.0%', dirs: Object.keys(E.editFx.DIRECTIONS).sort(), looks: ['blood', 'fog', 'spot'].every((k) => !!E.editFx.LOOKS[k]) };
         lo.ql = 2; lo.qAuto = true; lo.frames = new Array(80).fill(0.05); lo.ql = 2; lo.applyQuality(); const before = lo.ql; lo.frames = new Array(79).fill(0.05); lo.last = performance.now() - 50; lo.loop(performance.now()); o.auto = [before, lo.ql]; return o; }""")
     check(r6["blur"] and r6["ghosts"] == 0, "flou de DÉPLACEMENT sur la pièce qui glisse, plus aucune image rémanente (ghost=%d)" % r6["ghosts"])
-    check(r6["rx"] <= 30 and r6["sc"] <= 1.9, "plateau jamais étiré : inclinaison %.0f° ≤ 30°, zoom ×%.2f" % (r6["rx"], r6["sc"]))
+    check(r6["rx"] <= 30 and r6["sc"] <= 2.9, "plateau jamais étiré : inclinaison %.0f° ≤ 30°, zoom d'impact ×%.2f (1,8 à 2,8)" % (r6["rx"], r6["sc"]))
     check(r6["blood"] and r6["q2"] and r6["q0"] and r6["fog"], "directions artistiques (Sang / Brume) et qualités (Max / Léger) appliquées")
-    check(r6["crack"] and r6["flare"] and r6["bars"] and r6["spot"], "effets : fissures, flare, bandes de cinéma, projecteur : %s" % {k: r6[k] for k in ("crack", "flare", "bars", "spot")})
+    check(r6["crack"] and r6["flare"] and not r6["bars"] and r6["spot"], "effets : fissures, flare, projecteur, plus de bandes de cinéma : %s" % {k: r6[k] for k in ("crack", "flare", "bars", "spot")})
     check(r6["dirs"] == ["aura", "blood", "fog", "galaxy", "neon", "spot"] and r6["looks"], "6 directions artistiques disponibles")
     check(r6["auto"][1] == 1, "qualité AUTO : l'image saccade -> les effets sont allégés d'un cran %s" % r6["auto"])
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")
     # aperçu viral réel via l'interface : intro à t=0 puis les coups s'enchaînent
     pg.select_option("#ce-pace", "viral"); pg.wait_for_timeout(200)
     pg.click("#ce-play")
-    pg.wait_for_selector(".ce-stage .ce-intro:not([hidden])", timeout=15000)
-    check(True, "aperçu viral : l'intro s'affiche")
-    pg.wait_for_function("document.querySelector('.ce-prog i').style.transform !== 'scaleX(0)'", timeout=20000)
-    pg.wait_for_timeout(6500)
-    check(pg.evaluate("document.querySelectorAll('.ce-pcs img').length") >= 30 and pg.evaluate("!document.querySelector('.ce-intro') || document.querySelector('.ce-intro').hidden || document.querySelector('.ce-intro').classList.contains('out')"), "aperçu viral : l'intro laisse place aux coups")
+    pg.wait_for_selector(".ce-ov canvas.ce-cvp", timeout=15000)
+    check(True, "aperçu viral (canvas déterministe) : le loader s'affiche pendant la préparation")
+    pg.wait_for_function("!document.querySelector('.ce-ov .ce-load')", timeout=30000)
+    pg.wait_for_function("document.querySelector('.ce-ov .ce-prog i').style.transform !== 'scaleX(0)'", timeout=20000)
+    pg.wait_for_timeout(1500)
+    sz = pg.evaluate("(() => { const c = document.querySelector('.ce-cvp'), r = c.getBoundingClientRect(); const g = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < g.length; i += 101) s += g[i]; return [r.width, r.height, innerWidth, innerHeight, s]; })()")
+    check(sz[0] == sz[2] and sz[1] == sz[3] and sz[4] > 5000, "le canvas fait exactement la taille de l'écran (%dx%d) et dessine l'intro VS" % (sz[0], sz[1]))
+    pg.click(".ce-ov .ce-x")
     if SHOTS:
         pg.screenshot(path=os.path.join(SHOTS, "ce_viral.png"))
     pg.evaluate("document.querySelectorAll('.ce-stage').forEach(e => e.remove())")

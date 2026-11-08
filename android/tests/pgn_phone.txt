@@ -1,0 +1,12 @@
+[Site "Chess.com"]
+[Date "2026-11-08"]
+[White "Phoxie"]
+[Black "Lepoissonsteve80"]
+[Result "0-1"]
+[WhiteElo "381"]
+[BlackElo "395"]
+[TimeControl "180"]
+1. e4 d5 2. exd5 Qxd5 3. Nc3 Qa5 4. Nf3 Nf6 5. d4 c6 6. Bc4 e6 7. Bg5 Bb4 8. Qd3
+Nbd7 9. O-O e5 10. dxe5 Nxe5 11. Nxe5 Qxe5 12. Bxf6 Qxf6 13. Qe4+ Be6 14. Bxe6
+fxe6 15. Na4 Ba5 16. b4 Bc7 17. Rad1 O-O 18. Rd7 Be5 19. Rfd1 Qxf2+ 20. Kh1 Qf1+
+21. Rxf1 Rxf1# 0-1

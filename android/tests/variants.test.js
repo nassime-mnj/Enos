@@ -174,7 +174,7 @@ t("2v2 : poser sur ses rangées avec SON élixir, la pièce lui appartient", () 
 });
 t("2v2 : un roi maté sort (pièces retirées), la partie continue en 2v1", () => {
   // roi blanc A en a1 maté par tour noire en h1 + ... : roi a1, tour noire b8 (b-file) et dame noire h2 ; roi blanc B en f1 libre
-  const s = mkDuo("rr2k3/8/8/8/8/8/6q1/K4K2", 0, { a1: 0, f1: 2, e8: 1, a8: 1, b8: 1, g2: 1 }, 0);
+  const s = mkDuo("rr2kk2/8/8/8/8/8/6q1/K4K2", 0, { a1: 0, f1: 2, e8: 1, f8: 3, a8: 1, b8: 1, g2: 1 }, 0);
   assert.ok(V.inCheck(s));
   const r = V.settle(s);
   assert.ok(!r.over && r.out.length === 1 && r.out[0].seat === 0, JSON.stringify(r));
@@ -187,9 +187,24 @@ t("2v2 : une équipe sans roi a perdu", () => {
   const r = V.settle(s); assert.ok(r.over && r.result === "w", JSON.stringify(r));
 });
 t("2v2 : un joueur sans coup ni échec passe son tour", () => {
-  const s = mkDuo("7k/5Q2/8/8/8/8/8/K7", 1, { h8: 1, f7: 0, a1: 0 }, 0);
-  s.b[I("g6")] = "K"; s.o[I("g6")] = 0; s.b[I("f7")] = ""; s.o[I("f7")] = -1; s.b[I("f7")] = "Q"; s.o[I("f7")] = 0;
-  const r = V.settle(s); assert.ok(r.out.length === 0 && s.alive[1], "pas éliminé");
+  const s = mkDuo("k6k/5Q2/6K1/8/8/8/8/K1K5", 1, { a8: 3, h8: 1, f7: 0, g6: 0, a1: 0, c1: 2 }, 0);
+  const r = V.settle(s); assert.ok(r.out.length === 0 && s.alive[1], "pas éliminé : " + JSON.stringify(r)); assert.strictEqual(s.seat, 2, "le joueur suivant joue");
+});
+t("2v2 : capturer le DERNIER roi adverse termine la partie (même sans mat) — bug corrigé", () => {
+  // un roi noir (seat 3) est déjà sorti ; le roi du seat 1 est pris par la dame blanche pendant que le seat 3... (ici : seat 1 seul roi noir restant, capturé)
+  const s = mkDuo("7k/8/8/8/8/8/8/K1K2Q2", 0, { h8: 1, a1: 0, c1: 2, f1: 0 }, 0); s.alive[3] = false;
+  s.b[I("h1")] = "q"; s.o[I("h1")] = 1;                                          // dame noire quelconque
+  s.b[I("f1")] = ""; s.o[I("f1")] = -1; s.b[I("h2")] = "Q"; s.o[I("h2")] = 0;       // dame blanche en h2 : peut prendre le roi h8 ? (colonne h bloquée par la dame noire h1 ? non : h2->h8 libre)
+  s.b[I("h1")] = ""; s.o[I("h1")] = -1;
+  const cap = V.legal(s).find((m) => m.f === I("h2") && m.t === I("h8")); assert.ok(cap, "la dame peut capturer le roi (légal : le roi noir n'est pas protégé par un coup)");
+  V.play(s, cap);
+  const r = V.settle(s); assert.ok(r.over && r.result === "w" && r.why === "mate", "partie finie : " + JSON.stringify(r)); assert.ok(r.out.some((o) => o.why === "captured" && o.seat === 1 && o.sq === I("h8")), "le roi capturé est annoncé");
+});
+t("2v2 : roi capturé = joueur éliminé (2v1), la partie continue s'il reste un roi dans l'équipe", () => {
+  const s = mkDuo("k6k/8/8/8/8/8/8/K1K4Q", 0, { a8: 3, h8: 1, a1: 0, c1: 2, h1: 0 }, 0);
+  const cap = V.legal(s).find((m) => m.f === I("h1") && m.t === I("h8")); assert.ok(cap, "Dxh8 possible");
+  V.play(s, cap); const r = V.settle(s);
+  assert.ok(!r.over && !s.alive[1] && s.alive[3] && s.b[I("h8")] === "Q", "seat 1 éliminé, seat 3 toujours là : " + JSON.stringify(r)); assert.ok(r.out[0].why === "captured");
 });
 t("2v2 IA : parties de bots (niveaux 1-2) jouent des coups légaux et finissent", () => {
   for (const lvl of [1, 2]) {
@@ -256,5 +271,104 @@ t("stratégies : chaque stratégie joue des coups légaux (élixir et duo)", () 
 t("stratégie économe : n'achète pas de petites pièces tant que l'élixir n'est pas plein", () => {
   const s = V.newGame("elixir"); s.elixir.w = 4;
   for (let k = 0; k < 8; k++) { const a = V.think(s, 3, Math.random, { strat: "eco" }); assert.strictEqual(a.drops.length, 0, "a dépensé " + JSON.stringify(a.drops)); }
+});
+
+// ---------- Élixir +, Roulette, jugements forcé / manqué
+const mkE = (rows, side, el) => { const s = mk("elixirp", rows, side); if (el != null) { s.elixir.w = el; s.elixir.b = el; } return s; };
+t("Élixir + : 4 cartes avec leurs coûts, plafond d'élixir 15", () => {
+  assert.deepStrictEqual([V.COSTP.mk, V.COSTP.army, V.COSTP.barrel, V.COSTP.rei], [14, 5, 5, 9]);
+  const s = V.newGame("elixirp"); for (let i = 0; i < 30; i++) { s.elixir.w = Math.min(15, s.elixir.w + 1); }
+  s.side = "w"; V.play(s, V.legal(s)[0]); assert.ok(s.elixir.w >= 15 || s.elixir.w === 15, "+1 jusqu'à 15 : " + s.elixir.w);
+  const s2 = V.newGame("elixirp"); s2.elixir.w = 13; assert.ok(!V.canDrop(s2, "mk", I("d4")), "13 < 14 : pas de Méga Chevalier");
+  s2.elixir.w = 14; assert.ok(V.canDrop(s2, "mk", I("d4")), "14 : le Méga Chevalier se pose n'importe où (d4 est hors de ses rangées)");
+});
+t("Méga Chevalier : à la pose il écrase le 3×3 adverse, pas ses propres pièces, pas au-delà", () => {
+  const s = mkE("4k3/8/8/2ppp3/2pPp3/2ppp3/8/4K3", "w", 14);
+  s.b[I("d4")] = ""; s.b[I("d4")] = "P";                                         // un pion blanc au centre du carré : ne doit pas être écrasé
+  s.b[I("c3")] = "p";
+  assert.ok(V.drop(s, "mk", I("d6")), "pose du Méga Chevalier en d6");
+  const gone = s.ev.smash.map(V.sqName).sort();
+  assert.deepStrictEqual(gone, ["c5", "d5", "e5"].sort(), "écrasé : c5 d5 e5 (3×3 autour de d6 ; c7 d7 e7 c6 e6 sont vides) : " + gone);
+  assert.ok(s.b[I("c4")] === "p" && s.b[I("d4")] === "P", "pièces hors du carré intactes");
+  assert.strictEqual(s.sp[I("d6")], "mk"); assert.strictEqual(V.map(s)["d6"], "M", "dessin spécial : M (blanc) / m (noir)");
+  assert.strictEqual(s.elixir.w, 0, "14 💧 dépensés");
+});
+t("Méga Chevalier : chaque saut de cavalier écrase aussi ; un roi écrasé = partie perdue", () => {
+  const s = mkE("4k3/8/8/8/8/8/8/4K3", "w", 14); V.drop(s, "mk", I("c3"));
+  s.b[I("d6")] = "p"; s.b[I("e5")] = "p"; s.b[I("g7")] = "k"; s.b[I("e8")] = ""; s.b[I("f8")] = "k"; s.b[I("g7")] = "";
+  const m = V.legal(s).find((x) => x.f === I("c3") && x.t === I("d5")); assert.ok(m, "Cd5 (saut de cavalier)");
+  V.play(s, m); assert.deepStrictEqual(s.ev.smash.map(V.sqName).sort(), ["d6", "e5"], "d6 et e5 écrasés à l'atterrissage : " + s.ev.smash.map(V.sqName));
+  const k = mkE("4k3/8/8/8/8/8/8/4K3", "w", 14); k.b[I("e8")] = ""; k.b[I("e6")] = "k";
+  V.drop(k, "mk", I("e5"));
+  assert.strictEqual(k.kingLost, "b"); const st = V.status(k); assert.ok(st.over && st.result === "w" && st.why === "smash", "roi noir écrasé : " + JSON.stringify(st));
+});
+t("Méga Chevalier : un roi à portée de son prochain saut est EN ÉCHEC (il doit bouger)", () => {
+  const s = mkE("4k3/8/8/8/8/8/8/4K3", "b", 14); s.b[I("e8")] = ""; s.b[I("d8")] = "k";
+  s.b[I("c3")] = "N"; s.sp[I("c3")] = "mk";
+  assert.ok(!V.inCheck(s, "b"), "c3 -> cases d5/e4/b5/a4/a2/b1/d1/e2 : aucune à ≤ 1 case de d8");
+  s.b[I("c3")] = ""; s.sp[I("c3")] = ""; s.b[I("c6")] = "N"; s.sp[I("c6")] = "mk";
+  assert.ok(V.inCheck(s, "b"), "Cc6 peut sauter en b8/d8/e7… et écraser le roi : échec");
+});
+t("Armée de pions : 5 💧, remplit TOUTE la rangée de pions (cases vides), pions-squelettes", () => {
+  const s = mkE("4k3/8/8/8/8/8/3P4/4K3", "w", 5);
+  assert.ok(V.canDrop(s, "army", I("a2")) && !V.canDrop(s, "army", I("a3")), "seulement sur la rangée de pions");
+  V.drop(s, "army", I("a2")); const pawns = s.b.filter((p, i) => p === "P" && (i >> 3) === 1).length; assert.strictEqual(pawns, 8, "8 pions sur la 2ᵉ rangée");
+  assert.strictEqual(s.sp[I("a2")], "army"); assert.strictEqual(s.sp[I("d2")], "", "le pion déjà là reste normal"); assert.strictEqual(s.elixir.w, 0);
+  assert.strictEqual(V.map(s)["a2"], "S");
+  const s2 = mkE("4k3/8/8/8/8/8/PPPPPPPP/4K3", "w", 5); assert.strictEqual(V.dropSquares(s2, "army").length, 0, "rangée pleine : rien à poser");
+});
+t("Baril du fou : un fou posé N'IMPORTE OÙ (5 💧), il se déplace ensuite comme un fou", () => {
+  const s = mkE("4k3/8/8/8/8/8/8/4K3", "w", 5); assert.ok(V.canDrop(s, "barrel", I("g7")), "g7 (chez l'adversaire) possible");
+  V.drop(s, "barrel", I("g7")); assert.strictEqual(s.b[I("g7")], "B"); assert.strictEqual(V.map(s)["g7"], "G");
+  s.side = "w"; assert.ok(V.legal(s).some((m) => m.f === I("g7") && m.t === I("h8")) && V.legal(s).some((m) => m.f === I("g7") && m.t === I("a1") === false), "mouvements de fou");
+});
+t("R.E.I.N.E : capture en SAUTANT par-dessus les pièces ; déplacements simples bloqués", () => {
+  const s = mkE("4k3/8/8/8/8/8/8/4K3", "w", 9); V.drop(s, "rei", I("d1"));
+  s.b[I("d3")] = "P"; s.b[I("d5")] = "p"; s.b[I("d7")] = "n"; s.side = "w";
+  const mv = V.legal(s).filter((m) => m.f === I("d1"));
+  assert.ok(mv.some((m) => m.t === I("d5") && m.cap === "p"), "capture de d5 par-dessus le pion d3 (saut)");
+  assert.ok(mv.some((m) => m.t === I("d7") && m.cap === "n"), "capture de d7 en sautant d3 et d5");
+  assert.ok(!mv.some((m) => m.t === I("d4")) && !mv.some((m) => m.t === I("d6")), "pas de déplacement simple au-delà d'un obstacle");
+  assert.ok(mv.some((m) => m.t === I("d2")), "déplacement simple avant l'obstacle");
+  assert.ok(V.inCheck(mkReiCheck(), "b"), "le roi noir est en échec par-dessus un pion");
+});
+function mkReiCheck() { const s = mkE("4k3/8/8/8/8/3P4/8/4K3", "w", 9); s.b[I("e1")] = "K"; s.b[I("e4")] = "Q"; s.sp[I("e4")] = "rei"; s.b[I("e6")] = "p"; return s; }
+t("Roulette : 2 rois, une pièce tirée par tour, main de 5, pose GRATUITE dans ses 2 rangées, tirage idempotent", () => {
+  const s = V.newGame("rnd"); assert.deepStrictEqual(s.b.filter(Boolean).sort(), ["K", "k"]);
+  const got = V.beginTurn(s, () => 0.5); assert.ok(["p", "n", "b", "r", "q"].includes(got) && s.hand.w.length === 1 && s.spun);
+  assert.strictEqual(V.beginTurn(s, () => 0.5), null, "un seul tirage par tour");
+  assert.ok(V.canDrop(s, got, I(got === "p" ? "e2" : "e1") === 4 ? I("d2") : I("e2")) || V.dropSquares(s, got).length > 0, "pose possible");
+  const sq = V.dropSquares(s, got)[0]; assert.ok(V.drop(s, got, sq)); assert.strictEqual(s.hand.w.length, 0, "la pièce quitte la main"); assert.strictEqual(s.side, "w", "poser ne passe pas le tour");
+  assert.ok(!V.canDrop(s, "q", I("a1")), "rien en main : pas de pose");
+  V.play(s, V.legal(s)[0]); assert.strictEqual(s.spun, false, "nouveau tour : nouveau tirage"); assert.strictEqual(s.side, "b");
+  for (let i = 0; i < 9; i++) { s.spun = false; V.spin(s, Math.random); } assert.ok(s.hand.b.length === 5, "main limitée à 5 (la plus ancienne est perdue)");
+});
+t("Roulette : poids du tirage (pion le plus fréquent, dame la plus rare)", () => {
+  const cnt = { p: 0, n: 0, b: 0, r: 0, q: 0 }; const s = V.newGame("rnd"); for (let i = 0; i < 4000; i++) { s.spun = false; s.hand.w = []; cnt[V.spin(s)]++; }
+  assert.ok(cnt.p > cnt.n && cnt.n > cnt.r && cnt.r > cnt.q && cnt.q > 100, JSON.stringify(cnt));
+});
+t("IA : Élixir + et Roulette — coups et poses toujours légaux, les bots utilisent les cartes spéciales", () => {
+  let specials = 0;
+  for (const mode of ["elixirp", "rnd"]) for (const lvl of [1, 2]) {
+    const s = V.newGame(mode);
+    for (let i = 0; i < 30 && !V.status(s).over; i++) {
+      if (mode === "rnd") V.beginTurn(s);
+      if (mode === "elixirp") s.elixir[s.side] = Math.min(15, s.elixir[s.side] + 3);
+      const a = V.think(s, lvl); a.drops.forEach((d) => { assert.ok(V.drop(s, d.type, d.sq), "pose illégale " + d.type); if (V.SPECIALS[d.type]) specials++; });
+      if (!a.move) { V.pass(s); continue; }
+      assert.ok(V.legal(s).some((m) => m.f === a.move.f && m.t === a.move.t && m.promo === a.move.promo)); V.play(s, a.move);
+    }
+  }
+  assert.ok(specials >= 1, "les bots posent des cartes spéciales (" + specials + ")");
+});
+t("Jugement : coup forcé (un seul coup légal) et coup MANQUÉ (mat existant perdu) — jamais brillant", () => {
+  const f = mk("elixir", "4k3/4Q3/8/8/8/8/8/4K3", "b"); const anf = V.analyse(f, 2);
+  assert.strictEqual(V.judge(f, anf, anf.list[0].m).key, "forced", "Rxe7 : un seul coup légal");
+  // mat en 2 pour les Blancs : Tb7+ ... ; on joue un coup qui ne mate plus
+  const m = mk("elixir", "k7/8/1K6/8/8/8/8/7R", "w"), an = V.analyse(m, 3);
+  assert.ok(an.mate >= 1 && an.mate <= 3, "le moteur voit un mat (n=" + an.mate + ")");
+  const bad = an.list.find((x) => x.raw < 90000 && x.m.p === "R");
+  if (bad) { const j = V.judge(m, an, bad.m); assert.ok(["miss", "mistake", "blunder"].includes(j.key) && j.key !== "brilliant", "mat perdu : " + j.key); }
+  const best = V.judge(m, an, an.list[0].m); assert.strictEqual(best.key, "best");
 });
 console.log(n + " tests OK");

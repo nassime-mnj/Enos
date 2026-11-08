@@ -9,17 +9,19 @@
 <link rel="stylesheet" href="arena.css">
 <link rel="stylesheet" href="royale.css">
 <link rel="stylesheet" href="variants.css">
+<link rel="stylesheet" href="badges.css">
 <link rel="stylesheet" href="chessedit.css">
 </head>
 <body>
 <header><b>E.N.O.S.</b><span id="ttl">ÉCHECS</span><button id="close" hidden>FERMER ✕</button></header>
 <main>
-  <div class="seg" id="tabs" data-p="enos" style="margin-bottom:14px"><button data-t="learn" class="on">APPRENDRE</button><button data-t="advisor">CONSEILLER</button><button data-t="course">COURS EN DIRECT</button><button data-t="game">REVUE</button><button data-t="arena">⚔ ARÈNE</button><button data-t="royale">👑 ROYALE ×4</button><button data-t="variants">🧪 VARIANTES</button><button data-t="chessedit">🎬 CHESS EDIT</button><button data-t="clips">🎭 CLIPS</button><button data-t="backup">💾 SAUVEGARDE</button><i class="seg-ind"></i></div>
+  <div class="seg" id="tabs" data-p="enos" style="margin-bottom:14px"><button data-t="learn" class="on">APPRENDRE</button><button data-t="advisor">CONSEILLER</button><button data-t="course">COURS EN DIRECT</button><button data-t="game">REVUE</button><button data-t="arena">⚔ ARÈNE</button><button data-t="royale">👑 ROYALE ×4</button><button data-t="prime">🤖 PRIME</button><button data-t="variants">🧪 VARIANTES</button><button data-t="chessedit">🎬 CHESS EDIT</button><button data-t="clips">🎭 CLIPS</button><button data-t="backup">💾 SAUVEGARDE</button><i class="seg-ind"></i></div>
   <div id="tool-learn"><div class="suite-body" id="app-learn"></div></div>
   <div id="tool-advisor" hidden><div class="suite-body" id="app-advisor"></div></div>
   <div id="tool-chessedit" hidden><div class="suite-body" id="app-chessedit"></div></div>
   <div id="tool-clips" hidden><div class="suite-body" id="app-clips"></div></div>
   <div id="tool-backup" hidden><div class="suite-body" id="app-backup"></div></div>
+  <div id="tool-prime" hidden><div class="suite-body" id="app-prime"></div></div>
   <div id="tool-variants" hidden><div class="suite-body" id="app-variants"></div></div>
   <div id="tool-royale" hidden><div class="suite-body" id="app-royale"></div></div>
   <div id="tool-arena" hidden><div class="suite-body" id="app-arena"></div></div>
@@ -35,6 +37,7 @@
 <script src="m_learn.js"></script>
 <script src="bot_lines.js"></script>
 <script src="bot_chat.js"></script>
+<script src="ai_bots.js"></script>
 <script src="pc_boot.js"></script>
 </body>
 </html>

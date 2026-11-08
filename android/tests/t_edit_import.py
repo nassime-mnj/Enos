@@ -1,0 +1,51 @@
+"""Chess Edit : import d'une partie Chess.com (PGN) avec pseudos, classements et photos de profil -> intro VS avec les vraies photos, sans réseau."""
+import base64, os, struct, tempfile, zlib
+from mobile_common import *
+from playwright.sync_api import sync_playwright
+
+def png(path, rgb):
+    w = h = 64; raw = b"".join(b"\x00" + bytes(rgb) * w for _ in range(h))
+    ch = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    open(path, "wb").write(b"\x89PNG\r\n\x1a\n" + ch(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + ch(b"IDAT", zlib.compress(raw)) + ch(b"IEND", b""))
+
+PGN = '[Event "Live Chess"]\n[Site "Chess.com"]\n[White "Lelex"]\n[Black "Naskolit"]\n[Result "1-0"]\n[WhiteElo "1850"]\n[BlackElo "1790"]\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7#\n1-0'
+errs = []
+tmp = tempfile.mkdtemp(); a, b2 = os.path.join(tmp, "a.png"), os.path.join(tmp, "b.png"); png(a, (220, 40, 40)); png(b2, (40, 90, 220))
+with sync_playwright() as pw:
+    b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(120000)
+    pg.wait_for_function("window.ENOS && ENOS.editMap && ENOS.chessEdit")
+    open_tool(pg, "chessedit")
+    pg.fill("#ce-pgn", PGN)
+    with pg.expect_file_chooser() as fc: pg.click("#ce-pwi")
+    fc.value.set_files(a)
+    pg.wait_for_function("document.querySelectorAll('#ce-avs img').length === 1")
+    with pg.expect_file_chooser() as fc: pg.click("#ce-pbi")
+    fc.value.set_files(b2)
+    pg.wait_for_function("document.querySelectorAll('#ce-avs img').length === 2")
+    pg.click("#ce-imp-go")
+    pg.wait_for_function("document.querySelector('#ce-imp-st').textContent.startsWith('✔') || document.querySelector('#ce-imp-st').textContent.startsWith('✕')", timeout=180000)
+    st = pg.inner_text("#ce-imp-st"); print(st)
+    check(st.startswith("✔"), "import + analyse du PGN : %s" % st)
+    r = pg.evaluate("""async () => { const rec = ENOS.settings.get('chessedit.imports', []).pop(), M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { voices: true, intro: true, synth: true }), it = tl.events.find((e) => e.intro), I = it.intro;
+      const cv = document.createElement('canvas'); cv.width = 270; cv.height = 480; const R = new ENOS.editRender.Renderer(cv, tl, {}); await R.load(); R.draw(1.5);
+      const px = cv.getContext('2d').getImageData(0, 0, 4, 4).data.length; return { pw: rec.pw, pb: rec.pb, elo: [rec.pwElo, rec.pbElo], n: rec.mv.length, img: [I.white.img.slice(0, 22), I.black.img.slice(0, 22)], names: [I.white.name, I.black.name], elos: [I.white.elo, I.black.elo], loaded: Object.keys(R.av).length, px, winner: tl.events.find((e) => e.kind === 'outro').winner }; }""")
+    print(r)
+    check(r["pw"] == "Lelex" and r["pb"] == "Naskolit" and r["elo"] == [1850, 1790] and r["n"] == 7, "pseudos + classements lus dans le PGN Chess.com")
+    check(all(x.startswith("data:image/jpeg") for x in r["img"]) and r["loaded"] >= 2, "photos de profil chargées dans l'intro (data URI, canvas non taché)")
+    check(r["names"] == ["Lelex", "Naskolit"] and r["elos"] == [1850, 1790], "intro VS : vrais pseudos et classements")
+    check(r["winner"] and r["winner"]["name"] == "Lelex", "vainqueur dynamique : %s" % r["winner"])
+    n = pg.evaluate("(t) => { const c = new Chess(); return [c.load_pgn(t, { sloppy: true }), ENOS.brain.normPgn(t).length > 0 && (() => { const d = new Chess(); return d.load_pgn(ENOS.brain.normPgn(t), { sloppy: true }) ? d.history().length : 0; })()]; }", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pgn_phone.txt")).read())
+    check(n[1] == 42, "PGN collé d'un téléphone (sans ligne vide après les en-têtes, 21 coups) : lu après normalisation (%s)" % n)
+    q = pg.evaluate("""async (t) => { const r = await ENOS.brain.reviewGame({ pgn: t, me: 'auto', ms: 220 }); return r.judged.slice(36, 42).map((x) => [x.n, x.san, x.key]); }""", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pgn_phone.txt")).read())
+    print(q)
+    check(any(x[1] == "Qf1+" and x[2] == "brilliant" for x in q), "sacrifice de dame qui fait avancer le mat (20...Qf1+!!) jugé BRILLANT comme sur Chess.com : %s" % q)
+    # capture Chess.com : le modèle de vision est simulé (pas de clé / réseau en test) ; on vérifie remplissage, inversion de couleurs d'après le PGN, classements, recadrage des photos
+    s2 = pg.evaluate("""async () => { const cv = document.createElement('canvas'); cv.width = 600; cv.height = 1000; const g = cv.getContext('2d'); g.fillStyle = '#2a6'; g.fillRect(0, 0, 600, 1000); const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+      ENOS.ai.configured = () => true; ENOS.suite.api.llmVision = async () => JSON.stringify({ white: { name: 'GM Naskolit', elo: 1790, avatar: [0.04, 0.05, 0.12, 0.07] }, black: { name: 'Lelex', elo: 1850, avatar: [0.04, 0.9, 0.12, 0.07] }, result: '0-1' });
+      document.querySelector('#ce-pgn').value = '[White "Lelex"]\\n[Black "Naskolit"]\\n\\n1. e4 e5'; document.querySelector('#ce-pw').value = ''; document.querySelector('#ce-pb').value = '';
+      const r = await ENOS._ceSnap(blob); return { r, w: document.querySelector('#ce-pw').value, b: document.querySelector('#ce-pb').value, avs: document.querySelectorAll('#ce-avs img').length }; }""")
+    print(s2)
+    check(s2["w"] == "Lelex" and s2["b"] == "Naskolit" and s2["r"]["elo"] == [1850, 1790] and s2["avs"] == 2, "capture : pseudos (titre GM retiré), elo et 2 photos remplis ; couleurs corrigées d'après le PGN")
+    check(not errs, "aucune erreur JS : %s" % errs[:3])
+    b.close()
+raise SystemExit(1 if BAD else 0)

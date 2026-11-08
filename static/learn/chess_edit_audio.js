@@ -59,12 +59,27 @@
     return out;
   }
 
+  /** ODF des BASSES (< 180 Hz) en fenêtres de 10 ms : énergie(t) − énergie(t−1), rectifiée ; pics locaux francs espacés d'au moins minGap secondes (le plus fort gagne) */
+  function lowOnsets10(low, sr) {
+    const W = Math.max(1, Math.round(sr * 0.01)), nf = Math.floor(low.length / W), en = new Float32Array(nf), odf = new Float32Array(nf);
+    for (let f = 0; f < nf; f++) { let e = 0; for (let k = f * W, q = k + W; k < q; k++) e += low[k] * low[k]; en[f] = e / W; }
+    for (let f = 1; f < nf; f++) odf[f] = Math.max(0, en[f] - en[f - 1]);
+    return odf;
+  }
+  function peaks10(c, t0, t1, minGap, k) {
+    const i0 = Math.max(3, Math.round(t0 / 0.01)), i1 = Math.min(c.length - 3, Math.round(t1 / 0.01)), g = Math.max(1, Math.round(minGap / 0.01)); if (i1 <= i0) return [];
+    let m = 0, v = 0, n = 0; for (let i = i0; i < i1; i++) { m += c[i]; n++; } m /= Math.max(1, n); for (let i = i0; i < i1; i++) v += (c[i] - m) * (c[i] - m); const thr = m + (k == null ? 0.7 : k) * Math.sqrt(v / Math.max(1, n)), cand = [];
+    for (let i = i0; i < i1; i++) if (c[i] >= thr && c[i] >= c[i - 1] && c[i] > c[i + 1] && c[i] >= c[i - 3] && c[i] >= c[i + 3]) cand.push(i);
+    cand.sort((a, b) => c[b] - c[a]); const acc = []; for (const i of cand) if (!acc.some((j) => Math.abs(j - i) < g)) acc.push(i);
+    return acc.sort((a, b) => a - b).map((i) => +(i * 0.01).toFixed(3));
+  }
   /**
    * sig : {full, low, voc} (Float32Array mono à `sr` Hz). Retourne l'analyse complète (temps en secondes).
    */
+  const st0 = (a, i, j) => { const s0 = stat(a, i, Math.max(i + 2, j)); return s0.m + 0.9 * s0.sd; };
   function analyse(sig, sr) {
     const rf = rmsFrames(sig.full, sr), rl = rmsFrames(sig.low, sr), rv = rmsFrames(sig.voc, sr), n = rf.length, dur = sig.full.length / sr;
-    const res = { duration: +dur.toFixed(3), introBeats: [], hardBeats: [], vocalPeaks: [], buildUpStart: 0, preDropSilence: 0, mainDropTimestamp: 0, confidence: 0, wave: [] };
+    const res = { duration: +dur.toFixed(3), introBeats: [], hardBeats: [], hats: [], dropTime: 0, vocalPeaks: [], buildUpStart: 0, preDropSilence: 0, mainDropTimestamp: 0, confidence: 0, wave: [] };
     if (n < 100) return res;
     const flux = fluxCurve(sig.full, sr, n), env = smooth(rf, 25), env2 = smooth(rf, 50);       // enveloppes 0,5 s et 1 s
     let max = 0; for (let i = 0; i < n; i++) if (env[i] > max) max = env[i];
@@ -74,13 +89,18 @@
     const avg = (i, j) => { i = Math.max(0, i); j = Math.min(n, j); return j > i ? (pre[j] - pre[i]) / (j - i) : 0; };
     let best = -1, bi = Math.min(n - 1, 50);
     for (let i = 50; i < n - 25; i++) {
-      const after = avg(i, i + 100), before = avg(i - 75, i - 5), sc = (after / (before + 0.03 * max)) * (after / max);
+      const after = avg(i, i + 100), before = avg(i - 75, i - 5), sus = avg(i, Math.min(n, i + 400)), sc = (after / (before + 0.03 * max)) * (after / max) * (dur > 40 ? Math.pow(sus / max, 1.5) : 1);        // musique longue : le VRAI drop est celui dont l'énergie DURE (8 s), pas un pré-drop de 2 s
       if (sc > best) { best = sc; bi = i; }
     }
     const lowOn = onset(rl), lowMax = Math.max(1e-9, ...lowOn.slice(Math.max(0, bi - 15), bi + 16));
     let di = bi, dv = -1;                                                                   // recale sur l'attaque de basse la plus proche
     for (let i = Math.max(1, bi - 15); i <= Math.min(n - 1, bi + 15); i++) if (lowOn[i] > dv) { dv = lowOn[i]; di = i; }
     if (dv < lowMax * 0.2) di = bi;
+    {                                                                                       // le drop est aussi le moment où l'énergie RMS moyenne sur 2 s bondit de > 180 % après un creux de voix
+      const medV = stat(rv, 0, n).m; let cb = -1, cs = 0;
+      for (let i = 60; i < n - 100; i++) { const a2 = avg(i, i + 100), b2 = avg(i - 75, i); if (a2 > b2 * 2.8 && b2 > 0) { const vTrough = mean(rv, i - 50, i) <= medV * 0.9 ? 1.25 : 1, sc2 = (a2 / max) * vTrough; if (sc2 > cs) { cs = sc2; cb = i; } } }
+      if (cb >= 0 && Math.abs(cb - di) * HOP <= 6) { let bj = cb, bv = -1; for (let i = Math.max(1, cb - 15); i <= Math.min(n - 1, cb + 15); i++) if (lowOn[i] > bv) { bv = lowOn[i]; bj = i; } di = bj; }
+    }
     res.mainDropTimestamp = +(di * HOP).toFixed(3);
     res.confidence = +Math.min(1, best / 4).toFixed(2);
     // --- creux juste avant le drop, puis début de la montée (on remonte tant que l'énergie lissée baisse en reculant)
@@ -99,6 +119,15 @@
     const mix = new Float32Array(n); for (let i = 0; i < n; i++) mix[i] = 0.5 * fN[i] + 0.5 * lN[i];
     const si = stat(mix, 0, Math.max(10, bu));
     res.introBeats = peaks(mix, 10, Math.max(11, bu - 15), si.m + 0.4 * si.sd, 0.3, 30);
+    // --- HARD-SYNC : impacts de basse sur fenêtres de 10 ms (différence d'énergie < 180 Hz) ; ≥ 450 ms d'écart dans l'intro, ≥ 220 ms après le drop
+    {
+      const odf = lowOnsets10(sig.low, sr), D = res.mainDropTimestamp;
+      res.introBeats = peaks10(odf, 0.3, Math.max(0.5, D - 0.25), 0.45, 0.6);
+      res.hardBeats = peaks10(odf, D + 0.05, dur, 0.22, 0.7).slice(0, 140);
+      const near = (t) => res.introBeats.some((b) => Math.abs(b - t) < 0.09) || res.hardBeats.some((b) => Math.abs(b - t) < 0.09);       // hi-hats : flux spectral global entre deux basses, espacés d'au moins 120 ms, avant le drop
+      res.hats = peaks(flux, 10, Math.max(11, di), st0(flux, 0, di), 0.12, 160).filter((t) => !near(t));
+      res.dropTime = D;
+    }
     // --- pics de voix : bande 300-3000 Hz, au-dessus de sa propre moyenne sur 1 s
     const vs = smooth(rv, 5), vl = smooth(rv, 50), vc = new Float32Array(n); for (let i = 0; i < n; i++) vc[i] = Math.max(0, vs[i] - vl[i]);
     const sv = stat(vc, 0, n);
@@ -126,7 +155,7 @@
     src.buffer = buf;
     let last = src;
     const f = (type, hz, q) => { const b = oc.createBiquadFilter(); b.type = type; b.frequency.value = hz; b.Q.value = q || 0.707; last.connect(b); last = b; };
-    if (kind === "low") { f("lowpass", 150); f("lowpass", 150); }                          // 2 étages : pente plus raide, kick et sub seuls
+    if (kind === "low") { f("lowpass", 180); f("lowpass", 180); }                          // 2 étages : pente plus raide, kick et sub seuls
     else if (kind === "voc") { f("highpass", 300); f("lowpass", 3000); }
     last.connect(oc.destination); src.start(0);
     return (await oc.startRendering()).getChannelData(0);
