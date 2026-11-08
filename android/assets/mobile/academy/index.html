@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Code Academy</title>
+<link rel="stylesheet" href="academy.css">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="brand"><span class="logo">&lt;/&gt;</span> CODE ACADEMY<small>devenir expert, vite</small></div>
+    <nav id="langs"></nav>
+    <div class="grow"></div>
+    <div id="xpbox" title="Ton niveau"><span id="rank">Novice</span><div class="bar"><i id="xpbar"></i></div><b id="xp">0 XP</b><span id="streak" title="Série de jours"></span></div>
+    <button id="b-set" class="ico" title="Réglages">⚙</button>
+    <button id="close" class="ico" title="Fermer" hidden>✕</button>
+  </header>
+  <div id="main">
+    <aside id="act">
+      <button data-v="learn" class="on" title="Parcours">📚<small>Cours</small></button>
+      <button data-v="compile" title="Compilation animée">⚙️<small>Compil</small></button>
+      <button data-v="lab" title="Atelier VS Code">🧪<small>Atelier</small></button>
+      <button data-v="quiz" title="Prédis la sortie">🎯<small>Quiz</small></button>
+      <button data-v="sheet" title="Aide-mémoire">📋<small>Fiches</small></button>
+      <button data-v="stats" title="Progression">🏆<small>Succès</small></button>
+    </aside>
+    <aside id="side"></aside>
+    <section id="work"></section>
+  </div>
+  <footer id="status"><span id="st-tools"></span><span class="grow"></span><span id="st-msg"></span></footer>
+</div>
+<div id="modal" hidden></div>
+<script src="data_core.js"></script>
+<script src="data_python.js"></script>
+<script src="data_c.js"></script>
+<script src="data_js.js"></script>
+<script src="data_cpp.js"></script>
+<script src="data_java.js"></script>
+<script src="data_shell.js"></script>
+<script src="data_more.js"></script>
+<script src="data_algo.js"></script>
+<script src="data_compile.js"></script>
+<script src="academy.js"></script>
+</body>
+</html>

@@ -38,7 +38,7 @@ body.speaking::before{animation-duration:2.6s}   /* le fond « respire » plus v
 header{position:relative;text-align:center;padding:10px 10px 6px;border-bottom:1px solid var(--dim);
  background:repeating-linear-gradient(0deg,hsl(var(--h) calc(86% * var(--sat)) 2.7% / 0.77) 0 2px,#000000a8 2px 4px);overflow:hidden}
 body:has(section[role=dialog]:not([hidden])) #b-rg-top{display:none}
-#b-rg-top.rg-gear{position:fixed;top:10px;right:14px;z-index:40;padding:6px 12px;border:1px solid var(--neon);background:#000000c0;color:var(--neon);font:700 12px Consolas,monospace;letter-spacing:2px;cursor:pointer;box-shadow:0 0 10px var(--dim)}
+#b-rg-top.rg-gear{position:fixed;top:10px;left:14px;z-index:40;padding:6px 12px;border:1px solid var(--neon);background:#000000c0;color:var(--neon);font:700 12px Consolas,monospace;letter-spacing:2px;cursor:pointer;box-shadow:0 0 10px var(--dim)}
 #b-rg-top.rg-gear:hover{background:var(--neon);color:#000}
 header::after{content:"";position:absolute;left:0;right:0;height:18px;background:linear-gradient(#0000,hsl(calc(var(--h) - 1) calc(81% * var(--sat)) 8.2%),#0000);animation:scan 4s linear infinite;pointer-events:none}
 @keyframes scan{from{top:-20px}to{top:100%}}
@@ -277,6 +277,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       <button class="btn local-only friends-ok dev-ok" id="b-vm">26. VOICE CHANGER<small>54 voix · réglages en direct · ta voix modifiée dans Discord, OBS, les jeux (câble virtuel)</small></button>
       <button class="btn local-only friends-ok" id="b-qt">24. OUTILS RAPIDES<small>JSON / XML · dépenses partagées · notes de frais (tickets → Excel)</small></button>
       <button class="btn dev-ok" id="b-subs">25. ABONNEMENTS<small>Détecte tes abonnements dans tes e-mails · coût mensuel · résiliation guidée</small></button>
+      <button class="btn local-only friends-ok" id="b-academy">26. CODE ACADEMY<small>Python · C · C++ · Java · JS · Shell : cours animés, compilation en direct, exercices corrigés, VS Code</small></button>
       <button class="btn local-only friends-ok" id="b-syl">23. SYLLABUS SCANNER<small>Plan de cours (PDF) → examens, rendus et cours dans l'agenda</small></button>
       <button class="btn local-only friends-ok" id="b-sm">22. STUDIO MÉDIA<small>HEIC/WEBP · MP3/GIF · netteté · débruitage · flou · EXIF · transcription · sous-titres</small></button>
       <button class="btn local-only friends-ok" id="b-pdf">21. ÉDITEUR PDF<small>Fusion · pages · annotation · caviardage · signature · OCR · IA</small></button>

@@ -247,6 +247,8 @@
         const firstHuman = seats.find((x) => x.human);
         G = { st: C4.newGame({ teams, storm: STORMS[cfg.storm] }), seats, view: firstHuman ? firstHuman.s : 0, sel: -1, legal: new Set(), legalMoves: [], paused: false, over: false, token: (G ? G.token : 0) + 1, speed: cfg.speed, sqEl: {}, pc: new Map(), hist: [], warned: [false, false, false, false] };
         G.lostMinor = [0, 0, 0, 0]; G.q = [0, 1, 2, 3].map(() => ({ brilliant: 0, best: 0, excellent: 0, good: 0, inaccuracy: 0, mistake: 0, blunder: 0 })); G.busy = false; document.documentElement.classList.remove("ghor");
+        G.sleep = [0, 0, 0, 0]; G.skCd = [0, 0, 0, 0]; G.rt = [0, 0, 0, 0]; G.badge = [];
+        $(".ro-fx").innerHTML = ""; $("#ro-board").classList.remove("ghorfx"); el.querySelectorAll(".ro-ban").forEach((b) => b.classList.remove("ghorfx", "sleep"));
         $("#ro-setup").hidden = true; $("#ro-game").hidden = false; $("#ro-end").hidden = true;
         el.querySelectorAll(".ro-ban").forEach((b) => { const s = +b.dataset.s, pos = (s - G.view + 4) % 4; b.dataset.pos = pos; b.classList.remove("ko"); b.querySelector(".nm").textContent = G.seats[s].name; b.querySelector(".ro-t").textContent = teamTag(s); });
         $("#ro-arena").dataset.view = G.view;
@@ -285,10 +287,18 @@
           if (C4.over(st) || st.ply >= MAX_PLIES) return finish();
           hud();
           if (G.paused || G.busy) { await sleep(120); continue; }
+          if (G.sleep[o] > 0) { await napSkip(o); continue; }                                   // endormi par Naskolit : il passe son tour
           if (seat.human) { G.legalMoves = C4.moves(st, o); await sleep(80); continue; }          // en attente d'un clic (voir onTap)
           const d = SPEEDS[G.speed];
           if (d) await sleep(d + Math.random() * d * 0.25);
           if (!G || tok !== G.token || G.paused || G.st !== st || st.turn !== o) continue;
+          if (seat.ai.wheel && seat.ai.moves % 10 === 0 && seat.ai.spun !== seat.ai.moves) {      // la roue du Jester tourne AVANT son coup : il attend de connaître son Elo
+            seat.ai.spun = seat.ai.moves; await jesterWheel(o, !d); continue;
+          }
+          if (++G.rt[o] % 3 === 1) {                                                          // analyse : qui me menace le plus ? qui est à ma portée ? faut-il changer de cible ?
+            let rt = null; try { rt = AI.retarget(st, o, seat.ai); } catch (e) { rt = null; }
+            if (rt) retargeted(o, rt);
+          }
           const m = AI.choose(st, o, seat.ai);
           if (m < 0) { st.turn = (o + 1) % 4; continue; }
           apply(m, !!d);
@@ -319,9 +329,13 @@
         }
         if (r.storm) { quake(); ticker("🌪 La tempête dévore le bord du plateau !"); E.vibrate([40, 40, 80]); for (const s of Object.keys(G.chat)) say(+s, "r_storm", {}); }
         if (G.over === false) { E.chessSound && E.chessSound.play(r.captured ? "capture" : "move"); }
+        // icônes et effets du coup
+        moveFx(o, from, to, r);
         // commentaires
         if (J) judged(o, J, r);
         events(r, o);
+        if (G.skCd[o] > 0) G.skCd[o]--;
+        if (r.captured && r.captured.owner < 4 && G.seats[o].id === "naskolit" && G.skCd[o] <= 0 && C4.VALUE[r.captured.type] >= 3 && G.st.alive[r.captured.owner] && !C4.allied(G.st, o, r.captured.owner) && G.sleep[r.captured.owner] <= 0) putToSleep(o, r.captured.owner);
         if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].id === "ghorghor" && [C4.KN, C4.B].includes(r.captured.type) && ++G.lostMinor[r.captured.owner] === minorNeed(r.captured.owner)) ghorTransform(r.captured.owner);
         const info = AI.afterMove(G.seats[o].ai || { moves: 0 }, { captured: !!r.captured });
         if (r.captured && r.captured.owner < 4 && G.seats[r.captured.owner].ai) AI.afterMove(G.seats[r.captured.owner].ai, { lost: true });
@@ -342,6 +356,7 @@
       function judged(o, J, r) {
         const q = G.q[o], seat = G.seats[o], label = AI.QUALITY[J.key];
         q[J.key]++;
+        if (r && r.to != null) badge(o, r.to, J.key);
         const chip = el.querySelector(`.ro-ban[data-s="${o}"] .ro-q`);
         if (chip && J.key !== "good") { chip.hidden = false; chip.style.setProperty("--qc", QCOL[J.key]); chip.textContent = (J.key === "brilliant" ? "✦ " : "") + label.toUpperCase() + (J.key === "brilliant" ? " !!" : J.key === "blunder" ? " ??" : ""); clearTimeout(chip._t); chip._t = setTimeout(() => { chip.hidden = true; }, 2600); }
         const bad = ["inaccuracy", "mistake", "blunder"].includes(J.key), great = J.key === "best" || J.key === "brilliant";
@@ -389,11 +404,15 @@
         await sleep(2000);
         if (!G || tok !== G.token) return;
         E.vibrate([60, 40, 60, 40, 140]);
+        ghorSound(); ghorOverlay(2300);
         await glitchFx(1700);
         if (!G || tok !== G.token) return;
         const c = cfg.seats[s], foes = [0, 1, 2, 3].map((i) => i !== s && G.seats[i].team !== seat.team);
         Object.assign(seat, { id: "ghorreal", name: "GhorGhor le vrai", elo: 3200, title: "GM", ai: AI.make({ persona: "ghorreal", target: seat.target, foes, royale: true }) });
         document.documentElement.classList.add("ghor");
+        $("#ro-board").classList.add("ghorfx"); el.querySelector(`.ro-ban[data-s="${s}"]`).classList.add("ghorfx");
+        G.pc.forEach((n) => { if (C4.ownerOf(+n.dataset.v) === s) n.classList.add("ghorpc"); });
+        { const ks = C4.kingSq(G.st, s); if (ks >= 0) { fxCell(ks, "ring big", "").style.setProperty("--c", "#ff1a3c"); setTimeout(() => ks >= 0 && G && fxCell(ks, "ring big", "").style.setProperty("--c", "#ff4d63"), 250); } }
         if (E.botChat && old) { const n = E.botChat.replace(old, "ghorreal", "awake"); G.chat[s] = n; setTimeout(() => { if (G && tok === G.token && n) n.say("greet", { elo: 3200 }); }, 500); }
         renderBan(s); ticker("👁 GHORGHOR LE VRAI est réveillé : GM · 3200 Elo");
         G.busy = false;
@@ -418,6 +437,206 @@
           ticker(`♚ Échec à ${nm(r.check.who)} !`); E.chessSound && E.chessSound.play("check");
           say(r.check.by, "check", {}); say(r.check.who, "check_received", {});
         }
+      }
+
+      // ------------------------------------------------------------------ icônes et effets des coups
+      const animOn = () => !window.matchMedia("(prefers-reduced-motion: reduce)").matches && E.settings.get("anim", true);
+      const soundOn = () => E.settings.get("chess.sound", true);
+      const BADGE = { brilliant: ["!!", "#1acfd6"], best: ["★", "#7bd64d"], excellent: ["👍", "#9ecc38"], good: ["✓", "#739e66"], inaccuracy: ["?!", "#f5c542"], mistake: ["?", "#f5a524"], blunder: ["??", "#ff4d63"] };
+      function fxCell(sq, cls, html) {
+        const d = document.createElement("i"); d.className = "rfx " + cls; if (html) d.innerHTML = html;
+        d.style.width = d.style.height = CELL + "%"; place(d, sq); $(".ro-fx").appendChild(d);
+        if (!/badgecell/.test(cls)) setTimeout(() => d.remove(), 1500);
+        return d;
+      }
+      function lineFx(a, b, col, cls) {
+        const [x1, y1] = toView(a), [x2, y2] = toView(b), dx = (x2 - x1) * CELL, dy = (y2 - y1) * CELL;
+        const t = document.createElement("i"); t.className = "rfx-trail " + (cls || "");
+        t.style.cssText = `left:${(x1 + 0.5) * CELL}%;top:${(y1 + 0.5) * CELL}%;width:${Math.hypot(dx, dy)}%;--c:${col};transform:rotate(${Math.atan2(dy, dx)}rad)`;
+        $(".ro-fx").appendChild(t); setTimeout(() => t.remove(), 1300);
+      }
+      function moveFx(o, from, to, r) {
+        if (G.speed === "turbo" || !animOn()) return;
+        const col = COLORS[o];
+        lineFx(from, to, col);                                                                // traînée lumineuse du coup
+        fxCell(from, "ghostsq").style.setProperty("--c", col);
+        fxCell(to, "ring").style.setProperty("--c", col);
+        if (G.badge) G.badge.forEach((c, i) => { if (c && c.dataset.sq == to && i !== o) { c.remove(); G.badge[i] = null; } });   // la pièce prise emporte son icône
+        if (r.captured) {
+          const big = C4.VALUE[r.captured.type] >= 5 || r.captured.type === C4.K, n = big ? 14 : 8;
+          const sp = fxCell(to, "sparks", Array.from({ length: n }, (_, i) => `<s style="--a:${(i / n * 360 + Math.random() * 20).toFixed(0)}deg;--d:${(big ? 2.2 : 1.5) + Math.random() * 0.8}"></s>`).join(""));
+          sp.style.setProperty("--c", r.captured.owner === C4.DEAD ? "#9aa" : COLORS[r.captured.owner] || col);
+          fxCell(to, "ring wave").style.setProperty("--c", COLORS[r.captured.owner] || "#9aa");
+          if (r.captured.owner !== C4.DEAD) fxCell(to, "pts", `<b>+${C4.VALUE[r.captured.type]}</b>`).style.setProperty("--c", col);
+          if (big) { const bd = $("#ro-board"); bd.classList.remove("flash"); void bd.offsetWidth; bd.classList.add("flash"); }
+        }
+        if (r.promo) { fxCell(to, "promo", "<b>♛</b>").style.setProperty("--c", "#ffd24a"); fxCell(to, "ring big").style.setProperty("--c", "#ffd24a"); }
+        if (r.check && !r.elim.length) { const ks = C4.kingSq(G.st, r.check.who); if (ks >= 0) { fxCell(ks, "ring big").style.setProperty("--c", "#ff3b4f"); lineFx(to, ks, "#ff3b4f", "chk"); } }
+      }
+      function badge(o, sq, key) {
+        const b = BADGE[key]; if (!b || !G.badge) return;
+        if (G.badge[o]) G.badge[o].remove();
+        const c = fxCell(sq, "badgecell", `<b class="rfx-badge k-${key}" style="--c:${b[1]}">${b[0]}</b>`); c.dataset.sq = sq; G.badge[o] = c;
+      }
+      // changement de cible après analyse (menace, occasion, faiblesse, meneur)
+      function retargeted(o, rt) {
+        const seat = G.seats[o], ko = C4.kingSq(G.st, o), kt = C4.kingSq(G.st, rt.to);
+        seat.target = rt.to;
+        ticker(`🎯 ${seat.name} change de cible : ${G.seats[rt.to].name} (${rt.why})`);
+        if (ko >= 0 && kt >= 0 && G.speed !== "turbo" && animOn()) { lineFx(ko, kt, COLORS[o], "tgt"); fxCell(kt, "ring").style.setProperty("--c", COLORS[o]); }
+        const ban = el.querySelector(`.ro-ban[data-s="${o}"]`), q = ban && ban.querySelector(".ro-q");
+        if (q) { q.hidden = false; q.style.setProperty("--qc", COLORS[rt.to]); q.textContent = "🎯 " + G.seats[rt.to].name.toUpperCase(); clearTimeout(q._t); q._t = setTimeout(() => { q.hidden = true; }, 2200); }
+        say(o, "r_target", {});
+      }
+      // ---- Naskolit : capacité spéciale, il endort un adversaire pendant 1 tour (après une capture de pièce mineure ou plus, recharge 4 coups)
+      function nextAlive(from) { for (let i = 1; i <= 4; i++) { const q = (from + i) % 4; if (G.st.alive[q]) return q; } return from; }
+      function zzzSound() {
+        try {
+          if (!soundOn()) return;
+          const ac = (zzzSound.ac = zzzSound.ac || new (window.AudioContext || window.webkitAudioContext)()), t = ac.currentTime;
+          if (ac.state === "suspended") ac.resume();
+          [523, 392, 294].forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + i * 0.16); g.gain.exponentialRampToValueAtTime(0.12, t + i * 0.16 + 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.16 + 0.5); o.connect(g); g.connect(ac.destination); o.start(t + i * 0.16); o.stop(t + i * 0.16 + 0.55); });
+        } catch (e) { /* audio indisponible */ }
+      }
+      function putToSleep(o, v) {
+        G.sleep[v] = 1; G.skCd[o] = 4;
+        ticker(`💤 ${G.seats[o].name} endort ${G.seats[v].name} : il passe son prochain tour !`);
+        const ban = el.querySelector(`.ro-ban[data-s="${v}"]`); if (ban) ban.classList.add("sleep");
+        const ks = C4.kingSq(G.st, v);
+        if (ks >= 0 && animOn()) { fxCell(ks, "ring big").style.setProperty("--c", "#8aa4ff"); fxCell(ks, "zzz", "<b>Z</b><b>z</b><b>z</b>"); }
+        G.pc.forEach((n) => { if (C4.ownerOf(+n.dataset.v) === v) n.classList.add("asleep"); });
+        zzzSound(); E.vibrate([20, 40, 20]);
+        say(v, "r_sleep", {}, "check_received");
+      }
+      async function napSkip(o) {
+        G.sleep[o]--;
+        const seat = G.seats[o], ban = el.querySelector(`.ro-ban[data-s="${o}"]`), ks = C4.kingSq(G.st, o);
+        ticker(`😴 ${seat.name} dort… son tour est sauté`);
+        if (ks >= 0 && animOn() && G.speed !== "turbo") fxCell(ks, "zzz", "<b>Z</b><b>z</b><b>z</b>");
+        await sleep(SPEEDS[G.speed] ? Math.max(500, SPEEDS[G.speed]) : 60);
+        if (ban) ban.classList.remove("sleep");
+        G.pc.forEach((n) => { if (C4.ownerOf(+n.dataset.v) === o) n.classList.remove("asleep"); });
+        G.st.turn = nextAlive(o); hud();
+      }
+      // ---- GhorGhor le vrai : cinématique plein écran
+      function ghorSound() {
+        try {
+          if (!soundOn()) return;
+          const ac = (ghorSound.ac = ghorSound.ac || new (window.AudioContext || window.webkitAudioContext)()), t = ac.currentTime;
+          if (ac.state === "suspended") ac.resume();
+          const n = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.4), ac.sampleRate), data = n.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (Math.random() < 0.35 ? 1 : 0.15) * (1 - i / data.length);
+          const src = ac.createBufferSource(), g1 = ac.createGain(), o = ac.createOscillator(), g2 = ac.createGain();
+          src.buffer = n; g1.gain.value = 0.5; src.connect(g1); g1.connect(ac.destination); src.start(t);
+          o.type = "sawtooth"; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(32, t + 1.6); g2.gain.setValueAtTime(0.35, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 1.7); o.connect(g2); g2.connect(ac.destination); o.start(t); o.stop(t + 1.8);
+        } catch (e) { /* audio indisponible */ }
+      }
+      function ghorOverlay(ms) {
+        if (!animOn()) return;
+        const ov = document.createElement("div"); ov.className = "ro-ghorov";
+        ov.innerHTML = `<div class="rg-eye"><i></i></div><div class="rg-txt" data-t="GHORGHOR LE VRAI">GHORGHOR LE VRAI</div><div class="rg-sub">GM · 3200 Elo</div>`;
+        document.body.appendChild(ov);
+        setTimeout(() => { ov.classList.add("out"); setTimeout(() => ov.remove(), 600); }, ms);
+      }
+      // ---- la roue du Jester : roue HDR dessinée en canvas (reflets, ampoules, éclats), tirée AVANT son coup
+      function wheelTick() {
+        try {
+          if (!soundOn()) return;
+          const ac = (wheelTick.ac = wheelTick.ac || new (window.AudioContext || window.webkitAudioContext)()), t = ac.currentTime;
+          if (ac.state === "suspended") ac.resume();
+          const o = ac.createOscillator(), g = ac.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(2100, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.04);
+          g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.06);
+        } catch (e) { /* audio indisponible */ }
+      }
+      function wheelFx(name, elo, fast) {
+        return new Promise((done) => {
+          const ov = document.createElement("div"); ov.className = "ro-wheel";
+          ov.innerHTML = `<div class="rw-rays"></div><div class="rw-box"><div class="rw-title">🃏 LA ROUE DU JESTER</div><div class="rw-sub">${esc(name)} attend son futur niveau…</div><div class="rw-stage"><canvas></canvas></div><div class="rw-res"><b>…</b></div></div>`;
+          document.body.appendChild(ov);
+          const cv = ov.querySelector("canvas"), res = ov.querySelector(".rw-res"), SZ = Math.max(240, Math.min(Math.round(Math.min(innerWidth, innerHeight) * 0.74), 470)), dpr = Math.min(2, window.devicePixelRatio || 1);
+          cv.width = cv.height = Math.round(SZ * dpr); cv.style.width = cv.style.height = SZ + "px";
+          const g = cv.getContext("2d"), R = SZ / 2, SEG = 16, A = Math.PI * 2 / SEG, TAU = Math.PI * 2;
+          const f = (elo - 1) / 3200, final = TAU * (fast ? 0 : 6) + TAU * (1 - f), DUR = fast ? 1 : 4800;
+          const hueOf = (i) => 355 - i / (SEG - 1) * 235 + (i / (SEG - 1) > 0.5 ? 0 : 0);        // rouge (bas niveau) -> or -> vert -> cyan (niveau monstre)
+          const sparks = []; let theta = 0, flap = 0, lastSeg = -1, lastTick = 0, t0 = performance.now(), phase = "spin", tEnd = 0;
+          const label = (i) => (i === 0 ? "1" : String(i * 200));
+          const tier = elo < 800 ? ["NIVEAU DÉBUTANT 😴", "#ff6a5a"] : elo < 1800 ? ["NIVEAU CORRECT 🙂", "#ffd24a"] : elo < 2600 ? ["NIVEAU FORT 🔥", "#8be04d"] : ["NIVEAU MONSTRE ⚡", "#1acfd6"];
+          function draw(now) {
+            const t = (now - t0) / 1000;
+            g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, SZ, SZ);
+            g.save(); g.translate(R, R);
+            // halo HDR derrière la roue
+            const halo = g.createRadialGradient(0, 0, R * 0.7, 0, 0, R * 1.02); halo.addColorStop(0, "rgba(255,190,60,0)"); halo.addColorStop(0.8, "rgba(255,170,40,.28)"); halo.addColorStop(1, "rgba(255,120,20,0)");
+            g.fillStyle = halo; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
+            const RR = R * 0.9;
+            for (let i = 0; i < SEG; i++) {                                                     // quartiers
+              const a0 = -Math.PI / 2 + theta + i * A, h = hueOf(i), gr = g.createRadialGradient(0, 0, RR * 0.18, 0, 0, RR);
+              gr.addColorStop(0, `hsl(${h},80%,${i % 2 ? 12 : 18}%)`); gr.addColorStop(0.65, `hsl(${h},88%,${i % 2 ? 30 : 38}%)`); gr.addColorStop(1, `hsl(${h},100%,${i % 2 ? 46 : 56}%)`);
+              g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, RR, a0, a0 + A); g.closePath(); g.fillStyle = gr; g.fill();
+              g.save(); g.rotate(a0); g.strokeStyle = "rgba(255,235,170,.55)"; g.lineWidth = 2; g.beginPath(); g.moveTo(RR * 0.2, 0); g.lineTo(RR, 0); g.stroke(); g.restore();
+              g.save(); g.rotate(a0 + A / 2); g.translate(RR * 0.66, 0); g.rotate(Math.PI / 2);
+              g.font = `900 ${Math.round(R * 0.095)}px system-ui,sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+              g.shadowColor = `hsl(${h},100%,60%)`; g.shadowBlur = 12; g.fillStyle = "#fff"; g.fillText(label(i), 0, 0); g.restore();
+            }
+            // reflet vitré qui ne tourne pas (effet RTX)
+            g.save(); g.beginPath(); g.arc(0, 0, RR, 0, TAU); g.clip();
+            const gl = g.createLinearGradient(-RR, -RR, RR * 0.6, RR); gl.addColorStop(0, "rgba(255,255,255,.28)"); gl.addColorStop(0.35, "rgba(255,255,255,.04)"); gl.addColorStop(0.5, "rgba(255,255,255,0)"); gl.addColorStop(1, "rgba(0,0,0,.35)");
+            g.fillStyle = gl; g.fillRect(-RR, -RR, RR * 2, RR * 2); g.restore();
+            // jante métal doré
+            let rim = "#d9a93a";
+            if (g.createConicGradient) { const cg = g.createConicGradient(-0.6, 0, 0); [[0, "#fff1b8"], [0.12, "#b98512"], [0.28, "#ffe08a"], [0.45, "#8a5d08"], [0.6, "#ffefb0"], [0.78, "#a87410"], [1, "#fff1b8"]].forEach(([p, c]) => cg.addColorStop(p, c)); rim = cg; }
+            g.strokeStyle = rim; g.lineWidth = R * 0.1; g.shadowColor = "rgba(255,190,60,.9)"; g.shadowBlur = 22; g.beginPath(); g.arc(0, 0, R * 0.945, 0, TAU); g.stroke(); g.shadowBlur = 0;
+            g.strokeStyle = "rgba(0,0,0,.55)"; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, R * 0.895, 0, TAU); g.stroke();
+            // ampoules qui chassent
+            const bulbs = 32, flashAll = phase === "done" && Math.floor(t * 8) % 2 === 0;
+            g.save(); g.globalCompositeOperation = "lighter";
+            for (let i = 0; i < bulbs; i++) {
+              const an = i / bulbs * TAU - Math.PI / 2, on = flashAll || (i + Math.floor(t * (phase === "spin" ? 16 : 6))) % 4 === 0;
+              g.shadowColor = on ? "#fff3b0" : "transparent"; g.shadowBlur = on ? 16 : 0; g.fillStyle = on ? "#fff3b0" : "rgba(120,80,10,.7)";
+              g.beginPath(); g.arc(Math.cos(an) * R * 0.945, Math.sin(an) * R * 0.945, R * 0.02, 0, TAU); g.fill();
+            }
+            g.restore();
+            // moyeu
+            const hub = g.createRadialGradient(-R * 0.04, -R * 0.05, R * 0.01, 0, 0, R * 0.2); hub.addColorStop(0, "#fff7d0"); hub.addColorStop(0.35, "#e0a92b"); hub.addColorStop(1, "#4d3205");
+            g.shadowColor = "#000"; g.shadowBlur = 14; g.fillStyle = hub; g.beginPath(); g.arc(0, 0, R * 0.19, 0, TAU); g.fill(); g.shadowBlur = 0;
+            g.font = `${Math.round(R * 0.18)}px system-ui,sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "#fff"; g.fillText("🃏", 0, R * 0.01);
+            // pointeur à ressort
+            g.save(); g.translate(0, -R * 0.99); g.rotate(flap);
+            g.shadowColor = "#ff3b4f"; g.shadowBlur = 18; const pg = g.createLinearGradient(0, 0, 0, R * 0.2); pg.addColorStop(0, "#fff"); pg.addColorStop(1, "#ff3b4f");
+            g.fillStyle = pg; g.beginPath(); g.moveTo(-R * 0.055, -R * 0.02); g.lineTo(R * 0.055, -R * 0.02); g.lineTo(0, R * 0.19); g.closePath(); g.fill(); g.restore();
+            // éclats
+            g.save(); g.globalCompositeOperation = "lighter";
+            for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i]; s.x += s.vx; s.y += s.vy; s.vy += 0.12; s.l -= 0.018; if (s.l <= 0) { sparks.splice(i, 1); continue; } g.fillStyle = s.c; g.globalAlpha = Math.max(0, s.l); g.shadowColor = s.c; g.shadowBlur = 10; g.beginPath(); g.arc(s.x, s.y, s.r, 0, TAU); g.fill(); }
+            g.restore(); g.restore();
+          }
+          const burst = () => { const c = tier[1]; for (let i = 0; i < 90; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, v = 2 + Math.random() * 6; sparks.push({ x: 0, y: -R * 0.9, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: 1.2 + Math.random() * 2.6, l: 0.7 + Math.random() * 0.6, c: Math.random() < 0.5 ? c : "#fff3b0" }); } };
+          function frame(now) {
+            if (!ov.isConnected) return;
+            if (phase === "spin") {
+              const k = Math.min(1, (now - t0) / DUR), e = 1 - Math.pow(1 - k, 4);
+              theta = final * e;
+              const seg = Math.floor((((theta % TAU) + TAU) % TAU) / A);
+              if (seg !== lastSeg) { if (lastSeg >= 0) { flap = -0.55; if (now - lastTick > 28) { wheelTick(); lastTick = now; } } lastSeg = seg; }
+              if (k >= 1) { phase = "done"; tEnd = now; theta = final; res.innerHTML = `<b style="color:${tier[1]}">${elo}</b> Elo<small>${tier[0]}</small>`; res.classList.add("pop"); burst(); E.vibrate([20, 30, 40]); zzzSoundWin(); }
+            }
+            flap += (0 - flap) * 0.22;
+            draw(now);
+            if (phase === "done" && now - tEnd > (fast ? 700 : 1500)) { ov.classList.add("out"); setTimeout(() => { ov.remove(); done(); }, 320); return; }
+            requestAnimationFrame(frame);
+          }
+          function zzzSoundWin() { try { if (!soundOn()) return; const ac = wheelTick.ac || new (window.AudioContext || window.webkitAudioContext)(); wheelTick.ac = ac; const t = ac.currentTime; [523, 659, 784, 1047].forEach((fq, i) => { const o = ac.createOscillator(), gg = ac.createGain(); o.type = "triangle"; o.frequency.value = fq; gg.gain.setValueAtTime(0.0001, t + i * 0.07); gg.gain.exponentialRampToValueAtTime(0.1, t + i * 0.07 + 0.03); gg.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.07 + 0.6); o.connect(gg); gg.connect(ac.destination); o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.65); }); } catch (e) { /* audio indisponible */ } }
+          requestAnimationFrame(frame);
+          setTimeout(() => { if (ov.isConnected) { ov.remove(); done(); } }, DUR + 6000);        // filet de sécurité (onglet en arrière-plan : requestAnimationFrame est suspendu)
+        });
+      }
+      async function jesterWheel(o, turbo) {
+        const seat = G.seats[o], ai = seat.ai, tok = G.token, elo = 1 + Math.floor(Math.random() * 3200);
+        G.busy = true; ticker(`🎡 ${seat.name} lance la roue… son Elo se décide avant qu'il joue`);
+        await wheelFx(seat.name, elo, turbo || !animOn());
+        if (!G || tok !== G.token) return;
+        AI.setElo(ai, elo); seat.elo = elo; renderBan(o);
+        ticker(`🎡 La roue donne ${elo} Elo à ${seat.name} !`); say(o, elo < 800 ? "wheel_low" : elo < 2400 ? "wheel_mid" : "wheel_high", { elo });
+        G.busy = false;
       }
 
       // ------------------------------------------------------------------ effets
@@ -472,6 +691,7 @@
       function back() {
         if (G) { G.token++; G.over = true; }
         E.botChat && E.botChat.unmountAll(); document.documentElement.classList.remove("ghor");
+        $("#ro-board").classList.remove("ghorfx"); el.querySelectorAll(".ro-ban").forEach((b) => b.classList.remove("ghorfx", "sleep")); document.querySelectorAll(".ro-wheel,.ro-ghorov").forEach((n) => n.remove());
         $("#ro-game").hidden = true; $("#ro-setup").hidden = false; $("#ro-end").hidden = true; palmares(); fillSeats();
       }
       // coup dicté (ex. « h2 h4 », « h2-h4 », « h2xh4 ») : joue pour le siège au trait
@@ -585,7 +805,7 @@
         A.toast("Entraînement terminé : coche « Bots entraînés » pour les utiliser.", "ok", 5000);
       };
 
-      el._api = { rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back, apply: (m) => apply(m, false), ghorTransform, minorNeed: (s) => minorNeed(s), judged, renderBan, setDuo, duoMode };
+      el._api = { moveFx, badge, putToSleep, napSkip, wheelFx, retargeted, rebuild() { buildBoard(); drawSquares(); hud(); }, launch, get g() { return G; }, cfg: () => cfg, back, apply: (m) => apply(m, false), ghorTransform, minorNeed: (s) => minorNeed(s), judged, renderBan, setDuo, duoMode };
       fillSeats(); palmares();
     },
   });

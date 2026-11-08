@@ -636,3 +636,16 @@ window.ENOS_BOT_LINES = {
     r_target: ["Cible assignée : {me}.", "Objectif verrouillé : {me}."], r_capture: ["Capture enregistrée.", "Matériel adverse réduit."], r_lost: ["Perte matérielle. Recalcul.", "Pièce perdue."], r_elim_win: ["Joueur éliminé.", "Cible neutralisée."], r_elim_lose: ["Défaite enregistrée.", "Roi tombé."], r_storm: ["Effondrement imminent. Repli.", "Zone réduite."], r_win: ["Dernier survivant : E.N.O.S.", "Victoire conforme aux prévisions."],
   });
 })();
+
+// Naskolit endort un adversaire pendant 1 tour (Battle Royale x4) : r_sleep = je viens d'etre endormi
+(() => {
+  const L = window.ENOS_BOT_LINES, add = (id, o) => { const t = (L[id] = L[id] || {}); for (const k in o) t[k] = (t[k] || []).concat(o[k]); };
+  add("nasko", { r_sleep: ["Hein quoi ? J'ai dormi ?", "Dcp je me suis endormi sur le clavier", "Mdrrr je rate mon tour, c'est abusé"] });
+  add("penoire", { r_sleep: ["Un tour de repos, ça ne change rien à ma supériorité.", "Il m'a endormi ?! Fraude."] });
+  add("lelex", { r_sleep: ["XD je dors, att att", "Mdrrr il m'a mis KO sans me toucher"] });
+  add("ghorghor", { r_sleep: ["Zzz… non. Je ne dors jamais vraiment.", "Même endormi, je te vois."] });
+  add("naskurieux", { r_sleep: ["Je rate un tour mais je reviens plus fort.", "Dodo forcé, c'est pas juste !"] });
+  add("jester", { r_sleep: ["Même le bouffon fait la sieste !", "La roue tourne… sans moi."] });
+  add("eto", { r_sleep: ["Un tour de calme. Soit.", "Je médite, profite."] });
+  add("enos", { r_sleep: ["Mise en veille forcée. Reprise au tour suivant.", "Tour sauté. Recalcul différé."] });
+})();

@@ -143,6 +143,7 @@
   U.back = () => {
     if (U.closeSheet()) return true;
     if (E.codelab && E.codelab.back && E.codelab.back()) return true;
+    if (E.academy && E.academy.back && E.academy.back()) return true;
     const open = E.$$(".subview").find((x) => !x.hidden);
     if (open) { E.emit("tools-back"); return true; }
     if (index !== 0) { U.go(0); return true; }

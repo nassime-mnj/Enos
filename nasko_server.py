@@ -34,6 +34,7 @@ import nasko_pdf
 import nasko_receipts
 import nasko_studio
 import nasko_syllabus
+import nasko_academy
 import subs_analyzer
 import nasko_roles
 import nasko_cloud
@@ -6404,6 +6405,46 @@ def static_ext(lib: str, path: str):
     if not full.startswith(base + os.sep) or ext not in _EXT_MIME or not os.path.isfile(full):
         raise HTTPException(404)
     return FileResponse(full, media_type=_EXT_MIME[ext], headers={"Cache-Control": "public, max-age=86400"})
+
+
+_ACAD_MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json"}
+
+
+@app.get("/static/academy/{path:path}")
+def static_academy(path: str):
+    """Code Academy (cours, animations, exercices) : fichiers de static/academy/, chemin résolu strictement dans le dossier."""
+    path = path or "index.html"
+    if "\x00" in path or "\\" in path:
+        raise HTTPException(404)
+    base = os.path.realpath(resource_path("static", "academy"))
+    full = os.path.realpath(os.path.join(base, path))
+    ext = os.path.splitext(full)[1].lower()
+    if not full.startswith(base + os.sep) or ext not in _ACAD_MIME or not os.path.isfile(full):
+        raise HTTPException(404)
+    return FileResponse(full, media_type=_ACAD_MIME[ext], headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/academy/status", dependencies=_LOCAL)
+def academy_status():
+    return nasko_academy.status()
+
+
+@app.post("/api/academy/run", dependencies=_LOCAL)
+async def academy_run(request: Request):
+    b = await request.json()
+    return await asyncio.to_thread(nasko_academy.run, str(b.get("lang", "")), str(b.get("code", "")), str(b.get("stdin", ""))[:20000])
+
+
+@app.post("/api/academy/trace", dependencies=_LOCAL)
+async def academy_trace(request: Request):
+    b = await request.json()
+    return await asyncio.to_thread(nasko_academy.trace_python, str(b.get("code", "")))
+
+
+@app.post("/api/academy/vscode", dependencies=_LOCAL)
+async def academy_vscode(request: Request):
+    b = await request.json()
+    return await asyncio.to_thread(nasko_academy.open_vscode, str(b.get("lang", "")), str(b.get("code", "")), str(b.get("name", "")))
 
 
 _LEARN_MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".png": "image/png"}

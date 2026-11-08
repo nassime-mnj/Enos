@@ -9,10 +9,12 @@
     box = document.createElement("div");
     box.style.cssText = "position:fixed;inset:0;z-index:99999;background:#050506";
     const f = document.createElement("iframe");
-    f.src = "/static/learn/" + (hash || ""); f.title = "Échecs"; f.style.cssText = "width:100%;height:100%;border:0";
+    f.src = (hash && hash.charAt(0) === "/" ? hash : "/static/learn/" + (hash || "")); f.title = "Échecs"; f.style.cssText = "width:100%;height:100%;border:0";
     box.append(f); document.body.append(box);
   };
   window.enosOpenLearn = open;
+  const acad = document.getElementById("b-academy");
+  if (acad) acad.addEventListener("click", () => open("/static/academy/"));
   const learn = document.getElementById("b-learn"), adv = document.getElementById("b-adv");
   if (learn) learn.addEventListener("click", () => open(""));
   if (adv) adv.addEventListener("click", () => open("#advisor"));

@@ -38,7 +38,7 @@
     const per = PERSONA[opts.persona] || PERSONA.nasko;
     const w = {};
     for (const k of KEYS) w[k] = clampW((opts.w && opts.w[k] != null ? opts.w[k] : BASE[k] * (per.mul[k] || 1)));
-    return { persona: opts.persona, w, noise: opts.noise != null ? opts.noise : per.noise, base: per.noise, target: opts.target == null ? -1 : opts.target, foes: opts.foes || null, grow: !opts.royale && !!per.grow, drowsy: !opts.royale && !!per.drowsy, wheel: !!per.wheel, elo: AI.ELO[opts.persona] || 1200, eloGrow: !!opts.royale && !!per.grow, eloDrowsy: !!opts.royale && !!per.drowsy, moves: 0, skill: 1 };
+    return { persona: opts.persona, w, noise: opts.noise != null ? opts.noise : per.noise, base: per.noise, target: opts.target == null ? -1 : opts.target, foes: opts.foes || null, grow: !opts.royale && !!per.grow, drowsy: !opts.royale && !!per.drowsy, wheel: !!per.wheel, elo: AI.ELO[opts.persona] || 1200, royale: !!opts.royale, eloGrow: !!opts.royale && !!per.grow, eloDrowsy: !!opts.royale && !!per.drowsy, moves: 0, skill: 1 };
   };
   AI.PERSONA = PERSONA; AI.KEYS = KEYS; AI.BASE = BASE;
   AI.defaultWeights = (persona) => { const per = PERSONA[persona] || PERSONA.nasko, w = {}; for (const k of KEYS) w[k] = clampW(BASE[k] * (per.mul[k] || 1)); return w; };
@@ -168,12 +168,51 @@
     return best;
   };
 
+  /**
+   * CHOIX DYNAMIQUE DE LA CIBLE (Battle Royale) : pour chaque ennemi vivant on calcule
+   *   menace      = valeur de MES pièces qu'il attaque (roi ×4) -> « qui me menace le plus ? »
+   *   occasion    = valeur de SES pièces que j'attaque + pression sur les cases autour de son roi -> « qui est à ma portée ? »
+   *   faiblesse   = peu de matériel restant -> proche de l'élimination (points de mat)
+   *   meneur      = avance au score sur moi -> il faut le freiner
+   * puis on choisit la meilleure note, avec une hystérésis (on ne change que si c'est nettement mieux). Retourne {to, why} ou null.
+   */
+  const ANALYTIC = { eto: 1, enos: 1, ghorreal: 1, naskolit: 1, penoire: 1 };
+  AI.retarget = (st, o, ai) => {
+    if (!ai || !st.alive[o]) return null;
+    const foes = [0, 1, 2, 3].filter((e) => e !== o && st.alive[e] && !C4.allied(st, o, e) && (!ai.foes || ai.foes[e]));
+    if (!foes.length) return null;
+    const mine = C4.attackedBy(st, o), ksqMe = C4.kingSq(st, o), score = {};
+    for (const e of foes) {
+      const att = C4.attackedBy(st, e), ks = C4.kingSq(st, e);
+      let threat = 0, chance = 0, mat = 0, press = 0;
+      for (let i = 0; i < SQ; i++) {
+        const v = st.b[i]; if (!v) continue;
+        const ow = ownerOf(v), ty = typeOf(v);
+        if (ow === o && att[i]) threat += ty === K ? MATV[Q] * 4 : MATV[ty];
+        if (ow === e) { mat += ty === K ? 0 : MATV[ty]; if (mine[i]) chance += ty === K ? MATV[Q] * 5 : MATV[ty]; }
+      }
+      if (ks >= 0) { const kx = ks % N, ky = (ks / N) | 0; for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) { const x = kx + dx, y = ky + dy; if ((dx || dy) && x >= 0 && y >= 0 && x < N && y < N && mine[x + y * N]) press++; } }
+      const dist = ks >= 0 && ksqMe >= 0 ? Math.abs(ks % N - ksqMe % N) + Math.abs(((ks / N) | 0) - ((ksqMe / N) | 0)) : 14;
+      const sc = threat * 1.0 + chance * 0.8 + press * 3 + Math.max(0, 40 - mat) * 0.25 + Math.max(0, st.pts[e] - st.pts[o]) * 0.12 - dist * 0.15;
+      score[e] = { sc, threat, chance, press, weak: Math.max(0, 40 - mat), lead: Math.max(0, st.pts[e] - st.pts[o]) };
+    }
+    const cur = foes.includes(ai.target) ? ai.target : -1;
+    let best = foes[0];
+    for (const e of foes) if (score[e].sc > score[best].sc) best = e;
+    const margin = ANALYTIC[ai.persona] ? 1.12 : 1.4;                                     // les bots calculateurs changent plus facilement d'avis
+    if (cur >= 0 && (best === cur || score[best].sc < score[cur].sc * margin + 2)) return null;
+    const b = score[best], parts = [["me menace", b.threat * 1.0], ["est à portée", b.chance * 0.8 + b.press * 3], ["est le plus faible", b.weak * 0.25], ["mène la partie", b.lead * 0.12]];
+    parts.sort((x, y) => y[1] - x[1]);
+    ai.target = best;
+    return { to: best, why: parts[0][0] };
+  };
+
   /** Mise à jour de la personnalité après chaque coup joué (Naskurieux progresse, Naskolit s'endort, le Jester relance la roue). */
   AI.afterMove = (ai, info) => {
     ai.moves++;
     if (ai.grow && info.captured) ai.noise = Math.max(0.02, ai.noise - 0.12);
     if (ai.drowsy && info.lost) ai.noise = Math.min(1.1, ai.noise + 0.1);
-    if (ai.wheel && ai.moves % 10 === 0) { const elo = 1 + Math.floor(Math.random() * 3200); ai.noise = 1.3 - elo / 3200 * 1.28; ai.elo = elo; return { elo }; }
+    if (ai.wheel && !ai.royale && ai.moves % 10 === 0) { const elo = 1 + Math.floor(Math.random() * 3200); ai.noise = 1.3 - elo / 3200 * 1.28; ai.elo = elo; return { elo }; }
     return null;
   };
 
