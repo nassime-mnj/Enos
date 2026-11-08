@@ -107,6 +107,7 @@
 
   // ------------------------------------------------------------------ jugement
   /** Jugement d'un coup : beforeW / afterW = évaluations (Blancs) AVANT et APRÈS, color = 'w'|'b'. Mêmes seuils que CHESS (PC). */
+  const heavySac = (fen, uci) => { try { const c = new Chess(fen), m = play(c, uci); return !!m && VAL[m.piece] >= 5 && K.isSacrifice(fen, uci); } catch (e) { return false; } };
   K.quality = (fenBefore, uci, beforeW, afterW, color) => {
     const sgn = color === "w" ? 1 : -1;
     const braw = sgn * beforeW, araw = sgn * afterW;                                              // point de vue du camp qui joue, SANS plafond : les mats sont lus tels que Stockfish les annonce
@@ -114,7 +115,8 @@
     const mateB = braw >= 9000 ? Math.round(MAT - braw) : 0, mateA = araw >= 9000 ? Math.round(MAT - araw) : -1;       // « mat en n » du camp au trait avant / après son coup (-1 : plus de mat)
     let key;
     if (mateB) {                                                                                  // il AVAIT un mat forcé : le garder (même vitesse) = meilleur coup ; sacrifier sans avancer = coup MANQUÉ, jamais « brillant »
-      if (mateA >= 0 && mateA <= mateB - 1) key = "best";                                          // mat en n avant -> mat en n-1 après (ou immédiat) : le mat avance
+      if (mateA >= 1 && mateA <= mateB - 1 && heavySac(fenBefore, uci)) key = "brilliant";          // SACRIFICE DE DAME / TOUR qui fait avancer le mat (ex. Dxf1+ !! Txf1 Txf1#) : « brillant » comme sur Chess.com
+      else if (mateA >= 0 && mateA <= mateB - 1) key = "best";                                     // mat en n avant -> mat en n-1 après (ou immédiat) : le mat avance
       else if (mateA >= 0 && mateA <= mateB + 1) key = "good";                                     // le mat ne se rapproche pas (même distance) : correct mais pas le plus direct
       else if (araw >= 300) key = "miss";                                                          // mat perdu ou beaucoup plus lent, mais la position reste gagnante
       else key = araw >= -100 ? "mistake" : "blunder";                                             // il a jeté la victoire

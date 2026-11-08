@@ -240,3 +240,9 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 
 ### 1.62.1 — correctif import
 - Un PGN collé depuis un téléphone (en-têtes sans ligne vide avant les coups) était refusé (« PGN illisible ») : `K.normPgn` (chess_review.js) remet la forme attendue (en-têtes, ligne vide, coups sur une ligne). Utilisé par l'import Chess Edit et par l'analyse de partie. Test : `t_edit_import.py` (`pgn_phone.txt`).
+
+## 1.63 — Brillants sur sacrifice de dame/tour + remplissage depuis une capture Chess.com
+
+- **Jugement** (`chess_brain.js`, `K.quality`) : un sacrifice de dame ou de tour qui fait avancer un mat forcé (ex. 20...Df1+ !! Txf1 Txf1#) est « brillant », comme sur Chess.com (avant : classé « meilleur » car il y avait déjà un mat).
+- **Import Chess Edit** : bouton « 📸 Remplir depuis une capture Chess.com » → modèle de vision (clé Groq, comme le scanner de documents) lit pseudos, classements, couleurs et rectangles des photos de profil (recadrés en carré 256 px). Les couleurs sont corrigées d'après les en-têtes du PGN s'il est collé. Les noms/photos d'une importation précédente ne masquent plus le PGN suivant.
+- Tests : `t_edit_import.py` (vision simulée en test).

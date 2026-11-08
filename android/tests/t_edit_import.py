@@ -36,6 +36,16 @@ with sync_playwright() as pw:
     check(r["winner"] and r["winner"]["name"] == "Lelex", "vainqueur dynamique : %s" % r["winner"])
     n = pg.evaluate("(t) => { const c = new Chess(); return [c.load_pgn(t, { sloppy: true }), ENOS.brain.normPgn(t).length > 0 && (() => { const d = new Chess(); return d.load_pgn(ENOS.brain.normPgn(t), { sloppy: true }) ? d.history().length : 0; })()]; }", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pgn_phone.txt")).read())
     check(n[1] == 42, "PGN collé d'un téléphone (sans ligne vide après les en-têtes, 21 coups) : lu après normalisation (%s)" % n)
+    q = pg.evaluate("""async (t) => { const r = await ENOS.brain.reviewGame({ pgn: t, me: 'auto', ms: 220 }); return r.judged.slice(36, 42).map((x) => [x.n, x.san, x.key]); }""", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pgn_phone.txt")).read())
+    print(q)
+    check(any(x[1] == "Qf1+" and x[2] == "brilliant" for x in q), "sacrifice de dame qui fait avancer le mat (20...Qf1+!!) jugé BRILLANT comme sur Chess.com : %s" % q)
+    # capture Chess.com : le modèle de vision est simulé (pas de clé / réseau en test) ; on vérifie remplissage, inversion de couleurs d'après le PGN, classements, recadrage des photos
+    s2 = pg.evaluate("""async () => { const cv = document.createElement('canvas'); cv.width = 600; cv.height = 1000; const g = cv.getContext('2d'); g.fillStyle = '#2a6'; g.fillRect(0, 0, 600, 1000); const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
+      ENOS.ai.configured = () => true; ENOS.suite.api.llmVision = async () => JSON.stringify({ white: { name: 'GM Naskolit', elo: 1790, avatar: [0.04, 0.05, 0.12, 0.07] }, black: { name: 'Lelex', elo: 1850, avatar: [0.04, 0.9, 0.12, 0.07] }, result: '0-1' });
+      document.querySelector('#ce-pgn').value = '[White "Lelex"]\\n[Black "Naskolit"]\\n\\n1. e4 e5'; document.querySelector('#ce-pw').value = ''; document.querySelector('#ce-pb').value = '';
+      const r = await ENOS._ceSnap(blob); return { r, w: document.querySelector('#ce-pw').value, b: document.querySelector('#ce-pb').value, avs: document.querySelectorAll('#ce-avs img').length }; }""")
+    print(s2)
+    check(s2["w"] == "Lelex" and s2["b"] == "Naskolit" and s2["r"]["elo"] == [1850, 1790] and s2["avs"] == 2, "capture : pseudos (titre GM retiré), elo et 2 photos remplis ; couleurs corrigées d'après le PGN")
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)
