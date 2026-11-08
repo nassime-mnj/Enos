@@ -47,7 +47,7 @@
   K.attackers = attackers;
 
   /** Le coup abandonne-t-il ≥ 2 pions de matériel, même après l'échange ? (estimation : 1 échange évalué à la volée) */
-  K.isSacrifice = (fen, uci) => {
+  K.isSacrifice = (fen, uci, minNet) => {
     const ch = new Chess(fen), mover = ch.turn();
     const m = play(ch, uci);
     if (!m) return false;
@@ -58,7 +58,7 @@
     if (!att.length) return false;
     const defended = attackers(map, m.to, mover).length > 0, cheapest = Math.min(...att.map((t) => VAL[t])), mine = VAL[(map[m.to] || "p").toLowerCase()];
     const lost = !defended ? mine : cheapest < mine ? mine - cheapest : 0;
-    return lost - gain >= 2;
+    return lost - gain >= (minNet || 2);
   };
 
   /** FILTRE DE SACRIFICE sur une ligne (liste UCI) : l'adversaire prend une pièce lourde, déficit ≥ 2 pions, et on ne reprend pas aussitôt. -> {piece, deficit} | null */
@@ -107,6 +107,7 @@
 
   // ------------------------------------------------------------------ jugement
   /** Jugement d'un coup : beforeW / afterW = évaluations (Blancs) AVANT et APRÈS, color = 'w'|'b'. Mêmes seuils que CHESS (PC). */
+  const heavy = (fen, uci) => { try { const m = play(new Chess(fen), uci); return !!m && VAL[m.piece] >= 5; } catch (e) { return false; } };
   const heavySac = (fen, uci) => { try { const c = new Chess(fen), m = play(c, uci); return !!m && VAL[m.piece] >= 5 && K.isSacrifice(fen, uci); } catch (e) { return false; } };
   K.quality = (fenBefore, uci, beforeW, afterW, color) => {
     const sgn = color === "w" ? 1 : -1;
@@ -122,6 +123,7 @@
       else key = araw >= -100 ? "mistake" : "blunder";                                             // il a jeté la victoire
     }
     else if (loss <= 15 && a >= -50 && braw < 600 && K.isSacrifice(fenBefore, uci)) key = "brilliant";
+    else if (loss <= 15 && braw >= 600 && braw < 2000 && araw >= 300 && K.isSacrifice(fenBefore, uci, 4) && heavy(fenBefore, uci)) key = "brilliant";      // sacrifice de TOUR / DAME (perte nette ≥ 4) qui garde la victoire : « brillant » sur Chess.com même quand on gagnait déjà (ex. Txa7 !! +1,12)
     else if (braw >= 600 && araw >= 200 && araw < braw - 250 && loss >= 70) key = "miss";            // position déjà gagnante : le coup en laisse filer l'essentiel sans tout perdre
     else if (loss <= 8) key = "best";
     else if (loss <= 30) key = "excellent";

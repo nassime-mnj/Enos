@@ -246,3 +246,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Jugement** (`chess_brain.js`, `K.quality`) : un sacrifice de dame ou de tour qui fait avancer un mat forcé (ex. 20...Df1+ !! Txf1 Txf1#) est « brillant », comme sur Chess.com (avant : classé « meilleur » car il y avait déjà un mat).
 - **Import Chess Edit** : bouton « 📸 Remplir depuis une capture Chess.com » → modèle de vision (clé Groq, comme le scanner de documents) lit pseudos, classements, couleurs et rectangles des photos de profil (recadrés en carré 256 px). Les couleurs sont corrigées d'après les en-têtes du PGN s'il est collé. Les noms/photos d'une importation précédente ne masquent plus le PGN suivant.
 - Tests : `t_edit_import.py` (vision simulée en test).
+
+## 1.64 — Brillant sur sacrifice en position gagnante + musiques longues à 2 drops
+
+- **Jugement** (`chess_brain.js`) : un sacrifice de tour / dame (perte nette ≥ 4) qui garde la victoire (≥ +3) est « brillant » même quand on gagnait déjà (≥ +6) — cas Chess.com `Txa7 !!`. Les positions écrasantes (≥ +20) restent exclues.
+- **Analyse audio** (`chess_edit_audio.js`) : `drops[]` = drops forts (≥ 50 % du meilleur score, montée ≥ ×1,6, ≥ 8 s d'écart, jamais dans les 8 dernières secondes d'un morceau long) ; le **dernier** est le drop principal (`mainDropTimestamp`), le précédent est le 1er tournant.
+- **Montage** (`chess_edit_map.js`, `buildSync`) : avec 2 drops, ouverture calme (≤ 10 coups, 1,1–2,4 s) → **1er drop sur un coup NORMAL** (kind `drop1`, effets pleins mais ni hero ni badge) → phase normale (kind `mid`, 1,1–2,9 s) → montage accéléré si besoin → drop principal → finale 0,65–0,90 s / coup. Sur une musique longue la partie remplit la musique : rythme étiré avant le drop (jamais de plateau figé > 3 s), queue jusqu'à 34 coups.
+- Tests : `t_edit_long.py` (WAV de 100 s à 2 drops, partie de 45 demi-coups, brillant Txa7).

@@ -316,13 +316,25 @@
     const pick = (idxs, k) => (idxs.length <= k ? idxs.slice() : idxs.map((i) => ({ i, s: score(i) })).sort((a, b) => b.s - a.s).slice(0, k).map((x) => x.i).sort((a, b) => a - b));
     const spread = (list, k) => (k >= list.length ? list.slice() : k <= 0 ? [] : Array.from({ length: k }, (_, j) => list[Math.round((j * (list.length - 1)) / Math.max(1, k - 1))]));       // k temps répartis du 1er au dernier (le dernier tombe juste avant le drop)
     // ---- LOI DE DISTRIBUTION (continuité) : INTRO calme (1,1–1,6 s / coup, glissement 240 ms) → MONTAGE ACCÉLÉRÉ LISIBLE des coups intermédiaires (toutes les ≤140 ms, caméra fixe à plat, zéro effet) → pause → DROP = 1er tournant → coups INTENSES sur les vrais temps forts (0,65–0,90 s), avec un « HERO MOMENT » de 1,6–1,8 s après chaque coup brillant / THE ROOK
-    let h = 0; const sched = [], clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v)), minTail = Math.min(12, Math.max(1, n - 1)), tailLen = Math.max(minTail, Math.min(22, n - Math.min(4, n - 1)));
-    const lo = Math.max(Math.min(4, n - 1), n - 22), hi = Math.max(lo, n - minTail); let start = n - tailLen; for (let i = lo; i <= hi; i++) if (score(i) > score(start)) start = i;       // meilleur tournant / sacrifice / coup illégal parmi les départs possibles
+    let h = 0; const sched = [], clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v)), real = !!(audio.duration && !audio.synthetic), E0 = real ? audio.duration - 2.0 : 0;
+    // LONGUE MUSIQUE : la partie remplit toute la musique. 2 drops (≥ 5 s d'écart) : 1er drop = tournant sur un coup NORMAL (ouverture calme avant), 2e drop = drop principal (final : sacrifice + mat)
+    const dropsAll = (audio.drops || []).filter((x) => x > t00 + 4 && x < D - 5), D1 = dropsAll.length ? dropsAll[dropsAll.length - 1] : 0, twoD = D1 > 0;
+    const minTail = Math.min(12, Math.max(1, n - 1)), tpre = D - 0.6 - t00, stretch = real && E0 - D > 6 && tpre > 12;       // musique longue : on étire le rythme AVANT le drop (jamais de plateau figé > 3 s) et on garde 0,65–0,90 s / coup après
+    const tailMax = real ? clampN(Math.min(Math.floor((E0 - D) / 0.8), stretch ? n - Math.ceil(tpre / 2.0) : 34), minTail, 34) : 22, tailLen = Math.max(minTail, Math.min(tailMax, n - Math.min(4, n - 1)));
+    const lo = Math.max(Math.min(4, n - 1), n - tailMax), hi = Math.max(lo, n - minTail); let start = n - tailLen; for (let i = lo; i <= hi; i++) if (score(i) > score(start)) start = i;       // meilleur tournant / sacrifice / coup illégal parmi les départs possibles
     const avail = Math.max(2, D - 0.6 - t00), ffDt = (M) => clampN(3.5 / Math.max(1, M), 0.06, 0.14);
-    let calmN = Math.min(8, start); for (; calmN > Math.min(2, start); calmN--) { const M = start - calmN, need = (calmN - 1) * 1.1 + (M ? M * ffDt(M) + 1.3 : 0) + 0.3; if (need <= avail) break; }
-    const M = start - calmN, dt = ffDt(M), ffDur = M * dt, calmSp = clampN(calmN > 1 ? (avail - (M ? ffDur + 1.6 : 0)) / (calmN - 1) : 1.3, 1.1, 1.6);
-    let prevT = -9, lastCalm = t00; for (let k = 0; k < calmN; k++) { const ideal = t00 + k * calmSp, nb = rawIntro.filter((x) => Math.abs(x - ideal) < 0.2 && x - prevT >= 1.1 && x - prevT <= 1.6).sort((p, q) => Math.abs(p - ideal) - Math.abs(q - ideal))[0], tk = k === 0 ? ideal : nb != null ? nb : Math.min(prevT + 1.6, Math.max(ideal, prevT + 1.1)); sched.push({ i: k, t: +tk.toFixed(3), dur: 240, kind: "crit", soft: true }); prevT = tk; lastCalm = tk; }
-    if (M > 0) { const ffStart = Math.max(lastCalm + 1.3, D - 0.7 - ffDur), dd = Math.min(dt, Math.max(0.06, (D - 0.5 - ffStart) / M)); for (let j = 0; j < M; j++) sched.push({ i: calmN + j, t: +(ffStart + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }   // montage accéléré lisible : on VOIT les pièces avancer et s'échanger
+    let calmN = Math.min(twoD ? 10 : 8, start);
+    if (twoD) calmN = clampN(Math.floor((D1 - 1.3 - t00) / 1.3) + 1, Math.min(2, start), Math.min(10, start)); 
+    else for (; calmN > Math.min(2, start); calmN--) { const M = start - calmN, need = (calmN - 1) * 1.1 + (M ? M * ffDt(M) + 1.3 : 0) + 0.3; if (need <= avail) break; }
+    const R0 = start - calmN, SPC = stretch ? 2.4 : 1.6, calmSp = twoD ? clampN((D1 - 1.3 - t00) / Math.max(1, calmN - 1), 1.1, SPC) : clampN(calmN > 1 ? (avail - (R0 ? ffDt(R0) * R0 + 1.6 : 0)) / (calmN - 1) : 1.3, 1.1, SPC);
+    let prevT = -9, lastCalm = t00; for (let k = 0; k < calmN; k++) { const ideal = t00 + k * calmSp, nb = rawIntro.filter((x) => Math.abs(x - ideal) < 0.2 && x - prevT >= 1.1 && x - prevT <= SPC).sort((p, q) => Math.abs(p - ideal) - Math.abs(q - ideal))[0], tk = k === 0 ? ideal : nb != null ? nb : Math.min(prevT + SPC, Math.max(ideal, prevT + 1.1)); sched.push({ i: k, t: +tk.toFixed(3), dur: 240, kind: "crit", soft: true }); prevT = tk; lastCalm = tk; }
+    // PHASE NORMALE (coups à rythme normal, 1,1–1,5 s) entre l'ouverture calme et le montage accéléré ; avec 2 drops, elle commence EXACTEMENT sur le 1er drop
+    const midStart = twoD ? D1 : lastCalm + 1.3, ffD = (M) => M * ffDt(M);
+    let Mid = 0; for (let m = R0; m >= 1; m--) { const M = R0 - m, need = (m - 1) * 1.1 + (M ? ffD(M) + 1.3 : 0) + 0.9; if (need <= D - midStart) { Mid = m; break; } }
+    if (!real && !twoD) Mid = 0;                                                                                  // sans musique réelle : comportement d'origine (le montage accéléré couvre tout)
+    const M = R0 - Mid, dt = ffDt(M), ffDur = M * dt;
+    let lastMid = lastCalm; if (Mid > 0) { const midSp = clampN(((D - 0.9 - midStart) - (M ? ffDur + 1.3 : 0)) / Math.max(1, Mid - 1), 1.1, stretch ? 2.9 : 1.5); let pm = -9; for (let k = 0; k < Mid; k++) { const ideal = midStart + k * midSp, nb = beatsAll.filter((x) => Math.abs(x - ideal) < 0.2 && x - pm >= 1.0).sort((a, b) => Math.abs(a - ideal) - Math.abs(b - ideal))[0], tk = k === 0 ? midStart : nb != null ? nb : Math.max(ideal, pm + 1.0); sched.push({ i: calmN + k, t: +tk.toFixed(3), dur: 200, kind: k === 0 && twoD ? "drop1" : "mid" }); pm = tk; lastMid = tk; } }
+    if (M > 0) { const ffStart = Math.max(lastMid + 1.3, D - 0.7 - ffDur), dd = Math.min(dt, Math.max(0.06, (D - 0.5 - ffStart) / M)); for (let j = 0; j < M; j++) sched.push({ i: calmN + Mid + j, t: +(ffStart + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }   // montage accéléré lisible
     const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), heroCount = plies.slice(start).filter((p, k) => isHero(start + k)).length;
     let tt = D || (post[0] || 2); const ts = audio.duration && !audio.synthetic ? clampN((audio.duration - 2.0 - tt - heroCount * 1.7) / Math.max(1, tailLen - heroCount), 0.65, 0.9) : 0.75;
     for (let i = start; i < n; i++) {
@@ -358,7 +370,7 @@
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: false, arrow: false,
         illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: !soft && illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
       lastShown = q.i; if (bigMove) e.tone = "cyan";
-      e.minor = !soft && !bigMove && q.kind !== "drop" && !p.check && !p.mate && !(p.captured && ["q", "r", "b", "n"].includes(p.captured)) && !illegal;                  // coup ordinaire de la phase intense : effets sobres
+      e.minor = !soft && !bigMove && q.kind !== "drop" && q.kind !== "drop1" && !p.check && !p.mate && !(p.captured && ["q", "r", "b", "n"].includes(p.captured)) && !illegal;                  // coup ordinaire de la phase intense : effets sobres
       if (q.cam) e.cam = q.cam;
       (soft ? [] : (q.vfx || [])).forEach((v) => {                                                                                // effets demandés par le script Gemini (ignorés pendant l'intro calme)
         const V = String(v).toUpperCase();
