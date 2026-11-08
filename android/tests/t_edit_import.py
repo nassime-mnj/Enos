@@ -8,7 +8,7 @@ def png(path, rgb):
     ch = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
     open(path, "wb").write(b"\x89PNG\r\n\x1a\n" + ch(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + ch(b"IDAT", zlib.compress(raw)) + ch(b"IEND", b""))
 
-PGN = '[Event "Live Chess"]\n[Site "Chess.com"]\n[White "Lelex"]\n[Black "Naskolit"]\n[Result "1-0"]\n[WhiteElo "1850"]\n[BlackElo "1790"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0'
+PGN = '[Event "Live Chess"]\n[Site "Chess.com"]\n[White "Lelex"]\n[Black "Naskolit"]\n[Result "1-0"]\n[WhiteElo "1850"]\n[BlackElo "1790"]\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7#\n1-0'
 errs = []
 tmp = tempfile.mkdtemp(); a, b2 = os.path.join(tmp, "a.png"), os.path.join(tmp, "b.png"); png(a, (220, 40, 40)); png(b2, (40, 90, 220))
 with sync_playwright() as pw:
@@ -34,6 +34,8 @@ with sync_playwright() as pw:
     check(all(x.startswith("data:image/jpeg") for x in r["img"]) and r["loaded"] >= 2, "photos de profil chargées dans l'intro (data URI, canvas non taché)")
     check(r["names"] == ["Lelex", "Naskolit"] and r["elos"] == [1850, 1790], "intro VS : vrais pseudos et classements")
     check(r["winner"] and r["winner"]["name"] == "Lelex", "vainqueur dynamique : %s" % r["winner"])
+    n = pg.evaluate("(t) => { const c = new Chess(); return [c.load_pgn(t, { sloppy: true }), ENOS.brain.normPgn(t).length > 0 && (() => { const d = new Chess(); return d.load_pgn(ENOS.brain.normPgn(t), { sloppy: true }) ? d.history().length : 0; })()]; }", open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pgn_phone.txt")).read())
+    check(n[1] == 42, "PGN collé d'un téléphone (sans ligne vide après les en-têtes, 21 coups) : lu après normalisation (%s)" % n)
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

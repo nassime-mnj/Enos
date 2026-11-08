@@ -237,3 +237,6 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Pseudos (`White`/`Black`) et classements (`WhiteElo`/`BlackElo`) lus dans le PGN ; photos de profil choisies par 📷 (recadrées au centre, JPEG 256 px en data URI → canvas jamais « taché »). Intro VS, vainqueur dynamique, etc. les utilisent.
 - Volontairement **aucun réseau** (CSP `connect-src 'none'`) : pas de téléchargement depuis Chess.com. Une capture PNG seule ne contient qu'une position, pas la partie.
 - Test : `t_edit_import.py`.
+
+### 1.62.1 — correctif import
+- Un PGN collé depuis un téléphone (en-têtes sans ligne vide avant les coups) était refusé (« PGN illisible ») : `K.normPgn` (chess_review.js) remet la forme attendue (en-têtes, ligne vide, coups sur une ligne). Utilisé par l'import Chess Edit et par l'analyse de partie. Test : `t_edit_import.py` (`pgn_phone.txt`).

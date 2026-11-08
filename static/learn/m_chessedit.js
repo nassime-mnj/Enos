@@ -96,7 +96,7 @@
       $("#ce-imp-go").onclick = async () => {
         const btn = $("#ce-imp-go"); btn.disabled = true;
         try {
-          let txt = $("#ce-pgn").value.trim(); if (!txt) throw new Error("colle le PGN de la partie");
+          let txt = E.brain.normPgn($("#ce-pgn").value); if (!txt) throw new Error("colle le PGN de la partie");
           const g = new Chess(); if (!g.load_pgn(txt, { sloppy: true })) throw new Error("PGN illisible");
           const H = g.header(), w = $("#ce-pw").value.trim() || H.White || "Blancs", b = $("#ce-pb").value.trim() || H.Black || "Noirs";
           $("#ce-pw").value = w; $("#ce-pb").value = b;
