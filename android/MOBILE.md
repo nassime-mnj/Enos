@@ -295,3 +295,7 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
   - **drop / coups forts** : éclat et aberration courts ;
   - **mat** : plateau en feu (bords qui brûlent, braises, teinte orange) puis **vide** : tout part au noir sauf la pièce floue (DOF) + lame de lumière.
 - Réglage « ✨ Effets pro » (`chessedit.fx`, activé par défaut) ; sans WebGL2 ou en cas d'erreur, retour automatique au rendu 2D. Test : `t_edit_gl.py` (WebGL logiciel SwiftShader).
+
+### 1.69.1 — correctif export (« The radius provided (-2.08) is negative »)
+- Cause : le bandeau d'équipe (avatar qui « pop » avec un easing à dépassement) donnait un rayon < 3 px, d'où `arc(…, r − 3·k)` négatif → l'export s'arrêtait à ~25 %. `sceneDisc` / `phFill` ignorent maintenant les rayons ≤ 1 px et le rayon de découpe est borné.
+- Nouveau test de **balayage** `t_edit_sweep.py` : rend toute la vidéo (toutes les 70 ms) de 3 parties (solo, équipes, sans musique) × 5 intros/outros, GL compris ; vérifié qu'il reproduit le bug sur l'ancien code.

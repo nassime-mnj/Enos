@@ -22,21 +22,21 @@
   /** pastille d'origine d'ETO (turquoise), d'E.N.O.S. (rouge), de Stockfish (gris) : disque de couleur + sigle ; sinon l'initiale */
   P.phFill = function (g, s, r) {
     const ph = s && s.ph, c = ph ? ph[1] : "#5b6075", txt = ph ? ph[0] : String((s && s.name) || "?").trim().charAt(0).toUpperCase();
-    g.save(); g.beginPath(); g.arc(0, 0, r, 0, TAU); g.clip(); const gr = g.createRadialGradient(0, -r * 0.35, r * 0.1, 0, 0, r); gr.addColorStop(0, c); gr.addColorStop(1, "#0b0c12"); g.fillStyle = gr; g.globalAlpha *= 0.9; g.fillRect(-r, -r, r * 2, r * 2); g.globalAlpha = 1;
+    if (!(r > 1)) return; g.save(); g.beginPath(); g.arc(0, 0, r, 0, TAU); g.clip(); const gr = g.createRadialGradient(0, -r * 0.35, r * 0.1, 0, 0, r); gr.addColorStop(0, c); gr.addColorStop(1, "#0b0c12"); g.fillStyle = gr; g.globalAlpha *= 0.9; g.fillRect(-r, -r, r * 2, r * 2); g.globalAlpha = 1;
     g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; let px = r * (txt.length > 2 ? 0.62 : 0.95); g.font = FONT(px); while (px > 10 && g.measureText(txt).width > r * 1.55) { px *= 0.92; g.font = FONT(px); } g.lineWidth = px * 0.08; g.strokeStyle = "rgba(0,0,0,.5)"; g.strokeText(txt, 0, r * 0.05); g.fillText(txt, 0, r * 0.05); g.restore();
   };
   /** disque d'avatar : image (photo / bot / icône pixel-art) rognée en cercle, anneau de couleur, lettre si pas d'image */
   P.introMood = function (id, t) { return id === "eto" ? (t < 0.8 ? "smile" : t < 1.3 ? "wink" : t < 2.4 ? "happy" : "think") : (t < 1 ? "idle" : t < 2.5 ? "scan" : "alert"); };
   const KEYMOOD = { eto: { brilliant: "wow", best: "happy", excellent: "happy", great: "happy", blunder: "sad", mistake: "sad", miss: "think", inaccuracy: "think" }, enos: { brilliant: "alert", best: "lock", excellent: "lock", great: "lock", blunder: "alert", mistake: "alert", miss: "scan", inaccuracy: "scan" } };
   P.sceneDisc = function (g, s, cx, cy, r, rim, alpha, mood) {
-    const k = this.k(), im = s && s.img && this.av[s.img];
+    const k = this.k(), im = s && s.img && this.av[s.img]; if (!(r > 1)) return;                                    // rayon nul / négatif pendant l'apparition (easing « back ») : rien à dessiner
     if (s && s.anim && im && E.animIcons) {                                                                          // ETO / E.N.O.S. : icône d'origine ANIMÉE (écran 8-bit / œil)
       g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; E.animIcons.draw(g, s.anim, im, cx, cy, r * 2.2, this._now || 0, mood || (this._inIntro ? this.introMood(s.anim, this._now || 0) : s.mood || "auto"));
       g.strokeStyle = rim; g.lineWidth = Math.max(3, r * 0.045); g.globalAlpha *= 0.85; g.beginPath(); g.arc(cx, cy, r * 1.16, 0, TAU); g.stroke(); g.restore(); return;
     }
     g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; g.translate(cx, cy);
     g.fillStyle = "#0b0c12"; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
-    if (im) { g.save(); g.beginPath(); g.arc(0, 0, r - 3 * k, 0, TAU); g.clip(); g.drawImage(im, -r, -r, r * 2, r * 2); g.restore(); }
+    if (im) { g.save(); g.beginPath(); g.arc(0, 0, Math.max(0.1, r - 3 * k), 0, TAU); g.clip(); g.drawImage(im, -r, -r, r * 2, r * 2); g.restore(); }
     else this.phFill(g, s, r - 3 * k);
     g.strokeStyle = rim; g.lineWidth = Math.max(3, r * 0.07); g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke();
     g.strokeStyle = "rgba(255,255,255,.85)"; g.lineWidth = Math.max(2, r * 0.025); g.beginPath(); g.arc(0, 0, r + r * 0.07, 0, TAU); g.stroke();
