@@ -52,7 +52,7 @@
           <p class="ce-stat" id="ce-sum" style="margin-top:8px"></p></div>
         <div class="card"><h3>4 · Rendu</h3>
           <label class="fld">Direction artistique</label><select id="ce-look" class="sel" style="margin-bottom:8px"><option value="auto">🎲 AUTO · varie à chaque edit (sang, brume, projecteur, néon…)</option><option value="blood">Sang · rouge et noir, braises</option><option value="fog">Brume · gris, fumée, projecteur</option><option value="spot">Projecteur · très sombre, un seul spot</option><option value="neon">Néon violet</option><option value="galaxy">Galaxie</option><option value="aura">Aura turquoise</option></select>
-          <label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
+          <label class="fld ce-fxl" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="ce-fx"> ✨ Effets pro : bloom, projecteur, fumée, feu, vide (WebGL)</label><label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
           <label class="fld">Résolution de l'export</label><select id="ce-res" class="sel"><option value="720">720 × 1280 · rapide (téléphone)</option><option value="1080">1080 × 1920 · qualité maximale</option></select>
           <div class="row"><button class="btn pri" id="ce-gen">🎬 GÉNÉRER L'EDIT (MP4 · 60 FPS)</button></div>
           <div class="row"><button class="btn" id="ce-play">▶ APERÇU RAPIDE</button></div>
@@ -145,6 +145,7 @@
         } catch (e) { impSt("✕ " + (e.message || e)); }
         btn.disabled = false;
       };
+      $("#ce-fx").checked = E.settings.get("chessedit.fx", true) !== false; $("#ce-fx").onchange = () => E.settings.set("chessedit.fx", $("#ce-fx").checked);
       $("#ce-game").onchange = (e) => { if (e.target.value !== "") setRec(hist()[+e.target.value]); };
 
       // ------------------------------------------------------------ musique

@@ -285,3 +285,13 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Sons** : `js/fahh_data.js` (mp3 embarqués). Erreur / coup manqué = `fahh` ; gaffe = `fahh_slow` (4,2 s) ; chacun avec choc grave (`thud`) sur le bus « hit » (écho spatial comme les autres bruitages) et la musique baisse pendant le son. Les coups passés en accéléré restent muets.
 - **Pause sur les gaffes** : la partie se fige 1,7 s après la gaffe (comme le moment héros), caméra serrée ×1,38 → ×1,5 tenue pendant le FAHH ralenti, arrêt sur image de 140 ms.
 - **Équipes** : à chaque coup, bandeau NOIR sobre (dalle inclinée, reflet qui balaie, traînées blanches, étincelles) avec l'avatar du joueur et son NOM seul — aucun mot, aucune couleur d'alerte. Compteurs blancs sous chaque avatar (◆ brillants, ! erreurs, ✕ gaffes). Tests : `t_edit_hits.py`.
+
+## 1.69 — Post-production WebGL (look « chess edit pro »)
+
+- Analyse d'une référence pro (ChessFXs) : bloom HDR, assombrissement avec projecteur sur la pièce héros, traînée de fumée turbulente, plateau qui se déforme à l'impact, plateau en feu avec braises, profondeur de champ + vide final, aberration chromatique, niveaux de gris.
+- `js/chess_edit_gl.js` : UN fragment shader WebGL2 appliqué au MONDE (plateau + pièces) après le rendu 2D, avant les textes/bandeaux. Pistes calculées depuis la timeline (fonctions pures de t → aperçu = export, 60 FPS déterministe) :
+  - **coup brillant** : halo qui monte avant l'impact → fumée cyan + drapeau + nuit (×0,2) avec projecteur sur la case, lumière qui revient en ~3 s ;
+  - **gaffe** : le monde se fige, se désature, projecteur + déformation légère ;
+  - **drop / coups forts** : éclat et aberration courts ;
+  - **mat** : plateau en feu (bords qui brûlent, braises, teinte orange) puis **vide** : tout part au noir sauf la pièce floue (DOF) + lame de lumière.
+- Réglage « ✨ Effets pro » (`chessedit.fx`, activé par défaut) ; sans WebGL2 ou en cas d'erreur, retour automatique au rendu 2D. Test : `t_edit_gl.py` (WebGL logiciel SwiftShader).

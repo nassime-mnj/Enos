@@ -23,7 +23,7 @@
   class Renderer {
     /** canvas : taille interne = taille de la vidéo (ex. 1080×1920) ; tl : timeline (buildViral / buildSync) ; o : {flip, rec, base} */
     constructor(canvas, tl, o) {
-      o = o || {}; this.cv = canvas; this.ctx = canvas.getContext("2d"); this.tl = tl; this.W = canvas.width; this.H = canvas.height; this.BS = this.W; this.cell = this.BS / 8; this.flip0 = !!o.flip; this.rec = o.rec || {}; this.base = o.base || E.assetBase || "";
+      o = o || {}; this.cv = canvas; this.ctx = canvas.getContext("2d"); this.tl = tl; this.W = canvas.width; this.H = canvas.height; this.BS = this.W; this.cell = this.BS / 8; this.flip0 = !!o.flip; this.rec = o.rec || {}; this.noFx = !!o.noFx || !!(E.settings && E.settings.get && E.settings.get("chessedit.fx", true) === false); this.base = o.base || E.assetBase || "";
       const evs = tl.events; this.intro = evs.find((e) => e.kind === "intro") || null; this.introEnd = this.intro ? this.intro.dur : 0; this.outro = evs.find((e) => e.kind === "outro") || null; this.setup = evs.find((e) => e.kind === "setup") || null;
       this.mv = evs.filter((e) => (e.from || e.drop || e.cheat === "twist") && e.fen).sort((a, b) => a.t - b.t); this.prompts = evs.filter((e) => e.kind === "prompt"); this.cutR = evs.filter((e) => e.kind === "cutrook"); this.cutE = evs.filter((e) => e.kind === "cutevo"); this.cut3s = evs.filter((e) => e.kind === "cut3");
       this.imp = this.mv.filter((e) => e.kind !== "ff"); this.twists = this.mv.filter((e) => e.cheat === "twist");
@@ -130,6 +130,7 @@
         if (dp) { this.drawWorld(this.scene.getContext("2d"), tw0, strobe, t); this.rgbSplit(dp, t); }
         else { this.drawWorld(tg, tw0, strobe, t); if (needChroma) this.composeChroma(chromaAmp); }
       }
+      if (this.glPost) this.glPost(t);                                                                       // post-production WebGL (bloom, projecteur, fumée, feu, vide) sur le MONDE seulement
       this.drawScreenFx(ctx, t);
       if (this.teamHud && t >= this.introEnd) this.teamHud(ctx, t);
       this.drawOverlays(ctx, t);

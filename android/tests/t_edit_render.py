@@ -35,7 +35,7 @@ with sync_playwright() as pw:
     r = ev("""async () => { const cv = document.createElement('canvas'); cv.width = 360; cv.height = 640; const R = new ENOS.editRender.Renderer(cv, window.__tl, { flip: true, rec: window.__rec }); await R.load(); window.__R = R;
       const t = window.__tl, drop = t.stats.drop, imp = t.events.filter((e) => e.from && e.kind !== 'ff'), ck = imp.find((e) => e.check) || imp[5], twT = t.events.find((e) => e.kind === 'outro').t;
       const pre2 = t.events.filter((e) => e.from && e.soft)[2], rp = imp.find((e) => e.redPath) || imp[8], times = { soft: pre2 ? pre2.impact - 0.12 : 6, redpath: rp.impact + 0.25, intro1: 0.4, intro2: 2.2, intro3: 3.4, first: 3.86, preDrop: drop - 0.3, prompt: drop - 0.3, drop: drop + 0.03, afterDrop: drop + 0.6, check: ck ? ck.impact + 0.25 : 5, end: twT + 1.6 };
-      const out = {}; let blank = 0; for (const [k, v] of Object.entries(times)) { R.draw(v); const d = cv.toDataURL('image/png'); out[k] = d; const g = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let s = 0; for (let i = 0; i < g.length; i += 97) s += g[i]; if (s < 2000) blank++; }
+      const out = {}; let blank = 0; for (const [k, v] of Object.entries(times)) { R.draw(v); if (R._glErr) window.__glErr = R._glErr; const d = cv.toDataURL('image/png'); out[k] = d; const g = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let s = 0; for (let i = 0; i < g.length; i += 97) s += g[i]; if (s < 2000) blank++; }
       return { frames: out, blank, times }; }""")
     for k, d in r["frames"].items():
         open(os.path.join(OUT, k + ".png"), "wb").write(base64.b64decode(d.split(",")[1]))
