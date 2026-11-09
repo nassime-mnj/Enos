@@ -41,7 +41,7 @@
       const need = new Set(["crown", "book", "miss", "blunder", "brilliant", "best", "great", "excellent", "inaccuracy", "mistake", "good", "next", "mate"]);
       this.tl.events.forEach((e) => { if (e.badge && e.badge.img) need.add(e.badge.img); });
       await Promise.all([...need].map(async (n) => { const im = await loadImg(`${A}img/badges/${n}.png`); if (im) this.badgeSpr["img/badges/" + n + ".png"] = this.badgeSprite(im, ({ brilliant: "#1CE8E8", best: "#96bc4b", great: "#1bb3ad", excellent: "#96bc4b", inaccuracy: "#f7c631", mistake: "#e58f2a", blunder: "#CA3431", miss: "#ff2a2a", good: "#96bc4b", next: "#9aa7bd", mate: "#e8604c" })[n] || "#fff"); }));
-      const srcs = new Set(); this.tl.events.forEach((e) => { if (e.aiImg) srcs.add(e.aiImg); if (e.intro) [e.intro.white, e.intro.black].forEach((s) => s && s.img && srcs.add(s.img)); (e.lines || []).forEach((l) => { const b = E.botChat && E.botChat.bots[l.bot]; if (b && b.img) srcs.add(b.img); }); if (e.final) { const b = E.botChat && E.botChat.bots[e.final.bot]; if (b && b.img) srcs.add(b.img); } });
+      const srcs = new Set(); this.tl.events.forEach((e) => { if (e.aiImg) srcs.add(e.aiImg); if (e.intro) { [e.intro.white, e.intro.black].forEach((s) => s && s.img && srcs.add(s.img)); if (e.intro.teams) [].concat(e.intro.teams.w, e.intro.teams.b).forEach((s) => s && s.img && srcs.add(s.img)); } (e.lines || []).forEach((l) => { const b = E.botChat && E.botChat.bots[l.bot]; if (b && b.img) srcs.add(b.img); }); if (e.final) { const b = E.botChat && E.botChat.bots[e.final.bot]; if (b && b.img) srcs.add(b.img); } });
       await Promise.all([...srcs].map(async (s) => { const im = await loadImg(/^data:/.test(s) ? s : A + s); if (im) { this.av[s] = im; this.badgeSpr[s] = this.badgeSprite(im, "#ffffff", true); } }));
       this.rookBg = this.makeRookBg(); this.boards = { contrast: this.boardSprite("contrast"), classic: this.boardSprite("classic") }; this.bgBoard = this.blurredBoard(); this.loaded = true; return this;
     }
@@ -130,6 +130,7 @@
         else { this.drawWorld(tg, tw0, strobe, t); if (needChroma) this.composeChroma(chromaAmp); }
       }
       this.drawScreenFx(ctx, t);
+      if (this.teamHud && t >= this.introEnd) this.teamHud(ctx, t);
       this.drawOverlays(ctx, t);
       if (t < this.introEnd) { const k = (t - (this.introEnd - 0.3)) / 0.3; ctx.save(); ctx.globalAlpha = 1 - EASE.out3(clamp(k, 0, 1)); this.drawIntro(this.introEnd - 0.3); ctx.restore(); }
       if (this.introEnd && t >= this.introEnd && t < this.introEnd + 0.14) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9 * (1 - (t - this.introEnd) / 0.14); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
@@ -446,13 +447,13 @@
       const R = W * 0.23, pulse = 1 + 0.03 * Math.sin(t * TAU * 2), slide = (t0, dir) => lerp(dir * W * 0.8, 0, EASE.out3(clamp((t - t0) / 0.6, 0, 1)));
       const avatar = (s, cx, cy, rim, boss) => {
         const gl = boss ? 0.55 + 0.45 * tension + 0.15 * Math.sin(t * 12) : 0.5; this.glowAt(g, rim, cx, cy, R * 2.1, gl); g.save(); g.translate(cx, cy); g.scale(pulse, pulse); g.fillStyle = "#111"; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
-        const im = s && s.img && this.av[s.img]; if (im) { g.save(); g.beginPath(); g.arc(0, 0, R - 4 * k, 0, TAU); g.clip(); g.drawImage(im, -R, -R, R * 2, R * 2); g.restore(); } else { g.fillStyle = "#fff"; g.font = FONT(R * 0.9); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(s && s.human ? "TOI" : "?", 0, 0); }
+        const im = s && s.img && this.av[s.img]; if (im) { g.save(); g.beginPath(); g.arc(0, 0, R - 4 * k, 0, TAU); g.clip(); g.drawImage(im, -R, -R, R * 2, R * 2); g.restore(); } else if (this.phFill) { g.save(); this.phFill(g, s, R - 4 * k); g.restore(); } else { g.fillStyle = "#fff"; g.font = FONT(R * 0.9); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String((s && s.name) || "?").trim().charAt(0).toUpperCase(), 0, 0); }
         g.strokeStyle = rim; g.lineWidth = 8 * k; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke(); g.strokeStyle = "#fff"; g.lineWidth = 3 * k; g.beginPath(); g.arc(0, 0, R + 9 * k, 0, TAU); g.stroke(); g.restore();
       };
       const x1 = W * 0.30 + slide(0, -1), y1 = H * 0.205, x2 = W * 0.70 + slide(0.05, 1), y2 = H * 0.665; avatar(P1, x1, y1, "#ff4a3a", false); avatar(P2, x2, y2, "#3d8bff", bot(P2));
       const vs = EASE.back(clamp((t - 0.6) / 0.4, 0, 1)); if (vs > 0) { g.save(); g.translate(W / 2, H * 0.475); g.scale(vs, vs); g.rotate(-0.05); this.glowAt(g, "#38e8ff", 0, 0, W * 0.3, 0.6); g.font = FONT(220 * k); g.textAlign = "center"; g.textBaseline = "middle"; const gr = g.createLinearGradient(0, -110 * k, 0, 110 * k); gr.addColorStop(0, "#ffffff"); gr.addColorStop(0.45, "#9aa0b0"); gr.addColorStop(0.5, "#e8ecff"); gr.addColorStop(1, "#6a7088"); g.lineWidth = 12 * k; g.strokeStyle = "#000"; g.strokeText("VS", 0, 0); g.fillStyle = gr; g.fillText("VS", 0, 0); g.restore(); }
       const nm = (s, cx, cy, side) => {
-        const a = clamp((t - 0.9) / 0.4, 0, 1); if (a <= 0 || !s) return; g.save(); g.globalAlpha = a; g.textAlign = "center"; const name = String(s.human ? (s.name === "Toi" ? "TOI" : s.name) : s.name).toUpperCase();
+        const a = clamp((t - 0.9) / 0.4, 0, 1); if (a <= 0 || !s) return; g.save(); g.globalAlpha = a; g.textAlign = "center"; const name = String(s.name).toUpperCase();
         g.font = FONT(64 * k); g.lineWidth = 9 * k; g.strokeStyle = "#000"; g.strokeText(name, cx, cy + R + 86 * k); g.fillStyle = "#fff"; g.fillText(name, cx, cy + R + 86 * k);
         const tag = s.title ? s.title : s.human ? "" : "AI", y = cy + R + 150 * k; g.font = FONT(34 * k); const tw = tag ? g.measureText(tag).width + 26 * k : 0; let eloTxt = ""; if (s.elo != null) { const kk = EASE.out4(clamp((t - 0.9) / 1.5, 0, 1)); eloTxt = Math.round(s.elo * kk) + " ELO"; }
         g.font = FONT(44 * k); const ew = eloTxt ? g.measureText(eloTxt).width : 0, total = tw + (tw && ew ? 16 * k : 0) + ew; let x = cx - total / 2;

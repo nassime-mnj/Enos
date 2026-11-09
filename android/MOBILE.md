@@ -264,3 +264,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Réglage : format (2v1…4v2), camp de l'équipe n°1 (Blancs / Noirs / hasard), un sélecteur par membre ; dernier choix mémorisé (`defi.team`).
 - Technique : `g.pl[c]` est un getter qui renvoie le membre au trait (tous les rôles existants — jugement, Elo dynamiques, Jester, styles — fonctionnent par membre) ; `g.tname` = noms d'équipe (« Nasko + ETO »), `mv.by` = auteur de chaque coup. Le 1er personnage doué de parole de chaque équipe parle pour elle. GhorGhor ne se transforme pas en équipe.
 - Parties enregistrées avec noms d'équipe (replay, Chess Edit, import). Test : `t_teams.py` (les 6 formats, rotation vérifiée, interface, partie jouable avec humain).
+
+## 1.66 — Chess Edit : icônes des joueurs, équipes, intros / outros variés
+
+- **Jamais « Toi » écrit** sur une vidéo : prénom du profil. **Icônes aléatoires** (30 icônes pixel-art, `img/icons/ic01–30.png`, embarquées dans `render_assets.js`) pour tout **joueur humain** sans photo ; tirées de la partie + du nom (même rendu aperçu / export), jamais deux fois la même. **Les bots gardent leur icône d'origine** : têtes (Nasko, Lelex…), pastille turquoise « ETO », rouge « ENOS », grise « SF » (Stockfish / Bot N).
+- **Équipes** : la partie enregistrée garde `teams` et l'auteur de chaque coup (`mv[6]`). Intro : 2 panneaux d'équipes (avatars + noms + « 4 VS 1 »), 2 animations ; **bandeau d'équipes en jeu** (membre qui vient de jouer agrandi + lumineux, suivant en surbrillance) ; outro « ÉQUIPE BLANCS / NOIRS » avec les avatars des gagnants.
+- **Intros solo variées** (choisies par la partie) : face-à-face, SLASH diagonal, CARTES holographiques, TERMINAL glitch. **Outros variés** : tampon, CARTE DE VICTOIRE (laurier + particules), ÉCLATS (l'image se brise), CINÉMA (bandes noires + nom révélé). Code : `js/chess_edit_scenes.js` (aussi chargé sur PC).
+- Test : `t_edit_scenes.py` (61 images ; `SHOTS=dossier` pour les enregistrer).

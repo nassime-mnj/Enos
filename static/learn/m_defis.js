@@ -623,7 +623,8 @@
         if (g.moves.length >= 2) {
           const list = hist(); list.push({ t: Date.now(), title: g.mode.t.replace(/[^\p{L}\p{N} .'-]/gu, "").trim() + " · " + sideName("w") + " – " + sideName("b"), result, plies: g.moves.length, brill: g.brill.w + g.brill.b, acc: g.me ? (g.me === "w" ? accW : accB) : null, pgn: g.ch.pgn(),
             id: g.id, pw: sideName("w"), pb: sideName("b"), pk: [g.pl.w.kind || "", g.pl.b.kind || ""], bw: g.brill.w, bb: g.brill.b, me: g.me, accW, accB,
-            ch: g.chat || [], mv: g.moves.map((m) => [m.uci, m.san, m.q.key, m.q.loss | 0, m.ew === undefined ? null : m.ew, m.bestSan || ""]) });   // enregistrement complet : [uci, san, jugement, perte, éval Blancs, meilleur coup]
+            ch: g.chat || [], mv: g.moves.map((m) => [m.uci, m.san, m.q.key, m.q.loss | 0, m.ew === undefined ? null : m.ew, m.bestSan || "", m.by || ""]),
+            ...(g.teams ? { teams: { w: g.teams.w.map((x) => ({ name: x.name, talk: x.talk || "", elo: x.elo || 0, human: !!x.human, kind: x.kind || "" })), b: g.teams.b.map((x) => ({ name: x.name, talk: x.talk || "", elo: x.elo || 0, human: !!x.human, kind: x.kind || "" })) } } : {}) });   // enregistrement complet : [uci, san, jugement, perte, éval Blancs, meilleur coup]
           E.settings.set("defi.hist", list.slice(-150));
         }
         const row = (c) => `<div class="df-sum"><b>${esc(sideName(c))}</b><span>précision ${(c === "w" ? accW : accB) == null ? "—" : (c === "w" ? accW : accB) + " %"}</span><span style="color:#1acfd6">✦ ${g.brill[c]} brillant${g.brill[c] > 1 ? "s" : ""}</span></div>`;

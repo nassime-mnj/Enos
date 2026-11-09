@@ -78,7 +78,7 @@
       if (transformAt.includes(i)) { d += 55; tags.push("boss"); }
       else if (lines.some((l) => STRONG_CHAT.has(l.kind))) { d += 20; tags.push("réplique"); }
       const fenBefore = i ? out[i - 1].fen : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-      out.push({ i, n: i + 1, pid, fenBefore, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "",
+      out.push({ i, n: i + 1, pid, fenBefore, color: mv.color, san: mv.san, uci, from: mv.from, to: mv.to, piece: mv.piece, captured: mv.captured || "", promo: mv.promotion || "", key, loss, ev, best: m[5] || "", by: m[6] || "",
         check: /[+#]/.test(mv.san), mate: /#/.test(mv.san), sacrifice: sac, alien: !!(rec.clip && rec.clip.alien === i + 1), boss: transformAt.includes(i), drama: Math.round(d * 10) / 10, tags, lines, fen: ch.fen() });
     });
     return out;
@@ -257,14 +257,36 @@
     if (p.captured || p.key === "inaccuracy" || p.key === "best" || p.key === "excellent") return 1;
     return 0;
   }
+  // NOM AFFICHÉ : « Toi » n'est jamais écrit sur une vidéo : c'est le prénom du profil (ou « Joueur »).
+  const meName = () => { try { const n = E.ai && E.ai.name && E.ai.name(); if (n && n !== "Toi") return String(n); } catch (e) { /* profil absent */ } return "Joueur"; };
+  const dispName = (n) => String(n == null ? "" : n).replace(/\bToi\b/g, meName());
+  // ICÔNE ALÉATOIRE (30 icônes pixel-art) pour tout joueur qui n'est pas un bot : tirée de la partie + du nom, donc la même dans l'aperçu et dans l'export ; jamais la même pour 2 joueurs d'une vidéo
+  const ICONS = 30, hashS = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const iconFor = (rec, name, used) => { const base = (hashS(String((rec && rec.t) || (rec && rec.title) || "") + "|" + name) % ICONS); let k = base; while (used.has(k) && used.size < ICONS) k = (k + 7) % ICONS; used.add(k); return "img/icons/ic" + String(k + 1).padStart(2, "0") + ".png"; };
+  // BOTS : ils gardent leur icône d'origine (tête du personnage ; ETO / E.N.O.S. / Stockfish = leur pastille de couleur). Seuls les JOUEURS (humains) reçoivent une icône aléatoire.
+  function botLook(name, talk) {
+    const bots = (E.botChat && E.botChat.bots) || {}, id = talk && bots[talk] ? talk : Object.keys(bots).find((k) => bots[k].name === name);
+    const pick = (b, i) => ({ id: i || "", img: b.img || "", ph: b.img ? null : b.ph || [String(b.name || name).slice(0, 3).toUpperCase(), "#8d8d97"], b });
+    if (id) return pick(bots[id], id);
+    if (/^ETO\b/i.test(name) && bots.eto) return pick(bots.eto, "eto");
+    if (/^E\.?N\.?O\.?S/i.test(name) && bots.enos) return pick(bots.enos, "enos");
+    if (/^(Stockfish|Bot \d+)/i.test(name)) return { id: "", img: "", ph: ["SF", "#8d8d97"], b: null };
+    return null;
+  }
   function introInfo(rec) {
-    const bots = (E.botChat && E.botChat.bots) || {}, me = (E.userName && E.userName()) || "Toi";
+    const used = new Set();
     const side = (name, color) => {
-      const id = Object.keys(bots).find((k) => bots[k].name === name), b = id ? bots[id] : null;
-      const ext = color === "w" ? rec.pwImg : rec.pbImg, xe = color === "w" ? rec.pwElo : rec.pbElo;                         // partie importée (Chess.com / PGN) : photo de profil + classement des vrais joueurs
-      return { name: name === "Toi" ? me : name, id: id || "", img: ext || (b && b.img ? b.img : ""), title: b && b.title ? b.title : "", elo: xe != null ? xe : id && ELO_OF[id] != null ? ELO_OF[id] : null, human: !b, color };
+      const look = botLook(name), ext = color === "w" ? rec.pwImg : rec.pbImg, xe = color === "w" ? rec.pwElo : rec.pbElo, b = look && look.b;
+      const img = ext || (look ? look.img : iconFor(rec, name, used));                                            // photo importée > image du bot > (joueur) icône aléatoire
+      return { name: dispName(name), id: look ? look.id : "", img, ph: !img && look ? look.ph : null, icon: !ext && !look, title: b && b.title ? b.title : "", elo: xe != null ? xe : look && look.id && ELO_OF[look.id] != null ? ELO_OF[look.id] : null, human: !look, color };
     };
-    return { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "" };
+    const out = { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "", seed: hashS(String((rec && (rec.t || rec.title)) || "") + "|scene") };
+    if (rec.teams && rec.teams.w && rec.teams.b) {                                                              // ÉQUIPES : chaque membre a son avatar
+      const mem = (list, color) => list.map((m) => { const look = m.human ? null : botLook(m.name, m.talk), b = look && look.b; return { name: dispName(m.name), img: look ? look.img : iconFor(rec, "m:" + color + m.name, used), ph: look && !look.img ? look.ph : null, icon: !look, human: !look, elo: m.elo || null, title: b && b.title ? b.title : "" }; });
+      out.teams = { w: mem(rec.teams.w, "w"), b: mem(rec.teams.b, "b") };
+      out.white.name = dispName(rec.pw); out.black.name = dispName(rec.pb);
+    }
+    return out;
   }
 
   /** bruitages + voix d'une liste d'événements (calés sur l'impact de chaque coup) */
@@ -364,7 +386,7 @@
       let bd = null; if (dk && BADGES[dk] && q.kind !== "ff") bd = BADGES[dk];
       const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
       const e = { cheat, alien: !!p.alien, t: +(q.t - qdur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
-        lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
+        by: p.by || "", lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
         dur: qdur, soft, forced, bigMove, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
         fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: false, arrow: false,
@@ -412,7 +434,7 @@
     ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));
     const last = ev[ev.length - 1], twistEnd = !!(last && last.cheat === "twist"), end = +(((last ? last.impact : 1) + (twistEnd ? 4.2 : 0.2))).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
     const winnerName = last && (last.mate || last.cheat === "twist") ? (last.color === "w" ? rec.pw : rec.pb) : "", flip3d = !!(script && script.outro && /FLIP/i.test(script.outro.type || "") && primeIn), outT = flip3d && script.outro.timestamp > 0 ? Math.max(end - 0.2, script.outro.timestamp) : end;
-    all.push({ t: outT, kind: "outro", dur: 1.8, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, flip3d, winner: winnerName ? { name: winnerName, color: last.color, king: last.mate ? last.kingSq || "" : "", mate: !!last.mate } : null, defeat: primeLoses ? { color: last && last.color } : null, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
+    all.push({ t: outT, kind: "outro", dur: 1.8, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, flip3d, winner: winnerName ? { name: rec.teams ? (last.color === "w" ? "Équipe Blancs" : "Équipe Noirs") : dispName(winnerName), team: !!rec.teams, color: last.color, king: last.mate ? last.kingSq || "" : "", mate: !!last.mate } : null, defeat: primeLoses ? { color: last && last.color } : null, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
     const dur = +(outT + 1.8 + (flip3d ? 1.8 : 0)).toFixed(3), key = ev.filter((e) => e.lvl >= 2);
     return { viral: true, sync: true, primeLoses, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align: null, stats: { open: 0, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: heroEv ? heroEv.n : 0, freeze: 0, idle: 0, heroT: heroEv ? heroEv.impact : 0, drop: D, skipped: n - ev.length, beats: beatsAll.length } };
   }
