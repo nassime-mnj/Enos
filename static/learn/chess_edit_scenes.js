@@ -180,19 +180,55 @@
   // ------------------------------------------------------------------ BANDEAU D'ÉQUIPES EN JEU (équipe qui joue = avatar agrandi + nom)
   P.teamHud = function (g, t) {
     const info = this.intro && this.intro.intro, tm = info && info.teams; if (!tm) return;
-    if (!this._tm) { const cnt = { w: 0, b: 0 }; this._tm = this.mv.filter((e) => e.from && e.cheat !== "twist").map((e) => { const c = e.color, i = cnt[c]++; return { t: e.impact, c, i: i % Math.max(1, tm[c].length) }; }); }
+    if (!this._tm) { const cnt = { w: 0, b: 0 }; this._tm = this.mv.filter((e) => e.from && e.cheat !== "twist").map((e) => { const c = e.color, i = cnt[c]++; return { t: e.impact, c, i: i % Math.max(1, tm[c].length), e }; }); }
     if (this.outro && t >= this.outro.t + 0.1) return;
     const { W, H } = this, k = this.k(), flip = this.flipAt ? this.flipAt(t) : false, bot = flip ? "b" : "w", top = flip ? "w" : "b";
     let last = { w: -1, b: -1 }, cur = "", curI = -1; this._tm.forEach((m) => { if (m.t <= t + 0.001) { last[m.c] = m.i; cur = m.c; curI = m.i; } });
     const strip = (side, cy) => {
       const list = tm[side], n = list.length, R = Math.min(W * 0.062, (W * 0.8 / n) / 2.3), gap = Math.min(W * 0.8 / n, R * 3.6), c = side === "w" ? cols.w : cols.b, x0 = W / 2 - gap * (n - 1) / 2;
       g.save(); g.globalAlpha = 0.9; g.fillStyle = "rgba(0,0,0,.45)"; const bw = gap * n + R * 2, bh = R * 2 + 78 * k; g.beginPath(); const rx = W / 2 - bw / 2, ry = cy - R - 20 * k, rr = 26 * k; g.moveTo(rx + rr, ry); g.arcTo(rx + bw, ry, rx + bw, ry + bh, rr); g.arcTo(rx + bw, ry + bh, rx, ry + bh, rr); g.arcTo(rx, ry + bh, rx, ry, rr); g.arcTo(rx, ry, rx + bw, ry, rr); g.closePath(); g.fill(); g.restore();
-      const lastEv = this.mv.filter((e) => e.from && e.color === side && e.impact <= t + 0.001).pop();
+      const lastEv = this.mv.filter((e) => e.from && e.color === side && e.impact <= t + 0.001).pop(), tal = {};
+      this._tm.forEach((m) => { if (m.c === side && m.t <= t + 0.001) { const o = (tal[m.i] ||= { b: 0, m: 0, x: 0 }); if (m.e.key === "brilliant") o.b++; else if (m.e.key === "blunder") o.x++; else if (m.e.key === "mistake" || m.e.key === "miss") o.m++; } });
       list.forEach((m, i) => { const act = cur === side && curI === i, nextUp = cur !== side && ((last[side] + 1) % n) === i, a = act ? 1 : nextUp ? 0.9 : 0.5, sc = act ? 1.22 : nextUp ? 1.05 : 0.9, x = x0 + gap * i;
         g.save(); g.globalAlpha = a; if (act) this.glowAt(g, c, x, cy, R * 2.4, 0.6); g.translate(x, cy); g.scale(sc, sc); this.sceneDisc(g, m, 0, 0, R, act ? "#fff" : c, 1, act && lastEv && m.anim && KEYMOOD[m.anim] ? KEYMOOD[m.anim][lastEv.key] || (m.anim === "eto" ? "smile" : "idle") : undefined); g.restore();
-        g.save(); g.globalAlpha = a; g.textAlign = "center"; const nm = String(m.name).toUpperCase(); const s = fitFont(g, nm, gap * 0.95, 24 * k, FONT); g.fillStyle = act ? "#fff" : "#cfd3e6"; g.fillText(nm, x, cy + R + 36 * k); g.restore(); });
+        g.save(); g.globalAlpha = a; g.textAlign = "center"; const nm = String(m.name).toUpperCase(); const s = fitFont(g, nm, gap * 0.95, 24 * k, FONT); g.fillStyle = act ? "#fff" : "#cfd3e6"; g.fillText(nm, x, cy + R + 36 * k); g.restore();
+        const o = tal[i]; if (o && (o.b || o.m || o.x)) {                                                       // compteurs de responsabilité : ◆ brillants, ! erreurs, ✕ gaffes
+          const items = [[o.b, "#ffffff", 0], [o.m, "#ffffff", 1], [o.x, "#ffffff", 2]].filter((q) => q[0]), s = 11 * k, w = 46 * k, x1 = x - (items.length * w) / 2 + w / 2, yy = cy + R + 62 * k;
+          items.forEach(([n, c, ty], j) => { const px = x1 + j * w; g.save(); g.fillStyle = c; g.strokeStyle = c; g.lineWidth = 4 * k; g.translate(px - 8 * k, yy);
+            if (ty === 0) { g.beginPath(); g.moveTo(0, -s); g.lineTo(s, 0); g.lineTo(0, s); g.lineTo(-s, 0); g.closePath(); g.fill(); } else if (ty === 1) { g.fillRect(-2 * k, -s, 4 * k, s * 1.2); g.fillRect(-2 * k, s * 0.5, 4 * k, 4 * k); } else { g.beginPath(); g.moveTo(-s * 0.8, -s * 0.8); g.lineTo(s * 0.8, s * 0.8); g.moveTo(s * 0.8, -s * 0.8); g.lineTo(-s * 0.8, s * 0.8); g.stroke(); }
+            g.restore(); g.save(); g.font = FONT(22 * k); g.textAlign = "left"; g.fillStyle = "#fff"; g.fillText(String(n), px + 6 * k, yy + 8 * k); g.restore(); }); } });
     };
     g.save(); strip(top, H * 0.5 - W / 2 - 78 * k - (this.W / 1080) * 12); strip(bot, H * 0.5 + W / 2 + 94 * k); g.restore();
+    this.teamCredit(g, t, tm);
+  };
+
+  // ------------------------------------------------------------------ « QUI A JOUÉ ? » — bandeau NOIR sobre à chaque coup d'une équipe : l'avatar du joueur entre dans le cadre et son NOM seul s'affiche (aucun mot, aucune couleur d'alerte :
+  //   le badge du coup dit déjà tout). Animation sur le calque : dalle noire inclinée qui glisse, reflet qui balaie, traînées blanches, étincelles ; une gaffe ajoute une secousse et un léger « bégaiement » monochrome du nom.
+  P.teamCredit = function (g, t, tm) {
+    const list = this._tm; if (!list || !list.length) return;
+    let cur = -1; for (let i = 0; i < list.length; i++) { if (list[i].e.kind === "ff") continue; if (list[i].t - 0.12 <= t) cur = i; else break; }
+    if (cur < 0) return; const it = list[cur], e = it.e; let nxt = Infinity; for (let j = cur + 1; j < list.length; j++) if (list[j].e.kind !== "ff") { nxt = list[j].t; break; }
+    const hold = !!e.blunderHold, life = clamp(hold ? 1.9 : e.bigMove ? 1.5 : Math.min(1.3, nxt - it.t - 0.05), 0.5, 2.0), u = t - it.t + 0.12; if (u < 0 || u > life + 0.12) return;
+    const { W, H } = this, k = this.k(), member = tm[it.c][it.i]; if (!member) return;
+    const inK = EASE.back(clamp(u / 0.26, 0, 1)), outK = clamp((u - (life - 0.18)) / 0.22, 0, 1), dir = it.c === "w" ? -1 : 1, slide = lerp(dir * W * 1.1, 0, clamp(inK, 0, 1.15)) + dir * W * 1.1 * EASE.out3(outK);
+    const sh = (hold ? 12 : 0) * k * Math.exp(-u * 4) * Math.sin(u * 90), cy = H * 0.072 + sh, bh = 170 * k;
+    g.save(); g.translate(slide, 0);
+    g.save(); g.transform(1, 0, -0.16, 1, 0, 0);                                                                  // dalle noire inclinée, filets blancs fins
+    const gr = g.createLinearGradient(0, cy - bh / 2, 0, cy + bh / 2); gr.addColorStop(0, "#050506"); gr.addColorStop(1, "#16171c"); g.globalAlpha = 0.93; g.fillStyle = gr; g.fillRect(-W * 0.2, cy - bh / 2, W * 1.4, bh); g.globalAlpha = 1;
+    g.fillStyle = "rgba(255,255,255,.85)"; g.fillRect(-W * 0.2, cy - bh / 2, W * 1.4, 3 * k); g.fillRect(-W * 0.2, cy + bh / 2 - 3 * k, W * 1.4, 3 * k);
+    g.save(); g.beginPath(); g.rect(-W * 0.2, cy - bh / 2, W * 1.4, bh); g.clip(); g.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 8; i++) { const x = ((i * 191 + u * (800 + i * 80)) % (W * 1.5)) - W * 0.2; g.globalAlpha = 0.07; g.fillStyle = "#fff"; g.fillRect(x, cy - bh / 2, (8 + (i % 3) * 12) * k, bh); }
+    const sw = (u / 0.7) * (W * 1.6) - W * 0.3; g.globalAlpha = 0.22 * (1 - clamp(u / 0.8, 0, 1)); g.fillStyle = "#fff"; g.fillRect(sw, cy - bh / 2, 70 * k, bh);                    // reflet qui balaie
+    g.restore(); g.restore();
+    const ax = it.c === "w" ? W * 0.13 : W * 0.87, R = 76 * k * clamp(inK, 0, 1.12);
+    g.save(); g.translate(ax, cy); g.rotate((1 - clamp(inK, 0, 1)) * dir * 0.8); g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = 3 * k; g.setLineDash([R * 0.2, R * 0.14]); g.lineDashOffset = -u * R * 1.5; g.beginPath(); g.arc(0, 0, R * 1.2, 0, TAU); g.stroke(); g.setLineDash([]); g.restore();
+    this.sceneDisc(g, member, ax, cy, R, "#ffffff", 1, member.anim && KEYMOOD[member.anim] ? KEYMOOD[member.anim][e.key] || (member.anim === "eto" ? "smile" : "idle") : undefined);
+    const tx = it.c === "w" ? W * 0.255 : W * 0.745, al = it.c === "w" ? "left" : "right", ta = clamp((u - 0.1) / 0.18, 0, 1), name = String(member.name).toUpperCase();
+    g.save(); g.globalAlpha = ta; g.textBaseline = "middle"; g.textAlign = al; const ns = fitFont(g, name, W * 0.6, 96 * k, FONT), jit = hold && u < 0.5 ? Math.sin(u * 140) * 5 * k : 0;
+    if (hold && u < 0.6) { g.fillStyle = "rgba(255,255,255,.28)"; g.fillText(name, tx - 7 * k + jit, cy); g.fillText(name, tx + 7 * k - jit, cy); }
+    g.lineWidth = ns * 0.1; g.lineJoin = "round"; g.strokeStyle = "#000"; g.strokeText(name, tx + jit, cy); g.fillStyle = "#fff"; g.fillText(name, tx + jit, cy); g.restore();
+    g.restore();
+    if (u < 0.5) { const rn = mulberry(it.t * 977 | 0); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 16; i++) { const an = rn() * TAU, d = (70 + rn() * 240) * k * EASE.out3(clamp(u / 0.45, 0, 1)), sz = (3 + rn() * 6) * k; g.globalAlpha = (1 - u / 0.5) * 0.85; g.fillStyle = "#fff"; g.fillRect(ax + slide + Math.cos(an) * d, cy + Math.sin(an) * d, sz, sz); } g.restore(); }
   };
 
   // ------------------------------------------------------------------ OUTRO : dispatch

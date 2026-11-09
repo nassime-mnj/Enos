@@ -89,7 +89,8 @@
         S = Math.min(S, 0.9 * this.W / dx, 0.9 * this.H / dy); S = clamp(S, 1.0, 1.6);                                              // départ ET arrivée toujours à l'écran (on voit au moins 5×5 cases)
         if (e.cam) { if (e.cam.zoom) S = clamp(e.cam.zoom, 1.0, 1.6); if (e.cam.tilt != null) th = (e.cam.tilt * Math.PI) / 180; }
         if (e.bigMove && !e.soft && !e.cam) S = 1.45;
-        const hold = e.soft ? 0.9 : e.bigMove ? 1.6 : Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my }, tgt2 = e.bigMove && !e.soft ? { S: Math.min(1.6, S + 0.1), th: th * 0.4, x: mx, y: my } : tgt;                 // HERO MOMENT : zoom lent ×1,45 → ×1,55 pendant tout le cri
+        if (e.blunderHold && !e.cam) { S = 1.38; th = th * 0.5; }                                                            // GAFFE : cadrage serré, tenu pendant le FAHH ralenti
+        const hold = e.soft ? 0.9 : e.bigMove ? 1.6 : e.blunderHold ? 1.55 : Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my }, tgt2 = (e.bigMove || e.blunderHold) && !e.soft ? { S: Math.min(1.6, S + (e.blunderHold ? 0.12 : 0.1)), th: th * 0.4, x: mx, y: my } : tgt;                 // HERO MOMENT : zoom lent ×1,45 → ×1,55 pendant tout le cri
         kf = kf.filter((k) => k.t < ti); kf.push({ t: ti, s: cur, ease: "lin" }, { t: ti + 0.15, s: tgt, ease: "out3" }, { t: ti + hold, s: tgt2, ease: "lin" }, { t: ti + hold + 0.45, s: base, ease: "out3" });
       });
       kf.sort((a, b) => a.t - b.t); this.kf = kf;      kf.sort((a, b) => a.t - b.t); this.kf = kf; this.camAt = (t) => at(this.kf, t);
@@ -135,7 +136,7 @@
       if (t < this.introEnd) { const k = (t - (this.introEnd - 0.3)) / 0.3; ctx.save(); ctx.globalAlpha = 1 - EASE.out3(clamp(k, 0, 1)); this.drawIntro(this.introEnd - 0.3); ctx.restore(); }
       if (this.introEnd && t >= this.introEnd && t < this.introEnd + 0.14) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9 * (1 - (t - this.introEnd) / 0.14); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     }
-    hitstop(t) { for (const e of this.imp) if (e.bigMove && t >= e.impact && t < e.impact + 0.09) return e.impact; return t; }
+    hitstop(t) { for (const e of this.imp) if ((e.bigMove || e.blunderHold) && t >= e.impact && t < e.impact + (e.blunderHold ? 0.14 : 0.09)) return e.impact; return t; }
     chromaAt(t, strobe) { if (strobe) return strobe.bigMove ? 0 : 25 * this.k(); let a = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.14 && !e.minor && !e.soft && !e.bigMove) a = Math.max(a, (4 + 6 * clamp((e.drama || 0) / 80, 0.3, 1)) * this.k() * (1 - u / 0.14)); } return a; }
     k() { return this.W / 1080; }
     /** « White core + RGB radial split » : l'image + deux copies en `screen` (rouge −14 px, cyan +14 px) limitées à un disque autour de la pièce clé */

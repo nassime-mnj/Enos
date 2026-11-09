@@ -299,6 +299,10 @@
       sfx.push({ t: e.impact, id, gain: g, bus: "echo", ply: e.n, duck: !e.soft && e.kind !== "ff" });
       if (e.kind !== "ff" && !e.soft) { if (id === "capture") sfx.push({ t: e.impact, id: "thud", gain: 1.35, bus: "echo", ply: e.n }); else if (id === "check") sfx.push({ t: e.impact, id: "crystal", gain: 1.1, bus: "echo", ply: e.n }); else if (id === "mate") sfx.push({ t: e.impact, id: "mateboom", gain: 1.35, bus: "echo", ply: e.n }); }
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
+      if (e.kind !== "ff" && !e.forced) {                                                              // « FAHH » : erreur = FAHH normal, gaffe = FAHH ralenti ; ça FRAPPE (impact grave + boom) comme les autres bruitages
+        if (e.key === "blunder") { sfx.push({ t: e.impact, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: e.n }); }
+        else if (e.key === "mistake" || e.key === "miss") { sfx.push({ t: e.impact, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: e.soft ? 0.8 : 1.15, bus: "echo", ply: e.n }); }
+      }
     });
     ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
       if (e.stats && e.pre > 0) { sfx.push({ t: +e.t.toFixed(3), id: "boom", gain: 1.1, bus: "sfx", ply: e.n }); sfx.push({ t: +(e.t + e.pre - 0.3).toFixed(3), id: "whoosh", gain: 0.7, bus: "sfx", ply: e.n }); }
@@ -357,11 +361,12 @@
     const M = R0 - Mid, dt = ffDt(M), ffDur = M * dt;
     let lastMid = lastCalm; if (Mid > 0) { const midSp = clampN(((D - 0.9 - midStart) - (M ? ffDur + 1.3 : 0)) / Math.max(1, Mid - 1), 1.1, stretch ? 2.9 : 1.5); let pm = -9; for (let k = 0; k < Mid; k++) { const ideal = midStart + k * midSp, nb = beatsAll.filter((x) => Math.abs(x - ideal) < 0.2 && x - pm >= 1.0).sort((a, b) => Math.abs(a - ideal) - Math.abs(b - ideal))[0], tk = k === 0 ? midStart : nb != null ? nb : Math.max(ideal, pm + 1.0); sched.push({ i: calmN + k, t: +tk.toFixed(3), dur: 200, kind: k === 0 && twoD ? "drop1" : "mid" }); pm = tk; lastMid = tk; } }
     if (M > 0) { const ffStart = Math.max(lastMid + 1.3, D - 0.7 - ffDur), dd = Math.min(dt, Math.max(0.06, (D - 0.5 - ffStart) / M)); for (let j = 0; j < M; j++) sched.push({ i: calmN + Mid + j, t: +(ffStart + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }   // montage accéléré lisible
-    const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), heroCount = plies.slice(start).filter((p, k) => isHero(start + k)).length;
+    const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), isBl = (i) => plies[i].key === "blunder" && !isHero(i), heroCount = plies.slice(start).filter((p, k) => isHero(start + k) || isBl(start + k)).length;
     let tt = D || (post[0] || 2); const ts = audio.duration && !audio.synthetic ? clampN((audio.duration - 2.0 - tt - heroCount * 1.7) / Math.max(1, tailLen - heroCount), 0.65, 0.9) : 0.75;
     for (let i = start; i < n; i++) {
       sched.push({ i, t: +tt.toFixed(3), dur: 90, kind: i === start ? "drop" : "crit" });
-      if (isHero(i) && i < n - 1) { const gap = plies[i].piece === "r" ? 1.8 : 1.6; tt += gap; }                                                                      // HERO MOMENT : le plateau reste verrouillé, le coup de réponse ne tombe qu'une fois le cri terminé
+      if (isBl(i) && i < n - 1) tt += 1.7;                                                                                                            // GAFFE : PAUSE — le plateau reste figé, le FAHH ralenti sonne en entier avant la réponse
+      else if (isHero(i) && i < n - 1) { const gap = plies[i].piece === "r" ? 1.8 : 1.6; tt += gap; }                                                                      // HERO MOMENT : le plateau reste verrouillé, le coup de réponse ne tombe qu'une fois le cri terminé
       else { const nb = post.filter((x) => x >= tt + 0.65 && x <= tt + 0.9).sort((p, q) => Math.abs(p - tt - ts) - Math.abs(q - tt - ts))[0]; tt = nb != null ? nb : tt + ts; }
     }
     h = start;
@@ -378,7 +383,7 @@
     sched.forEach((q) => {
       const p = plies[q.i], key = p.key, lvl = L[q.i], big = q.kind === "drop", sl = { kind: q.kind }, soft0 = !!q.soft, prevP = q.i ? plies[q.i - 1] : null;
       const forced = !soft0 && q.kind !== "ff" && !!prevP && (key === "forced" || (p.piece === "k" && !!prevP.check && p.color !== prevP.color)), soft = soft0 || forced, qdur = forced ? 240 : q.dur;                       // coup de réponse FORCÉ du perdant (le roi qui fuit) : aucun effet, aucun badge
-      const boss = !soft && !!(p.from && !p.drop && q.kind !== "ff" && p.mate && q.i === n - 1), bigMove = !soft && q.kind !== "ff" && (key === "brilliant" || (!!p.sacrifice && L[q.i] >= 3)), lead = boss ? 0.25 : bigMove ? 0.12 : 0;                         // coup brillant / sacrifice : 120 ms d'ANTICIPATION avant l'impact
+      const boss = !soft && !!(p.from && !p.drop && q.kind !== "ff" && p.mate && q.i === n - 1), bigMove = !soft && q.kind !== "ff" && (key === "brilliant" || (!!p.sacrifice && L[q.i] >= 3)), blunderHold = !soft && q.kind !== "ff" && key === "blunder" && !bigMove, lead = boss ? 0.25 : bigMove ? 0.12 : 0;                         // coup brillant / sacrifice : 120 ms d'ANTICIPATION avant l'impact
       let dk = key; if (key === "good" || key === "book" || !BADGES[key]) dk = p.captured && ["q", "r", "b", "n"].includes(p.captured) ? "best" : p.check || p.mate ? "great" : p.captured ? "excellent" : "";             // palette complète : ★ ! !! ?! ? ?? — jamais le ✓ vert sur tout
       if (q.badge) dk = q.badge === "NONE" ? "" : ({ BOOK: "book", BRILLIANT: "brilliant", GREAT: "great", BEST: "best", EXCELLENT: "excellent", GOOD: "good", INACCURACY: "inaccuracy", MISTAKE: "mistake", BLUNDER: "blunder", MISS: "miss", FORCED: "forced" })[String(q.badge).toUpperCase()] || dk;
       if (forced) dk = "";
@@ -386,13 +391,13 @@
       let bd = null; if (dk && BADGES[dk] && q.kind !== "ff") bd = BADGES[dk];
       const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
       const e = { cheat, alien: !!p.alien, t: +(q.t - qdur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
-        by: p.by || "", lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
-        dur: qdur, soft, forced, bigMove, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
+        by: p.by || "", loss: p.loss | 0, lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
+        dur: qdur, soft, forced, bigMove, blunderHold, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
         fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: false, arrow: false,
         illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: !soft && illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
       lastShown = q.i; if (bigMove) e.tone = "cyan";
-      e.minor = !soft && !bigMove && q.kind !== "drop" && q.kind !== "drop1" && !p.check && !p.mate && !(p.captured && ["q", "r", "b", "n"].includes(p.captured)) && !illegal;                  // coup ordinaire de la phase intense : effets sobres
+      e.minor = !soft && !bigMove && !blunderHold && q.kind !== "drop" && q.kind !== "drop1" && !p.check && !p.mate && !(p.captured && ["q", "r", "b", "n"].includes(p.captured)) && !illegal;                  // coup ordinaire de la phase intense : effets sobres
       if (q.cam) e.cam = q.cam;
       (soft ? [] : (q.vfx || [])).forEach((v) => {                                                                                // effets demandés par le script Gemini (ignorés pendant l'intro calme)
         const V = String(v).toUpperCase();

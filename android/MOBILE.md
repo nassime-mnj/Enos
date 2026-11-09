@@ -279,3 +279,9 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **E.N.O.S.** : iris qui tourne, pupille carrée qui regarde autour, clignement à volets, SCAN (paupières mi-closes + ligne de balayage), ALERTE (flash, viseur qui pulse), VERROUILLAGE (viseur qui se resserre, pupille fine), réflexion (points).
 - **Chat box** : l'avatar d'ETO / E.N.O.S. est un `<canvas class="bot-anim">` (≈ 15 images/s, 1 image/s si « réduire les animations ») ; il prend l'humeur de la réplique (bug de l'adversaire → ETO triste, E.N.O.S. en alerte, etc. — `animIcons.moodOf`).
 - **Chess Edit** : intro VS (humeur selon la séquence), bulles de dialogue (humeur selon la réplique), bandeau d'équipes (humeur selon le dernier coup), victoire d'équipe. Test : `t_anim_icons.py` (`SHOTS=dossier` pour les planches d'humeurs).
+
+## 1.68 — FAHH (erreurs) / FAHH ralenti (gaffes) + « qui a joué » en équipe
+
+- **Sons** : `js/fahh_data.js` (mp3 embarqués). Erreur / coup manqué = `fahh` ; gaffe = `fahh_slow` (4,2 s) ; chacun avec choc grave (`thud`) sur le bus « hit » (écho spatial comme les autres bruitages) et la musique baisse pendant le son. Les coups passés en accéléré restent muets.
+- **Pause sur les gaffes** : la partie se fige 1,7 s après la gaffe (comme le moment héros), caméra serrée ×1,38 → ×1,5 tenue pendant le FAHH ralenti, arrêt sur image de 140 ms.
+- **Équipes** : à chaque coup, bandeau NOIR sobre (dalle inclinée, reflet qui balaie, traînées blanches, étincelles) avec l'avatar du joueur et son NOM seul — aucun mot, aucune couleur d'alerte. Compteurs blancs sous chaque avatar (◆ brillants, ! erreurs, ✕ gaffes). Tests : `t_edit_hits.py`.
