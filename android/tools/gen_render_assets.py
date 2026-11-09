@@ -7,6 +7,7 @@ M = os.path.join(os.path.dirname(__file__), "..", "assets", "mobile")
 out = {}
 def add(rel, size=None):
     im = Image.open(os.path.join(M, rel)).convert("RGBA")
+    if rel in ("img/bots/eto.png", "img/bots/enos.png"): size = 512                       # icônes animées : pleine définition
     if size and max(im.size) > size: im.thumbnail((size, size), Image.LANCZOS)
     if rel.startswith("img/icons"): im = im.convert("RGB").quantize(64, method=Image.Quantize.MEDIANCUT)       # icônes pixel-art : 64 couleurs suffisent
     b = io.BytesIO(); im.save(b, "PNG", optimize=True); out[rel.replace(os.sep, "/")] = "data:image/png;base64," + base64.b64encode(b.getvalue()).decode()

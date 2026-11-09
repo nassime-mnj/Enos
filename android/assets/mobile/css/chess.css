@@ -212,6 +212,7 @@
 @media (prefers-reduced-motion:reduce){.bot-av.talk,.bot-bubble,.bot-m{animation:none}}
 
 /* ---- combats de bots : avatars sans illustration, vainqueur / perdant, écran VS, transcript partagé */
+.bot-av.bot-anim{background:transparent;border:0;box-shadow:none;image-rendering:pixelated;object-fit:contain}
 .bot-av.ph{display:grid;place-items:center;font:800 15px var(--ui);letter-spacing:1.5px;color:#fff;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--c) 55%,#000),#0b0b0d);border-color:var(--c);text-shadow:0 0 10px var(--c)}
 .bot-av.win{box-shadow:0 0 0 2px #ffd24a,0 0 28px #ffd24a99;transform:scale(1.06);transition:.4s}
 .bot-av.lose{filter:grayscale(1) brightness(.6);transition:.4s}

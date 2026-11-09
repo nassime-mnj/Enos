@@ -26,8 +26,14 @@
     g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; let px = r * (txt.length > 2 ? 0.62 : 0.95); g.font = FONT(px); while (px > 10 && g.measureText(txt).width > r * 1.55) { px *= 0.92; g.font = FONT(px); } g.lineWidth = px * 0.08; g.strokeStyle = "rgba(0,0,0,.5)"; g.strokeText(txt, 0, r * 0.05); g.fillText(txt, 0, r * 0.05); g.restore();
   };
   /** disque d'avatar : image (photo / bot / icône pixel-art) rognée en cercle, anneau de couleur, lettre si pas d'image */
-  P.sceneDisc = function (g, s, cx, cy, r, rim, alpha) {
+  P.introMood = function (id, t) { return id === "eto" ? (t < 0.8 ? "smile" : t < 1.3 ? "wink" : t < 2.4 ? "happy" : "think") : (t < 1 ? "idle" : t < 2.5 ? "scan" : "alert"); };
+  const KEYMOOD = { eto: { brilliant: "wow", best: "happy", excellent: "happy", great: "happy", blunder: "sad", mistake: "sad", miss: "think", inaccuracy: "think" }, enos: { brilliant: "alert", best: "lock", excellent: "lock", great: "lock", blunder: "alert", mistake: "alert", miss: "scan", inaccuracy: "scan" } };
+  P.sceneDisc = function (g, s, cx, cy, r, rim, alpha, mood) {
     const k = this.k(), im = s && s.img && this.av[s.img];
+    if (s && s.anim && im && E.animIcons) {                                                                          // ETO / E.N.O.S. : icône d'origine ANIMÉE (écran 8-bit / œil)
+      g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; E.animIcons.draw(g, s.anim, im, cx, cy, r * 2.2, this._now || 0, mood || (this._inIntro ? this.introMood(s.anim, this._now || 0) : s.mood || "auto"));
+      g.strokeStyle = rim; g.lineWidth = Math.max(3, r * 0.045); g.globalAlpha *= 0.85; g.beginPath(); g.arc(cx, cy, r * 1.16, 0, TAU); g.stroke(); g.restore(); return;
+    }
     g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; g.translate(cx, cy);
     g.fillStyle = "#0b0c12"; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
     if (im) { g.save(); g.beginPath(); g.arc(0, 0, r - 3 * k, 0, TAU); g.clip(); g.drawImage(im, -r, -r, r * 2, r * 2); g.restore(); }
@@ -62,7 +68,8 @@
     const forced = this.rec && this.rec.outroStyle != null ? +this.rec.outroStyle : null;
     return (this._os = forced != null ? forced % 4 : ((seed >>> 5) + 1) % 4);
   };
-  P.drawIntro = function (t) {
+  P.drawIntro = function (t) { this._inIntro = true; try { return this.drawIntro2(t); } finally { this._inIntro = false; } };
+  P.drawIntro2 = function (t) {
     const info = (this.intro && this.intro.intro) || {}, st = this.introStyle();
     if (info.teams) return this.introTeams(t, info, st);
     if (st === 1) return this.introSlash(t, info);
@@ -180,8 +187,9 @@
     const strip = (side, cy) => {
       const list = tm[side], n = list.length, R = Math.min(W * 0.062, (W * 0.8 / n) / 2.3), gap = Math.min(W * 0.8 / n, R * 3.6), c = side === "w" ? cols.w : cols.b, x0 = W / 2 - gap * (n - 1) / 2;
       g.save(); g.globalAlpha = 0.9; g.fillStyle = "rgba(0,0,0,.45)"; const bw = gap * n + R * 2, bh = R * 2 + 78 * k; g.beginPath(); const rx = W / 2 - bw / 2, ry = cy - R - 20 * k, rr = 26 * k; g.moveTo(rx + rr, ry); g.arcTo(rx + bw, ry, rx + bw, ry + bh, rr); g.arcTo(rx + bw, ry + bh, rx, ry + bh, rr); g.arcTo(rx, ry + bh, rx, ry, rr); g.arcTo(rx, ry, rx + bw, ry, rr); g.closePath(); g.fill(); g.restore();
+      const lastEv = this.mv.filter((e) => e.from && e.color === side && e.impact <= t + 0.001).pop();
       list.forEach((m, i) => { const act = cur === side && curI === i, nextUp = cur !== side && ((last[side] + 1) % n) === i, a = act ? 1 : nextUp ? 0.9 : 0.5, sc = act ? 1.22 : nextUp ? 1.05 : 0.9, x = x0 + gap * i;
-        g.save(); g.globalAlpha = a; if (act) this.glowAt(g, c, x, cy, R * 2.4, 0.6); g.translate(x, cy); g.scale(sc, sc); this.sceneDisc(g, m, 0, 0, R, act ? "#fff" : c); g.restore();
+        g.save(); g.globalAlpha = a; if (act) this.glowAt(g, c, x, cy, R * 2.4, 0.6); g.translate(x, cy); g.scale(sc, sc); this.sceneDisc(g, m, 0, 0, R, act ? "#fff" : c, 1, act && lastEv && m.anim && KEYMOOD[m.anim] ? KEYMOOD[m.anim][lastEv.key] || (m.anim === "eto" ? "smile" : "idle") : undefined); g.restore();
         g.save(); g.globalAlpha = a; g.textAlign = "center"; const nm = String(m.name).toUpperCase(); const s = fitFont(g, nm, gap * 0.95, 24 * k, FONT); g.fillStyle = act ? "#fff" : "#cfd3e6"; g.fillText(nm, x, cy + R + 36 * k); g.restore(); });
     };
     g.save(); strip(top, H * 0.5 - W / 2 - 78 * k - (this.W / 1080) * 12); strip(bot, H * 0.5 + W / 2 + 94 * k); g.restore();
@@ -209,7 +217,7 @@
     this.glowAt(g, cols.gold, W / 2, cy, W * 0.6, 0.35 * a);
     people.forEach((m, i) => { const x = n === 1 ? W / 2 : W / 2 - W * 0.43 + gap * (i + 0.5), pu = EASE.back(clamp((u - i * 0.12) / 0.6, 0, 1)); g.save(); g.translate(x, cy); g.scale(pu, pu);
       g.strokeStyle = cols.gold; g.lineWidth = Math.max(3, R * 0.05); g.setLineDash([R * 0.18, R * 0.12]); g.lineDashOffset = -u * R * 0.8; g.beginPath(); g.arc(0, 0, R * 1.22, 0, TAU); g.stroke(); g.setLineDash([]);
-      this.sceneDisc(g, m, 0, 0, R, cols.gold); if (n > 1) { g.restore(); this.sceneName(g, m.name, x, cy + R * 1.2 + 42 * k, gap * 0.95, 34 * k, "#fff", pu); } else g.restore(); });
+      this.sceneDisc(g, m, 0, 0, R, cols.gold, 1, m.anim === "eto" ? "happy" : "lock"); if (n > 1) { g.restore(); this.sceneName(g, m.name, x, cy + R * 1.2 + 42 * k, gap * 0.95, 34 * k, "#fff", pu); } else g.restore(); });
     const ry = H * 0.58, ru = EASE.out4(clamp((u - 0.3) / 0.5, 0, 1)); g.save(); g.translate(lerp(-W, 0, ru), ry); g.transform(1, 0, -0.12, 1, 0, 0); g.fillStyle = c; g.fillRect(-W * 0.1, -70 * k, W * 1.2, 130 * k); g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(-W * 0.1, 60 * k, W * 1.2, 8 * k); g.restore();
     g.save(); g.globalAlpha = ru; g.textAlign = "center"; g.textBaseline = "middle"; const vt = n > 1 ? "VICTOIRE D'ÉQUIPE" : "VICTOIRE", vs0 = fitFont(g, vt, W * 0.92, 120 * k, FONT); g.lineWidth = vs0 * 0.1; g.strokeStyle = "#000"; g.strokeText(vt, W / 2, ry - 6 * k); g.fillStyle = "#fff"; g.fillText(vt, W / 2, ry - 6 * k); g.restore();
     const nu = EASE.out3(clamp((u - 0.7) / 0.5, 0, 1)); g.save(); g.globalAlpha = nu; this.sceneName(g, o.winner.name, W / 2, H * 0.58 + 160 * k - (1 - nu) * 30 * k, W * 0.9, 86 * k, cols.gold, 1); g.font = TXT(36 * k, 700); g.textAlign = "center"; g.fillStyle = "#cfd3e6"; g.fillText(o.winner.mate ? "ÉCHEC ET MAT" : String(o.result || "").split("·")[0].trim().toUpperCase(), W / 2, H * 0.58 + 214 * k); g.restore();

@@ -31,8 +31,8 @@ with sync_playwright() as pw:
     tw = info["team"]["teams"]["w"]; imgs = [m["img"] for m in tw]
     check(len(tw) == 4 and len(set(imgs)) == 4 and imgs[0].startswith("img/icons/") and imgs[2].startswith("img/bots/lelex") and "Toi" not in [m["name"] for m in tw], "équipe de 4 : avatars distincts (joueurs = icônes, Lelex = sa tête) : %s" % imgs)
     check(all(v == 64 for k, v in info.items() if "_px" in k), "canvas non « tainted » (getImageData ok) pour toutes les scènes")
-    e = info["eto"]; check(e["white"]["img"] == "" and e["white"]["ph"] == ["ETO", "#1acfd6"] and e["black"]["img"] == "" and e["black"]["ph"][0] == "ENOS" and not e["white"]["icon"], "ETO et E.N.O.S. gardent leur icône d'origine (pastille ETO turquoise / ENOS rouge), pas d'icône aléatoire : %s / %s" % (e["white"]["ph"], e["black"]["ph"]))
-    t2 = info["tm2"]["teams"]["w"]; check(t2[0]["ph"][0] == "ETO" and t2[1]["ph"][0] == "SF" and t2[2]["ph"][0] == "SF" and t2[3]["img"].startswith("img/icons/") and info["tm2"]["teams"]["b"][0]["img"] == "img/bots/naskolit.png", "équipe : ETO / Stockfish / Bot 400 = pastilles d'origine, Naskolit = sa tête, seul le joueur humain a une icône aléatoire")
+    e = info["eto"]; check(e["white"]["img"] == "img/bots/eto.png" and e["white"]["anim"] == "eto" and e["black"]["img"] == "img/bots/enos.png" and e["black"]["anim"] == "enos" and not e["white"]["icon"], "ETO (écran 8-bit) et E.N.O.S. (œil rouge) gardent leur icône d'origine, animée : %s / %s" % (e["white"]["img"], e["black"]["img"]))
+    t2 = info["tm2"]["teams"]["w"]; check(t2[0]["anim"] == "eto" and t2[1]["ph"][0] == "SF" and t2[2]["ph"][0] == "SF" and t2[3]["img"].startswith("img/icons/") and info["tm2"]["teams"]["b"][0]["img"] == "img/bots/naskolit.png", "équipe : ETO / Stockfish / Bot 400 = pastilles d'origine, Naskolit = sa tête, seul le joueur humain a une icône aléatoire")
     frames = res["frames"]; check(len(frames) >= 61, "%d images de scènes rendues sans erreur" % len(frames))
     same = len({v for k, v in frames.items() if k.startswith("solo_intro") and k.endswith("_1.6")})
     check(same == 4, "4 intros solo différentes (%d)" % same)

@@ -271,3 +271,11 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Équipes** : la partie enregistrée garde `teams` et l'auteur de chaque coup (`mv[6]`). Intro : 2 panneaux d'équipes (avatars + noms + « 4 VS 1 »), 2 animations ; **bandeau d'équipes en jeu** (membre qui vient de jouer agrandi + lumineux, suivant en surbrillance) ; outro « ÉQUIPE BLANCS / NOIRS » avec les avatars des gagnants.
 - **Intros solo variées** (choisies par la partie) : face-à-face, SLASH diagonal, CARTES holographiques, TERMINAL glitch. **Outros variés** : tampon, CARTE DE VICTOIRE (laurier + particules), ÉCLATS (l'image se brise), CINÉMA (bandes noires + nom révélé). Code : `js/chess_edit_scenes.js` (aussi chargé sur PC).
 - Test : `t_edit_scenes.py` (61 images ; `SHOTS=dossier` pour les enregistrer).
+
+## 1.67 — Icônes animées d'ETO (écran 8-bit) et d'E.N.O.S. (œil rouge)
+
+- Les icônes d'origine (`img/bots/eto.png`, `img/bots/enos.png`) remplacent les pastilles. Le cadre métallique est l'image ; **l'écran d'ETO et l'œil d'E.N.O.S. sont redessinés en direct** (`js/anim_icons.js`, fonctions pures du temps : utilisables dans la vidéo 60 FPS déterministe et dans le DOM).
+- **ETO** : sourire, `^_^` joyeux, clin d'œil, surpris « O », triste (larmes), réfléchit (regard en haut), regarde à gauche / droite, parle (bouche qui s'ouvre au rythme de la parole), clignements, balayage d'écran, glitch au changement d'humeur.
+- **E.N.O.S.** : iris qui tourne, pupille carrée qui regarde autour, clignement à volets, SCAN (paupières mi-closes + ligne de balayage), ALERTE (flash, viseur qui pulse), VERROUILLAGE (viseur qui se resserre, pupille fine), réflexion (points).
+- **Chat box** : l'avatar d'ETO / E.N.O.S. est un `<canvas class="bot-anim">` (≈ 15 images/s, 1 image/s si « réduire les animations ») ; il prend l'humeur de la réplique (bug de l'adversaire → ETO triste, E.N.O.S. en alerte, etc. — `animIcons.moodOf`).
+- **Chess Edit** : intro VS (humeur selon la séquence), bulles de dialogue (humeur selon la réplique), bandeau d'équipes (humeur selon le dernier coup), victoire d'équipe. Test : `t_anim_icons.py` (`SHOTS=dossier` pour les planches d'humeurs).

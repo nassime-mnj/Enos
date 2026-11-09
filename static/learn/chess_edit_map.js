@@ -266,7 +266,7 @@
   // BOTS : ils gardent leur icône d'origine (tête du personnage ; ETO / E.N.O.S. / Stockfish = leur pastille de couleur). Seuls les JOUEURS (humains) reçoivent une icône aléatoire.
   function botLook(name, talk) {
     const bots = (E.botChat && E.botChat.bots) || {}, id = talk && bots[talk] ? talk : Object.keys(bots).find((k) => bots[k].name === name);
-    const pick = (b, i) => ({ id: i || "", img: b.img || "", ph: b.img ? null : b.ph || [String(b.name || name).slice(0, 3).toUpperCase(), "#8d8d97"], b });
+    const pick = (b, i) => ({ id: i || "", img: b.img || "", anim: b.anim || "", ph: b.img ? null : b.ph || [String(b.name || name).slice(0, 3).toUpperCase(), "#8d8d97"], b });
     if (id) return pick(bots[id], id);
     if (/^ETO\b/i.test(name) && bots.eto) return pick(bots.eto, "eto");
     if (/^E\.?N\.?O\.?S/i.test(name) && bots.enos) return pick(bots.enos, "enos");
@@ -278,11 +278,11 @@
     const side = (name, color) => {
       const look = botLook(name), ext = color === "w" ? rec.pwImg : rec.pbImg, xe = color === "w" ? rec.pwElo : rec.pbElo, b = look && look.b;
       const img = ext || (look ? look.img : iconFor(rec, name, used));                                            // photo importée > image du bot > (joueur) icône aléatoire
-      return { name: dispName(name), id: look ? look.id : "", img, ph: !img && look ? look.ph : null, icon: !ext && !look, title: b && b.title ? b.title : "", elo: xe != null ? xe : look && look.id && ELO_OF[look.id] != null ? ELO_OF[look.id] : null, human: !look, color };
+      return { name: dispName(name), id: look ? look.id : "", img, anim: look ? look.anim || "" : "", ph: !img && look ? look.ph : null, icon: !ext && !look, title: b && b.title ? b.title : "", elo: xe != null ? xe : look && look.id && ELO_OF[look.id] != null ? ELO_OF[look.id] : null, human: !look, color };
     };
     const out = { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "", seed: hashS(String((rec && (rec.t || rec.title)) || "") + "|scene") };
     if (rec.teams && rec.teams.w && rec.teams.b) {                                                              // ÉQUIPES : chaque membre a son avatar
-      const mem = (list, color) => list.map((m) => { const look = m.human ? null : botLook(m.name, m.talk), b = look && look.b; return { name: dispName(m.name), img: look ? look.img : iconFor(rec, "m:" + color + m.name, used), ph: look && !look.img ? look.ph : null, icon: !look, human: !look, elo: m.elo || null, title: b && b.title ? b.title : "" }; });
+      const mem = (list, color) => list.map((m) => { const look = m.human ? null : botLook(m.name, m.talk), b = look && look.b; return { name: dispName(m.name), img: look ? look.img : iconFor(rec, "m:" + color + m.name, used), anim: look ? look.anim || "" : "", ph: look && !look.img ? look.ph : null, icon: !look, human: !look, elo: m.elo || null, title: b && b.title ? b.title : "" }; });
       out.teams = { w: mem(rec.teams.w, "w"), b: mem(rec.teams.b, "b") };
       out.white.name = dispName(rec.pw); out.black.name = dispName(rec.pb);
     }

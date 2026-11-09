@@ -118,7 +118,7 @@
 
     /** image complète à l'instant t (secondes) */
     draw(t) {
-      if (!this.loaded) return; const { ctx, W, H } = this;
+      if (!this.loaded) return; this._now = t; const { ctx, W, H } = this;
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
       if (t < this.introEnd - 0.3) { this.drawIntro(t); return; }
       const strobe = this.imp.find((e) => e.strobe && t >= e.impact && t < e.impact + 0.055), chromaAmp = this.chromaAt(t, strobe), needChroma = chromaAmp > 0.8, tg = needChroma ? this.scene.getContext("2d") : ctx;
@@ -433,7 +433,7 @@
       if (!cur) return; const b = E.botChat && E.botChat.bots[cur.l.bot], text = cur.l.text, shown = text.slice(0, Math.ceil(text.length * clamp(cur.u / 0.7, 0, 1))), fade = cur.u > 2.1 ? 1 - (cur.u - 2.1) / 0.3 : clamp(cur.u / 0.15, 0, 1);
       g.save(); g.globalAlpha = clamp(fade, 0, 1); const bh = 150 * k, y = H - bh - 120 * k, x = 40 * k, w = W - 80 * k; g.fillStyle = "rgba(0,0,0,.78)"; g.fillRect(x, y, w, bh); g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 2 * k; g.strokeRect(x, y, w, bh);
       const pn = !!cur.l.panic, jx = pn ? Math.sin(t * 95) * 4 * k : 0, jy = pn ? Math.cos(t * 83) * 3 * k : 0; if (pn) { g.translate(jx, jy); g.strokeStyle = "#ff3b3b"; g.lineWidth = 4 * k; g.strokeRect(x, y, w, bh); }
-      const av = b && b.img && this.av[b.img]; if (av) { g.save(); g.beginPath(); g.arc(x + 70 * k, y + bh / 2, 50 * k, 0, TAU); g.clip(); g.drawImage(av, x + 20 * k, y + bh / 2 - 50 * k, 100 * k, 100 * k); g.restore(); }
+      const av = b && b.img && this.av[b.img]; if (av && b.anim && E.animIcons) { E.animIcons.draw(g, b.anim, av, x + 70 * k, y + bh / 2, 112 * k, t, E.animIcons.moodOf(b.anim, cur.l.kind), cur.u); } else if (av) { g.save(); g.beginPath(); g.arc(x + 70 * k, y + bh / 2, 50 * k, 0, TAU); g.clip(); g.drawImage(av, x + 20 * k, y + bh / 2 - 50 * k, 100 * k, 100 * k); g.restore(); }
       g.fillStyle = "#ffd666"; g.font = TXT(24 * k, 700); g.textAlign = "left"; g.fillText(b ? b.name : cur.l.bot, x + 140 * k, y + 38 * k); g.fillStyle = pn ? "#ff3b3b" : "#fff"; g.font = TXT(28 * k, pn ? 800 : 500); this.wrap(g, shown, w - 170 * k).slice(0, 3).forEach((l, i) => g.fillText(l, x + 140 * k, y + 76 * k + i * 34 * k)); g.restore();
     }
 
@@ -447,7 +447,7 @@
       const R = W * 0.23, pulse = 1 + 0.03 * Math.sin(t * TAU * 2), slide = (t0, dir) => lerp(dir * W * 0.8, 0, EASE.out3(clamp((t - t0) / 0.6, 0, 1)));
       const avatar = (s, cx, cy, rim, boss) => {
         const gl = boss ? 0.55 + 0.45 * tension + 0.15 * Math.sin(t * 12) : 0.5; this.glowAt(g, rim, cx, cy, R * 2.1, gl); g.save(); g.translate(cx, cy); g.scale(pulse, pulse); g.fillStyle = "#111"; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill();
-        const im = s && s.img && this.av[s.img]; if (im) { g.save(); g.beginPath(); g.arc(0, 0, R - 4 * k, 0, TAU); g.clip(); g.drawImage(im, -R, -R, R * 2, R * 2); g.restore(); } else if (this.phFill) { g.save(); this.phFill(g, s, R - 4 * k); g.restore(); } else { g.fillStyle = "#fff"; g.font = FONT(R * 0.9); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String((s && s.name) || "?").trim().charAt(0).toUpperCase(), 0, 0); }
+        const im = s && s.img && this.av[s.img]; if (im && s.anim && E.animIcons) { E.animIcons.draw(g, s.anim, im, 0, 0, R * 2.2, t, this.introMood ? this.introMood(s.anim, t) : "auto"); } else if (im) { g.save(); g.beginPath(); g.arc(0, 0, R - 4 * k, 0, TAU); g.clip(); g.drawImage(im, -R, -R, R * 2, R * 2); g.restore(); } else if (this.phFill) { g.save(); this.phFill(g, s, R - 4 * k); g.restore(); } else { g.fillStyle = "#fff"; g.font = FONT(R * 0.9); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String((s && s.name) || "?").trim().charAt(0).toUpperCase(), 0, 0); }
         g.strokeStyle = rim; g.lineWidth = 8 * k; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.stroke(); g.strokeStyle = "#fff"; g.lineWidth = 3 * k; g.beginPath(); g.arc(0, 0, R + 9 * k, 0, TAU); g.stroke(); g.restore();
       };
       const x1 = W * 0.30 + slide(0, -1), y1 = H * 0.205, x2 = W * 0.70 + slide(0.05, 1), y2 = H * 0.665; avatar(P1, x1, y1, "#ff4a3a", false); avatar(P2, x2, y2, "#3d8bff", bot(P2));
