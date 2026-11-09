@@ -257,3 +257,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 ### 1.64.1 — correctif brillant (partie réelle La_Loi_De_Fortes)
 - Cause réelle : sur ce PGN, 20.Txa7 est le MEILLEUR coup (≈ +1,1) mais l'évaluation « après » (autre recherche, 220 ms) donnait 36 cp de moins → « bon ». `K.judge` : si le coup joué est le meilleur coup du moteur, sa valeur est celle de la position (bruit entre deux recherches) ; tout sacrifice (perte ≤ 120) est confirmé à 3× le temps. Test : `t_edit_long.py` avec `pgn_loi.txt` (PGN réel).
 - Bouton de capture raccourci (le texte débordait sur les boutons photo).
+
+## 1.65 — Défis › Équipes : 2v1, 3v1, 4v1, 2v2, 3v2, 4v2
+
+- Nouveau mode **« 👥 Équipes »** (module Défis) : chaque camp est une équipe de 1 à 4 membres qui jouent **à tour de rôle** (coup n de l'équipe → membre n mod taille). Membres au choix : **joueurs** (Toi, Joueur 2-4, passe-passe sur le téléphone), **bots Stockfish** (400-3200 Elo), **personnages** (Nasko, Lelex, Pénoire, Naskurieux, GhorGhor, Naskolit, Jester, ETO, E.N.O.S., Stockfish) et **chat bots IA**.
+- Réglage : format (2v1…4v2), camp de l'équipe n°1 (Blancs / Noirs / hasard), un sélecteur par membre ; dernier choix mémorisé (`defi.team`).
+- Technique : `g.pl[c]` est un getter qui renvoie le membre au trait (tous les rôles existants — jugement, Elo dynamiques, Jester, styles — fonctionnent par membre) ; `g.tname` = noms d'équipe (« Nasko + ETO »), `mv.by` = auteur de chaque coup. Le 1er personnage doué de parole de chaque équipe parle pour elle. GhorGhor ne se transforme pas en équipe.
+- Parties enregistrées avec noms d'équipe (replay, Chess Edit, import). Test : `t_teams.py` (les 6 formats, rotation vérifiée, interface, partie jouable avec humain).
