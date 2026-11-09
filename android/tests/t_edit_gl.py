@@ -23,6 +23,11 @@ with sync_playwright() as pw:
       const a = (nm) => out.frames[nm]; out.diff = hero ? a('hero_hit') !== a('hero_flat') && a('hero_dim') !== a('hero_hold') : false;
       out.px = Array.from(cv.getContext('2d').getImageData(0, 0, 4, 4).data).length;
       shot('det1', hero ? hero.impact + 0.3 : 6); const d1 = out.frames.det1; shot('det2', hero ? hero.impact + 0.3 : 6); out.det = d1 === out.frames.det2;
+      // ORIENTATION : à un instant calme, le rendu GL doit RESSEMBLER au rendu 2D (jamais retourné)
+      { const tc = 7.7; const grab = () => { const d = cv.getContext('2d').getImageData(0, 0, 540, 960).data; return d; };
+        R.noFx = true; R.draw(tc); const flat = grab(); R.noFx = false; R.draw(tc); const gl = grab(); let same = 0, flip = 0, n = 0;
+        for (let y = 100; y < 860; y += 7) for (let x = 0; x < 540; x += 7) { const i = (y * 540 + x) * 4, j = ((959 - y) * 540 + x) * 4; same += Math.abs(flat[i] - gl[i]) + Math.abs(flat[i + 1] - gl[i + 1]); flip += Math.abs(flat[i] - gl[j]) + Math.abs(flat[i + 1] - gl[j + 1]); n++; }
+        out.orient = [Math.round(same / n), Math.round(flip / n)]; }
       return out; } catch (e) { return { err: String(e.stack || e).slice(0, 600) }; } }""")
     if 'err' in r: print(r['err']); raise SystemExit(1)
     print({k: v for k, v in r.items() if k != "frames"})
@@ -34,6 +39,7 @@ with sync_playwright() as pw:
     if OUT:
         os.makedirs(OUT, exist_ok=True)
         for k, v in r["frames"].items(): open(os.path.join(OUT, k + ".png"), "wb").write(base64.b64decode(v.split(",")[1]))
+    if r["gl"]: check(r["orient"][0] * 2 < r["orient"][1], "le rendu GL n'est PAS retourné (écart au rendu 2D %d, écart retourné %d)" % tuple(r["orient"]))
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

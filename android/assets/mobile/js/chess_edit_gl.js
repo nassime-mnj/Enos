@@ -26,7 +26,6 @@ float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
 float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
 float fbm(vec2 p){ float a=0.5, s=0.0; for(int i=0;i<4;i++){ s+=a*vn(p); p=p*2.03+vec2(17.3,9.1); a*=0.5; } return s; }
 float luma(vec3 c){ return dot(c, vec3(0.299,0.587,0.114)); }
-vec2 UV(vec2 p){ return vec2(p.x/uRes.x, 1.0 - p.y/uRes.y); }   // p = pixels, origine en haut à gauche
 void main(){
   vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);          // pixels, origine en haut à gauche
   vec2 uv = p / uRes;
@@ -36,7 +35,7 @@ void main(){
   if (uWarp > 0.001) { float fall = exp(-uWarpAge*2.6); d += vec2(sin(uv.y*4.5 + uWarpAge*14.0), cos(uv.x*3.6*asp + uWarpAge*11.0)) * 0.011 * uWarp * fall * (0.4 + 0.6*uv.y); }
   if (uFire > 0.001) { d += (vec2(fbm(uv*vec2(9.0,14.0) + vec2(0.0,-uT*1.2)), fbm(uv*vec2(11.0,13.0) + vec2(5.0,-uT*1.1))) - 0.5) * 0.012 * uFire; }
   vec2 tuv = uv + d;
-  vec2 su = vec2(tuv.x, 1.0 - tuv.y);                                // coordonnées texture (la 1re ligne de l'image = haut)
+  vec2 su = tuv;                                                     // le canvas est envoyé tel quel : v = 0 en HAUT (même repère que p, origine en haut à gauche)
   // --- couleur de base (+ aberration chromatique radiale)
   vec3 c;
   if (uAber > 0.001) { vec2 r = (uv - 0.5) * uAber * 0.012; c = vec3(texture(uS, su + vec2(r.x, -r.y)).r, texture(uS, su).g, texture(uS, su - vec2(r.x, -r.y)).b); } else c = texture(uS, su).rgb;
