@@ -133,6 +133,10 @@
     else key = "blunder";
     return { key, label: K.QUALITY[key], loss: Math.round(loss), before: Math.round(sgn * beforeW), after: Math.round(sgn * afterW) };
   };
+  // CADENCES (comme Chess.com) et ÉCHELLE D'ELO AFFICHÉE : les classements bullet / blitz sont plus HAUTS que le rapide (même moteur). C'est l'ÉTIQUETTE (affichage, vidéo, répliques) : la force réelle du moteur ne change pas.
+  K.TC = { none: { id: "none", name: "Sans pendule" }, bullet: { id: "bullet", name: "Bullet · 1 min", base: 60000, think: 300, k: 0.55, hdr: "60" }, blitz: { id: "blitz", name: "Blitz · 3 min", base: 180000, think: 700, k: 0.3, hdr: "180" }, rapid: { id: "rapid", name: "Rapide · 10 min", base: 600000, think: 1000, k: 0, hdr: "600" }, daily: { id: "daily", name: "Différé · 3 jours par coup", days: 3, think: 1500, k: 0, hdr: "1/259200" } };
+  K.TC_TOP = { rapid: { sf: 3200, eto: 3200, enos: 3200 }, daily: { sf: 3200, eto: 3200, enos: 3200 }, blitz: { sf: 4100, eto: 4000, enos: 3900 }, bullet: { sf: 5000, eto: 4900, enos: 4800 } };       // Stockfish / ETO / E.N.O.S. (modifiable ici)
+  K.tcElo = (tc, who, base) => { if (!tc || !K.TC[tc] || tc === "none") return base; const top = K.TC_TOP[tc]; if (top && who && top[who] != null) return top[who]; return Math.round(base + (K.TC[tc].k || 0) * Math.max(0, base - 1000)); };
   K.winPct = (cp) => 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * Math.max(-2000, Math.min(2000, cp)))) - 1);
   const moveAccuracy = (wb, wa) => Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * Math.max(0, wb - wa)) - 3.1669));
   const sideReview = (moves) => {

@@ -83,6 +83,7 @@
         <div id="df-home">
           <div class="card"><h3>Choisis ton défi</h3><div class="df-modes">${MODES.map((m) => `<button class="df-mode" data-m="${m.id}"><b>${m.t}</b><small>${m.s}</small></button>`).join("")}</div>
             <p class="muted" style="font-size:12.5px;margin-top:10px">Chaque coup est jugé (Brillant, Meilleur, Gaffe…) comme sur le PC. Aucun ordinateur nécessaire.</p></div>
+          <div class="card" id="df-dcard" hidden><h3>Parties en différé en cours</h3><div id="df-daily" class="list"></div></div>
           <div class="card"><h3>Parties récentes<span class="sp" id="df-hn"></span></h3><div id="df-hist" class="list"></div></div>
         </div>
         <div id="df-game" hidden>
@@ -162,6 +163,8 @@
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
         else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
+        const tcSaved = E.settings.get("defi.tc", "none");
+        body += `<label class="fld" style="margin-top:14px">Cadence (comme Chess.com)</label><select id="su-tc" class="sel">${Object.values(K.TC).map((x) => `<option value="${x.id}" ${x.id === tcSaved ? "selected" : ""}>${x.name}</option>`).join("")}</select><p class="muted" style="font-size:12px;margin-top:6px;line-height:1.4">Bullet / blitz : les classements affichés sont plus hauts (étiquette) et les bots jouent vite. Différé : pas de pendule, la partie est enregistrée et reprise plus tard.</p>`;
         const s = E.ui.sheet({ title: m.t, html: body, options: [{ label: "COMMENCER", cls: "pri", fn: () => {
           if (id === "enos") E.settings.set("chess.power", pow);
           if (s.querySelector("#su-elo")) { elo = +s.querySelector("#su-elo").value; E.settings.set("defi.elo", elo); }
@@ -170,7 +173,8 @@
           if (s.querySelector("#su-cw")) { cw = s.querySelector("#su-cw").value; cb = s.querySelector("#su-cb").value; E.settings.set("defi.combat", [cw, cb]); }
           const c = color === "r" ? (Math.random() < 0.5 ? "w" : "b") : color;
           let t1, t2; if (id === "teams") { const pk = (n) => [...s.querySelectorAll("select[data-t='" + n + "']")].map((x) => x.value); t1 = pk(1); t2 = pk(2); E.settings.set("defi.team", { f: +s.querySelector("#su-tf").value, t1, t2 }); }
-          launch(id, { color: c, elo, pow, boss, cw, cb, t1, t2 });
+          const tc = s.querySelector("#su-tc") ? s.querySelector("#su-tc").value : "none"; E.settings.set("defi.tc", tc);
+          launch(id, { color: c, elo, pow, boss, cw, cb, t1, t2, tc });
         } }, { label: "ANNULER" }] });
         if (teamWire) teamWire(s);
         const seg = s.querySelector("#su-col");
@@ -208,19 +212,33 @@
         return [ch, boss];
       }
 
+      function applyTc(p, tc) {                                              // Elo AFFICHÉ selon la cadence ; la force réelle (eloReal) reste celle du niveau
+        const one = (x) => { if (!x || x.human || x.gain || x.lose || x.wheel || !x.elo) return; x.eloReal = x.elo; const who = x.name === "Stockfish" || x.pure ? "sf" : x.kind === "eto" ? "eto" : /^E\.N\.O\.S/.test(x.name || "") ? "enos" : ""; x.elo = K.tcElo(tc, who, x.elo); };
+        if (p && p.list) p.list.forEach(one); else one(p);
+      }
       function launch(id, o) {
         const m = MODES.find((x) => x.id === id), pl = players(id, o);
+        if (o.tc && o.tc !== "none") pl.forEach((p) => applyTc(p, o.tc));
         if (g) g.token++;
         const me = m.human ? (pl[0].human ? "w" : "b") : null;
         g = { id, mode: m, pl: { w: pl[0], b: pl[1] }, me, token: (g ? g.token : 0) + 1, ch: new Chess(), fen: START, evalW: 0, bestUci: "", moves: [], snaps: [], over: "", busy: false, paused: false, sel: "", hint: null, last: null,
           brill: { w: 0, b: 0 }, inBook: true, seen: L.startSeen(START), talk: {}, fr: {}, wn: {}, lostMinor: { w: 0, b: 0 }, flip: me === "b", delay: id === "speedrun" ? 250 : id === "boss" || id === "ebs" || id === "ebd" ? 700 : 900, o, started: Date.now(), sayN: 0, duoTurn: 0, chat: [] };
+        g.tc = o.tc && o.tc !== "none" && K.TC[o.tc] ? K.TC[o.tc] : null;
+        if (g.tc) { g.tcMs = (c) => Math.max(80, Math.min(g.tc.think, g.clk ? g.clk[c] / 20 : g.tc.think)); if (g.tc.base) { g.clk = { w: g.tc.base, b: g.tc.base }; g.clkT = performance.now(); clearInterval(g.clkI); g.clkI = setInterval(clockTick, 100); } }
         if (m.teams) {                                                           // g.pl[c] = le MEMBRE dont c'est le tour dans l'équipe c (rotation : coup n de l'équipe -> membre n mod taille)
           g.teams = { w: pl[0].list, b: pl[1].list }; g.tname = { w: pl[0].name, b: pl[1].name };
           ["w", "b"].forEach((c) => Object.defineProperty(g.pl, c, { enumerable: true, configurable: true, get: () => g.teams[c][g.moves.filter((x) => x.color === c).length % g.teams[c].length] }));
           const hw = g.teams.w.some((x) => x.human), hb = g.teams.b.some((x) => x.human); g.flip = hb && !hw;
         }
         if (E.botChat) E.botChat.onSay = (bot, text, kind) => { if (g && g.chat && g.chat.length < 80) g.chat.push([g.moves.length, bot, text.slice(0, 160), kind]); };   // répliques gardées pour CHESS EDIT STUDIO
+        if (g.tc) g.ch.header("TimeControl", g.tc.hdr || "-");
         g.ch.header("Event", m.t.replace(/[^\p{L}\p{N} .]/gu, "").trim(), "White", pl[0].name, "Black", pl[1].name, "Date", new Date().toISOString().slice(0, 10).replace(/-/g, "."));
+        if (o.resume) {                                                          // reprise d'une partie en différé : on rejoue les coups enregistrés (jugements conservés)
+          const x = o.resume, ch = g.ch; g.seen = L.startSeen(START); let last = null;
+          x.moves.forEach((mm) => { const mv = ch.move({ from: mm.uci.slice(0, 2), to: mm.uci.slice(2, 4), promotion: mm.uci[4] }); if (!mv) return; g.moves.push({ ...mm }); g.seen = L.addSeen(g.seen, ch.fen()); last = mv; if (mm.q && mm.q.key === "brilliant") g.brill[mm.color]++; });
+          g.fen = ch.fen(); g.last = last ? [last.from, last.to] : null; const lm = g.moves[g.moves.length - 1]; g.evalW = lm && lm.ew != null ? lm.ew : 0; g.bestUci = ""; g.inBook = false; g.chat = x.chat || []; g.started = x.t;
+          if (x.dl && Date.now() > x.dl) { const c = ch.turn(); setTimeout(() => { if (g && !g.over) { g.token++; finish("Temps écoulé (3 jours) — " + (c === "w" ? "les Noirs" : "les Blancs") + " gagnent"); } }, 300); }
+        }
         $("#df-home").hidden = true; $("#df-game").hidden = false;
         document.documentElement.classList.remove("ghor");
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
@@ -278,16 +296,16 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor"); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); };
+      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor"); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
         const pos = B.parse(g.fen), turn = pos.turn;
         const targets = g.sel ? new Chess(g.fen).moves({ square: g.sel, verbose: true }).map((m) => m.to) : [];
         B.render($("#df-board"), pos.m, { flip: g.flip, last: g.last, hint: g.hint, sel: g.sel, targets, check: g.ch.in_check() ? B.kingSquare(pos.m, turn) : "", badge: (() => { const m = g.moves[g.moves.length - 1]; return m && m.uci && m.q && B.BADGES[m.q.key] ? { sq: m.uci.slice(2, 4), key: m.q.key, id: g.moves.length } : null; })(), end: g.ch.in_checkmate() ? { sq: B.kingSquare(pos.m, turn), id: g.moves.length } : null, onTap, anim });
-        const strip = (c) => g.teams ? `<span class="df-dot ${c}"></span><b style="font-size:13px">${g.teams[c].map((m) => (m === g.pl[c] && !g.over ? `<u>${esc(m.name)}</u>` : esc(m.name))).join(" + ")}</b><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>` : `<span class="df-dot ${c}"></span>${tbadge(g.pl[c])}<b>${esc(sideName(c))}</b><small>${g.pl[c].elo ? g.pl[c].elo + " Elo" : ""}</small><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>`;
+        const strip = (c) => g.teams ? `<span class="df-dot ${c}"></span><b style="font-size:13px">${g.teams[c].map((m) => (m === g.pl[c] && !g.over ? `<u>${esc(m.name)}</u>` : esc(m.name))).join(" + ")}</b><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>${g.clk ? `<span class="df-clk" data-c="${c}"></span>` : ""}` : `<span class="df-dot ${c}"></span>${tbadge(g.pl[c])}<b>${esc(sideName(c))}</b><small>${g.pl[c].elo ? g.pl[c].elo + " Elo" : ""}</small><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>${g.clk ? `<span class="df-clk" data-c="${c}"></span>` : ""}`;
         const top = g.flip ? "w" : "b", bot = g.flip ? "b" : "w";
-        $("#df-top").innerHTML = strip(top); $("#df-bot").innerHTML = strip(bot);
+        $("#df-top").innerHTML = strip(top); $("#df-bot").innerHTML = strip(bot); paintClock();
         const w = Math.abs(g.evalW) >= 9000 ? (g.evalW > 0 ? 100 : 0) : B.winPct(g.evalW);
         $("#df-eval").style.setProperty("--w", (g.flip ? 100 - w : w) + "%");
         $("#df-evt").textContent = Math.abs(g.evalW) >= 9000 ? "MAT" : (g.evalW / 100 * (g.flip ? -1 : 1)).toFixed(1).replace(".", ",").replace(/^(\d)/, "+$1");
@@ -295,6 +313,32 @@
         $("#df-moves").scrollLeft = 1e5;
       }
       const status = (t) => { $("#df-status").textContent = t; };
+      // ---- PENDULE : bullet 1 min, blitz 3 min, rapide 10 min (sans incrément, comme Chess.com) ; différé : pas de pendule (échéance de 3 jours pour toi)
+      const fmtClk = (ms) => { ms = Math.max(0, ms); const s = ms / 1000; return s < 10 ? s.toFixed(1) : Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0"); };
+      function paintClock() { if (!g || !g.clk) return; el.querySelectorAll(".df-clk").forEach((n) => { const c = n.dataset.c, ms = g.clk[c]; n.textContent = fmtClk(ms); n.classList.toggle("on", !g.over && g.ch.turn() === c && g.moves.length >= 2 && !g.paused); n.classList.toggle("low", ms < 10000); }); }
+      function clockTick() {
+        if (!g || g.over || !g.clk) { if (g) clearInterval(g.clkI); return; }
+        const now = performance.now(), dt = now - g.clkT; g.clkT = now;
+        if (g.moves.length >= 2 && !g.paused && !g.over && !$("#df-game").hidden) { const turn = g.ch.turn(); g.clk[turn] -= dt; if (g.clk[turn] <= 0) return flagFall(turn); }
+        paintClock();
+      }
+      function flagFall(c) {                                                  // temps écoulé : l'autre camp gagne, sauf s'il n'a pas de quoi mater (nulle)
+        g.clk[c] = 0; const win = c === "w" ? "b" : "w", pcs = []; g.ch.board().forEach((row) => row.forEach((q) => { if (q && q.color === win && q.type !== "k") pcs.push(q.type); }));
+        const mat = pcs.some((t) => t === "p" || t === "q" || t === "r") || pcs.length >= 2; clearInterval(g.clkI); g.token++; L.abort && L.abort(); g.busy = false;
+        finish(mat ? "Temps écoulé — " + (win === "w" ? "les Blancs" : "les Noirs") + " gagnent" : "Temps écoulé — matériel insuffisant : nulle");
+      }
+      // ---- PARTIES EN DIFFÉRÉ : enregistrées après chaque coup, reprises depuis l'accueil
+      const dailyList = () => E.settings.get("defi.daily", []);
+      function saveDaily() {
+        if (!g || !g.tc || !g.tc.days) return; const list = dailyList().filter((x) => x.t !== g.started);
+        if (!g.over) list.push({ t: g.started, id: g.id, o: { color: g.o.color, elo: g.o.elo, pow: g.o.pow, boss: g.o.boss, cw: g.o.cw, cb: g.o.cb, t1: g.o.t1, t2: g.o.t2, tc: g.o.tc }, names: [g.tname ? g.tname.w : g.pl.w.name, g.tname ? g.tname.b : g.pl.b.name], dl: Date.now() + g.tc.days * 864e5, moves: g.moves.map((x) => ({ uci: x.uci, san: x.san, color: x.color, q: x.q, ew: x.ew, bestSan: x.bestSan, n: x.n, before: x.before, after: x.after, loss: x.loss, key: x.key, label: x.label, best: x.best, by: x.by || "" })), chat: g.chat || [] });
+        E.settings.set("defi.daily", list.slice(-6));
+      }
+      function paintDaily() {
+        const l = dailyList(); $("#df-dcard").hidden = !l.length;
+        $("#df-daily").innerHTML = l.map((x, i) => `<div class="it"><span class="n">${esc(x.names[0])} – ${esc(x.names[1])}<small>${x.moves.length} coups · échéance ${new Date(x.dl).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</small></span><button class="mini" data-dres="${i}">REPRENDRE</button><button class="mini" data-ddel="${i}">✕</button></div>`).join("");
+      }
+      $("#df-daily").onclick = (e) => { const r = e.target.closest("[data-dres]"), d = e.target.closest("[data-ddel]"); if (r) { const x = dailyList()[+r.dataset.dres]; if (x) launch(x.id, { ...x.o, resume: x }); } if (d) { const l = dailyList(); l.splice(+d.dataset.ddel, 1); E.settings.set("defi.daily", l); paintDaily(); } };
 
       // ---- entrée du joueur
       function onTap(sq) {
@@ -353,13 +397,14 @@
           if (!r || !r.uci) throw new Error("Le moteur n'a pas répondu.");
           return { uci: r.uci };
         }
+        const tcf = g.tcMs ? g.tcMs(ch.turn()) / 1000 : 1, er = p.eloReal != null ? p.eloReal : p.elo;                    // cadence : réflexion proportionnelle au temps restant (≤ 1 s)
         if (p.kind === "eto" || (p.kind === "duo" && duo % 2 === 1)) {
-          const m = await K.etoMove(fen, { topMs: 900, sacMs: 1500 });
+          const m = await K.etoMove(fen, { topMs: Math.max(80, 900 * tcf), sacMs: Math.max(120, 1500 * tcf) });
           const u = await nodraw(fen, m.uci);
           return u === m.uci ? { uci: m.uci, brilliant: m.brilliant } : { uci: u };
         }
-        if (p.elo < 1300 && Math.random() < Math.max(0, (1300 - p.elo) / 1050 * 0.6)) { const l = ch.moves({ verbose: true }); const m = l[Math.floor(Math.random() * l.length)]; return { uci: m.from + m.to + (m.promotion || "") }; }
-        const r = await L.choose(fen, p.power || powerOfElo(p.elo), g.seen, { pure: !!p.pure, ms: p.power >= 100 ? 1000 : undefined });   // E.N.O.S. (pleine puissance) cherche lui aussi le coup brillant
+        if (er < 1300 && Math.random() < Math.max(0, (1300 - er) / 1050 * 0.6)) { const l = ch.moves({ verbose: true }); const m = l[Math.floor(Math.random() * l.length)]; return { uci: m.from + m.to + (m.promotion || "") }; }
+        const r = await L.choose(fen, p.power || powerOfElo(er), g.seen, { pure: !!p.pure, ms: g.tcMs ? Math.min(p.power >= 100 ? 1000 : 9999, g.tcMs(ch.turn())) : p.power >= 100 ? 1000 : undefined });   // E.N.O.S. (pleine puissance) cherche lui aussi le coup brillant
         if (!r || !r.uci) throw new Error("Le moteur n'a pas répondu.");
         return { uci: r.uci, brilliant: r.brilliant ? { piece: r.brilliant.piece, cp: r.brilliant.cp, mate: r.brilliant.mate, line: [] } : undefined };
       }
@@ -374,7 +419,7 @@
         if (alien && legal.has(alien)) return { uci: alien };
         const node = S && S.book[turn][path];
         if (node) { const ok = Object.entries(node).filter(([u]) => legal.has(u)); if (ok.length) return { uci: wpick(ok) }; }
-        const lines = await L.lines(fen, 6, 450);
+        const lines = await L.lines(fen, 6, g.tcMs ? Math.max(80, Math.min(450, g.tcMs(turn))) : 450);
         if (!lines.length) { const r = await L.think(fen, powerOfElo(p.elo)); return { uci: r.uci }; }
         const top = lines[0], k = p.skill || (S ? S.skill : { mistake: 0.15, blunder: 0.08 }), roll = Math.random();
         const cand = lines.filter((l) => !top.mate || l.mate);
@@ -390,7 +435,7 @@
       async function commit(uci, meta, tok) {
         g.busy = true;
         const turn = g.ch.turn(), before = g.fen, evalBefore = g.evalW, bestUci = g.bestUci; const byName = g.pl[turn].name;
-        g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook, seen: g.seen, lostMinor: { ...g.lostMinor }, elos: { w: g.pl.w.elo, b: g.pl.b.elo } });
+        g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook, seen: g.seen, lostMinor: { ...g.lostMinor }, clk: g.clk ? { ...g.clk } : null, elos: { w: g.pl.w.elo, b: g.pl.b.elo } });
         const m = g.ch.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
         if (!m) { g.busy = false; return status("Coup illégal"); }
         g.fen = g.ch.fen(); g.last = [m.from, m.to]; g.seen = L.addSeen(g.seen, g.fen);
@@ -428,7 +473,7 @@
         if (q.key === "brilliant") { g.brill[turn]++; E.vibrate(30); setTimeout(() => E.chessSound && E.chessSound.play("brilliant"), 250); }
         judge(g.moves[g.moves.length - 1], meta);
         g.busy = false;
-        paint();
+        paint(); saveDaily();
         // gaffe catastrophique du joueur : continuer ou annuler ?
         if (g.mode.human && g.pl[turn].human && q.key === "blunder" && g.id !== "coach" && !g.ch.game_over()) {
           const cancel = await new Promise((res) => E.ui.sheet({ title: "Gaffe catastrophique", html: `<p class="muted" style="margin-bottom:14px;line-height:1.5">Ton coup <b>${esc(m.san)}</b> te coûte ${q.loss} cp.${bestSan ? ` Il fallait jouer <b style="color:#7bd64d">${esc(bestSan)}</b>.` : ""}</p>`, options: [{ label: "ANNULER LE COUP", fn: () => res(true) }, { label: "CONTINUER", fn: () => res(false) }], onClose: () => res(false) }));
@@ -580,6 +625,7 @@
         let s = null;
         for (let i = 0; i < n && g.snaps.length; i++) { s = g.snaps.pop(); g.ch.undo(); }
         if (!s) return;
+        if (s.clk) g.clk = s.clk;
         g.fen = s.fen; g.evalW = s.evalW; g.bestUci = s.bestUci; g.moves.length = s.n; g.last = s.last; g.brill = s.brill; g.inBook = s.inBook; g.seen = s.seen || L.startSeen(s.fen); if (s.lostMinor) g.lostMinor = s.lostMinor; if (s.elos) { for (const c of ["w", "b"]) { const pp = g.pl[c]; if (pp.gain || pp.lose || pp.wheel) pp.elo = s.elos[c]; } } g.sel = ""; g.hint = null; g.over = ""; g.busy = false;
         $("#df-judge").hidden = true; $("#df-say").hidden = true;
         paint(); status("Coup annulé"); next(g.token);
@@ -605,7 +651,7 @@
       // ---- fin
       function finish(result, stopped) {
         if (!g) return;
-        g.over = result; g.busy = false; g.token++;
+        g.over = result; g.busy = false; g.token++; clearInterval(g.clkI); if (g.tc && g.tc.days) saveDaily();
         paint(); status(result);
         if (E.botChat && E.botChat.count() && !stopped && g.talk) {                // la chat box a le dernier mot
           const win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : "", lose = win === "w" ? "b" : "w";
@@ -622,7 +668,7 @@
         if (g.mode.human && g.me && !stopped && E.chessLearn) E.chessLearn.addGame(g.me, result, g.pl[g.me === "w" ? "b" : "w"].power || 100);
         if (g.moves.length >= 2) {
           const list = hist(); list.push({ t: Date.now(), title: g.mode.t.replace(/[^\p{L}\p{N} .'-]/gu, "").trim() + " · " + sideName("w") + " – " + sideName("b"), result, plies: g.moves.length, brill: g.brill.w + g.brill.b, acc: g.me ? (g.me === "w" ? accW : accB) : null, pgn: g.ch.pgn(),
-            id: g.id, pw: sideName("w"), pb: sideName("b"), pk: [g.pl.w.kind || "", g.pl.b.kind || ""], bw: g.brill.w, bb: g.brill.b, me: g.me, accW, accB,
+            id: g.id, tc: g.tc ? g.tc.id : "", ...(g.tc && !g.teams ? { pwElo: g.pl.w.human ? null : g.pl.w.elo || null, pbElo: g.pl.b.human ? null : g.pl.b.elo || null } : {}), pw: sideName("w"), pb: sideName("b"), pk: [g.pl.w.kind || "", g.pl.b.kind || ""], bw: g.brill.w, bb: g.brill.b, me: g.me, accW, accB,
             ch: g.chat || [], mv: g.moves.map((m) => [m.uci, m.san, m.q.key, m.q.loss | 0, m.ew === undefined ? null : m.ew, m.bestSan || "", m.by || ""]),
             ...(g.teams ? { teams: { w: g.teams.w.map((x) => ({ name: x.name, talk: x.talk || "", elo: x.elo || 0, human: !!x.human, kind: x.kind || "" })), b: g.teams.b.map((x) => ({ name: x.name, talk: x.talk || "", elo: x.elo || 0, human: !!x.human, kind: x.kind || "" })) } } : {}) });   // enregistrement complet : [uci, san, jugement, perte, éval Blancs, meilleur coup]
           E.settings.set("defi.hist", list.slice(-150));
@@ -682,7 +728,7 @@
       }
 
       el._api = { launch, replay, get g() { return g; }, setup };
-      paintHist();
+      paintHist(); paintDaily();
     },
   });
 })();

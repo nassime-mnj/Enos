@@ -278,7 +278,7 @@
     const side = (name, color) => {
       const look = botLook(name), ext = color === "w" ? rec.pwImg : rec.pbImg, xe = color === "w" ? rec.pwElo : rec.pbElo, b = look && look.b;
       const img = ext || (look ? look.img : iconFor(rec, name, used));                                            // photo importée > image du bot > (joueur) icône aléatoire
-      return { name: dispName(name), id: look ? look.id : "", img, anim: look ? look.anim || "" : "", ph: !img && look ? look.ph : null, icon: !ext && !look, title: b && b.title ? b.title : "", elo: xe != null ? xe : look && look.id && ELO_OF[look.id] != null ? ELO_OF[look.id] : null, human: !look, color };
+      return { name: dispName(name), id: look ? look.id : "", img, anim: look ? look.anim || "" : "", ph: !img && look ? look.ph : null, icon: !ext && !look, title: b && b.title ? b.title : "", elo: xe != null ? xe : look && look.id && ELO_OF[look.id] != null ? (E.brain && E.brain.tcElo ? E.brain.tcElo(rec.tc, look.id === "eto" || look.id === "enos" ? look.id : "", ELO_OF[look.id]) : ELO_OF[look.id]) : null, human: !look, color };
     };
     const out = { white: side(rec.pw || "Blancs", "w"), black: side(rec.pb || "Noirs", "b"), title: rec.title || "", result: rec.result || "", seed: hashS(String((rec && (rec.t || rec.title)) || "") + "|scene") };
     if (rec.teams && rec.teams.w && rec.teams.b) {                                                              // ÉQUIPES : chaque membre a son avatar

@@ -302,3 +302,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 
 ### 1.69.2 — correctif : pièces à l'envers
 - Le shader WebGL échantillonnait le canvas avec un axe vertical inversé (v = 1 − y) alors que le canvas est envoyé tel quel (ligne 0 en haut) : tout le MONDE (plateau + pièces) sortait retourné verticalement (le projecteur visait aussi le mauvais endroit). Corrigé ; test d'orientation ajouté dans `t_edit_gl.py` (le rendu GL doit ressembler au rendu 2D, jamais à son retournement).
+
+## 1.70 — Cadences Chess.com dans les Défis (bullet, blitz, rapide, différé) + Elo affichés par cadence
+
+- **Cadence** (sélecteur dans chaque défi) : **Bullet 1 min**, **Blitz 3 min**, **Rapide 10 min** (pendule sans incrément, 1ers coups gratuits, drapeau = « Temps écoulé », nulle si le vainqueur n'a pas de quoi mater, pendule restaurée par « Annuler ») et **Différé 3 jours par coup** (pas de pendule : partie enregistrée après chaque coup dans `defi.daily`, carte « Parties en différé en cours » à l'accueil, reprise avec jugements conservés, échéance dépassée = perdu).
+- **Bots rapides** : leur réflexion = min(300 / 700 / 1000 / 1500 ms, temps restant ÷ 20). La force réelle (`eloReal`, niveau Stockfish) ne change pas.
+- **Elo affichés** (`K.TC_TOP` / `K.tcElo` dans `chess_brain.js`, modifiables) : rapide et différé : Stockfish / ETO / E.N.O.S. = 3200 ; **blitz** 4100 / 4000 / 3900 ; **bullet** 5000 / 4900 / 4800. Les autres bots : Elo + k × (Elo − 1000) (k = 0,3 blitz, 0,55 bullet). Étiquette seulement (écran, répliques, vidéo Chess Edit : `rec.tc`, `pwElo` / `pbElo`).
+- PGN : en-tête `TimeControl`. Test : `t_defis_tc.py`.
