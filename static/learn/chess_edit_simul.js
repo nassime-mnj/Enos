@@ -54,7 +54,7 @@
     });
     sfx.sort((a, b) => a.t - b.t);
     const best = vis.reduce((a, v) => (v.score > a.score ? v : a), vis[0]);
-    return { events, sfx, duration, stats: { drop: best.tImp, hero: best.tImp }, plies: [], simul: { boards: bds, vis, seq, nB, boss, info, outT, teamIdx: team, winnerTeam: teamWon }, keys: [] };
+    return { viral: true, events, sfx, duration, stats: { drop: best.tImp, hero: best.tImp }, plies: [], simul: { boards: bds, vis, seq, nB, boss, info, outT, teamIdx: team, winnerTeam: teamWon }, keys: [] };
   };
 
   // ------------------------------------------------------------------ RENDU
