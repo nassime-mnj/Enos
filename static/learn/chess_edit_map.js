@@ -299,6 +299,7 @@
       sfx.push({ t: e.impact, id, gain: g, bus: "echo", ply: e.n, duck: !e.soft && e.kind !== "ff" });
       if (e.kind !== "ff" && !e.soft) { if (id === "capture") sfx.push({ t: e.impact, id: "thud", gain: 1.35, bus: "echo", ply: e.n }); else if (id === "check") sfx.push({ t: e.impact, id: "crystal", gain: 1.1, bus: "echo", ply: e.n }); else if (id === "mate") sfx.push({ t: e.impact, id: "mateboom", gain: 1.35, bus: "echo", ply: e.n }); }
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
+      if (e.slowKnight) { sfx.push({ t: +(e.impact - e.dur / 1000).toFixed(3), id: "horse", gain: 1.9, bus: "epic", ply: e.n }); sfx.push({ t: e.impact, id: "mateboom", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.6, bus: "echo", ply: e.n }); }      // hennissement épique avec beaucoup d'écho pendant le vol, puis GROS impact à l'atterrissage
       if (e.kind !== "ff" && !e.forced) {                                                              // « FAHH » : erreur = FAHH normal, gaffe = FAHH ralenti ; ça FRAPPE (impact grave + boom) comme les autres bruitages
         if (e.key === "blunder") { sfx.push({ t: e.impact, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: e.n }); }
         else if (e.key === "mistake" || e.key === "miss") { sfx.push({ t: e.impact, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: e.soft ? 0.8 : 1.15, bus: "echo", ply: e.n }); }
@@ -348,7 +349,8 @@
     const minTail = Math.min(12, Math.max(1, n - 1)), tpre = D - 0.6 - t00, stretch = real && E0 - D > 6 && tpre > 12;       // musique longue : on étire le rythme AVANT le drop (jamais de plateau figé > 3 s) et on garde 0,65–0,90 s / coup après
     const tailMax = real ? clampN(Math.min(Math.floor((E0 - D) / 0.8), stretch ? n - Math.ceil(tpre / 2.0) : 34), minTail, 34) : 22, tailLen = Math.max(minTail, Math.min(tailMax, n - Math.min(4, n - 1)));
     const lo = Math.max(Math.min(4, n - 1), n - tailMax), hi = Math.max(lo, n - minTail); let start = n - tailLen; for (let i = lo; i <= hi; i++) if (score(i) > score(start)) start = i;       // meilleur tournant / sacrifice / coup illégal parmi les départs possibles
-    const avail = Math.max(2, D - 0.6 - t00), ffDt = (M) => clampN(3.5 / Math.max(1, M), 0.06, 0.14);
+    const KN_S = 2.8, isKn = (i) => plies[i].key === "brilliant" && plies[i].piece === "n", kd0 = isKn(start) ? KN_S : 0, DP = D - kd0;     // SACRIFICE DE CAVALIER BRILLANT : glissement très lent (2,8 s) le temps du « horse sound », impact à l'atterrissage
+    const avail = Math.max(2, DP - 0.6 - t00), ffDt = (M) => clampN(3.5 / Math.max(1, M), 0.06, 0.14);
     let calmN = Math.min(twoD ? 10 : 8, start);
     if (twoD) calmN = clampN(Math.floor((D1 - 1.3 - t00) / 1.3) + 1, Math.min(2, start), Math.min(10, start)); 
     else for (; calmN > Math.min(2, start); calmN--) { const M = start - calmN, need = (calmN - 1) * 1.1 + (M ? M * ffDt(M) + 1.3 : 0) + 0.3; if (need <= avail) break; }
@@ -356,15 +358,17 @@
     let prevT = -9, lastCalm = t00; for (let k = 0; k < calmN; k++) { const ideal = t00 + k * calmSp, nb = rawIntro.filter((x) => Math.abs(x - ideal) < 0.2 && x - prevT >= 1.1 && x - prevT <= SPC).sort((p, q) => Math.abs(p - ideal) - Math.abs(q - ideal))[0], tk = k === 0 ? ideal : nb != null ? nb : Math.min(prevT + SPC, Math.max(ideal, prevT + 1.1)); sched.push({ i: k, t: +tk.toFixed(3), dur: 240, kind: "crit", soft: true }); prevT = tk; lastCalm = tk; }
     // PHASE NORMALE (coups à rythme normal, 1,1–1,5 s) entre l'ouverture calme et le montage accéléré ; avec 2 drops, elle commence EXACTEMENT sur le 1er drop
     const midStart = twoD ? D1 : lastCalm + 1.3, ffD = (M) => M * ffDt(M);
-    let Mid = 0; for (let m = R0; m >= 1; m--) { const M = R0 - m, need = (m - 1) * 1.1 + (M ? ffD(M) + 1.3 : 0) + 0.9; if (need <= D - midStart) { Mid = m; break; } }
+    let Mid = 0; for (let m = R0; m >= 1; m--) { const M = R0 - m, need = (m - 1) * 1.1 + (M ? ffD(M) + 1.3 : 0) + 0.9; if (need <= DP - midStart) { Mid = m; break; } }
     if (!real && !twoD) Mid = 0;                                                                                  // sans musique réelle : comportement d'origine (le montage accéléré couvre tout)
     const M = R0 - Mid, dt = ffDt(M), ffDur = M * dt;
-    let lastMid = lastCalm; if (Mid > 0) { const midSp = clampN(((D - 0.9 - midStart) - (M ? ffDur + 1.3 : 0)) / Math.max(1, Mid - 1), 1.1, stretch ? 2.9 : 1.5); let pm = -9; for (let k = 0; k < Mid; k++) { const ideal = midStart + k * midSp, nb = beatsAll.filter((x) => Math.abs(x - ideal) < 0.2 && x - pm >= 1.0).sort((a, b) => Math.abs(a - ideal) - Math.abs(b - ideal))[0], tk = k === 0 ? midStart : nb != null ? nb : Math.max(ideal, pm + 1.0); sched.push({ i: calmN + k, t: +tk.toFixed(3), dur: 200, kind: k === 0 && twoD ? "drop1" : "mid" }); pm = tk; lastMid = tk; } }
-    if (M > 0) { const ffStart = Math.max(lastMid + 1.3, D - 0.7 - ffDur), dd = Math.min(dt, Math.max(0.06, (D - 0.5 - ffStart) / M)); for (let j = 0; j < M; j++) sched.push({ i: calmN + Mid + j, t: +(ffStart + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }   // montage accéléré lisible
+    let lastMid = lastCalm; if (Mid > 0) { const midSp = clampN(((DP - 0.9 - midStart) - (M ? ffDur + 1.3 : 0)) / Math.max(1, Mid - 1), 1.1, stretch ? 2.9 : 1.5); let pm = -9; for (let k = 0; k < Mid; k++) { const ideal = midStart + k * midSp, nb = beatsAll.filter((x) => Math.abs(x - ideal) < 0.2 && x - pm >= 1.0).sort((a, b) => Math.abs(a - ideal) - Math.abs(b - ideal))[0], tk = k === 0 ? midStart : nb != null ? nb : Math.max(ideal, pm + 1.0); sched.push({ i: calmN + k, t: +tk.toFixed(3), dur: 200, kind: k === 0 && twoD ? "drop1" : "mid" }); pm = tk; lastMid = tk; } }
+    if (M > 0) { const ffStart = Math.max(lastMid + 1.3, DP - 0.7 - ffDur), dd = Math.min(dt, Math.max(0.06, (DP - 0.5 - ffStart) / M)); for (let j = 0; j < M; j++) sched.push({ i: calmN + Mid + j, t: +(ffStart + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }   // montage accéléré lisible
     const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), isBl = (i) => plies[i].key === "blunder" && !isHero(i), heroCount = plies.slice(start).filter((p, k) => isHero(start + k) || isBl(start + k)).length;
     let tt = D || (post[0] || 2); const ts = audio.duration && !audio.synthetic ? clampN((audio.duration - 2.0 - tt - heroCount * 1.7) / Math.max(1, tailLen - heroCount), 0.65, 0.9) : 0.75;
+    let lastT = -9;
     for (let i = start; i < n; i++) {
-      sched.push({ i, t: +tt.toFixed(3), dur: 90, kind: i === start ? "drop" : "crit" });
+      if (isKn(i) && i !== start) tt = Math.max(tt, lastT + KN_S + 0.25);
+      sched.push({ i, t: +tt.toFixed(3), dur: isKn(i) ? Math.round(KN_S * 1000) : 90, kind: i === start ? "drop" : "crit", kn: isKn(i) }); lastT = tt;
       if (isBl(i) && i < n - 1) tt += 1.7;                                                                                                            // GAFFE : PAUSE — le plateau reste figé, le FAHH ralenti sonne en entier avant la réponse
       else if (isHero(i) && i < n - 1) { const gap = plies[i].piece === "r" ? 1.8 : 1.6; tt += gap; }                                                                      // HERO MOMENT : le plateau reste verrouillé, le coup de réponse ne tombe qu'une fois le cri terminé
       else { const nb = post.filter((x) => x >= tt + 0.65 && x <= tt + 0.9).sort((p, q) => Math.abs(p - tt - ts) - Math.abs(q - tt - ts))[0]; tt = nb != null ? nb : tt + ts; }
@@ -392,7 +396,7 @@
       const bl = p.lines.find((x) => x.bot && bots[x.bot] && bots[x.bot].img) || null, cheat = p.cheat || "", illegal = !!cheat && cheat !== "double" && cheat !== "revive";
       const e = { cheat, alien: !!p.alien, t: +(q.t - qdur / 1000 - lead).toFixed(3), ply: p.i, n: p.n, pid: p.pid, san: p.san, uci: p.uci, from: p.from, to: p.to, piece: p.piece, color: p.color, captured: p.captured, promo: p.promo, key, drama: p.drama, tags: p.tags,
         by: p.by || "", loss: p.loss | 0, lines: lvl >= 2 || cheat ? p.lines : [], fen: p.fen, fenBefore: p.fenBefore, drop: !!p.drop, special: p.special || "", smash: p.smash || [], filled: p.filled || [], elim: p.elim || [], dropPiece: p.dropPiece || "", kind: q.kind, phase: q.kind === "ff" ? "ff" : "hero", lvl: q.kind === "ff" ? 0 : Math.max(lvl, big ? 3 : 1),
-        dur: qdur, soft, forced, bigMove, blunderHold, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
+        dur: qdur, soft, forced, bigMove, blunderHold, slowKnight: !!q.kn && bigMove, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
         fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: false, arrow: false,
         illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: !soft && illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
@@ -433,7 +437,7 @@
     if (primeIn && !extra.some((x) => x.kind === "prompt")) ev.filter((e) => e._cutrook || (!script && e.kind !== "ff" && ((e.piece === "r" && (e.sacrifice || e.key === "brilliant")) || e.boss))).sort((a, b) => b.drama - a.drama).slice(0, 1).forEach((e) => { addCut("cutrook", e, 0.9, e.piece || "r"); });          // overlay « Quel est ton prochain coup » : Prime uniquement, UNE fois par edit   // BADASS ROOK (sacrifice / coup de boss)
     ev.filter((e) => e._prompt && !extra.some((x) => x.kind === "prompt" || x.kind === "cutrook")).slice(0, 1).forEach((e) => { const bl = botLine(e.ply); if (bl && bl.bot === "prime") extra.push({ t: +Math.max(0.05, e.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", piece: e.piece, fx: "PROMPT", ply: -1, ref: e }); });
     const sfx = sfxFor(ev, opts), all = [];
-    sfx.forEach((x) => { if (x.id === "the_rook") { const e = ev.find((y) => y.n === x.ply); if (e) e.voiceTag = "THE ROOK !"; } });
+    sfx.forEach((x) => { if (x.id === "the_rook" || x.id === "the_knight") { const e = ev.find((y) => y.n === x.ply); if (e) e.voiceTag = x.id === "the_rook" ? "THE ROOK !" : "THE KNIGHT !"; } });
     if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
     if (opts.intro && INTRO > 0) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));

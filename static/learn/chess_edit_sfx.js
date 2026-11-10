@@ -91,7 +91,7 @@
       this.bufs.thud = thudBuffer(a); this.bufs.crystal = crystalBuffer(a); this.bufs.mateboom = mateBoomBuffer(a); this.bufs.capture = captureBuffer(a); this.bufs.brilliant = chimeBuffer(a); this.bufs.boom = boomBuffer(a); this.bufs.whoosh = whooshBuffer(a);
       for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
       const FH = window.ENOS_FAHH || {};
-      for (const id of ["fahh", "fahh_slow"]) { try { if (FH[id]) { const raw = atob(FH[id]), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); this.bufs[id] = await a.decodeAudioData(u8.buffer); } } catch (e) { this.bufs[id] = null; } }       // FAHH (erreur) / FAHH ralenti (gaffe)
+      for (const id of ["fahh", "fahh_slow", "horse"]) { try { if (FH[id]) { const raw = atob(FH[id]), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); this.bufs[id] = await a.decodeAudioData(u8.buffer); } } catch (e) { this.bufs[id] = null; } }       // FAHH (erreur) / FAHH ralenti (gaffe)
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
         try {

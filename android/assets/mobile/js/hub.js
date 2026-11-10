@@ -87,6 +87,11 @@
     }).join("");
     $("#hub-page").innerHTML = `<header class="hub-ph"><button class="hub-back" id="hub-back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span class="hub-pi"><img src="img/menu/${c.img}.png" alt="" draggable="false"></span><h2>${esc(c.n)}</h2></header><div class="hub-body">${secs}</div>`;
   }
+  function refreshRecents() {                                                                   // met à jour « Récents » sans rejouer l'animation d'entrée des icônes
+    const main = root && root.querySelector(".hub-main"); if (!main) return; const old = main.querySelector(".hub-rec"); const rec = recents().map((id) => ({ id, m: meta(id) })).filter((x) => x.m).slice(0, 5);
+    const html = rec.length ? `<div class="hub-rec"><span>RÉCENTS</span><div class="hub-recs">${rec.map((x, i) => `<button class="hub-chip" data-id="${esc(x.id)}" style="--i:${i};animation:none">${`<span>${iconHtml(x.m, "")}</span>`}${esc(x.m.n)}</button>`).join("")}</div></div>` : "";
+    if (old) old.remove(); if (html) main.insertAdjacentHTML("afterbegin", html);
+  }
   function renderResults(q) {
     q = q.trim().toLowerCase(); const box = $("#hub-res"), cats = root.querySelector(".hub-cats"), rec = root.querySelector(".hub-rec");
     if (!q) { box.hidden = true; cats.hidden = false; if (rec) rec.hidden = false; return; }
@@ -114,15 +119,16 @@
     E.vibrate && E.vibrate(8); root.classList.add("in-cat");
     page.hidden = false; page.classList.remove("out"); page.classList.add("in"); const pi = page.querySelector(".hub-pi"); pi.style.visibility = "hidden";
     main.classList.add("away"); top.classList.add("away");
-    await flyIcon(btn, pi, 460); pi.style.visibility = ""; page.classList.remove("in"); page.classList.add("settled"); main.hidden = true; top.hidden = true; busy = false; window.scrollTo && 0;
+    btn.style.visibility = "hidden";                                                           // la seule icône visible est celle qui voyage (plus de doublon)
+    await flyIcon(btn, pi, 460); pi.style.visibility = ""; btn.style.visibility = ""; page.classList.remove("in"); page.classList.add("settled"); main.hidden = true; top.hidden = true; busy = false; window.scrollTo && 0;
   };
   const remember_cat = (cid) => E.settings.set("hub.cat", cid);
   H.closeCat = async () => {
     if (busy || !cur) return; busy = true; const cid = cur; const page = $("#hub-page"), main = root.querySelector(".hub-main"), top = root.querySelector(".hub-top"), pi = page.querySelector(".hub-pi");
     E.vibrate && E.vibrate(6); page.classList.remove("settled"); main.hidden = false; top.hidden = false; main.classList.add("away"); top.classList.add("away"); void main.offsetWidth;
-    const btn = root.querySelector(`.hub-cat[data-c="${cid}"] .hub-ci`); page.classList.add("out"); pi.style.visibility = "hidden"; main.classList.remove("away"); top.classList.remove("away");
-    const fly = flyIcon(pi, btn, 420); await Promise.all([fly, new Promise((r) => setTimeout(r, reduced() ? 0 : 300))]);
-    page.hidden = true; page.classList.remove("out"); root.classList.remove("in-cat"); cur = null; busy = false; renderRoot();
+    const btn = root.querySelector(`.hub-cat[data-c="${cid}"] .hub-ci`); page.classList.add("out"); pi.style.visibility = "hidden"; main.classList.remove("away"); top.classList.remove("away"); if (btn) btn.style.visibility = "hidden";
+    const fly = flyIcon(pi, btn, 420); await Promise.all([fly, new Promise((r) => setTimeout(r, reduced() ? 0 : 300))]); if (btn) btn.style.visibility = "";
+    page.hidden = true; page.classList.remove("out"); root.classList.remove("in-cat"); cur = null; busy = false; refreshRecents();
   };
   function zoomInto(el, then) {                                                                 // la tuile s'agrandit en plein écran puis laisse place au module
     if (reduced() || !el || !document.body.animate) return then();

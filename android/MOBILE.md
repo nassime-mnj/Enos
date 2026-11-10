@@ -318,3 +318,8 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Accueil des Défis** : 24 modes rangés en sections (Contre l'IA, Personnages, En équipe, Spectacle), tuiles icône + nom (les détails sont dans la feuille de réglage).
 - **Animations** : l'icône de la catégorie *voyage* jusqu'à l'en-tête (et revient), la tuile *s'agrandit* en module, entrées en cascade, **onde lumineuse + pression + vibration** au clic (hub, boutons, feuilles). Respecte « Animations » désactivées / réduire les animations.
 - Tests : `t_hub.py` ; les anciens tests passent par `ENOS.modules.open(id)` / `ENOS.hub.has(id)`.
+
+## 1.72 — Sacrifice de cavalier brillant + correctif des animations du hub
+
+- **Sacrifice de CAVALIER brillant** (uniquement) : le cavalier vole **lentement** (2,8 s, en arc, aura cyan, images fantômes, ombre au sol) pendant que le **horse sound** (`img` embarqué dans `js/fahh_data.js`, bus « épique » : réverbération + échos) se joue ; le cadre s'ouvre sur le trajet puis plonge sur la case d'arrivée ; à l'atterrissage : **gros impact** (mat. boom + choc grave + arrêt sur image), badge « !! », voix « the knight » et tag **THE KNIGHT !**. Le planning réserve la place du vol (le coup précédent finit avant, le montage accéléré se termine plus tôt). Test : `t_edit_knight.py`.
+- **Hub** : plus de doublon d'icône pendant le voyage (la grille cache l'icône qui vole), plus de « re-pop » de toutes les icônes au retour : seule la ligne Récents est mise à jour.

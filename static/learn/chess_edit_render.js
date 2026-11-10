@@ -91,7 +91,12 @@
         if (e.bigMove && !e.soft && !e.cam) S = 1.45;
         if (e.blunderHold && !e.cam) { S = 1.38; th = th * 0.5; }                                                            // GAFFE : cadrage serré, tenu pendant le FAHH ralenti
         const hold = e.soft ? 0.9 : e.bigMove ? 1.6 : e.blunderHold ? 1.55 : Math.max(0.5, (e.freeze || 0) * 0.7 + 0.28), tgt = { S, th, x: mx, y: my }, tgt2 = (e.bigMove || e.blunderHold) && !e.soft ? { S: Math.min(1.6, S + (e.blunderHold ? 0.12 : 0.1)), th: th * 0.4, x: mx, y: my } : tgt;                 // HERO MOMENT : zoom lent ×1,45 → ×1,55 pendant tout le cri
+        if (e.slowKnight) {                                                                                       // vol lent : le cadre s'ouvre sur tout le trajet puis plonge sur la case d'arrivée
+          const t0 = ti - (e.dur || 2800) / 1000, c0 = at(kf, t0), mid = { S: Math.min(1.32, S), th: 0, x: mx, y: my }, land = { S: 1.5, th: th * 0.3, x: B.x, y: B.y };
+          kf = kf.filter((k) => k.t < t0); kf.push({ t: t0, s: c0, ease: "lin" }, { t: t0 + (e.dur || 2800) / 1000 * 0.45, s: mid, ease: "io3" }, { t: ti, s: land, ease: "io3" }, { t: ti + 1.5, s: { ...land, S: 1.6 }, ease: "lin" }, { t: ti + 1.95, s: base, ease: "out3" });
+        } else {
         kf = kf.filter((k) => k.t < ti); kf.push({ t: ti, s: cur, ease: "lin" }, { t: ti + 0.15, s: tgt, ease: "out3" }, { t: ti + hold, s: tgt2, ease: "lin" }, { t: ti + hold + 0.45, s: base, ease: "out3" });
+        }
       });
       kf.sort((a, b) => a.t - b.t); this.kf = kf;      kf.sort((a, b) => a.t - b.t); this.kf = kf; this.camAt = (t) => at(this.kf, t);
     }
@@ -232,9 +237,17 @@
           else if (m.boss) this.piece(g, m.ch, a.x, a.y, cell * 1.02, { red: true, scale: 1.65, rot: (22 * Math.PI) / 180 });           // GIANT RED BOSS PIECE : ×1,65, 22° sur son propre centre
           else {
             const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1, lean = (0.17 + 0.09 * Math.abs(dx / dist)) * (Math.sign(dx) || -Math.sign(dy) || 1), moving = m.k > 0 && m.k < 1;
+            if (e && e.slowKnight && moving) {                                                                    // SACRIFICE DE CAVALIER : vol lent en arc, aura cyan, images fantômes derrière lui
+              const k0 = m.k, arc = Math.sin(clamp(k0, 0, 1) * Math.PI), lift = (x0, y0, kk) => ({ x: lerp(a.x, b.x, kk), y: lerp(a.y, b.y, kk) - Math.sin(clamp(kk, 0, 1) * Math.PI) * cell * 1.5 });
+              g.save(); g.globalAlpha = 0.35 * (1 - arc * 0.5); g.fillStyle = "#000"; g.beginPath(); g.ellipse(lerp(a.x, b.x, k0), lerp(a.y, b.y, k0) + cell * 0.36, cell * (0.3 + 0.1 * arc), cell * (0.08 + 0.03 * arc), 0, 0, TAU); g.fill(); g.restore();      // ombre au sol
+              for (let i = 6; i >= 1; i--) { const kk = k0 - i * 0.03; if (kk <= 0) continue; const P = lift(0, 0, kk); this.glowAt(g, "#00F7FF", P.x, P.y, cell * 0.8, 0.07 * (7 - i)); this.piece(g, m.ch, P.x, P.y, cell * 1.02, { scale: 1 + 0.4 * Math.sin(kk * Math.PI), alpha: 0.05 * (7 - i), rot: 0.3 * Math.sin(kk * Math.PI) * (Math.sign(b.x - a.x) || 1) }); }
+              const P = lift(0, 0, k0); this.glowAt(g, "#00F7FF", P.x, P.y, cell * (1.6 + arc), 0.55); this.glowAt(g, "#ffffff", P.x, P.y, cell * 0.9, 0.35 * arc);
+              this.piece(g, m.ch, P.x, P.y, cell * 1.02, { scale: 1 + 0.45 * arc, rot: 0.3 * arc * (Math.sign(b.x - a.x) || 1) });
+            } else {
             if (moving) this.glowAt(g, "#ffffff", x, y, cell * 0.9, 0.25); let rot = moving ? lean : 0;
             if (e && this.spins(e)) { const v = t - (e.impact - (e.dur || 90) / 1000); if (v >= 0 && v < 0.14) rot += TAU * SPIN(v / 0.14); }
             this.piece(g, m.ch, x, y, cell * 1.02, { rot, sx: moving ? 1.12 : 1, sy: moving ? 0.92 : 1 });                         // inertie : penche dans le sens de la course + étirement (1,12 × 0,92)
+            }
           }
         }
       }
