@@ -11,7 +11,7 @@
   const CATS = [
     { id: "echecs", n: "ÉCHECS", t: "Échecs", img: "cat_echecs", sections: [
       { n: "Jouer", big: true, items: [["@tc:bullet", "Bullet · 1 min", "cc:bullet"], ["@tc:blitz", "Blitz · 3 min", "cc:blitz"], ["@tc:rapid", "Rapide · 10 min", "cc:rapid"], ["@tc:daily", "Différé · 3 jours", "cc:daily"]] },
-      { n: "Affronter", items: [["defis", "Bots & défis", "cc:hand"], ["chess", "Contre E.N.O.S.", "cc:board"], ["@resume", "Reprendre", "cc:timer"], ["@team", "Équipes", "cc:users"], ["@combat", "Combat de bots", "cc:handshake"], ["royale", "Battle Royale", "cc:fourway"], ["variants", "Variantes", "cc:variants"], ["prime", "ChatGPT Prime", "cc:flag"]] },
+      { n: "Affronter", items: [["defis", "Bots & défis", "cc:hand"], ["chess", "Contre E.N.O.S.", "cc:board"], ["@resume", "Reprendre", "cc:timer"], ["@team", "Équipes", "cc:users"], ["@combat", "Combat de bots", "cc:handshake"], ["royale", "Battle Royale", "cc:fourway"], ["simul", "Simultanée", "cc:fork"], ["variants", "Variantes", "cc:variants"], ["prime", "ChatGPT Prime", "cc:flag"]] },
       { n: "Apprendre", items: [["@learn:lessons", "Leçons", "cc:knight_w"], ["@puz:", "Puzzles", "cc:rush"], ["@learn:openings", "Ouvertures", "cc:bishop_w"], ["@puz:mateIn1", "Mats", "cc:mate"], ["@puz:fork", "Fourchettes", "cc:fork"], ["@puz:pin", "Clouages", "cc:pin"], ["@puz:skewer", "Enfilades", "cc:skewer"], ["@learn:advice", "Conseils", "cc:rook_w"], ["train", "Entraînement", "cc:timer"]] },
       { n: "Analyser", items: [["advisor", "Analyse", "cc:vision"], ["@prof:games", "Historique", "cc:board"], ["@import", "Importer un PGN", "cc:flag"]] },
       { n: "Créer", items: [["chessedit", "Chess Edit", "cc:medal"], ["clips", "Game Clips", "cc:pawn_w"]] },

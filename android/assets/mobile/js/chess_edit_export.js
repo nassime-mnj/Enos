@@ -39,7 +39,7 @@
    */
   X.render = async function (tl, o) {
     o = o || {}; const W = o.width || 1080, H = o.height || 1920, fps = o.fps || 60, total = Math.ceil(tl.duration * fps), prog = o.onProgress || (() => {});
-    const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const R = new E.editRender.Renderer(cv, tl, { flip: o.flip, rec: o.rec });
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const R = new (tl.simul && E.editSimul ? E.editSimul.Renderer : E.editRender.Renderer)(cv, tl, { flip: o.flip, rec: o.rec });
     prog(0, "Chargement des images…"); await R.load();
     const sup = X.supported();
     if (sup.webcodecs) {
