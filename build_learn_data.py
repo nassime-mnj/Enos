@@ -88,6 +88,7 @@ def sync_pc():
              ("js/clips.js", "clips.js"), ("js/m_clips.js", "m_clips.js"), ("js/backup.js", "backup.js"), ("js/m_backup.js", "m_backup.js"), ("js/variants.js", "variants.js"), ("js/m_variants.js", "m_variants.js"), ("css/variants.css", "variants.css"), ("css/badges.css", "badges.css"), ("js/chess4.js", "chess4.js"), ("js/chess4_ai.js", "chess4_ai.js"), ("js/m_royale.js", "m_royale.js"), ("css/royale.css", "royale.css"),
              ("js/m_defis.js", "m_defis.js"), ("js/bot_chat.js", "bot_chat.js"), ("js/anim_icons.js", "anim_icons.js"), ("js/bot_lines.js", "bot_lines.js"), ("js/ai_bots.js", "ai_bots.js"), ("js/prime.js", "prime.js"), ("js/m_prime.js", "m_prime.js"), ("data/style_bots.js", "data/style_bots.js")]
     files += [("img/bots/" + n, "img/bots/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "bots")) if n.endswith(".png")]
+    files += [("img/menu/" + n, "img/menu/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "menu")) if n.startswith("cc_") and n.endswith(".png")]
     files += [("img/badges/" + n, "img/badges/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "badges")) if n.endswith(".png")]
     files += [("img/chess/" + n, "img/chess/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "chess")) if n.endswith(".png")]
     for a, b in files:

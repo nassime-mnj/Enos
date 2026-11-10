@@ -74,8 +74,8 @@ with sync_playwright() as pw:
     hashes = {n: sha(d) for n, d in files.items()}
     needles = [MARK.decode(), "facture_secrete", "contrat_confidentiel", "gros_fichier", PH1, [137, 80, 78, 71, 13, 10, 26, 10], "%PDF-", "ENOS-VAULT-v1", "image/png", "application/pdf"]
 
-    pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_selector('.mtile[data-m="vault"]')
-    check(pg.locator('.mtile[data-m="vault"]').count() == 1, "tuile « Coffre-fort » dans Modules")
+    pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_function('!!ENOS.hub')
+    check(pg.evaluate("ENOS.hub.has('vault')"), "tuile « Coffre-fort » dans Modules")
     open_tool(pg, "vault")
 
     # ---- lib : primitives

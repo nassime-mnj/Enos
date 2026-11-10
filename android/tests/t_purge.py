@@ -5,9 +5,9 @@ errs = []
 with sync_playwright() as pw:
     b, ctx = launch(pw)
     pg = open_app(ctx, errs)
-    pg.click('#tabbar [data-tab="tools"]'); pg.evaluate("ENOS.tools.show('')"); pg.wait_for_selector('.mtile[data-m="purge"]')
+    pg.click('#tabbar [data-tab="tools"]'); pg.evaluate("ENOS.tools.show('')"); pg.wait_for_function('!!ENOS.hub')
     check(True, "tuile PURGE.EXE dans le groupe « Jeux »")
-    pg.click('.mtile[data-m="purge"]'); pg.wait_for_selector("#tool-purge #pg-play")
+    pg.evaluate("ENOS.modules.open('purge')"); pg.wait_for_selector("#tool-purge #pg-play")
     pg.click("#pg-play"); pg.wait_for_selector("#purge-full canvas")
     pg.evaluate("window.__g = document.querySelector('#tool-purge .suite-body')._api.game")
     # le mode tactile affiche un écran d'accueil ; le mode souris non

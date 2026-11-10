@@ -125,8 +125,8 @@ def uris(ids, byid): return sorted(byid[i]["uri"] for i in ids)
 with sync_playwright() as pw:
     b, ctx = launch(pw); errs = []
     pg = open_app(ctx, errs)
-    pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_selector('.mtile[data-m="cleaner"]')
-    check(pg.locator('.mtile[data-m="cleaner"]').count() == 1, "tuile « Nettoyeur de stockage » dans Modules")
+    pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_function('!!ENOS.hub')
+    check(pg.evaluate("ENOS.hub.has('cleaner')"), "tuile « Nettoyeur de stockage » dans Modules")
     open_tool(pg, "cleaner")
     check("application Android" in pg.inner_text("#cln-root") and pg.locator("#cln-scan").count() == 0, "hors application : « disponible dans l'application Android »")
 

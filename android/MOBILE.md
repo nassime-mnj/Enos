@@ -309,3 +309,12 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Bots rapides** : leur réflexion = min(300 / 700 / 1000 / 1500 ms, temps restant ÷ 20). La force réelle (`eloReal`, niveau Stockfish) ne change pas.
 - **Elo affichés** (`K.TC_TOP` / `K.tcElo` dans `chess_brain.js`, modifiables) : rapide et différé : Stockfish / ETO / E.N.O.S. = 3200 ; **blitz** 4100 / 4000 / 3900 ; **bullet** 5000 / 4900 / 4800. Les autres bots : Elo + k × (Elo − 1000) (k = 0,3 blitz, 0,55 bullet). Étiquette seulement (écran, répliques, vidéo Chess Edit : `rec.tc`, `pwElo` / `pbElo`).
 - PGN : en-tête `TimeControl`. Test : `t_defis_tc.py`.
+
+## 1.71 — Refonte du menu Modules (hub 7 catégories)
+
+- **Hub** (`js/hub.js`, `css/hub.css`) : l'onglet MODULES devient **7 catégories à icônes lumineuses** (Échecs, Cloud, Paramètres, Codage, Outils, Organisation, Ordinateur — `img/menu/cat_*.png`, découpées de la maquette). Chaque catégorie = une page en **sections** ; chaque module = une **tuile icône + nom, sans description** ; recherche instantanée, ligne « Récents », verrous et pastille PC conservés. Tous les modules existants restent accessibles (`ENOS.hub.has(id)`, `ENOS.modules.all()`).
+- **Échecs façon Chess.com** : *Jouer* (Bullet / Blitz / Rapide / Différé : ouvrent les Défis avec la cadence déjà choisie), *Affronter* (bots, E.N.O.S., équipes, combat, Battle Royale, variantes, Prime, reprise d'une partie en différé), *Apprendre* (leçons, puzzles, ouvertures, mats, fourchettes, clouages, enfilades, conseils, entraînement), *Analyser* (analyse de capture, historique, import PGN), *Créer* (Chess Edit, Game Clips), *Profil*. Icônes Chess.com de la maquette (`img/menu/cc_*.png`).
+- **Nouveau module « Profil échecs »** (`js/m_chessprofile.js`) : **Statistiques** par cadence et par période (V/N/D, précision, brillants), **Historique** (revoir, Chess Edit), **Prix** (22 succès débloqués par tes parties).
+- **Accueil des Défis** : 24 modes rangés en sections (Contre l'IA, Personnages, En équipe, Spectacle), tuiles icône + nom (les détails sont dans la feuille de réglage).
+- **Animations** : l'icône de la catégorie *voyage* jusqu'à l'en-tête (et revient), la tuile *s'agrandit* en module, entrées en cascade, **onde lumineuse + pression + vibration** au clic (hub, boutons, feuilles). Respecte « Animations » désactivées / réduire les animations.
+- Tests : `t_hub.py` ; les anciens tests passent par `ENOS.modules.open(id)` / `ENOS.hub.has(id)`.

@@ -2,10 +2,10 @@ from mobile_common import *
 with sync_playwright() as pw:
     b, ctx = launch(pw); errs = []
     pg = open_app(ctx, errs)
-    pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_selector('.mtile[data-m="text"]')
+    pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_function('!!ENOS.hub')
     for t in ("text", "expenses"):
-        check(pg.locator(f'.mtile[data-m="{t}"]').count() == 1, f"tuile « {t} » dans Modules")
-    check(pg.locator('.mtile[data-m="img"]').count() == 1, "les outils existants (photos, dossiers) sont toujours là")
+        check(pg.evaluate(f\"ENOS.hub.has('{t}')\"), f"tuile « {t} » dans Modules")
+    check(pg.evaluate("ENOS.hub.has('img')"), "les outils existants (photos, dossiers) sont toujours là")
     # ---- JSON / XML
     open_tool(pg, "text")
     pg.fill("#tx-in", '{"b":1,"a":[1,2,{"z":true}]}'); pg.click("#tx-fmt")

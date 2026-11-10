@@ -9,9 +9,9 @@ with sync_playwright() as pg_:
     ev("""() => { window.__ka = []; const N = ENOS.native, o = N.keepAlive; N.keepAlive = (on, t) => { window.__ka.push([on, t]); return o(on, t); }; }""")
 
     # ---------------------------------------------------------------- module dans la grille + sous-vue
-    pg.click('#tabbar [data-tab="tools"]'); ev("ENOS.tools.show('')"); pg.wait_for_selector('.mtile[data-m="train"]')
+    pg.click('#tabbar [data-tab="tools"]'); ev("ENOS.tools.show('')"); pg.wait_for_function('!!ENOS.hub')
     check(True, "tuile « Super Enos » dans les modules")
-    pg.click('.mtile[data-m="train"]'); pg.wait_for_selector("#tool-train:not([hidden])")
+    pg.evaluate("ENOS.modules.open('train')"); pg.wait_for_selector("#tool-train:not([hidden])")
     check(pg.locator("#su-opps .su-opp.on").count() == 3, "3 profils sélectionnés par défaut (E.N.O.S., Stockfish, ETO)")
 
     # ---------------------------------------------------------------- une partie courte (limite de 24 demi-coups), sans LLM (pas de clé Groq)
@@ -58,7 +58,7 @@ with sync_playwright() as pg_:
     pg.click('#tabbar [data-tab="home"]'); pg.wait_for_timeout(120)
     mid = ev("getComputedStyle(document.querySelector('.view[data-v=home] .scroll > *:nth-child(3)')).opacity")
     check(float(mid) < 1, "les cartes de la page d'accueil entrent en cascade (opacité %s à 120 ms)" % mid)
-    ev("ENOS.settings.set('anim', false); ENOS.ui.applyAnim()"); pg.wait_for_timeout(150)
+    ev("ENOS.settings.set('anim', false); ENOS.ui.applyAnim()"); pg.wait_for_function("getComputedStyle(document.querySelector('.view:not(.on)')).transform === 'none'", timeout=4000)
     check(ev("document.documentElement.classList.contains('no-anim') && getComputedStyle(document.querySelector('.view:not(.on)')).transform") == "none", "réglage « Animations » désactivable")
     check(not errs, "aucune erreur JavaScript : %s" % errs[:2])
     b.close()

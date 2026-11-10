@@ -79,10 +79,20 @@
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
         ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
 
+      // ---- accueil : sections, icônes + noms (les détails de chaque défi sont dans sa feuille de réglage)
+      const AIIDS = E.aiBots ? E.aiBots.ids : [], botImg = (id) => (E.botChat && E.botChat.bots[id] && E.botChat.bots[id].img) || "";
+      const DFN = { brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
+      const DFG = [["Contre l'IA", ["brillant", "enos", "coach", "boss"]], ["Personnages", ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...AIIDS]], ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
+      function dfHome() {
+        let n = 0;
+        return DFG.map(([title, ids]) => `<section class="hub-sec"><h4><span>${title}</span></h4><div class="hub-grid">${ids.filter((id) => MODES.some((x) => x.id === id)).map((id) => {
+          const m = MODES.find((x) => x.id === id), d = DFN[id] || [m.t.replace(/^[^\p{L}\p{N}]+/u, "")], src = d[1] || botImg(id), name = d[0], ic = src && src.startsWith("cc:") ? `<img class="hub-cc" src="img/menu/cc_${src.slice(3)}.png" alt="">` : src ? `<img class="hub-cc hub-av" src="${src}" alt="">` : `<span class="hub-ini">${esc(name.slice(0, 2).toUpperCase())}</span>`;
+          return `<button class="df-mode hub-tile" data-m="${id}" style="--i:${n++}"><span class="hub-ic">${ic}</span><b>${esc(name)}</b></button>`;
+        }).join("")}</div></section>`).join("");
+      }
       el.innerHTML = `
         <div id="df-home">
-          <div class="card"><h3>Choisis ton défi</h3><div class="df-modes">${MODES.map((m) => `<button class="df-mode" data-m="${m.id}"><b>${m.t}</b><small>${m.s}</small></button>`).join("")}</div>
-            <p class="muted" style="font-size:12.5px;margin-top:10px">Chaque coup est jugé (Brillant, Meilleur, Gaffe…) comme sur le PC. Aucun ordinateur nécessaire.</p></div>
+          ${dfHome()}
           <div class="card" id="df-dcard" hidden><h3>Parties en différé en cours</h3><div id="df-daily" class="list"></div></div>
           <div class="card"><h3>Parties récentes<span class="sp" id="df-hn"></span></h3><div id="df-hist" class="list"></div></div>
         </div>

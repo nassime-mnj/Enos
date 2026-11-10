@@ -32,6 +32,6 @@ def open_app(ctx, errs):
 def open_tool(pg, tool):
     pg.click('#tabbar [data-tab="tools"]')
     pg.evaluate("window.ENOS.tools.show('')")
-    pg.wait_for_selector(f'.mtile[data-m="{tool}"]')
-    pg.click(f'.mtile[data-m="{tool}"]')
+    pg.wait_for_function(f"window.ENOS.hub && window.ENOS.modules")
+    pg.evaluate(f"window.ENOS.modules.open('{tool}')")
     pg.wait_for_selector(f"#tool-{tool}:not([hidden]) .suite-body > *", state="attached")

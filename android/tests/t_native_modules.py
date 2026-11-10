@@ -8,9 +8,9 @@ with sync_playwright() as pw:
     # -------------------------------------------------------------- hub : plus de tuile « PC » pour ces outils
     pg.click('#tabbar [data-tab="tools"]'); pg.evaluate("window.ENOS.tools.show('')")
     for mid in ["audiolab", "sprites", "chill", "compress", "subs", "defis", "advisor"]:
-        check(pg.locator('.mtile[data-m="%s"]' % mid).count() == 1, "tuile native : " + mid)
+        check(pg.evaluate(\"ENOS.hub.has('%s')\" % mid), "tuile native : " + mid)
     for mid in ["b-ch", "b-au", "b-cp", "b-ip", "b-av", "b-subs", "b-dm", "b-df", "b-st"]:
-        check(pg.locator('.mtile[data-m="%s"]' % mid).count() == 0, "ancienne tuile PC retirée : " + mid)
+        check((not pg.evaluate(\"ENOS.hub.has('%s')\" % mid)), "ancienne tuile PC retirée : " + mid)
 
     # -------------------------------------------------------------- Labo audio
     open_tool(pg, "audiolab")
