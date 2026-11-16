@@ -270,7 +270,8 @@
     if (id) return pick(bots[id], id);
     if (/^ETO\b/i.test(name) && bots.eto) return pick(bots.eto, "eto");
     if (/^E\.?N\.?O\.?S/i.test(name) && bots.enos) return pick(bots.enos, "enos");
-    if (/^(Stockfish|Bot \d+)/i.test(name)) return { id: "", img: "", ph: ["SF", "#8d8d97"], b: null };
+    if (/^Stockfish/i.test(name)) return { id: "stockfish", img: "img/bots/stockfish.png", anim: "", ph: null, b: { name: "Stockfish", img: "img/bots/stockfish.png" } };               // la morue de Stockfish
+    if (/^Bot \d+/i.test(name)) return { id: "", img: "", ph: ["SF", "#8d8d97"], b: null };
     return null;
   }
   /** sons d'erreur : IMPRÉCISION → « WTF » One Piece ; ERREUR → FAHH ou One Piece « funny 187 » (un coup sur deux, parité du n° de coup) ; COUP MANQUÉ → One Piece « funny 210 » ; GAFFE → FAHH ralenti uniquement. */
