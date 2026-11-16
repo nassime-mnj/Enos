@@ -331,3 +331,9 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Choix du moteur de rendu automatique (`tl.simul`) dans l'aperçu et l'export vidéo.
 - **1.73.1 (correctif)** : « Générer » et « Aperçu rapide » répondaient « Timeline indisponible » pour une partie Simultanée (la timeline n’était pas marquée `viral`) ; test d’interface `t_edit_simul_ui.py`.
 - Tests : `t_simul.py` (jeu), `t_edit_simul.py` (balayage de toutes les images + captures).
+
+## 1.74 — Sons One Piece sur imprécision / erreur / gaffe (Chess Edit)
+
+- 3 bruitages ajoutés dans `js/fahh_data.js` (rognés : silence initial retiré, fondu de fin) : `op_imp` (« Weird Anime WTF », 1,1 s) = **imprécision**, `op_err` (« funny 187 », 2,15 s) = **erreur**, `op_gaffe` (« funny 210 », 2,9 s) = **gaffe**.
+- Ils **coexistent** avec les FAHH existants : pour les erreurs et les gaffes, un coup sur deux (parité du n° de coup, donc stable d'un rendu à l'autre) joue le FAHH (normal / ralenti), l'autre le son One Piece ; l'imprécision (qui n'avait aucun son) joue toujours `op_imp`. Même choc grave + coupure de la musique que les FAHH.
+- Logique dans `E.editMap.errSfx(key, t, n, soft)` (utilisée aussi par la Simultanée). Test : `t_edit_onepiece.py` ; `t_edit_hits.py` adapté.

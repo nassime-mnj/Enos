@@ -8,6 +8,7 @@
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };
   const FONT = (px) => `900 ${Math.round(px)}px Impact, "Arial Black", system-ui, sans-serif`, TXT = (px, w) => `${w || 600} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
   const TONE = { brilliant: "#00F7FF", best: "#2CE65C", great: "#2CE65C", excellent: "#2CE65C", good: "#8fd16b", blunder: "#ff2020", mistake: "#ff9a1f", miss: "#ff9a1f", inaccuracy: "#f7c631" };
+  const errSfxOf = (key, t, k) => E.editMap.errSfx(key, +t.toFixed(3), k, false);
   const MOVE_DUR = 0.62, REPLY_DUR = 0.5;
 
   // ------------------------------------------------------------------ TIMELINE
@@ -49,8 +50,7 @@
         sfx.push({ t: +ti.toFixed(3), id, gain: 1.3, bus: "echo", ply: k });
         if (id === "capture") sfx.push({ t: +ti.toFixed(3), id: "thud", gain: 1.3, bus: "echo", ply: k }); else if (id === "check") sfx.push({ t: +ti.toFixed(3), id: "crystal", gain: 1.1, bus: "echo", ply: k }); else if (id === "mate") sfx.push({ t: +ti.toFixed(3), id: "mateboom", gain: 1.4, bus: "echo", ply: k });
         if (p.key === "brilliant") { sfx.push({ t: +(ti + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: k }); sfx.push({ t: +(ti + 0.04).toFixed(3), id: VOICE[p.piece] || "this_is_the_way", gain: 1.3, bus: "voice", level: 0.45, ply: k }); }
-        else if (p.key === "blunder") { sfx.push({ t: +ti.toFixed(3), id: "fahh_slow", gain: 1.6, bus: "hit", level: 0.28, ply: k }); sfx.push({ t: +ti.toFixed(3), id: "thud", gain: 1.4, bus: "echo", ply: k }); }
-        else if (p.key === "mistake" || p.key === "miss") sfx.push({ t: +ti.toFixed(3), id: "fahh", gain: 1.4, bus: "hit", level: 0.34, ply: k }); });
+        else errSfxOf(p.key, ti, k).forEach((x) => sfx.push(x)); });
     });
     sfx.sort((a, b) => a.t - b.t);
     const best = vis.reduce((a, v) => (v.score > a.score ? v : a), vis[0]);
