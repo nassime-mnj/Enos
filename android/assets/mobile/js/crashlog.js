@@ -7,7 +7,7 @@
   const KEY = "enos.crash.v1", SES = "enos.crash.session", SEEN = "enos.crash.seen", MAXN = 60;
   const ls = { get(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* quota / mode privé */ } } };
   const nat = () => !!(window.Enos && typeof window.Enos.crashAdd === "function");
-  const web = () => /^https?:$/.test(location.protocol) && !nat();
+  const web = () => /^https?:$/.test(location.protocol) && !nat() && !!document.querySelector('meta[name="nasko-token"]');                       // pages du PC seulement (jeton présent) ; le navigateur de test mobile ne fait aucun appel
   const pad = (n) => String(n).padStart(2, "0");
   const stamp = (d) => { d = d || new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
   const crumbs = []; let lastMsg = "", lastT = 0;
