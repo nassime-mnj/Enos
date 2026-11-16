@@ -92,6 +92,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        CrashLog.init(this);
         prefs = getSharedPreferences("nasko", MODE_PRIVATE);
         vault = new KeyVault(this);
         pcLink = new PcLink(prefs, vault);
@@ -218,6 +219,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onResume() {
+        CrashLog.state("fg");
         super.onResume();
         paused = false;
         web.onResume();
@@ -226,6 +228,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        CrashLog.state("bg");
         CookieManager.getInstance().flush();
         ui.removeCallbacks(probe);
         paused = true;
@@ -267,6 +270,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (isFinishing()) CrashLog.state("clean");
         ui.removeCallbacksAndMessages(null);
         keepAlive = false;
         TrainService.stop(this);
@@ -624,6 +628,19 @@ public class MainActivity extends Activity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
             return "GET".equals(r.getMethod()) ? webUpd.intercept(r.getUrl().toString()) : null;
+        }
+
+        @Override
+        public boolean onRenderProcessGone(WebView v, android.webkit.RenderProcessGoneDetail d) {
+            // le processus du WebView est mort (mémoire saturée le plus souvent) : on le note, puis on recrée l'écran au lieu de fermer toute l'application
+            CrashLog.add("WEBVIEW", "Processus du WebView perdu · plantage=" + d.didCrash() + " · priorité=" + d.rendererPriorityAtExit() + " · page=" + (v == null ? "?" : v.getUrl()));
+            ui.post(new Runnable() {
+                @Override
+                public void run() {
+                    recreate();
+                }
+            });
+            return true;
         }
 
         @Override

@@ -132,6 +132,29 @@ final class LocalBridge {
         return ok() && files.saveMedia(name, mime, b64, collection);
     }
 
+    // ------------------------------------------------------------------ journal de plantages (CrashLog.java) : lecture / ajout depuis js/crashlog.js / effacement
+    @JavascriptInterface
+    public String crashLog() {
+        return ok() ? CrashLog.text() : "";
+    }
+
+    private long crashT0;
+    private int crashN;
+
+    @JavascriptInterface
+    public void crashAdd(String kind, String msg) {
+        if (!ok()) return;
+        long now = System.currentTimeMillis();
+        if (now - crashT0 > 60000) { crashT0 = now; crashN = 0; }
+        if (++crashN > 40) return;                                            // au plus 40 lignes par minute (boucle d'erreurs)
+        CrashLog.add(kind == null || kind.length() > 12 ? "JS" : kind, msg);
+    }
+
+    @JavascriptInterface
+    public boolean crashClear() {
+        return ok() && CrashLog.clear();
+    }
+
     @JavascriptInterface
     public boolean saveBegin(String name, String mime, String collection) {
         return ok() && files.saveBegin(name, mime, collection);

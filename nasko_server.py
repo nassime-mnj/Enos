@@ -63,6 +63,8 @@ import nasko_agent
 import nasko_epita
 import nasko_mobchess
 import nasko_lol
+import nasko_crash
+import nasko_gamecoach
 import nasko_train
 import nasko_onboarding
 import nasko_pairing
@@ -5100,6 +5102,81 @@ def pet_interrupt():
     return {"ok": True}
 
 
+class GcConfig(BaseModel):
+    enabled: bool | None = None
+    game: str | None = None
+    goal: str | None = None
+    mode: str | None = None                  # "text" : bulle silencieuse · "voice" : voix + bulle
+    focus: str | None = None                 # "screen" | "window"
+    interval: int | None = None
+    process: str | None = None
+    need_game: bool | None = None
+    alerts_only: bool | None = None
+
+
+class GcAsk(BaseModel):
+    question: str
+
+
+class GcPause(BaseModel):
+    paused: bool
+
+
+@app.get("/api/gamecoach/status", dependencies=_LOCAL)
+def gc_status():
+    return nasko_gamecoach.status()
+
+
+@app.post("/api/gamecoach/config", dependencies=_LOCAL)
+def gc_config(b: GcConfig):
+    return nasko_gamecoach.set_config(b.model_dump(exclude_none=True))
+
+
+@app.post("/api/gamecoach/pause", dependencies=_LOCAL)
+def gc_pause(b: GcPause):
+    return nasko_gamecoach.pause(b.paused)
+
+
+@app.post("/api/gamecoach/analyse", dependencies=_LOCAL)
+def gc_analyse_now():
+    try:
+        _sig, ctx = nasko_gamecoach.step(None, force=True)
+    except Exception as e:                                                   # noqa: BLE001
+        raise HTTPException(502, f"Analyse impossible : {e}")
+    return {"context": ctx, **nasko_gamecoach.status()}
+
+
+@app.post("/api/gamecoach/ask", dependencies=_LOCAL)
+def gc_ask(b: GcAsk):
+    if not b.question.strip():
+        raise HTTPException(400, "Pose une question.")
+    try:
+        return {"answer": nasko_gamecoach.ask(b.question)}
+    except Exception as e:                                                   # noqa: BLE001
+        raise HTTPException(502, f"Réponse impossible : {e}")
+
+
+class CrashEntry(BaseModel):
+    kind: str = "JS"
+    msg: str = ""
+
+
+@app.get("/api/crash/log", dependencies=_LOCAL)
+def crash_log():
+    return {"text": nasko_crash.text(), "count": nasko_crash.count()}
+
+
+@app.post("/api/crash/log", dependencies=_LOCAL)
+def crash_add(b: CrashEntry):
+    return {"ok": nasko_crash.add_web(b.kind[:12], b.msg[:8000])}
+
+
+@app.post("/api/crash/clear", dependencies=_LOCAL)
+def crash_clear():
+    return {"ok": nasko_crash.clear()}
+
+
+
 class LolConfig(BaseModel):
     enabled: bool | None = None
     mode: str | None = None                  # "text" : bulle silencieuse · "voice" : voix + bulle
@@ -5773,6 +5850,7 @@ atexit.register(nasko_afk.afk.stop)
 atexit.register(nasko_mobchess.close)
 atexit.register(nasko_train.stop)
 atexit.register(nasko_lol.stop)
+atexit.register(nasko_gamecoach.stop)
 atexit.register(nasko_devmanager.stop_all)
 
 
@@ -6340,6 +6418,7 @@ async def _chat_startup():
     nasko_chat.trim()
     nasko_chat.prime_seen()
     threading.Thread(target=nasko_lol.autostart_if_enabled, daemon=True).start()
+    threading.Thread(target=nasko_gamecoach.autostart_if_enabled, daemon=True).start()
     threading.Thread(target=nasko_train.autostart_if_enabled, daemon=True).start()   # Super Enos : relance de l'entraînement si l'option « au démarrage » est cochée
     threading.Thread(target=_gs_relay_on, daemon=True).start()   # écoute permanente des alertes de mise à jour (relais par dossier partagé, local)
     if load_config().get("chat_channel_open"):                  # le canal était ouvert : il se rouvre tout seul
@@ -6820,6 +6899,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s",
                         handlers=[logging.FileHandler(_path("nasko.log"), encoding="utf-8")]
                         + ([logging.StreamHandler()] if sys.stdout else []))
+    nasko_crash.install()                                                   # journal de plantages (crash.log)
     headless = "--server-only" in sys.argv or "--background" in sys.argv      # --background : demarrage de Windows, sans fenetre
     tray_on = False
     quit_evt = state["quit_evt"] = threading.Event()

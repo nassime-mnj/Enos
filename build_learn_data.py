@@ -97,6 +97,7 @@ def sync_pc():
             continue
         os.makedirs(os.path.dirname(os.path.join(PC, b)), exist_ok=True)
         shutil.copyfile(os.path.join(MOBILE, a), os.path.join(PC, b))
+    shutil.copyfile(os.path.join(MOBILE, "js", "crashlog.js"), os.path.join(PC, "..", "crashlog.js"))   # journal de plantages : même script pour l'interface du PC (static/crashlog.js)
     print(len(files), "fichiers copiés dans static/learn")
 
 

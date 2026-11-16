@@ -22,7 +22,7 @@
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
     ] },
     { id: "parametres", n: "PARAMÈTRES", t: "Paramètres", img: "cat_parametres", sections: [
-      { n: "Application", items: [["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"]] },
+      { n: "Application", items: [["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
       { n: "Mon PC", items: [["s-qr", "Appairer le PC"], ["b-rg", "Réglages du PC"]] },
     ] },
     { id: "codage", n: "CODAGE", t: "Codage", img: "cat_codage", sections: [

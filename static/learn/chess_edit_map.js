@@ -273,6 +273,15 @@
     if (/^(Stockfish|Bot \d+)/i.test(name)) return { id: "", img: "", ph: ["SF", "#8d8d97"], b: null };
     return null;
   }
+  /** sons d'erreur : IMPRÉCISION → « WTF » One Piece ; ERREUR → FAHH ou One Piece « funny 187 » (un coup sur deux, parité du n° de coup) ; COUP MANQUÉ → One Piece « funny 210 » ; GAFFE → FAHH ralenti uniquement. */
+  function errSfx(key, t, n, soft) {
+    const out = [], alt = (n | 0) % 2 === 1;
+    if (key === "inaccuracy") out.push({ t, id: "op_imp", gain: soft ? 1.0 : 1.35, bus: "hit", level: 0.22, ply: n });
+    else if (key === "miss") out.push({ t, id: "op_gaffe", gain: 1.6, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n });
+    else if (key === "mistake") { out.push(alt ? { t, id: "op_err", gain: 1.45, bus: "hit", level: 0.3, ply: n } : { t, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: n }); out.push({ t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n }); }
+    else if (key === "blunder") out.push({ t, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: 1.5, bus: "echo", ply: n }, { t, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: n });
+    return out;
+  }
   function introInfo(rec) {
     const used = new Set();
     const side = (name, color) => {
@@ -301,8 +310,7 @@
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
       if (e.slowKnight) { sfx.push({ t: +(e.impact - e.dur / 1000).toFixed(3), id: "horse", gain: 1.9, bus: "epic", ply: e.n }); sfx.push({ t: e.impact, id: "mateboom", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.6, bus: "echo", ply: e.n }); }      // hennissement épique avec beaucoup d'écho pendant le vol, puis GROS impact à l'atterrissage
       if (e.kind !== "ff" && !e.forced) {                                                              // « FAHH » : erreur = FAHH normal, gaffe = FAHH ralenti ; ça FRAPPE (impact grave + boom) comme les autres bruitages
-        if (e.key === "blunder") { sfx.push({ t: e.impact, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: e.n }); }
-        else if (e.key === "mistake" || e.key === "miss") { sfx.push({ t: e.impact, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: e.soft ? 0.8 : 1.15, bus: "echo", ply: e.n }); }
+        errSfx(e.key, e.impact, e.n, e.soft).forEach((x) => sfx.push(x));
       }
     });
     ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
@@ -623,5 +631,5 @@ RÉPONDS UNIQUEMENT PAR UN BLOC JSON (aucun texte autour), exactement ce schéma
     };
   }
 
-  E.editMap = { geminiPrompt, parseScript, buildFromScript, GEM_BADGES, GEM_VFX, synthAudio, gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, reach, threatsFrom, pieceStats, mapOf };
+  E.editMap = { geminiPrompt, parseScript, buildFromScript, GEM_BADGES, GEM_VFX, synthAudio, gamePlies, autoSlots, manualSlots, assign, build, buildViral, manifest, sqXY, BADGES, lvlOf, introInfo, errSfx, reach, threatsFrom, pieceStats, mapOf };
 })();
