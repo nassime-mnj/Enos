@@ -1,0 +1,21 @@
+/* CHESS FOG : partie plein écran. Réutilise les classes fd-* de fived.css (boutons, cartes, menus). */
+.fg-hero canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.fg-game{position:fixed;inset:0;z-index:4000;background:radial-gradient(120% 90% at 50% 30%,#0d1c2a,#04080f);color:#eaf0ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;-webkit-user-select:none;user-select:none;animation:fdin .45s cubic-bezier(.2,.8,.2,1)}
+.fg-top{padding:max(10px,env(safe-area-inset-top)) 12px 6px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.fg-chip{flex:1;max-width:280px;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;padding:7px 14px;border-radius:16px;background:rgba(16,30,46,.75);border:1px solid rgba(130,200,230,.3);backdrop-filter:blur(10px)}
+.fg-chip i{grid-row:1/3;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 0 14px #fff}.fg-chip.b i{background:#0d1020;box-shadow:0 0 0 2px #fff,0 0 14px #5ad}
+.fg-chip b{font:900 13.5px system-ui;letter-spacing:1.5px}.fg-chip small{font-size:10.5px;color:#9fc2d8;letter-spacing:.5px}
+.fg-mid{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:4px 8px}
+.fg-board{width:min(100%,calc(100vh - 290px),560px);aspect-ratio:1;position:relative;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(130,210,240,.35),0 0 50px -6px rgba(60,180,220,.5),0 20px 50px -10px #000}
+.fg-cv{display:block;width:100%;height:100%}
+.fg-info{padding:6px 12px max(14px,env(safe-area-inset-bottom));display:grid;gap:8px;min-height:116px}
+.fg-msg{min-height:42px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.35;padding:8px 14px;border-radius:14px;background:rgba(14,26,40,.8);border:1px solid rgba(130,200,230,.25);color:#cfe6f4}
+.fg-msg:empty{opacity:.0}.fg-msg.pop{animation:fgpop .4s cubic-bezier(.2,.9,.2,1)}@keyframes fgpop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.fg-msg.good{border-color:#3dffa0;box-shadow:0 0 18px -4px #3dffa0}.fg-msg.bad{border-color:#ff4060;box-shadow:0 0 18px -4px #ff4060;color:#ffd5db}.fg-msg.warn{border-color:#ffb824;box-shadow:0 0 18px -4px #ffb824}.fg-msg.dim{color:#8fb0c4}
+.fg-caps{display:flex;justify-content:space-between;gap:10px;min-height:28px}.fg-caps>div{display:flex;align-items:center;gap:2px;flex-wrap:wrap}.fg-caps small{font-size:10px;letter-spacing:1px;color:#7fa5ba;margin-right:6px;text-transform:uppercase}.fg-caps img{width:24px;height:24px}
+.fg-think{position:absolute;left:50%;top:78px;transform:translateX(-50%);background:rgba(16,30,46,.85);border:1px solid rgba(130,200,230,.35);border-radius:20px;padding:7px 16px;font:800 12.5px system-ui;letter-spacing:1px;color:#bfe6f6}
+.fg-think[hidden]{display:none}.fg-think i{font-style:normal;animation:fdd 1.2s infinite}.fg-think i:nth-child(2){animation-delay:.2s}.fg-think i:nth-child(3){animation-delay:.4s}
+.fg-pass{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(100% 70% at 50% 40%,#0c1a28,#03060b)}
+.fg-pass[hidden]{display:none}.fg-pass h2.w{text-shadow:0 0 18px #fff,0 0 44px #9fe8ff}.fg-pass h2.b{text-shadow:0 0 18px #6a8cff,0 0 44px #3a5cff}.fg-pass .fd-card{text-align:center}.fg-pass .fd-b{margin-top:10px;width:100%}
+
+.fg-hero .fd-title{background:linear-gradient(0deg,rgba(4,8,15,.95) 30%,rgba(4,8,15,0));padding-top:60px;bottom:0;padding-bottom:12px}

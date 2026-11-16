@@ -64,7 +64,7 @@
     setQuality(low) { this.reduce = !!low; this.dpr = 0; this.resize(); }                                           // « Effets réduits » : résolution ≤ 1,25 et moins de bloom
     destroy() { this.alive = false; if (this._ro) this._ro.disconnect(); }
     resize() {
-      const r = (this.cv.parentElement || this.cv).getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, this.reduce ? 1.25 : 2.5), w = Math.max(120, Math.round(r.width)), h = Math.max(120, Math.round(r.height));
+      const pe = this.cv.parentElement || this.cv, r = { width: pe.clientWidth, height: pe.clientHeight }, dpr = Math.min(window.devicePixelRatio || 1, this.reduce ? 1.25 : 2.5), w = Math.max(120, Math.round(r.width)), h = Math.max(120, Math.round(r.height));
       if (w === this.W && h === this.H && dpr === this.dpr) return; this.W = w; this.H = h; this.dpr = dpr; this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr); this.cv.style.width = w + "px"; this.cv.style.height = h + "px";
       this.glow.width = Math.max(8, Math.round(w * dpr / 4)); this.glow.height = Math.max(8, Math.round(h * dpr / 4)); this.glow2.width = Math.max(4, Math.round(w * dpr / 16)); this.glow2.height = Math.max(4, Math.round(h * dpr / 16));
       this.dirty = true; if (this.S && !this.free) this.fitPresent(true);
