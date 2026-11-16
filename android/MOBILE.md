@@ -343,3 +343,7 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Cause** : le MP4 entier (30 à 80 Mo) était converti en UNE chaîne base64 puis envoyé d'un seul appel au pont Java (`saveMedia`) : saturation mémoire du WebView → plantage.
 - **Correction** : écriture **par morceaux de 768 Ko** (`saveBegin` / `saveChunk` / `saveEnd` dans `FilesBridge.java` + `LocalBridge.java`, `N.files.save` dans `native.js`), directement dans `Download/ENOS` ; le Blob n'est plus jamais copié en entier en mémoire ; en cas d'échec le fichier partiel est supprimé. Dans l'application, « Télécharger » enregistre directement (le partage de fichier et le repli data-URL, qui plantaient aussi sur les gros fichiers, ne sont utilisés qu'en navigateur).
 - Test : `t_save_native.py` (faux pont natif, fichier de 40 Mo reçu en entier, aucun appel > 1 Mo).
+
+## 1.74.2 — répartition des sons One Piece
+
+- **Gaffe** : FAHH ralenti uniquement (plus de son One Piece). **Coup manqué** : One Piece « funny 210 » (`op_gaffe`). Erreur : FAHH / One Piece 187 en alternance ; imprécision : One Piece « WTF ». (`E.editMap.errSfx`, test `t_edit_onepiece.py`.)

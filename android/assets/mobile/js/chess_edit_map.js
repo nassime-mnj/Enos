@@ -273,12 +273,13 @@
     if (/^(Stockfish|Bot \d+)/i.test(name)) return { id: "", img: "", ph: ["SF", "#8d8d97"], b: null };
     return null;
   }
-  /** sons d'erreur : IMPRÉCISION → « WTF » One Piece ; ERREUR → FAHH ou One Piece « funny 187 » ; GAFFE → FAHH ralenti ou One Piece « funny 210 ». Les deux familles COEXISTENT : un coup sur deux (parité du n° de coup, déterministe). */
+  /** sons d'erreur : IMPRÉCISION → « WTF » One Piece ; ERREUR → FAHH ou One Piece « funny 187 » (un coup sur deux, parité du n° de coup) ; COUP MANQUÉ → One Piece « funny 210 » ; GAFFE → FAHH ralenti uniquement. */
   function errSfx(key, t, n, soft) {
     const out = [], alt = (n | 0) % 2 === 1;
     if (key === "inaccuracy") out.push({ t, id: "op_imp", gain: soft ? 1.0 : 1.35, bus: "hit", level: 0.22, ply: n });
-    else if (key === "mistake" || key === "miss") { out.push(alt ? { t, id: "op_err", gain: 1.45, bus: "hit", level: 0.3, ply: n } : { t, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: n }); out.push({ t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n }); }
-    else if (key === "blunder") { out.push(alt ? { t, id: "op_gaffe", gain: 1.6, bus: "hit", level: 0.28, ply: n } : { t, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: n }); out.push({ t, id: "thud", gain: 1.5, bus: "echo", ply: n }, { t, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: n }); }
+    else if (key === "miss") out.push({ t, id: "op_gaffe", gain: 1.6, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n });
+    else if (key === "mistake") { out.push(alt ? { t, id: "op_err", gain: 1.45, bus: "hit", level: 0.3, ply: n } : { t, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: n }); out.push({ t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n }); }
+    else if (key === "blunder") out.push({ t, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: 1.5, bus: "echo", ply: n }, { t, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: n });
     return out;
   }
   function introInfo(rec) {
