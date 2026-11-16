@@ -132,6 +132,21 @@ final class LocalBridge {
         return ok() && files.saveMedia(name, mime, b64, collection);
     }
 
+    @JavascriptInterface
+    public boolean saveBegin(String name, String mime, String collection) {
+        return ok() && files.saveBegin(name, mime, collection);
+    }
+
+    @JavascriptInterface
+    public boolean saveChunk(String b64) {
+        return ok() && files.saveChunk(b64);
+    }
+
+    @JavascriptInterface
+    public boolean saveEnd(boolean ok) {
+        return ok() && files.saveEnd(ok);
+    }
+
     // ------------------------------------------------------------------ sauvegarde de l'application (Download/ENOS/enos-sauvegarde-*.json)
     @JavascriptInterface
     public boolean backupWrite(String name, String text) {

@@ -80,12 +80,27 @@
     list: (uri, docId) => (N.available ? parse(B.treeList(uri, docId || ""), []) : []),
     op: (op, args) => (N.available ? parse(B.treeOp(op, JSON.stringify(args)), { ok: false }) : { ok: false, error: "pont natif absent" }),
     // collection : "images" -> Pictures/ENOS, "downloads" -> Download/ENOS
-    save: (name, mime, bytes, collection) => {
-      if (!N.available) return Promise.resolve(false);
-      let bin = "";
-      const CH = 0x8000;
-      for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
-      return Promise.resolve(!!B.saveMedia(name, mime, btoa(bin), collection || "downloads"));
+    save: async (name, mime, bytes, collection, onProgress) => {
+      if (!N.available) return false;
+      const col = collection || "downloads", size = bytes.size != null ? bytes.size : bytes.length;
+      if (size <= 1500000 && !(bytes instanceof Blob)) {                                                       // petit fichier : un seul appel
+        let bin = ""; const CH = 0x8000;
+        for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+        return !!B.saveMedia(name, mime, btoa(bin), col);
+      }
+      if (!B.saveBegin) return false;                                                                           // anciens pilotes natifs : refus propre (pas de plantage)
+      const blob = bytes instanceof Blob ? bytes : new Blob([bytes], { type: mime }), CH = 786432;               // 768 Ko (multiple de 3) -> ~1 Mo de base64 par appel
+      if (!B.saveBegin(name, mime, col)) return false;
+      try {
+        for (let o = 0; o < blob.size; o += CH) {
+          const u8 = new Uint8Array(await blob.slice(o, o + CH).arrayBuffer()); let bin = ""; const S = 0x8000;
+          for (let i = 0; i < u8.length; i += S) bin += String.fromCharCode.apply(null, u8.subarray(i, i + S));
+          if (!B.saveChunk(btoa(bin))) { B.saveEnd(false); return false; }
+          if (onProgress) onProgress(Math.min(1, (o + CH) / blob.size));
+          await new Promise((r) => setTimeout(r, 0));
+        }
+        return !!B.saveEnd(true);
+      } catch (e) { try { B.saveEnd(false); } catch (e2) { /* rien */ } return false; }
     },
   };
 

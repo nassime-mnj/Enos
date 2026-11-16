@@ -39,7 +39,7 @@
       A.toast(ok ? "Enregistré : " + name : "Enregistrement refusé", ok ? "ok" : "err");
       return ok;
     }
-    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    const url = URL.createObjectURL(bytes instanceof Blob ? bytes : new Blob([bytes], { type: mime }));
     const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     return true;

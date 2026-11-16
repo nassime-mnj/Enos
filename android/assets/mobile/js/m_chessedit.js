@@ -414,13 +414,13 @@
           const vid = ov.querySelector("video"), url = URL.createObjectURL(r.blob); vid.src = url; vid.muted = false; vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
           ov.querySelector(".ce-gmsg").textContent = `${r.w}×${r.h} · ${r.fps} FPS · ${(r.blob.size / 1048576).toFixed(1)} Mo · ${r.via}`;
           const ext = r.mime.includes("mp4") ? "mp4" : "webm", name = `ChessEdit_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.${ext}`;
-          const saveLocal = async () => { await A.save(name, r.mime, new Uint8Array(await r.blob.arrayBuffer()), "videos"); };
+          const native = !!(E.native && E.native.available), saveLocal = async () => { const ok = await A.save(name, r.mime, r.blob, "downloads"); if (!ok) throw new Error("refusé"); };                 // le Blob part en MORCEAUX vers Java (jamais tout le MP4 en une chaîne : plantage mémoire)
           const dataUrl = () => new Promise((res) => { const rd = new FileReader(); rd.onload = () => { const a = document.createElement("a"); a.href = rd.result; a.download = name; document.body.appendChild(a); a.click(); a.remove(); res(); }; rd.readAsDataURL(r.blob); });
-          ov.querySelector("#ce-save").onclick = async () => { try { await saveLocal(); } catch (e) { try { await dataUrl(); } catch (e2) { A.toast("Enregistrement impossible : " + e2.message, "err"); } } };
+          ov.querySelector("#ce-save").onclick = async () => { try { await saveLocal(); } catch (e) { if (native) return; try { await dataUrl(); } catch (e2) { A.toast("Enregistrement impossible : " + e2.message, "err"); } } };
           ov.querySelector("#ce-dl").onclick = async () => {                                                                       // jamais d'URL blob: confiée au téléchargement natif du WebView
             const file = new File([r.blob], name, { type: r.mime });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: "Chess Edit" }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
-            try { await saveLocal(); } catch (e) { try { await dataUrl(); } catch (e2) { A.toast("Téléchargement impossible : " + e2.message, "err"); } }
+            if (!native && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: "Chess Edit" }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+            try { await saveLocal(); } catch (e) { if (native) return; try { await dataUrl(); } catch (e2) { A.toast("Téléchargement impossible : " + e2.message, "err"); } }
           };
           ov.querySelector("#ce-gclose").onclick = () => { vid.pause(); URL.revokeObjectURL(url); ov.remove(); };
           S.lastExport = r;
