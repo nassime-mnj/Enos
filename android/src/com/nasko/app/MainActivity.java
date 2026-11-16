@@ -698,12 +698,6 @@ public class MainActivity extends Activity {
             }
             showAsset("offline");
         }
-
-        @Override
-        public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
-            ui.post(MainActivity.this::recreate);
-            return true;
-        }
     }
 
     class Chrome extends WebChromeClient {
