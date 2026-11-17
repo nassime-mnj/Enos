@@ -233,6 +233,53 @@
 
   // ------------------------------------------------------------------ OUTRO : dispatch
   const winnerSide = (o) => (o.winner && o.winner.color) || "";
+  // ------------------------------------------------------------------ TITRE « ÉCHEC ET MAT » — lettrage de jeu AAA : lettres métal doré extrudées qui claquent une à une, aura, rayons divins, ondes de choc, braises, reflet balayant
+  P.mateAura = function (g, u, cx, cy, R) {
+    const { W, H } = this, k = this.k(), a = clamp(u / 0.45, 0, 1); if (u < 0) return;
+    this.glowAt(g, cols.gold, cx, cy, R * 1.6, 0.5 * a * (0.85 + 0.15 * Math.sin(u * 6))); this.glowAt(g, "#ffffff", cx, cy, R * 0.75, 0.32 * a);
+    g.save(); g.translate(cx, cy); g.globalCompositeOperation = "lighter"; const rays = 18, len = Math.hypot(W, H);                                   // rayons divins qui tournent lentement
+    for (let i = 0; i < rays; i++) { const a0 = (i / rays) * TAU + u * 0.22, wd = (TAU / rays) * 0.3, gr = g.createLinearGradient(0, 0, Math.cos(a0) * len * 0.7, Math.sin(a0) * len * 0.7); gr.addColorStop(0, "rgba(255,228,140,.6)"); gr.addColorStop(1, "rgba(255,228,140,0)"); g.globalAlpha = a * (0.2 + 0.12 * Math.sin(u * 3 + i * 1.7)); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, len, a0 - wd / 2, a0 + wd / 2); g.closePath(); g.fill(); }
+    g.restore();
+    for (let j = 0; j < 3; j++) { const ru = (u - 0.04 - j * 0.15) / 0.95; if (ru > 0 && ru < 1) { g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = (1 - ru) * 0.85; g.strokeStyle = j ? "#ffd666" : "#ffffff"; g.lineWidth = (16 - 10 * ru) * k; g.beginPath(); g.arc(cx, cy, R * 1.4 * EASE.out3(ru), 0, TAU); g.stroke(); g.restore(); } }          // ondes de choc
+    const rn = mulberry(31); g.save(); g.globalCompositeOperation = "lighter";                                                                                    // braises dorées qui montent
+    for (let i = 0; i < 44; i++) { const x0 = cx + (rn() - 0.5) * W * 0.95, sp = 50 + rn() * 150, ph = rn(), span = H * 0.8, y = cy + R * 0.55 - ((u * sp * k + ph * span) % span), sz = (2 + rn() * 5) * k, fade = 1 - clamp((cy + R * 0.55 - y) / (span * 0.9), 0, 1); g.globalAlpha = a * (0.3 + 0.5 * rn()) * fade; g.fillStyle = rn() < 0.6 ? "#ffd666" : "#fff6cf"; g.fillRect(x0 + Math.sin(u * 2 + i) * 14 * k, y, sz, sz); }
+    g.restore();
+  };
+  /** px = hauteur de police ; u = secondes depuis l'apparition ; chaque lettre claque (échelle 3,4 → 1 + flou de vitesse), puis un reflet blanc balaie le mot */
+  P.mateTitle = function (g, text, cx, cy, px, u) {
+    if (u < 0) return; const letters = Array.from(text), n = letters.length, k = this.k();
+    g.save(); g.font = FONT(px); const w0 = letters.map((c) => g.measureText(c).width), track = px * 0.07; let total = w0.reduce((a, b) => a + b, 0) + track * (n - 1);
+    const fit = Math.min(1, (this.W * 0.92) / (total + px * 0.4)); px *= fit; g.font = FONT(px); const widths = letters.map((c) => g.measureText(c).width), tr = px * 0.07; total = widths.reduce((a, b) => a + b, 0) + tr * (n - 1);
+    const pad = px * 0.35, pw = Math.ceil(total + pad * 2), ph = Math.ceil(px * 1.7), c = (this._mtC = this._mtC || document.createElement("canvas")); if (c.width !== pw || c.height !== ph) { c.width = pw; c.height = ph; }
+    const h = c.getContext("2d"); h.setTransform(1, 0, 0, 1, 0, 0); h.clearRect(0, 0, pw, ph); h.font = FONT(px); h.textBaseline = "middle"; h.textAlign = "left"; h.lineJoin = "round"; h.globalCompositeOperation = "source-over";
+    let x = pad; const pos = []; letters.forEach((ch, i) => { pos.push(x); x += widths[i] + tr; });
+    const my = ph / 2; letters.forEach((ch, i) => { for (let d = 9; d >= 1; d--) { h.fillStyle = d % 2 ? "#5a2f05" : "#3a1c02"; h.fillText(ch, pos[i] + d * px * 0.011, my + d * px * 0.02); } });          // extrusion 3D
+    h.lineWidth = px * 0.12; h.strokeStyle = "#2a1400"; letters.forEach((ch, i) => h.strokeText(ch, pos[i], my));
+    const gr = h.createLinearGradient(0, my - px * 0.55, 0, my + px * 0.55); [[0, "#fffdf0"], [0.3, "#ffe27a"], [0.49, "#f0a81e"], [0.51, "#8a4b0a"], [0.64, "#e09a16"], [1, "#fff0b0"]].forEach(([o, col]) => gr.addColorStop(o, col)); h.fillStyle = gr; letters.forEach((ch, i) => h.fillText(ch, pos[i], my));          // métal doré chromé
+    h.lineWidth = px * 0.02; h.strokeStyle = "rgba(255,255,255,.8)"; letters.forEach((ch, i) => h.strokeText(ch, pos[i] + px * 0.008, my - px * 0.008));
+    const sw = clamp((u - 0.55) / 0.8, 0, 1); if (sw > 0 && sw < 1) { h.globalCompositeOperation = "source-atop"; const sx = lerp(-px, pw + px, sw), sg = h.createLinearGradient(sx - px * 0.45, 0, sx + px * 0.45, 0); sg.addColorStop(0, "rgba(255,255,255,0)"); sg.addColorStop(0.5, "rgba(255,255,255,.95)"); sg.addColorStop(1, "rgba(255,255,255,0)"); h.save(); h.setTransform(1, 0, -0.35, 1, 0, 0); h.fillStyle = sg; h.fillRect(sx - px, 0, px * 2, ph); h.restore(); h.globalCompositeOperation = "source-over"; }     // reflet qui balaie
+    const L0 = cx - total / 2 - pad; this.glowAt(g, cols.gold, cx, cy, total * 0.62, 0.4 * clamp(u / 0.6, 0, 1) * (0.85 + 0.15 * Math.sin(u * 7)));
+    letters.forEach((ch, i) => {
+      const lu = clamp((u - i * 0.05) / 0.3, 0, 1); if (lu <= 0) return; const sc = lerp(3.4, 1, EASE.out4(lu)), al = clamp(lu * 3, 0, 1), sx0 = Math.max(0, pos[i] - tr / 2 - px * 0.1), sx1 = Math.min(pw, pos[i] + widths[i] + tr / 2 + px * 0.2), sw2 = sx1 - sx0, mx = L0 + (sx0 + sx1) / 2, my2 = cy + (1 - lu) * -px * 0.25;
+      if (lu < 1) for (let q = 3; q >= 1; q--) { const sq = sc + q * 0.22 * (1 - lu); g.save(); g.globalAlpha = al * 0.16; g.translate(mx, my2); g.scale(sq, sq); g.drawImage(c, sx0, 0, sw2, ph, -sw2 / 2, -ph / 2, sw2, ph); g.restore(); }
+      g.save(); g.globalAlpha = al; g.translate(mx, my2); g.scale(sc, sc); g.drawImage(c, sx0, 0, sw2, ph, -sw2 / 2, -ph / 2, sw2, ph); g.restore();
+    });
+    g.restore();
+  };
+  /** ligne secondaire : lettres argentées espacées entre deux filets d'or à losanges */
+  P.mateSub = function (g, text, cx, cy, px, u) {
+    if (u < 0) return; const a = EASE.out3(clamp(u / 0.5, 0, 1)), k = this.k(); g.save(); g.globalAlpha = a; g.font = `800 ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+    const spaced = Array.from(String(text).toUpperCase()).join(" "), w = Math.min(this.W * 0.8, g.measureText(spaced).width), y = cy + (1 - a) * 18 * k, gr = g.createLinearGradient(0, y - px / 2, 0, y + px / 2); gr.addColorStop(0, "#ffffff"); gr.addColorStop(1, "#b8c2da");
+    g.lineWidth = px * 0.16; g.strokeStyle = "#0a0c14"; g.lineJoin = "round"; g.strokeText(spaced, cx, y, w); g.fillStyle = gr; g.fillText(spaced, cx, y, w);
+    const lx = w / 2 + px * 0.9, ll = Math.min(this.W * 0.16, px * 3.2); [-1, 1].forEach((sd) => { const lg = g.createLinearGradient(cx + sd * lx, 0, cx + sd * (lx + ll), 0); lg.addColorStop(0, "rgba(255,214,102,.95)"); lg.addColorStop(1, "rgba(255,214,102,0)"); g.fillStyle = lg; g.fillRect(Math.min(cx + sd * lx, cx + sd * (lx + ll)), y - 1.5 * k, ll, 3 * k); g.save(); g.translate(cx + sd * (lx - px * 0.35), y); g.rotate(Math.PI / 4); g.fillStyle = cols.gold; g.fillRect(-px * 0.12, -px * 0.12, px * 0.24, px * 0.24); g.restore(); });
+    g.restore();
+  };
+  /** carte complète « échec et mat » : aura + titre + nom du vainqueur */
+  P.mateCard = function (g, o, u, cy, big) {
+    const { W } = this, k = this.k(); this.mateAura(g, u, W / 2, cy, W * (big ? 0.5 : 0.34));
+    if (big) { const px = 250 * k; this.mateTitle(g, "ÉCHEC", W / 2, cy - px * 0.52, px, u); this.mateTitle(g, "ET MAT", W / 2, cy + px * 0.52, px, u - 0.3); if (o.winner && o.winner.name) this.mateSub(g, o.winner.name + " " + (o.winner.team ? "GAGNENT" : "GAGNE"), W / 2, cy + px * 1.38, 48 * k, u - 1.0); }
+    else { this.mateTitle(g, "ÉCHEC ET MAT", W / 2, cy, 120 * k, u); if (o.winner && o.winner.name) this.mateSub(g, o.winner.name + " " + (o.winner.team ? "GAGNENT" : "GAGNE"), W / 2, cy + 100 * k, 36 * k, u - 0.75); }
+  };
   P.drawEnd = function (g, t) {
     const o = this.outro, st = this.outroStyle();
     if (!o || o.defeat || o.flip3d || !o.winner || st === 0) return orig.end.call(this, g, t);
@@ -256,7 +303,7 @@
       this.sceneDisc(g, m, 0, 0, R, cols.gold, 1, m.anim === "eto" ? "happy" : "lock"); if (n > 1) { g.restore(); this.sceneName(g, m.name, x, cy + R * 1.2 + 42 * k, gap * 0.95, 34 * k, "#fff", pu); } else g.restore(); });
     const ry = H * 0.58, ru = EASE.out4(clamp((u - 0.3) / 0.5, 0, 1)); g.save(); g.translate(lerp(-W, 0, ru), ry); g.transform(1, 0, -0.12, 1, 0, 0); g.fillStyle = c; g.fillRect(-W * 0.1, -70 * k, W * 1.2, 130 * k); g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(-W * 0.1, 60 * k, W * 1.2, 8 * k); g.restore();
     g.save(); g.globalAlpha = ru; g.textAlign = "center"; g.textBaseline = "middle"; const vt = n > 1 ? "VICTOIRE D'ÉQUIPE" : "VICTOIRE", vs0 = fitFont(g, vt, W * 0.92, 120 * k, FONT); g.lineWidth = vs0 * 0.1; g.strokeStyle = "#000"; g.strokeText(vt, W / 2, ry - 6 * k); g.fillStyle = "#fff"; g.fillText(vt, W / 2, ry - 6 * k); g.restore();
-    const nu = EASE.out3(clamp((u - 0.7) / 0.5, 0, 1)); g.save(); g.globalAlpha = nu; this.sceneName(g, o.winner.name, W / 2, H * 0.58 + 160 * k - (1 - nu) * 30 * k, W * 0.9, 86 * k, cols.gold, 1); g.font = TXT(36 * k, 700); g.textAlign = "center"; g.fillStyle = "#cfd3e6"; g.fillText(o.winner.mate ? "ÉCHEC ET MAT" : String(o.result || "").split("·")[0].trim().toUpperCase(), W / 2, H * 0.58 + 214 * k); g.restore();
+    const nu = EASE.out3(clamp((u - 0.7) / 0.5, 0, 1)); g.save(); g.globalAlpha = nu; this.sceneName(g, o.winner.name, W / 2, H * 0.58 + 160 * k - (1 - nu) * 30 * k, W * 0.9, 86 * k, cols.gold, 1); g.font = TXT(36 * k, 700); g.textAlign = "center"; g.fillStyle = "#cfd3e6"; if (!o.winner.mate) g.fillText(String(o.result || "").split("·")[0].trim().toUpperCase(), W / 2, H * 0.58 + 214 * k); g.restore(); if (o.winner.mate) { this.mateAura(g, u - 0.2, W / 2, H * 0.36, W * 0.42); this.mateTitle(g, "ÉCHEC ET MAT", W / 2, H * 0.58 + 335 * k, 112 * k, u - 0.9); }
     finalLine.call(this, g, o, u, H * 0.8);
   };
   // OUTRO 2 : l'image se brise en éclats
@@ -272,7 +319,7 @@
       g.save(); g.globalCompositeOperation = "lighter"; g.strokeStyle = "#fff"; g.globalAlpha = (1 - p) * 0.8; g.lineWidth = 3 * k; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a0) * W, cy + Math.sin(a0) * W); g.stroke(); g.restore();
     }
     const fl = clamp(1 - u / 0.2, 0, 1); if (fl > 0) { g.save(); g.globalAlpha = fl * 0.7; g.fillStyle = "#fff"; g.fillRect(0, 0, W, H); g.restore(); }
-    const tu = EASE.back(clamp((u - 0.8) / 0.5, 0, 1)); if (tu > 0) { g.save(); g.translate(W / 2, H * 0.46); g.scale(tu, tu); this.glowAt(g, cols.gold, 0, 0, W * 0.6, 0.4); g.restore(); this.stampText(g, o.winner.name.toUpperCase() + " GAGNE PAR ÉCHEC ET MAT", cols.gold, clamp((u - 0.8) / 0.3, 0, 1), 1); }
+    const tu = EASE.back(clamp((u - 0.8) / 0.5, 0, 1)); if (tu > 0) { g.save(); g.translate(W / 2, H * 0.46); g.scale(tu, tu); this.glowAt(g, cols.gold, 0, 0, W * 0.6, 0.4); g.restore(); if (o.winner.mate) this.mateCard(g, o, u - 0.8, H * 0.46, true); else this.stampText(g, o.winner.name.toUpperCase() + " GAGNE", cols.gold, clamp((u - 0.8) / 0.3, 0, 1), 1); }
     finalLine.call(this, g, o, u - 0.4, H * 0.72); g.restore();
   };
   // OUTRO 3 : cinéma (bandes noires, nom révélé)
@@ -284,7 +331,7 @@
     g.textAlign = "center"; g.textBaseline = "middle"; const s = fitFont(g, name, W * 0.9, 120 * k, FONT);
     g.save(); g.beginPath(); g.rect(W * 0.05, cy - s, W * 0.9 * reveal, s * 2); g.clip(); g.lineWidth = s * 0.12; g.strokeStyle = "#000"; g.strokeText(name, W / 2, cy); g.fillStyle = "#fff"; g.fillText(name, W / 2, cy); g.restore();
     const sx = lerp(-W * 0.3, W * 1.3, clamp((u - 0.5) / 1.2, 0, 1)); g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.5 * (1 - Math.abs(clamp((u - 0.5) / 1.2, 0, 1) - 0.5) * 2); g.translate(sx, cy); g.transform(1, 0, -0.5, 1, 0, 0); g.fillStyle = "#fff"; g.fillRect(-30 * k, -s, 60 * k, s * 2); g.restore();
-    const su = EASE.out3(clamp((u - 1.2) / 0.6, 0, 1)); g.save(); g.globalAlpha = su; g.font = TXT(40 * k, 800); g.fillStyle = cols.gold; const sub = (o.winner.mate ? "ÉCHEC ET MAT" : "VICTOIRE") + (people.length > 1 ? " · VICTOIRE D'ÉQUIPE" : ""); g.fillText(sub, W / 2, cy + s * 0.8 + (1 - su) * 20 * k); g.restore();
+    const su = EASE.out3(clamp((u - 1.2) / 0.6, 0, 1)); g.save(); g.globalAlpha = su; g.font = TXT(40 * k, 800); g.fillStyle = cols.gold; const sub = (o.winner.mate ? "ÉCHEC ET MAT" : "VICTOIRE") + (people.length > 1 ? " · VICTOIRE D'ÉQUIPE" : ""); if (!o.winner.mate) g.fillText(sub, W / 2, cy + s * 0.8 + (1 - su) * 20 * k); g.restore(); if (o.winner.mate) { this.mateAura(g, u - 0.4, W / 2, cy, W * 0.4); this.mateTitle(g, "ÉCHEC ET MAT", W / 2, cy - s * 1.4, 104 * k, u - 0.4); }
     if (people.length) { const R = Math.min(W * 0.07, (W * 0.8 / people.length) / 2.3), gap = Math.min(W * 0.8 / people.length, R * 3); people.forEach((m, i) => { const x = W / 2 - gap * (people.length - 1) / 2 + gap * i, pu = EASE.back(clamp((u - 1.4 - i * 0.1) / 0.5, 0, 1)); if (pu > 0) { g.save(); g.translate(x, cy + s * 0.8 + 70 * k + R); g.scale(pu, pu); this.sceneDisc(g, m, 0, 0, R, cols.gold); g.restore(); this.sceneName(g, m.name, x, cy + s * 0.8 + 70 * k + R * 2 + 34 * k, gap * 0.95, 28 * k, "#fff", pu); } }); }
     finalLine.call(this, g, o, u, H * 0.74); g.restore();
   };

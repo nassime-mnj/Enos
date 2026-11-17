@@ -274,13 +274,27 @@
     if (/^Bot \d+/i.test(name)) return { id: "", img: "", ph: ["SF", "#8d8d97"], b: null };
     return null;
   }
-  /** sons d'erreur : IMPRÉCISION → « WTF » One Piece ; ERREUR → FAHH ou One Piece « funny 187 » (un coup sur deux, parité du n° de coup) ; COUP MANQUÉ → One Piece « funny 210 » ; GAFFE → FAHH ralenti uniquement. */
-  function errSfx(key, t, n, soft) {
+  // BANQUE DE BRUITAGES D'EDIT (js/edit_sfx_data.js) — rôle de chaque son ; « lead » = durée d'élan d'un PRÉ-SON (sa chute tombe pile sur l'impact du coup qui suit)
+  const PRE = { sx_mario: 2.1, sx_nowait: 5.05, sx_reload: 0.6, sx_heaven: 4.2 };
+  const POOL = {
+    mate: ["sx_knockout", "sx_cupdeath", "sx_nba", "sx_amogus", "sx_finish"],        // échec et mat (+ le choc « finishing hit » sous les annonces)
+    matePre: ["sx_mario", "sx_nowait", "sx_reload"],                                  // juste AVANT le mat
+    blunder: ["fahh_slow", "sx_gong", "sx_flashbang"],                                // gaffe (flash bang = vrai flash blanc + image figée)
+    miss: ["op_gaffe", "sx_awkward"],                                                 // coup manqué
+  };
+  /** tirage SANS RÉPÉTITION : le son le moins utilisé de la réserve, départage par un hasard figé (graine = la partie) — même vidéo en aperçu et à l'export */
+  function sfxDeck(seed) {
+    let x = seed >>> 0 || 1; const rnd = () => { x = (x + 0x6d2b79f5) >>> 0; let t = x; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const used = {};
+    return { rnd, used, pick(pool) { const r = pool.map((id) => [id, (used[id] || 0) * 10 + rnd()]).sort((p, q) => p[1] - q[1])[0][0]; used[r] = (used[r] || 0) + 1; return r; } };
+  }
+  /** sons d'erreur : IMPRÉCISION → « WTF » One Piece ; ERREUR → FAHH ou One Piece « funny 187 » (un coup sur deux) ; COUP MANQUÉ → One Piece « funny 210 » ou « awkward moment » ; GAFFE → FAHH ralenti, GONG ou FLASH BANG (tirés sans répétition). */
+  function errSfx(key, t, n, soft, deck) {
     const out = [], alt = (n | 0) % 2 === 1;
     if (key === "inaccuracy") out.push({ t, id: "op_imp", gain: soft ? 1.0 : 1.35, bus: "hit", level: 0.22, ply: n });
-    else if (key === "miss") out.push({ t, id: "op_gaffe", gain: 1.6, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n });
+    else if (key === "miss") { const id = deck ? deck.pick(POOL.miss) : "op_gaffe"; out.push({ t, id, gain: id === "sx_awkward" ? 1.5 : 1.6, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n }); }
     else if (key === "mistake") { out.push(alt ? { t, id: "op_err", gain: 1.45, bus: "hit", level: 0.3, ply: n } : { t, id: "fahh", gain: 1.55, bus: "hit", level: 0.34, ply: n }); out.push({ t, id: "thud", gain: soft ? 0.8 : 1.15, bus: "echo", ply: n }); }
-    else if (key === "blunder") out.push({ t, id: "fahh_slow", gain: 1.7, bus: "hit", level: 0.28, ply: n }, { t, id: "thud", gain: 1.5, bus: "echo", ply: n }, { t, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: n });
+    else if (key === "blunder") { const id = deck ? deck.pick(POOL.blunder) : "fahh_slow"; out.push({ t, id, gain: id === "fahh_slow" ? 1.7 : id === "sx_gong" ? 1.4 : 1.5, bus: "hit", level: id === "sx_flashbang" ? 0.15 : 0.28, ply: n }, { t, id: "thud", gain: 1.5, bus: "echo", ply: n }, { t, id: "thud", gain: 1.2, bus: "hit", level: 0.3, ply: n }); }
     return out;
   }
   function introInfo(rec) {
@@ -299,44 +313,67 @@
     return out;
   }
 
-  /** bruitages + voix d'une liste d'événements (calés sur l'impact de chaque coup) */
+  /** bruitages + voix d'une liste d'événements (calés sur l'impact de chaque coup). Variété : chaque rôle a une RÉSERVE de sons tirés sans répétition ; chaque voix de Levy au plus UNE fois par partie. */
   function sfxFor(ev, opts) {
-    const sfx = [];
+    const sfx = [], deck = sfxDeck(opts.seed != null ? opts.seed : hashS(ev.map((e) => e.san || "").join(" ")));
+    const real = (e) => e.kind !== "ff" && !e.soft;
     ev.forEach((e) => {
       const id = e.cheat === "twist" ? "mate" : e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
       // bruitages LOURDS avec écho spatial (delay 140 / 280 ms, feedback 0,38, passe-haut 200 Hz) et +3 dB au-dessus de la musique (gain 1,35) ; couches synthétisées : bois + sub-bass (prise), cristal (échec), explosion grave (mat)
       const g = e.kind === "ff" ? 0.5 : e.soft ? 0.9 : 1.35;
-      // HIÉRARCHIE : coup normal / prise = bois MAT et SEC (pas d'écho) ; échec = cristal aigu AVEC écho ; promotion / mat = écho ; brillant / sacrifice = tonnerre + voix (plus bas) ; « THIS IS THE WAY » = SEULEMENT l'outro de victoire
+      // HIÉRARCHIE : coup normal / prise = bois MAT et SEC (pas d'écho) ; échec = cristal aigu AVEC écho ; promotion / mat = écho ; brillant / sacrifice = tonnerre ou boom cinéma + voix ; « THIS IS THE WAY » = SEULEMENT l'outro de victoire
       const wet = id === "check" || id === "mate" || id === "promote";
       sfx.push({ t: e.impact, id, gain: wet ? g : Math.min(g, 1.2), bus: wet ? "echo" : "sfx", ply: e.n, duck: wet && !e.soft && e.kind !== "ff" });
-      if (e.kind !== "ff" && !e.soft) { if (id === "capture") sfx.push({ t: e.impact, id: "thud", gain: 1.0, bus: "sfx", ply: e.n }); else if (id === "check") sfx.push({ t: e.impact, id: "crystal", gain: 1.1, bus: "echo", ply: e.n }); else if (id === "mate") sfx.push({ t: e.impact, id: "mateboom", gain: 1.35, bus: "echo", ply: e.n }); }
+      if (real(e)) { if (id === "capture") sfx.push({ t: e.impact, id: "thud", gain: 1.0, bus: "sfx", ply: e.n }); else if (id === "check") sfx.push({ t: e.impact, id: "crystal", gain: 1.1, bus: "echo", ply: e.n }); else if (id === "mate") sfx.push({ t: e.impact, id: "mateboom", gain: 1.35, bus: "echo", ply: e.n }); }
+      if (e.mate && real(e) && e.cheat !== "twist" && opts.voices !== false) {                                                    // ÉCHEC ET MAT : un son de la réserve (KO Cuphead, mort Cuphead, klaxon NBA, Among Us, Smash) ; les annonces ont le choc « finishing hit » dessous
+        const m = deck.pick(POOL.mate); e.mateSnd = m;
+        sfx.push({ t: +(e.impact + (m === "sx_finish" || m === "sx_cupdeath" ? 0 : 0.12)).toFixed(3), id: m, gain: m === "sx_nba" ? 1.15 : 1.45, bus: "hit", level: 0.25, ply: e.n });
+        if (m === "sx_knockout" || m === "sx_nba" || m === "sx_amogus") sfx.push({ t: e.impact, id: "sx_finish", gain: 1.1, bus: "echo", ply: e.n });
+      }
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
       if (e.slowKnight) { sfx.push({ t: +(e.impact - e.dur / 1000).toFixed(3), id: "horse", gain: 1.9, bus: "epic", ply: e.n }); sfx.push({ t: e.impact, id: "mateboom", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.6, bus: "echo", ply: e.n }); }      // hennissement épique avec beaucoup d'écho pendant le vol, puis GROS impact à l'atterrissage
-      if (e.kind !== "ff" && !e.forced) {                                                              // « FAHH » : erreur = FAHH normal, gaffe = FAHH ralenti ; ça FRAPPE (impact grave + boom) comme les autres bruitages
-        errSfx(e.key, e.impact, e.n, e.soft).forEach((x) => sfx.push(x));
+      if (e.kind !== "ff" && !e.forced) {                                                              // erreurs : FAHH / One Piece / gong / flash bang / awkward ; ça FRAPPE (impact grave) comme les autres bruitages
+        errSfx(e.key, e.impact, e.n, e.soft, deck).forEach((x) => { sfx.push(x); if (x.id === "sx_flashbang") e.flashbang = true; });
       }
     });
+    { let lastU = -99, nU = 0;                                                                         // EXCELLENT COUP : le « ding » Undertale (au plus 3, espacés de 3 s, jamais sur un coup qui a déjà son gros son)
+      ev.forEach((e) => { if (!real(e) || !["great", "excellent", "best"].includes(e.badge ? (e.badge.img || "") : e.key) || e.mate || e.bigMove || nU >= 3 || e.impact - lastU < 3) return; sfx.push({ t: +(e.impact + 0.03).toFixed(3), id: "sx_undertale", gain: 1.25, bus: "sfx", ply: e.n }); lastU = e.impact; nU++; }); }
     ev.forEach((e) => {                                                                              // impact sonore de la fiche de stats : coup grave puis « whoosh » de sortie
       if (e.stats && e.pre > 0) { sfx.push({ t: +e.t.toFixed(3), id: "boom", gain: 1.1, bus: "sfx", ply: e.n }); sfx.push({ t: +(e.t + e.pre - 0.3).toFixed(3), id: "whoosh", gain: 0.7, bus: "sfx", ply: e.n }); }
     });
-    if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS (jamais sur une erreur, une gaffe, un mat…), une seule par coup
-      const chosen = [];
+    if (opts.voices) {                                                                               // VOIX DE LEVY : UNIQUEMENT sur les coups BRILLANTS, une seule par coup, et CHAQUE voix une seule fois par partie (2 tours brillantes = un seul « THE ROOK »)
+      const chosen = [], said = new Set();
       ev.filter((e) => e.key === "brilliant" && !e.alien).forEach((e) => { if (chosen.every((x) => Math.abs(x.impact - e.impact) >= 2.4)) chosen.push(e); });
-      let lastVoice = null;                                                                          // dernier coup ayant eu une voix / un son de sacrifice
+      let lastVoice = null, nB = 0;                                                                  // dernier coup ayant eu une voix / un son de sacrifice
       ev.filter((e) => e.key === "brilliant").forEach((e) => {
         if (e.alien) {                                                                               // ALIEN GAMBIT : le sacrifice du cavalier = l'enregistrement, avec un écho ÉPIQUE
           sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "rec", gain: 1.5, bus: "epic", ply: e.n }); lastVoice = e.n; return;
         }
-        const c = chosen.includes(e);
-        if (lastVoice != null && e.n - lastVoice >= 3) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
-        sfx.push({ t: e.impact, id: "mateboom", gain: 1.3, bus: "echo", ply: e.n });                                                                                                       // coup de tonnerre grave sur CHAQUE brillant
-        if (c && VOICE[e.piece]) { const id = VOICE[e.piece]; sfx.push({ t: +(e.impact + 0.04).toFixed(3), id, gain: id === "the_rook" ? 3.2 : 1.3, wet: id === "the_rook" ? 2.2 : 1, bus: "voice", level: 0.4, ply: e.n }); lastVoice = e.n; }     // voix de la pièce ; musique à −8 dB (sidechain)
+        const c = chosen.includes(e), vid = VOICE[e.piece], speak = c && vid && !said.has(vid);
+        if (lastVoice != null && e.n - lastVoice >= 3 && !speak) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
+        sfx.push({ t: e.impact, id: nB % 2 === 0 || !speak ? "sx_boom" : "mateboom", gain: 1.3, bus: "echo", ply: e.n }); nB++;                                                 // BOOM CINÉMA (collatéral) ou tonnerre grave, en alternance
+        if (speak) { said.add(vid); sfx.push({ t: +(e.impact + 0.04).toFixed(3), id: vid, gain: vid === "the_rook" ? 3.2 : 1.3, wet: vid === "the_rook" ? 2.2 : 1, bus: "voice", level: 0.4, ply: e.n }); lastVoice = e.n; }     // voix de la pièce ; musique à −8 dB (sidechain)
       });
+    }
+    // PRÉ-SONS (dernier passage : ils ne doivent rien recouvrir) — brillant : « Made in Heaven » sur le coup clé, « reload » sur un autre ; mat : Mario « oh nooo », « no no wait wait » ou « reload »
+    if (opts.voices !== false) {
+      const busy = (a, b) => sfx.some((x) => x.t > a + 0.05 && x.t < b - 0.08 && (x.bus === "hit" || x.bus === "voice" || x.bus === "epic" || x.pre));
+      const tryPre = (e, list) => { for (const id of list) { const st = e.impact - PRE[id]; if (st < (opts.introEnd || 0) + 0.2 || busy(st, e.impact)) continue; sfx.push({ t: +st.toFixed(3), id, gain: id === "sx_reload" ? 1.5 : 1.25, bus: "hit", level: 0.35, pre: true, ply: e.n }); deck.used[id] = (deck.used[id] || 0) + 1; e.preSnd = id; return id; } return ""; };
+      const br = ev.filter((e) => e.key === "brilliant" && real(e) && !e.alien && !e.slowKnight), hero = br.slice().sort((a, b) => (b.kind === "drop") - (a.kind === "drop") || (b.drama || 0) - (a.drama || 0))[0];
+      if (hero) tryPre(hero, ["sx_heaven", "sx_reload"]);
+      for (const e of br.filter((x) => x !== hero && x.kind !== "drop")) if (!deck.used.sx_reload && tryPre(e, ["sx_reload"])) break;                           // « reload » : UNE seule fois sur un autre brillant (jamais en boucle)
+      ev.filter((e) => e.mate && real(e) && e.cheat !== "twist").forEach((e) => { const first = deck.pick(POOL.matePre); deck.used[first] = Math.max(0, deck.used[first] - 1); tryPre(e, [first].concat(POOL.matePre.filter((x) => x !== first).sort((a, b) => PRE[a] - PRE[b]))); });
     }
     sfx.sort((a, b) => a.t - b.t);
     return sfx;
   }
 
+  /** INTRO : « Thank you! » de Cuphead à l'ouverture ; NULLE : Bob l'éponge déçu sur l'écran de fin */
+  function bookends(sfx, opts, introEnd, outT, rec, noWinner) {
+    if (opts.voices === false) return;
+    if (opts.intro && introEnd > 1.2) sfx.push({ t: 0.25, id: "sx_thankyou", gain: 1.2, bus: "hit", level: 0.45, pre: true, ply: -1 });
+    if (noWinner && /1\/2|½|nulle|draw|pat/i.test(String((rec && rec.result) || ""))) sfx.push({ t: +(outT + 0.2).toFixed(3), id: "sx_sad", gain: 1.4, bus: "hit", level: 0.3, pre: true, ply: -1, outro: true });
+  }
   /** FENÊTRES DE GROOVE : séries de kicks FORTS (force ≥ 0,45) séparés d'au plus 2,6 s, d'au moins 8 s ; [{a, b, count}] (temps de la MUSIQUE) */
   function grooveSegments(audio) {
     const K = (audio.kicks || []).filter((k) => k[1] >= 0.45), seg = []; let cur = null;
@@ -384,7 +421,8 @@
     const lay = layout(set), heroes = set.filter(isHero), dropI = heroes.length ? heroes.reduce((b, i) => (plies[i].drama > plies[b].drama ? i : b), heroes[0]) : set.reduce((b, i) => (score(i) > score(b) ? i : b), set[0]), sched = [];
     lay.forEach((q) => {
       if (q.m > 0) { const dd = dtOf(q.m), st = q.t - 0.4 - q.burst; for (let j = 0; j < q.m; j++) sched.push({ i: q.i - q.m + j, t: +(st + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }
-      sched.push({ i: q.i, t: +q.t.toFixed(3), dur: isKn(q.i) ? Math.round(KN_S * 1000) : q.i < openN && !isHero(q.i) ? 240 : 90, kind: q.i === dropI ? "drop" : "crit", soft: q.i < openN && !isHero(q.i) && q.i !== dropI, kn: isKn(q.i) });
+      const room = sched.length ? q.t - sched[sched.length - 1].t : 9;                                                                  // DÉPLACEMENT VISIBLE : 300 ms (coup clé) / 200 ms, jamais plus que la moitié de l'écart avec le coup précédent
+      sched.push({ i: q.i, t: +q.t.toFixed(3), dur: isKn(q.i) ? Math.round(KN_S * 1000) : q.i < openN && !isHero(q.i) ? 240 : Math.round(Math.max(90, Math.min(isHero(q.i) ? 300 : 200, room * 450))), kind: q.i === dropI ? "drop" : "crit", soft: q.i < openN && !isHero(q.i) && q.i !== dropI, kn: isKn(q.i) });
     });
     sched.sort((a, b) => a.i - b.i);
     const bots = (E.botChat && E.botChat.bots) || {}, botLine = (i) => { for (let k = i; k >= Math.max(0, i - 6); k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; };
@@ -489,7 +527,7 @@
     if (heroEv && !script) {                                                                                      // 0,6 s avant le drop : cutscene « prompt & streaming » (si le bot parle) sinon mini-cutscene des deux pièces
       const bl = botLine(h), hp = plies[h];
       if (bl && bl.bot === "prime") extra.push({ t: +Math.max(0.05, heroEv.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (h ? plies[h - 1].san : "e4") + " ?", piece: hp.piece, fx: "PROMPT", ply: -1, ref: heroEv });
-      else if (hp.sacrifice || hp.key === "brilliant") extra.push({ t: +Math.max(0.05, heroEv.impact - 0.45).toFixed(3), kind: "cut3", dur: 0.4, text: opts.opening || hp.san, fx: "CUT3", ply: -1, ref: heroEv });
+      // (plus de mini-cutscene « cut3 » juste avant le coup clé : elle montrait le coup AVANT qu'il soit joué, la pièce semblait aller, revenir puis repartir)
     }
     const taken = (t0, t1, self) => ev.some((e) => e !== self && e.kind !== "ff" && e.impact > t0 - 0.02 && e.impact < t1 - 0.02) || extra.some((x) => x.t < t1 && x.t + x.dur > t0);
     const addCut = (kind, e, want, piece) => { const t1 = e.impact - 0.05; let d = want; while (d >= 0.45 && taken(t1 - d, t1, e)) d -= 0.1; if (d < 0.45) return false; const bl = botLine(e.ply); extra.push({ t: +(t1 - d).toFixed(3), kind, dur: +d.toFixed(3), ref: e, piece, text: bl ? bl.text : "", q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", fx: kind.toUpperCase(), ply: -1 }); return true; };
@@ -497,13 +535,14 @@
     const primeIn = rec.pw === "ChatGPT Prime" || rec.pb === "ChatGPT Prime";
     if (primeIn && !extra.some((x) => x.kind === "prompt")) ev.filter((e) => e._cutrook || (!script && e.kind !== "ff" && ((e.piece === "r" && (e.sacrifice || e.key === "brilliant")) || e.boss))).sort((a, b) => b.drama - a.drama).slice(0, 1).forEach((e) => { addCut("cutrook", e, 0.9, e.piece || "r"); });          // overlay « Quel est ton prochain coup » : Prime uniquement, UNE fois par edit   // BADASS ROOK (sacrifice / coup de boss)
     ev.filter((e) => e._prompt && !extra.some((x) => x.kind === "prompt" || x.kind === "cutrook")).slice(0, 1).forEach((e) => { const bl = botLine(e.ply); if (bl && bl.bot === "prime") extra.push({ t: +Math.max(0.05, e.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", piece: e.piece, fx: "PROMPT", ply: -1, ref: e }); });
-    const sfx = sfxFor(ev, opts), all = [];
+    const sfx = sfxFor(ev, Object.assign({ seed: hashS(String(rec.t || rec.title || "") + "|sfx|" + n) }, opts, { introEnd: opts.intro ? INTRO : 0 })), all = [];
     sfx.forEach((x) => { if (x.id === "the_rook" || x.id === "the_knight") { const e = ev.find((y) => y.n === x.ply); if (e) e.voiceTag = x.id === "the_rook" ? "THE ROOK !" : "THE KNIGHT !"; } });
     if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
     if (opts.intro && INTRO > 0) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     ev.forEach((e) => all.push(e)); extra.forEach((e) => all.push(e)); all.sort((a, b) => a.t - b.t || (a.kind === "setup" ? -1 : 0));
     const last = ev[ev.length - 1], twistEnd = !!(last && last.cheat === "twist"), end = +(((last ? last.impact : 1) + (twistEnd ? 4.2 : 0.2))).toFixed(3), finalLine = (() => { for (let k = n - 1; k >= 0; k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; })();
     const winnerName = last && (last.mate || last.cheat === "twist") ? (last.color === "w" ? rec.pw : rec.pb) : "", flip3d = !!(script && script.outro && /FLIP/i.test(script.outro.type || "") && primeIn), outT = flip3d && script.outro.timestamp > 0 ? Math.max(end - 0.2, script.outro.timestamp) : end;
+    bookends(sfx, opts, opts.intro ? INTRO : 0, outT, rec, !winnerName);
     if (opts.voices !== false && winnerName && !flip3d) sfx.push({ t: +(outT + 0.25).toFixed(3), id: "this_is_the_way", gain: 1.5, bus: "voice", level: 0.4, ply: n, outro: true });          // « THIS IS THE WAY » : UNIQUEMENT quand l'écran de victoire / mat s'affiche (jamais en cours de partie)
     sfx.sort((a, b) => a.t - b.t);
     all.push({ t: outT, kind: "outro", dur: 1.8, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n, flip3d, winner: winnerName ? { name: rec.teams ? (last.color === "w" ? "Équipe Blancs" : "Équipe Noirs") : dispName(winnerName), team: !!rec.teams, color: last.color, king: last.mate ? last.kingSq || "" : "", mate: !!last.mate } : null, defeat: primeLoses ? { color: last && last.color } : null, final: finalLine ? { bot: finalLine.bot, text: finalLine.text } : null });
@@ -654,7 +693,7 @@ RÉPONDS UNIQUEMENT PAR UN BLOC JSON (aucun texte autour), exactement ce schéma
     });
     const end = +(t + 0.2).toFixed(3);
     // son : les bruits de base calés à la frame sur l'impact de chaque coup, les voix de Levy sur le SACRIFICE d'une pièce (jamais deux voix à moins de 2,4 s)
-    const sfx = sfxFor(ev, opts);
+    const sfx = sfxFor(ev, Object.assign({ seed: hashS(String(rec.t || rec.title || "") + "|sfx|" + n) }, opts, { introEnd: opts.intro ? opts.introDur || 0 : 0 }));
     const all = [];
     if (opts.intro) all.push({ t: 0, kind: "intro", dur: opts.introDur, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     if (idle > 0.5) all.push({ t: t0, kind: "idle", dur: idle, fx: "IDLE", ply: -1 });
@@ -662,7 +701,7 @@ RÉPONDS UNIQUEMENT PAR UN BLOC JSON (aucun texte autour), exactement ce schéma
     const firstOpen = ev.find((e) => e.phase === "open");
     if (opts.opening && firstOpen) all.push({ t: +(firstOpen.t + 0.4).toFixed(3), kind: "title", dur: 4.5, text: opts.opening, fx: "TITLE", ply: -1 });
     all.sort((a, b) => a.t - b.t);
-    { const lastE = ev[ev.length - 1]; if (opts.voices !== false && lastE && lastE.mate && lastE.cheat !== "twist") { sfx.push({ t: +(end + 0.25).toFixed(3), id: "this_is_the_way", gain: 1.5, bus: "voice", level: 0.4, ply: n, outro: true }); sfx.sort((a, b) => a.t - b.t); } }          // « THIS IS THE WAY » : seulement à l'outro de victoire
+    { const lastE = ev[ev.length - 1]; bookends(sfx, opts, opts.intro ? opts.introDur || 0 : 0, end, rec, !(lastE && (lastE.mate || lastE.cheat === "twist"))); sfx.sort((a, b) => a.t - b.t); if (opts.voices !== false && lastE && lastE.mate && lastE.cheat !== "twist") { sfx.push({ t: +(end + 0.25).toFixed(3), id: "this_is_the_way", gain: 1.5, bus: "voice", level: 0.4, ply: n, outro: true }); sfx.sort((a, b) => a.t - b.t); } }          // « THIS IS THE WAY » : seulement à l'outro de victoire
     all.push({ t: end, kind: "outro", dur: opts.outroDur, result: rec.result || "", intro: introInfo(rec), fx: "OUTRO", ply: n });
     const dur = +(end + opts.outroDur).toFixed(3), key = ev.filter((e) => e.lvl >= 2), hero = ev[heroIdx];
     return { viral: true, events: all, key, duration: dur, plies: n, musicStart: 0, sfx, align, stats: { open: nOpen, ff: ev.filter((e) => e.kind === "ff").length, crit: key.length, hero: hero ? hero.n : 0, freeze: +ev.reduce((a, e) => a + e.freeze, 0).toFixed(1), idle,

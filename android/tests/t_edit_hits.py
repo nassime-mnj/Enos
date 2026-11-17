@@ -13,7 +13,7 @@ with sync_playwright() as pw:
       const rec = { t: 5151, title: 'x', result: 'gagne', plies: mv.length, pw: 'Toi + Nasko + Lelex', pb: 'Bot 400', pk: ['t', 't'], me: null, ch: [], mv, brill: 0, teams: { w: [{ name: 'Toi', human: true }, { name: 'Nasko', talk: 'nasko', elo: 1500 }, { name: 'Lelex', talk: 'lelex', elo: 1500 }], b: [{ name: 'Bot 400', kind: 'sf', elo: 400 }] } };
       const M = ENOS.editMap, pl = M.gamePlies(rec), au = { duration: 80, mainDropTimestamp: 14, dropTime: 14, confidence: 1, introBeats: Array.from({ length: 20 }, (_, k) => +(4 + 0.5 * k).toFixed(3)), hardBeats: Array.from({ length: 140 }, (_, k) => +(14.3 + 0.47 * k).toFixed(3)), hats: [], vocalPeaks: [] };
       const tl = M.buildViral(pl, rec, au, { voices: true, intro: true, syncDrop: true }), evs = tl.events.filter((e) => e.from), out = {};
-      const bl = evs.filter((e) => e.key === 'blunder'), mi = evs.filter((e) => e.key === 'mistake'), sl = tl.sfx.filter((x) => x.id === 'fahh_slow'), sn = tl.sfx.filter((x) => x.id === 'fahh' || x.id === 'op_err');
+      const bl = evs.filter((e) => e.key === 'blunder'), mi = evs.filter((e) => e.key === 'mistake'), sl = tl.sfx.filter((x) => ['fahh_slow', 'sx_gong', 'sx_flashbang'].includes(x.id)), sn = tl.sfx.filter((x) => x.id === 'fahh' || x.id === 'op_err');
       out.n = [bl.length, mi.length, sl.length, sn.length]; out.slowAt = sl.map((x) => x.t); out.blAt = bl.map((e) => e.impact); out.bus = [sl[0] && sl[0].bus, sn[0] && sn[0].bus]; out.thud = tl.sfx.filter((x) => x.id === 'thud' && bl.some((e) => Math.abs(e.impact - x.t) < 0.01)).length;
       out.hold = bl.map((e) => { const nx = evs.filter((x) => x.impact > e.impact + 0.001 && x.kind !== 'ff')[0]; return [!!e.blunderHold, e.soft, e.kind, nx ? +(nx.impact - e.impact).toFixed(2) : null]; });
       // le son se charge et se décode
@@ -28,7 +28,7 @@ with sync_playwright() as pw:
       out.diff = out.frames.blunder_a !== out.frames.blunder_b && out.frames.blunder_b !== out.frames.credit_normal;
       return out; }""")
     print({k: v for k, v in r.items() if k != "frames"})
-    check(r["n"][2] == r["n"][0] and r["n"][3] >= 1 and r["n"][3] <= r["n"][1], "1 FAHH ralenti par gaffe montrée, 1 FAHH par erreur montrée (%s ; les coups passés en accéléré restent muets)" % r["n"])
+    check(r["n"][2] == r["n"][0] and r["n"][3] >= 1 and r["n"][3] <= r["n"][1], "1 son de gaffe (FAHH ralenti / gong / flash bang) par gaffe montrée, 1 FAHH par erreur montrée (%s ; les coups passés en accéléré restent muets)" % r["n"])
     check(r["bus"] == ["hit", "hit"] and r["thud"] >= r["n"][0], "ça frappe : bus d'impact + choc grave sous chaque gaffe (%s, thud %d)" % (r["bus"], r["thud"]))
     check(r["buf"][0] and r["buf"][1] and r["buf"][2] > 4, "les deux mp3 se décodent (FAHH ralenti %s s)" % r["buf"][2])
     check(all(h[0] for h in r["hold"] if not h[1]) or all(h[3] is None or h[3] >= 1.5 for h in r["hold"] if h[2] != 'ff' and not h[1]), "gaffe = PAUSE : le coup suivant tombe ≥ 1,5 s plus tard : %s" % r["hold"])

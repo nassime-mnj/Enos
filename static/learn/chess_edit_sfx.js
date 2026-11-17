@@ -92,6 +92,8 @@
       for (const k of ["move", "capture", "check", "promote", "mate", "rec", "witty"]) { try { const r = S && S.buffer ? await S.buffer(k) : null; if (r || !this.bufs[k]) this.bufs[k] = r; } catch (e) { this.bufs[k] = null; } }
       const FH = window.ENOS_FAHH || {};
       for (const id of ["fahh", "fahh_slow", "horse", "op_imp", "op_err", "op_gaffe"]) { try { if (FH[id]) { const raw = atob(FH[id]), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); this.bufs[id] = await a.decodeAudioData(u8.buffer); } } catch (e) { this.bufs[id] = null; } }       // FAHH (erreur) / FAHH ralenti (gaffe)
+      const SX = window.ENOS_EDITSFX || {};                                                                                      // 16 bruitages d'edit (js/edit_sfx_data.js) : sx_*
+      await Promise.all(Object.keys(SX).map(async (id) => { try { const raw = atob(SX[id]), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); this.bufs[id] = await a.decodeAudioData(u8.buffer); } catch (e) { this.bufs[id] = null; } }));
       const L = window.ENOS_LEVY || {};
       await Promise.all(VOICES.map(async (id) => {
         try {
@@ -110,7 +112,7 @@
       while (this.i < this.queue.length && this.queue[this.i].t <= vt + 0.35) {
         const s = this.queue[this.i++], when = this.t0 + s.t;
         if (when < a.currentTime - 0.03) continue;                                        // trop tard (onglet gelé) : on saute
-        this.play(s.id, Math.max(when, a.currentTime), s.gain, s.bus, s.wet, s.level);
+        this.play(s.id, Math.max(when, a.currentTime), s.gain, s.bus, s.wet, s.level, s.pre);
       }
     }
     /** délai avant le premier vrai son du buffer (les mp3 de coups ont 0,1 à 0,4 s de silence au début) : le départ est avancé pour que l'IMPACT tombe pile sur `when` */
@@ -123,7 +125,8 @@
       }
       return this.ons[id];
     }
-    play(id, when, gain, bus, wet, level) {
+    /** pre = PRÉ-SON : `when` est le DÉBUT du fichier (le planning a déjà retiré la durée d'élan pour que la chute tombe sur l'impact), pas de recalage sur l'attaque */
+    play(id, when, gain, bus, wet, level, pre) {
       const b = this.bufs[id]; if (!b) return;
       const a = this.ctx, src = a.createBufferSource(), g = a.createGain(), rate = bus === "voice" ? FX.slowed : 1; src.buffer = b; g.gain.value = gain == null ? 1 : gain;
       if (bus === "voice") {
@@ -132,10 +135,10 @@
         if (this.onVoice) this.onVoice(when, b.duration / rate + 0.4, level);
       }
       else if (bus === "echo") { src.connect(g); g.connect(this.xin); g.connect(this.xwet); if (this.onDuck) this.onDuck(when, 0.22); }
-      else if (bus === "hit") { src.connect(g); g.connect(this.xin); g.connect(this.xwet); if (this.onVoice) this.onVoice(when, Math.min(b.duration, id === "fahh_slow" || id === "op_gaffe" ? 2.6 : id === "op_err" ? 2.0 : 1.6) + 0.1, level == null ? 0.3 : level); }      // coup « FAHH » : frappe comme un bruitage (écho) et la musique baisse pendant tout le son
+      else if (bus === "hit") { src.connect(g); g.connect(this.xin); g.connect(this.xwet); if (this.onVoice) this.onVoice(when, Math.min(b.duration, /^sx_/.test(id) ? 4.5 : id === "fahh_slow" || id === "op_gaffe" ? 2.6 : id === "op_err" ? 2.0 : 1.6) + 0.1, level == null ? 0.3 : level); }      // coup « FAHH » : frappe comme un bruitage (écho) et la musique baisse pendant tout le son
       else if (bus === "epic") { src.connect(g); g.connect(this.ein); if (this.onVoice) this.onVoice(when, b.duration + 2); }
       else { src.connect(g); g.connect(this.sfx); }
-      const at = when - this.onsetOf(id) / rate;
+      const at = pre ? when : when - this.onsetOf(id) / rate;
       if (at >= a.currentTime) src.start(at); else src.start(a.currentTime, Math.min(b.duration - 0.001, (a.currentTime - at) * rate));
     }
     close() { try { this.master.disconnect(); } catch (e) { /* déjà fermé */ } }

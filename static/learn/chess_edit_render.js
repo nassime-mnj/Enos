@@ -112,7 +112,7 @@
       if (e.drop) { const after = fenMapOf(e.fen), map = t >= e.impact ? after : Object.assign({}, before), ch = after[e.to]; if (t < e.impact) delete map[e.to]; return { map, mover: ch && t >= mt ? { sq: e.to, ch, scale: EASE.back(clamp((t - mt) / 0.28, 0, 1)), drop: true } : null, e }; }
       const ch = before[e.from]; if (!ch) return { map: fenMapOf(e.fen), mover: null, e };
       const map = Object.assign({}, before); delete map[e.from];
-      return { map, mover: { from: e.from, to: e.to, ch, k: p < 0 ? 0 : (dur >= 0.2 ? EASE.io3(clamp(p, 0, 1)) : EASE.out4(clamp(p, 0, 1))), boss: t < mt && e.boss, anti: t < mt && !!e.bigMove }, e };
+      return { map, mover: { from: e.from, to: e.to, ch, k: p < 0 ? 0 : (dur >= 0.16 && e.kind !== "ff" && !e.soft && !e.slowKnight ? Math.pow(clamp(p, 0, 1), 1.6) : dur >= 0.2 ? EASE.io3(clamp(p, 0, 1)) : EASE.out4(clamp(p, 0, 1))), boss: t < mt && e.boss, anti: t < mt && !!e.bigMove }, e };
     }
 
     // ------------------------------------------------------------------ dessin
@@ -131,16 +131,28 @@
       const fp = this.flipPhase(t); if (fp) { this.drawWorld(this.scene.getContext("2d"), t, null); this.drawTilt(this.scene, this._tilt); if (fp.p > 1.38 && fp.p < 1.6) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.5 * (1 - Math.abs(fp.p - 1.4) / 0.2); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; } }
       else {
         const dp = this.imp.find((e) => e.kind === "drop" && t >= e.impact && t < e.impact + 0.15);
-        const tw0 = this.hitstop(t);                                                                                     // HIT-STOP : 90 ms figés à l'instant du choc des coups brillants / sacrifices
+        const fbk = this.flashbangAt(t), tw0 = fbk ? fbk.e.impact + 0.035 : this.hitstop(t);                         // FLASH BANG : le monde est FIGÉ sur l'impact de la gaffe ; sinon HIT-STOP : 90 ms figés à l'instant du choc des coups brillants / sacrifices
         if (dp) { this.drawWorld(this.scene.getContext("2d"), tw0, strobe, t); this.rgbSplit(dp, t); }
-        else { this.drawWorld(tg, tw0, strobe, t); if (needChroma) this.composeChroma(chromaAmp); }
+        else { this.drawWorld(tg, tw0, strobe, fbk ? tw0 : t); if (needChroma) this.composeChroma(chromaAmp); }
       }
       if (this.glPost) this.glPost(t);                                                                       // post-production WebGL (bloom, projecteur, fumée, feu, vide) sur le MONDE seulement
       this.drawScreenFx(ctx, t);
       if (this.teamHud && t >= this.introEnd) this.teamHud(ctx, t);
       this.drawOverlays(ctx, t);
       if (t < this.introEnd) { const k = (t - (this.introEnd - 0.3)) / 0.3; ctx.save(); ctx.globalAlpha = 1 - EASE.out3(clamp(k, 0, 1)); this.drawIntro(this.introEnd - 0.3); ctx.restore(); }
+      this.drawFlashbang(ctx, t);
       if (this.introEnd && t >= this.introEnd && t < this.introEnd + 0.14) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9 * (1 - (t - this.introEnd) / 0.14); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    }
+    /** gaffe « flash bang » : {e, u, hold} pendant l'image figée (≤ 1,15 s, jamais sur le coup suivant) */
+    flashbangAt(t) { for (let i = 0; i < this.imp.length; i++) { const e = this.imp[i]; if (!e.flashbang) continue; const nx = this.imp[i + 1], hold = Math.max(0.3, Math.min(1.15, nx ? nx.impact - (nx.dur || 90) / 1000 - (nx.pre || 0) - e.impact - 0.08 : 1.15)), u = t - e.impact; if (u >= 0 && u < hold) return { e, u, hold }; } return null; }
+    drawFlashbang(g, t) {
+      const e = this.imp.find((x) => x.flashbang && t >= x.impact && t < x.impact + 2.2); if (!e) return; const u = t - e.impact, { W, H } = this;
+      const a = u < 0.1 ? 1 : Math.pow(Math.max(0, 1 - (u - 0.1) / 1.9), 1.7);
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+      if (u > 0.08) { g.globalCompositeOperation = "saturation"; g.globalAlpha = 0.85 * a; g.fillStyle = "#808080"; g.fillRect(0, 0, W, H); }                                              // couleurs brûlées (presque noir et blanc)
+      g.globalCompositeOperation = "source-over"; g.globalAlpha = a; const rg = g.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, H * 0.8); rg.addColorStop(0, "#ffffff"); rg.addColorStop(0.55, "rgba(255,255,255,.96)"); rg.addColorStop(1, "rgba(235,240,255,.82)"); g.fillStyle = rg; g.fillRect(0, 0, W, H);
+      if (u > 0.1 && u < 1.6) { g.globalAlpha = 0.35 * (1 - u / 1.6); g.globalCompositeOperation = "lighter"; for (let k = 0; k < 3; k++) { const s = 1 + 0.03 * (k + 1) * Math.min(1, u * 3); g.drawImage(this.cv, W / 2 - (W * s) / 2, H / 2 - (H * s) / 2, W * s, H * s); } }      // rémanence : l'image « brûlée » qui bave
+      g.restore();
     }
     hitstop(t) { for (const e of this.imp) if ((e.bigMove || e.blunderHold) && t >= e.impact && t < e.impact + (e.blunderHold ? 0.14 : 0.09)) return e.impact; return t; }
     chromaAt(t, strobe) { if (strobe) return strobe.bigMove ? 0 : 25 * this.k(); let a = 0; for (const e of this.imp) { const u = t - e.impact; if (u >= 0 && u < 0.14 && !e.minor && !e.soft && !e.bigMove) a = Math.max(a, (4 + 6 * clamp((e.drama || 0) / 80, 0.3, 1)) * this.k() * (1 - u / 0.14)); } return a; }
@@ -199,8 +211,24 @@
       for (let y = 0; y < H; y += 2) { const y0 = y - H / 2, z = y0 * sn, sc = d / (d + z), dy = H / 2 + y0 * cs * sc; g.drawImage(src, 0, y, W, 2, W / 2 - (W / 2) * sc, dy, W * sc, 2 * cs * sc + 0.8); }
     }
     /** ondes de choc case par case : [{ci, ri, u}] pour les coups brillants / sacrifices ; ripOff = décalage et échelle d'une case (c, r) */
-    ripples(t) { const out = []; for (const e of this.imp) { if (!e.bigMove) continue; const u = t - e.impact; if (u >= 0 && u < 0.75) { const P = this.sq(e.to, this.flipAt(t)); out.push({ ci: P.c, ri: P.r, u }); } } return out; }
-    ripOff(rip, c, r) { let dx = 0, dy = 0, s = 1; for (const w of rip) { const d = Math.hypot(c - w.ci, r - w.ri), ph = w.u * 15 - d * 1.5; if (ph <= 0) continue; const a = Math.sin(ph * Math.PI) * Math.exp(-w.u * 4.5) * Math.exp(-d * 0.3); dy += a * this.cell * 0.11; dx += Math.cos(ph * 2.3) * a * this.cell * 0.04; s += 0.07 * a; } return { dx, dy, s }; }
+    ripples(t) {
+      const out = []; for (const e of this.imp) {
+        if (e.soft || e.kind === "ff" || e.cheat === "twist") continue; const u = t - e.impact; if (u < 0 || u >= 1.05) continue;
+        const big = e.bigMove ? { col: "#00F7FF", col2: "#ff3df2", amp: 1, reach: 6 } : e.mate ? { col: "#ff2a2a", col2: "#ff8a00", amp: 1.1, reach: 7 } : e.key === "blunder" ? { col: "#ff2a2a", amp: 0.85, reach: 5 } : e.kind === "drop" ? { col: "#ffffff", col2: "#00F7FF", amp: 0.75, reach: 5 }
+          : e.check && !e.minor ? { col: "#ff3030", amp: 0.45, reach: 3 } : e.captured && "qr".includes(String(e.captured).toLowerCase()) && !e.minor ? { col: ({ cyan: "#00F7FF", red: "#FF2020", blue: "#2E9AFE", gold: "#ffd24a" })[e.tone] || "#2CE65C", amp: 0.5, reach: 3 } : null;
+        if (!big) continue; if (u >= (e.bigMove ? 0.75 : 1.05) && !big.reach) continue; const P = this.sq(e.to, this.flipAt(t)); out.push(Object.assign({ ci: P.c, ri: P.r, u, old: !!e.bigMove }, big));
+      }
+      return out;
+    }
+    /** DOMINO : chaque case s'allume en trame de points (halftone) puis tremble, l'une après l'autre en partant de l'impact (55 ms par case) */
+    domino(w, c, r) { const d = Math.hypot(c - w.ci, r - w.ri), ph = w.u - d * 0.055; if (ph < 0 || ph > 0.5 || d > w.reach + 0.5) return 0; return Math.pow(1 - ph / 0.5, 1.4) * Math.exp(-d / (w.reach * 0.8)) * w.amp; }
+    halftone(col) {
+      return ((this.half ||= {})[col] ||= (() => { const N = Math.round(this.cell), c = mk(N, N), g = c.getContext("2d"), n = 6, st = N / n; g.fillStyle = col;
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const cx = (i + 0.5) * st, cy = (j + 0.5) * st, dc = Math.hypot(cx - N / 2, cy - N / 2) / (N * 0.7), rr = st * 0.42 * (1 - dc * 0.55); g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.fill(); }
+        return c; })());
+    }
+    ripOff(rip, c, r) { let dx = 0, dy = 0, s = 1; for (const w of rip) { const d = Math.hypot(c - w.ci, r - w.ri), ph = w.u * 15 - d * 1.5; if (ph > 0 && w.old) { const a = Math.sin(ph * Math.PI) * Math.exp(-w.u * 4.5) * Math.exp(-d * 0.3); dy += a * this.cell * 0.11; dx += Math.cos(ph * 2.3) * a * this.cell * 0.04; s += 0.07 * a; }
+        const q = this.domino(w, c, r); if (q > 0) { const p2 = w.u - d * 0.055; dy += Math.abs(Math.sin(p2 * 55 + 0.6)) * q * this.cell * 0.06; dx += Math.cos(p2 * 61 + c) * q * this.cell * 0.025; s += 0.06 * q; } } return { dx, dy, s }; }
     /** physique individuelle : balancement élastique + rebond (pop) à l'atterrissage, respiration de la pièce active, spin 360° sur les coups spéciaux, inertie pendant le glissement */
     spins(e) { return e.key === "brilliant" || e.key === "great" || !!e.sacrifice || !!e.aiImg || !!e.spin; }
     pieceFx(t) {
@@ -221,6 +249,8 @@
       const rip = this.ripples(t), sprB = this.boards[classic ? "classic" : "contrast"];
       if (!rip.length) g.drawImage(sprB, -BS / 2, -BS / 2);
       else for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) { const o = this.ripOff(rip, c, r); g.drawImage(sprB, c * cell, r * cell, cell, cell, -BS / 2 + c * cell + o.dx - cell * (o.s - 1) / 2, -BS / 2 + r * cell + o.dy - cell * (o.s - 1) / 2, cell * o.s + 0.6, cell * o.s + 0.6); }                                  // les cases tremblent une à une autour du coup brillant
+      if (rip.length) { g.save(); g.globalCompositeOperation = "lighter"; for (const w of rip) for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) { const q = this.domino(w, c, r); if (q <= 0.02) continue; const o = this.ripOff(rip, c, r), x = -BS / 2 + c * cell + o.dx - cell * (o.s - 1) / 2, y = -BS / 2 + r * cell + o.dy - cell * (o.s - 1) / 2, col = w.col2 && (c + r) % 2 ? w.col2 : w.col;
+          g.globalAlpha = Math.min(1, q) * 0.32; g.fillStyle = col; g.fillRect(x, y, cell * o.s, cell * o.s); g.globalCompositeOperation = "source-over"; g.globalAlpha = Math.min(0.9, q); g.drawImage(this.halftone(col), x, y, cell * o.s, cell * o.s); g.globalCompositeOperation = "lighter"; } g.restore(); }          // points opaques : visibles aussi sur les cases claires          // cases allumées en trame de points, vague domino
       this.drawFx(g, t, st, flip, "floor");                                                                                               // CALQUES 1-2 : sol, flèche, rayon — SOUS les pièces
       // ombre portée des pièces (une ellipse floue pré-rendue par pièce serait plus chère : un seul voile)
       const draw = (sq, ch, o) => { const p = this.sq(sq, flip); if (rip.length) { const f = this.ripOff(rip, p.c, p.r); p.x += f.dx; p.y += f.dy; } this.piece(g, ch, p.x, p.y, cell * 1.02, o); };
@@ -244,9 +274,16 @@
               const P = lift(0, 0, k0); this.glowAt(g, "#00F7FF", P.x, P.y, cell * (1.6 + arc), 0.55); this.glowAt(g, "#ffffff", P.x, P.y, cell * 0.9, 0.35 * arc);
               this.piece(g, m.ch, P.x, P.y, cell * 1.02, { scale: 1 + 0.45 * arc, rot: 0.3 * arc * (Math.sign(b.x - a.x) || 1) });
             } else {
-            if (moving) this.glowAt(g, "#ffffff", x, y, cell * 0.9, 0.25); let rot = moving ? lean : 0;
+            let rot = moving ? lean : 0;
             if (e && this.spins(e)) { const v = t - (e.impact - (e.dur || 90) / 1000); if (v >= 0 && v < 0.14) rot += TAU * SPIN(v / 0.14); }
-            this.piece(g, m.ch, x, y, cell * 1.02, { rot, sx: moving ? 1.12 : 1, sy: moving ? 0.92 : 1 });                         // inertie : penche dans le sens de la course + étirement (1,12 × 0,92)
+            const hero = moving && e && e.kind !== "ff" && !e.soft && (e.dur || 0) >= 160, hop = hero ? Math.min(1, dist / (cell * 2.5)) * (e.minor ? 0.18 : 0.4) : 0, lift = (kk) => Math.sin(clamp(kk, 0, 1) * Math.PI) * cell * hop;
+            if (hero) {                                                                                                     // ARC + traînée : la pièce décolle, file en arc et laisse 5 images fantômes, sans jamais repasser par sa case
+              const tone = e.tone === "cyan" ? "#00F7FF" : e.tone === "red" ? "#FF2A2A" : "#ffffff"; g.save(); g.globalAlpha = 0.28; g.fillStyle = "#000"; g.beginPath(); g.ellipse(x, y + cell * 0.36, cell * 0.3, cell * 0.08, 0, 0, TAU); g.fill(); g.restore();
+              for (let i = 5; i >= 1; i--) { const kk = m.k - i * 0.045; if (kk <= 0) continue; const gx = lerp(a.x, b.x, kk), gy = lerp(a.y, b.y, kk) - lift(kk); g.save(); g.globalCompositeOperation = "lighter"; this.piece(g, m.ch, gx, gy, cell * 1.02, { white: true, alpha: 0.09 * (6 - i), rot }); g.restore(); }
+              this.glowAt(g, tone, x, y - lift(m.k), cell * 1.3, 0.35);
+            } else if (moving) this.glowAt(g, "#ffffff", x, y, cell * 0.9, 0.25);
+            const sc = hero ? 1 + 0.16 * Math.sin(m.k * Math.PI) : 1;
+            this.piece(g, m.ch, x, y - lift(m.k), cell * 1.02, { rot, sx: (moving ? 1.12 : 1) * sc, sy: (moving ? 0.92 : 1) * sc });                         // inertie : penche dans le sens de la course + étirement (1,12 × 0,92)
             }
           }
         }
@@ -265,7 +302,8 @@
           const v = t - (e.impact - dur); if (F && v >= 0 && v < 0.11 && !soft) { const kk = clamp(v / dur, 0, 1), k0 = clamp((v - 0.11) / dur, 0, 1), x1 = lerp(F.x, P.x, kk), y1 = lerp(F.y, P.y, kk), x0 = lerp(F.x, P.x, k0), y0 = lerp(F.y, P.y, k0), al = 1 - v / 0.11;
             g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round"; [[cell * 0.7, 0.14], [cell * 0.42, 0.28], [cell * 0.16, 0.55]].forEach(([w, a]) => { g.globalAlpha = a * al; g.strokeStyle = w < cell * 0.2 ? "#ffffff" : tone; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }); g.restore(); }              // traînée 110 ms
           if (u < 0) continue;
-          if (F && u < 1.3) { const al = (u < 0.9 ? 0.4 : 0.4 * (1 - (u - 0.9) / 0.4)) * wk; g.save(); g.globalAlpha = al; g.fillStyle = tone; g.fillRect(F.x - cell / 2, F.y - cell / 2, cell, cell); g.restore(); }                              // départ gardé à 40 %
+          const lastHere = this.lastImp(t) === e, keep = lastHere ? 1 : clamp(1 - (u - 0.25) / 0.3, 0, 1);                                                                    // le DERNIER coup reste allumé jusqu'au suivant
+          if (F && keep > 0) { const al = 0.42 * keep * wk; g.save(); g.globalAlpha = al; g.fillStyle = tone; g.fillRect(F.x - cell / 2, F.y - cell / 2, cell, cell); g.restore(); }                              // case de départ
           if ((e.key === "brilliant" || e.glow) && u < 1.35 && !soft) {                                                                                                                                                              // demi-plateau cyan, halo blanc (SOUS la pièce), étoiles en diagonale
             const al = u < 0.15 ? u / 0.15 : u > 0.95 ? 1 - (u - 0.95) / 0.4 : 1, rg = g.createRadialGradient(P.x, P.y, 0, P.x, P.y, BS * 0.75); rg.addColorStop(0, "rgba(0,247,255,.65)"); rg.addColorStop(1, "rgba(0,247,255,0)"); g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = al; g.fillStyle = rg; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
             this.glowAt(g, "#ffffff", P.x, P.y, cell * 2.0, 0.7 * al); const rnd = mulberry((e.n || 1) * 53 + 3); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 42; i++) { const sx0 = P.x + (rnd() - 0.5) * BS * 0.9, sy0 = P.y + (rnd() - 0.5) * BS * 0.9, sp = (3 + rnd() * 5) * cell, sz = cell * (0.04 + rnd() * 0.06), x = sx0 + u * sp * 0.7, y = sy0 - u * sp * 0.7; g.globalAlpha = al * (0.4 + 0.6 * rnd()); g.fillStyle = "#fff"; g.fillRect(x, y, sz, sz); g.fillRect(x - sz, y + sz * 0.4, sz * 3, sz * 0.2); } g.restore();
@@ -274,9 +312,9 @@
           if (e.redPath && e.from && u < 0.95 && !soft) {                                                                                                                                                                             // chemin rouge : sur le SOL, alpha ≤ 0,55
             const al = u < 0.15 ? u / 0.15 : u > 0.65 ? 1 - (u - 0.65) / 0.3 : 1; g.save(); g.globalAlpha = 0.35 * al; g.fillStyle = "#000"; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
             this.pathSquares(e).forEach((q, i) => { const p = this.sq(q, flip), a = clamp((u - i * 0.018) / 0.18, 0, 1) * al; g.save(); g.globalAlpha = 0.55 * a; g.fillStyle = "#FF2A1A"; g.fillRect(p.x - cell / 2, p.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, "#FF2A1A", p.x, p.y, cell * 1.1, 0.35 * a); });
-          } else if (u < 0.9) { const al = (1 - clamp(u / 0.9, 0, 1)) * wk; g.save(); g.globalAlpha = 0.4 * al; g.fillStyle = tone; g.fillRect(P.x - cell / 2, P.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, tone, P.x, P.y, cell * 1.4, 0.55 * al); }
+          } else if (keep > 0) { const fl = Math.exp(-u * 4.5), al = (0.5 + 0.45 * fl) * keep * wk; g.save(); g.globalAlpha = al; g.fillStyle = tone; g.fillRect(P.x - cell / 2, P.y - cell / 2, cell, cell); g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.5 * fl * wk; g.fillStyle = "#ffffff"; g.fillRect(P.x - cell / 2, P.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, tone, P.x, P.y, cell * 1.5, (0.25 + 0.5 * fl) * keep * wk); }       // case d'arrivée : éclair blanc puis couleur de la qualité du coup
           // --- CALQUE 2 : flèche d'échec / flèche spéciale et rayon (sous la pièce d'arrivée)
-          if ((e.check || e.mate) && !soft) this.beam(g, e, u, flip);
+          if ((e.check || e.mate) && !soft) { this.beam(g, e, u, flip); this.laser(g, e, u, flip); }
           if (e.arrow && e.from && u < 1.6) this.arrow(g, e, u, flip);
           continue;
         }
@@ -324,6 +362,14 @@
       if ((e.piece || "").toLowerCase() === "n" || (dx && dy && Math.abs(dx) !== Math.abs(dy))) { const sx = Math.sign(dx), sy = Math.sign(dy); sqs.push(from); if (Math.abs(dx) >= Math.abs(dy)) { for (let k = 1; k <= Math.abs(dx); k++) sqs.push(nm(f[0] + sx * k, f[1])); for (let k = 1; k <= Math.abs(dy); k++) sqs.push(nm(t[0], f[1] + sy * k)); } else { for (let k = 1; k <= Math.abs(dy); k++) sqs.push(nm(f[0], f[1] + sy * k)); for (let k = 1; k <= Math.abs(dx); k++) sqs.push(nm(f[0] + sx * k, t[1])); } }
       else { const n = Math.max(Math.abs(dx), Math.abs(dy)), sx = Math.sign(dx), sy = Math.sign(dy); for (let k = 0; k <= n; k++) sqs.push(nm(f[0] + sx * k, f[1] + sy * k)); }
       return sqs;
+    }
+    lastImp(t) { let l = null; for (const e of this.imp) { if (e.impact <= t) l = e; else break; } return l; }
+    /** ÉCHEC : la case du roi s'embrase en rouge et une COLONNE LASER rouge tombe sur lui (crépite, puis s'éteint) */
+    laser(g, e, u, flip) {
+      if (!e.kingSq || u < 0.04 || u > (e.mate ? 1.6 : 1.05)) return; const K = this.sq(e.kingSq, flip), c = this.cell, L = e.mate ? 1.6 : 1.05, grow = EASE.out3(clamp((u - 0.04) / 0.12, 0, 1)), fade = u > L - 0.3 ? (L - u) / 0.3 : 1, fl = 0.8 + 0.2 * Math.sin(u * 95), top = K.y - this.BS * 1.6 * grow;
+      g.save(); g.globalAlpha = 0.55 * fade; g.fillStyle = "#ff1a1a"; g.fillRect(K.x - c / 2, K.y - c / 2, c, c); g.globalCompositeOperation = "lighter";
+      [[c * 0.62, "rgba(255,20,20,.16)"], [c * 0.36, "rgba(255,40,40,.35)"], [c * 0.16, "#ff2a2a"], [c * 0.055, "#ffffff"]].forEach(([w, col]) => { const gr = g.createLinearGradient(0, top, 0, K.y); gr.addColorStop(0, "rgba(255,0,0,0)"); gr.addColorStop(0.25, col); gr.addColorStop(1, col); g.globalAlpha = fade * fl; g.fillStyle = gr; g.fillRect(K.x - w / 2, top, w, K.y - top); });
+      g.globalAlpha = fade; this.glowAt(g, "#ff2020", K.x, K.y, c * (1.3 + 0.3 * Math.sin(u * 40)), 0.8 * fade); g.restore();
     }
     beam(g, e, u, flip) {
       if (u > 0.95 || !e.kingSq) return; const a = this.sq(e.to, flip), b = this.sq(e.kingSq, flip), grow = clamp(u / 0.18, 0, 1), fade = u > 0.7 ? 1 - (u - 0.7) / 0.25 : 1, x2 = lerp(a.x, b.x, grow), y2 = lerp(a.y, b.y, grow), c = this.cell;
@@ -390,7 +436,7 @@
       const { W, H } = this, k = this.k(), o = this.outro, u = t - o.t - (o.flip3d ? 1.6 : 0), a = clamp((u - 0.2) / 0.35, 0, 1);
       g.save(); g.fillStyle = "rgba(0,0,0,.45)"; g.globalAlpha = a; g.fillRect(0, 0, W, H); g.restore();
       const main = String(o.result || "FIN").split("·")[0].trim().toUpperCase(), tw = o.defeat ? "CHATGPT PRIME : 404 ELO NOT FOUND" : o.winner ? o.winner.name.toUpperCase() + " GAGNE PAR ÉCHEC ET MAT" : main;                      // vrai nom du vainqueur
-      this.stampText(g, tw, o.defeat ? "#ff3b3b" : "#ffd666", a, 1);
+      if (!o.defeat && o.winner && o.winner.mate && this.mateCard) this.mateCard(g, o, u - 0.1, H * 0.44, true); else this.stampText(g, tw, o.defeat ? "#ff3b3b" : "#ffd666", a, 1);
       if (o.final && u > 0.9) { const b = E.botChat && E.botChat.bots[o.final.bot], k2 = clamp((u - 0.9) / 0.6, 0, 1); g.save(); g.globalAlpha = k2; g.font = TXT(34 * k, 600); g.textAlign = "center"; const lines = this.wrap(g, "« " + o.final.text + " »", W * 0.82); g.fillStyle = "#fff"; lines.forEach((l, i) => g.fillText(l, W / 2, H * 0.66 + i * 44 * k)); if (b) { g.font = TXT(26 * k, 700); g.fillStyle = "#ffd666"; g.fillText(b.name, W / 2, H * 0.66 - 50 * k); } g.restore(); }
     }
     drawPrompt(g, e, t) {

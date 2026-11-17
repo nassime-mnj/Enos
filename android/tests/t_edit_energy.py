@@ -20,7 +20,7 @@ with sync_playwright() as pw:
         times: evs.map((e) => e.impact), kicks, outT: out.t, way: tl.sfx.filter((x) => x.id === 'this_is_the_way').map((x) => [x.t, x.bus, x.level]),
         voices: tl.sfx.filter((x) => x.bus === 'voice' && x.id !== 'this_is_the_way').map((x) => [x.id, x.level]), dry: tl.sfx.filter((x) => (x.id === 'move' || x.id === 'capture')).every((x) => x.bus === 'sfx' || x.bus === 'echo'),
         movesDry: tl.sfx.filter((x) => x.id === 'move' && x.bus === 'sfx').length, movesEcho: tl.sfx.filter((x) => x.id === 'move' && x.bus === 'echo').length, crystalEcho: tl.sfx.filter((x) => x.id === 'crystal').every((x) => x.bus === 'echo'),
-        thunder: tl.sfx.filter((x) => x.id === 'mateboom').length, lastImpact: evs[evs.length - 1].impact };
+        thunder: tl.sfx.filter((x) => x.id === "mateboom" || x.id === "sx_boom").length, lastImpact: evs[evs.length - 1].impact };
     } catch (e) { return { err: String(e.stack).slice(0, 600) }; } }""", au)
     if "err" in r: print(r["err"]); raise SystemExit(1)
     print({k: v for k, v in r.items() if k not in ("times", "kicks")})
@@ -36,7 +36,7 @@ with sync_playwright() as pw:
     check(len(r["way"]) == 1 and r["way"][0][0] >= r["outT"] and r["way"][0][1] == "voice", "« This is the way » : UNE seule fois, à l'outro (t=%.1f ≥ outro %.1f), jamais en cours de partie" % (r["way"][0][0] if r["way"] else -1, r["outT"]))
     check(all(v[1] == 0.4 for v in r["voices"]) and len(r["voices"]) >= 1, "voix des brillants : musique à −8 dB (level 0,4) : %s" % r["voices"][:3])
     check(r["movesDry"] > 0 and r["movesEcho"] == 0 and r["crystalEcho"], "coups normaux = bois sec ; échec = cristal avec écho (%d secs)" % r["movesDry"])
-    check(r["thunder"] >= 8, "un coup de tonnerre sur chaque brillant (%d)" % r["thunder"])
+    check(r["thunder"] >= 8, "un tonnerre ou un boom cinéma sur chaque brillant (%d)" % r["thunder"])
     check(r["dur"] <= au["duration"] - r["musicStart"] + 0.01, "la vidéo (%.1f s) tient dans la musique restante (%.1f s)" % (r["dur"], au["duration"] - r["musicStart"]))
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()

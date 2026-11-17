@@ -16,7 +16,7 @@
     if (musicFile) { try { const buf = await oc.decodeAudioData(await musicFile.arrayBuffer()); const src = oc.createBufferSource(); src.buffer = buf; src.connect(mg); src.start(0, Math.max(0, tl.musicStart || 0)); } catch (e) { /* musique illisible : on exporte sans */ } }
     const duck = [];
     player.onVoice = (when, len, lvl) => duck.push([when, len, lvl || 0.45]); player.onDuck = (when, len) => duck.push([when, len, 0.45]);                              // sidechain : musique à 0,45 (−7 dB) pendant 220 ms (voix : toute leur durée)
-    (tl.sfx || []).slice().sort((a, b) => a.t - b.t).forEach((s) => player.play(s.id, Math.max(0, s.t), s.gain, s.bus, s.wet, s.level));
+    (tl.sfx || []).slice().sort((a, b) => a.t - b.t).forEach((s) => player.play(s.id, Math.max(0, s.t), s.gain, s.bus, s.wet, s.level, s.pre));
     duck.sort((a, b) => a[0] - b[0]); let lastEnd = 0; duck.forEach(([w, l, lv]) => { try { const st = Math.max(lastEnd, Math.max(0, w - 0.02)), en = w + l; if (en <= st) return; mg.gain.setValueAtTime(0.85, st); mg.gain.linearRampToValueAtTime(lv, st + 0.02); mg.gain.setValueAtTime(lv, en); mg.gain.linearRampToValueAtTime(0.85, en + 0.18); lastEnd = en + 0.18; } catch (e) { /* ordre invalide */ } });
     const out = await oc.startRendering(), fade = Math.min(0.8, out.duration * 0.2), n = Math.floor(fade * out.sampleRate), len = out.length;                // fondu de sortie : la vidéo se termine 2,0 s après le dernier coup, le son s'éteint
     for (let c = 0; c < out.numberOfChannels; c++) { const d = out.getChannelData(c); for (let i = 0; i < n; i++) d[len - 1 - i] *= i / n; }
