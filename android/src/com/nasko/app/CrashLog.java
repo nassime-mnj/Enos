@@ -57,8 +57,15 @@ final class CrashLog {
                 for (ApplicationExitInfo x : l) {
                     if (x.getTimestamp() <= seen) continue;
                     newest = Math.max(newest, x.getTimestamp());
+                    String pn = x.getProcessName();
+                    if (pn != null && !pn.equals(c.getPackageName())) continue;                       // processus isolés du WebView (« isolated not needed ») : pas la session de l'application
                     String d = x.getDescription();
-                    add("FIN", "Session précédente terminée : " + reason(x.getReason()) + (d != null ? " (" + d + ")" : "") + " · importance " + x.getImportance() + " · mémoire PSS " + (x.getPss() / 1024) + " Mo");
+                    boolean bg = x.getImportance() >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED;      // l'application était en arrière-plan : fermeture normale d'Android
+                    if (x.getReason() == ApplicationExitInfo.REASON_LOW_MEMORY && bg) {
+                        add("INFO", "Session précédente fermée en arrière-plan par Android (mémoire du téléphone, comportement normal : ce n'est pas un plantage)");
+                        continue;
+                    }
+                    add("FIN", "Session précédente terminée : " + reason(x.getReason()) + (x.getReason() == ApplicationExitInfo.REASON_LOW_MEMORY ? " au premier plan" : "") + (d != null && !d.isEmpty() ? " (" + d + ")" : "") + " · importance " + x.getImportance() + " · mémoire PSS " + (x.getPss() / 1024) + " Mo");
                 }
                 prefLong(c, newest);
             } else if (dirty) {
