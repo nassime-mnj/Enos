@@ -32,7 +32,7 @@ with sync_playwright() as pw:
     check("JSON" in r["bad"] and r["okEvents"] == 7, "script collé : erreur claire si invalide, ```json``` toléré (%s événements)" % r["okEvents"])
     check(all(abs(t - w) < 1e-6 for (n, t), w in zip(r["impacts"], [3.85, 4.4, 5.6, 12.0, 12.5, 18.2, 18.8])), "chaque coup tombe EXACTEMENT au timestamp du script : %s" % [round(t, 2) for n, t in r["impacts"]])
     check(abs(r["drop"] - 12.0) < 1e-6 and r["cam"][3] == 1.55, "le BRILLANT est le drop (12.00 s), caméra du script (zoom 1.55)")
-    check(all(v for k, v in r["flags"].items() if k != "redPath") and not r["flags"]["redPath"], "vfx du script appliqués (RED_PATH ignoré hors gaffe) : %s" % r["flags"])
+    check(all(v for k, v in r["flags"].items() if k not in ("redPath", "glasses")) and not r["flags"]["redPath"] and not r["flags"]["glasses"], "vfx du script appliqués (RED_PATH ignoré hors gaffe, GLASSES ignoré : plus de lunettes) : %s" % r["flags"])
     check({"cutrook", "prompt"} & set(r["kinds"]) and r["flip3d"], "cutscene Badass Rook / prompt + outro 3D_BOARD_FLIP_CHECKMATE : %s" % r["kinds"])
     check(r["badges"][0] == "book" and "brilliant" in r["badges"] and "mistake" in r["badges"] and "excellent" in r["badges"], "badges du script : %s" % r["badges"])
     # --- rendu : cadrage, cutscenes, flip 3D, physique
@@ -66,7 +66,7 @@ with sync_playwright() as pw:
     check(len(lo["panic"]) == 3 and any("404" in t or "500" in t for t in lo["panic"]), "3 derniers coups : Prime panique (texte rouge tremblant, excuses d'erreur serveur) : %s" % lo["panic"][:2])
     check(len(lo["arrows"]) == 1 and lo["arrows"][0].endswith("#") and lo["defeat"], "flèche jaune UNIQUE sur le mat final (%s) + écran de défaite 404 ELO NOT FOUND" % lo["arrows"])
     check(lo["punch"][0] - lo["punch"][1] >= 0.15, "punch caméra : zoom +0,22 au kick puis retombée exponentielle (%.3f → %.3f)" % tuple(lo["punch"]))
-    check(all(lo["layers"]) and lo["echo"] >= 7 and lo["gain"] >= 1.35 and "this_is_the_way" in lo["voice"], "mixage : bruitages lourds avec écho à gain 1,35 (+3 dB), couches bois / cristal / explosion, voix « This is the way » sur le mat : %s" % lo["layers"])
+    check(all(lo["layers"]) and lo["echo"] >= 2 and lo["gain"] >= 1.35 and "this_is_the_way" in lo["voice"], "mixage : échec / mat avec écho à gain 1,35 (+3 dB), coups normaux secs, couches bois / cristal / explosion, voix « This is the way » sur le mat : %s" % lo["layers"])
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

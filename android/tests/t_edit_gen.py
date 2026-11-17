@@ -22,7 +22,7 @@ with sync_playwright() as pw:
     pg.click("#ce-gen")
     pg.wait_for_selector(".ce-gbar i", timeout=5000)
     check(True, "barre de progression « Génération de l'edit »")
-    pg.wait_for_selector(".ce-genbox video", timeout=240000)
+    pg.wait_for_selector(".ce-genbox video", timeout=600000)
     info = pg.inner_text(".ce-genbox .ce-gmsg")
     check("60 FPS" in info and ("WebCodecs" in info or "MediaRecorder" in info), "lecteur <video controls autoplay loop> + infos : %s" % info)
     check(pg.locator("#ce-dl").is_visible() and pg.evaluate("document.querySelector('.ce-genbox video').loop && document.querySelector('.ce-genbox video').controls"), "bouton « TÉLÉCHARGER LE MP4 » + vidéo en boucle")

@@ -11,8 +11,8 @@
   const SPIN = bez(0.2, 0.8, 0.2, 1);
   const mulberry = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const fenMapOf = (fen) => { const m = {}; (fen || "").split(" ")[0].split("/").forEach((row, r) => { let c = 0; for (const ch of row) { if (/\d/.test(ch)) c += +ch; else { m[String.fromCharCode(97 + c) + (8 - r)] = ch; c++; } } }); return m; };
-  const FONT = (px) => `900 ${Math.round(px)}px Impact, "Arial Black", system-ui, sans-serif`;
-  const TXT = (px, w) => `${w || 600} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  const FONT = (px) => `400 ${Math.round(px)}px "Bebas Neue", Impact, "Arial Black", system-ui, sans-serif`;
+  const TXT = (px, w) => `${(w || 600) >= 650 ? 700 : 500} ${Math.round(px)}px Oswald, system-ui, -apple-system, "Segoe UI", sans-serif`;
   const PALETTE = { contrast: { l: ["#ffffff", "#ffffff", "#fafafa"], d: ["#0f0f0f", "#0B0B0B", "#080808"] }, classic: { l: ["#f2f3da", "#EBECD0", "#dcddc2"], d: ["#7fa05c", "#739552", "#678748"] } };
   const imgCache = {};
   const IMGSTAT = { data: 0, net: 0 };
@@ -36,6 +36,7 @@
 
     // ------------------------------------------------------------------ chargement (images + sprites pré-rendus)
     async load() {
+      if (E.editFonts) await E.editFonts.ready();                                                            // Bebas Neue + Oswald (js/edit_fonts_data.js) avant le 1er dessin
       const A = this.base, codes = "KQRBNPkqrbnpMEGSmegs".split(""), imgs = await Promise.all(codes.map((ch) => loadImg(`${A}img/chess/${ch === ch.toUpperCase() ? "w" : "b"}${ch.toLowerCase()}.png`)));
       codes.forEach((ch, i) => { const im = imgs[i]; if (!im) return; this.pc[ch] = this.skin(im, ch === ch.toUpperCase()); this.red[ch] = this.tint(this.pc[ch], "#FF1111", true); this.sil[ch.toLowerCase()] = this.sil[ch.toLowerCase()] || this.tint(this.pc[ch], "#ffffff", false); });
       const need = new Set(["crown", "book", "miss", "blunder", "brilliant", "best", "great", "excellent", "inaccuracy", "mistake", "good", "next", "mate"]);
@@ -109,6 +110,7 @@
       if (e.cheat === "twist") return { map: fenMapOf(e.fen), mover: null, e };
       if (p >= 1 || (!e.from && !e.drop)) return { map: fenMapOf(e.fen), mover: null, e };
       const before = fenMapOf(e.snap || e.fenBefore);
+      if (e.drop && e.conv) return { map: t >= e.impact ? fenMapOf(e.fen) : before, mover: null, e };
       if (e.drop) { const after = fenMapOf(e.fen), map = t >= e.impact ? after : Object.assign({}, before), ch = after[e.to]; if (t < e.impact) delete map[e.to]; return { map, mover: ch && t >= mt ? { sq: e.to, ch, scale: EASE.back(clamp((t - mt) / 0.28, 0, 1)), drop: true } : null, e }; }
       const ch = before[e.from]; if (!ch) return { map: fenMapOf(e.fen), mover: null, e };
       const map = Object.assign({}, before); delete map[e.from];
@@ -292,6 +294,7 @@
     /** effets dans le repère du plateau, en DEUX couches : 'floor' (sol, flèche, rayon : SOUS les pièces) et 'top' (UN badge, lunettes, éclats : au premier plan, jamais sur le centre de la pièce) */
     drawFx(g, t, st, flip, layer) {
       const cell = this.cell, BS = this.BS, floor = layer === "floor", dropT = this.dropT;
+      if (floor) this.announceFx(g, t, flip);
       for (const e of this.imp) {
         const u = t - e.impact; if (u < -0.2 || u > 2.2 || e.cheat === "twist") continue; const P = this.sq(e.to, flip), tone = ({ cyan: "#00F7FF", red: "#FF2020", green: "#2CE65C", blue: "#2E9AFE", gold: "#ffd24a" })[e.tone] || "#2CE65C", soft = !!e.soft, wk = soft ? 0.45 : 1;
         const dur = (e.dur || 70) / 1000, F = e.from ? this.sq(e.from, flip) : null;
@@ -309,6 +312,7 @@
             this.glowAt(g, "#ffffff", P.x, P.y, cell * 2.0, 0.7 * al); const rnd = mulberry((e.n || 1) * 53 + 3); g.save(); g.globalCompositeOperation = "lighter"; for (let i = 0; i < 42; i++) { const sx0 = P.x + (rnd() - 0.5) * BS * 0.9, sy0 = P.y + (rnd() - 0.5) * BS * 0.9, sp = (3 + rnd() * 5) * cell, sz = cell * (0.04 + rnd() * 0.06), x = sx0 + u * sp * 0.7, y = sy0 - u * sp * 0.7; g.globalAlpha = al * (0.4 + 0.6 * rnd()); g.fillStyle = "#fff"; g.fillRect(x, y, sz, sz); g.fillRect(x - sz, y + sz * 0.4, sz * 3, sz * 0.2); } g.restore();
           }
           if (e.bigMove && !soft && u < 0.75) this.impactFx(g, e, P, u);
+          if (e.conv && u < 0.7) { this.glowAt(g, "#ffffff", P.x, P.y, cell * (1 + 1.4 * u), 1 - u / 0.7); this.glowAt(g, "#81b64c", P.x, P.y, cell * 1.8, 0.7 * (1 - u / 0.7)); }        // conversion : éclair blanc sur la pièce qui change de camp
           if (e.redPath && e.from && u < 0.95 && !soft) {                                                                                                                                                                             // chemin rouge : sur le SOL, alpha ≤ 0,55
             const al = u < 0.15 ? u / 0.15 : u > 0.65 ? 1 - (u - 0.65) / 0.3 : 1; g.save(); g.globalAlpha = 0.35 * al; g.fillStyle = "#000"; g.fillRect(-BS / 2, -BS / 2, BS, BS); g.restore();
             this.pathSquares(e).forEach((q, i) => { const p = this.sq(q, flip), a = clamp((u - i * 0.018) / 0.18, 0, 1) * al; g.save(); g.globalAlpha = 0.55 * a; g.fillStyle = "#FF2A1A"; g.fillRect(p.x - cell / 2, p.y - cell / 2, cell, cell); g.restore(); this.glowAt(g, "#FF2A1A", p.x, p.y, cell * 1.1, 0.35 * a); });
@@ -326,8 +330,7 @@
           const bk = clamp(u / 0.3, 0, 1), sc = lerp(2.6, 1, EASE.out3(bk)), al = u > 0.7 ? 1 - (u - 0.7) / 0.25 : bk; g.save(); g.globalAlpha = al; g.strokeStyle = col; g.lineWidth = cell * 0.05; const s2 = (cell * 0.56) * sc, L = s2 * 0.32;
           [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x0 = P.x + sx * s2, y0 = P.y + sy * s2; g.beginPath(); g.moveTo(x0, y0 - sy * L); g.lineTo(x0, y0); g.lineTo(x0 - sx * L, y0); g.stroke(); }); g.restore(); }
         const one = this.badgeOne(e);
-        if (one && one.glasses && u > 0 && u < 1.9) this.glasses(g, P, u);
-        else if (one && one.img && u < 1.8) { const spr = this.badgeSpr[one.img]; if (spr) { const bk = clamp(u / 0.22, 0, 1), sc = e.bigMove ? lerp(2.2, 1, EASE.out3(clamp(u / 0.14, 0, 1))) : EASE.back(bk), fade = u > 1.5 ? 1 - (u - 1.5) / 0.3 : 1, sz = cell * 0.95 * sc, hdr = 0.85 + 0.35 * Math.sin(u * 9); g.save(); g.globalAlpha = clamp(fade, 0, 1); g.drawImage(spr, bx - sz / 2, by - sz / 2, sz, sz); this.glowAt(g, one.glow, bx, by, cell * 0.7 * sc, 0.3 * hdr * clamp(fade, 0, 1)); g.restore(); } }
+        if (one && one.img && u < 1.8) { const spr = this.badgeSpr[one.img]; if (spr) { const bk = clamp(u / 0.22, 0, 1), sc = e.bigMove ? lerp(2.2, 1, EASE.out3(clamp(u / 0.14, 0, 1))) : EASE.back(bk), fade = u > 1.5 ? 1 - (u - 1.5) / 0.3 : 1, sz = cell * 0.95 * sc, hdr = 0.85 + 0.35 * Math.sin(u * 9); g.save(); g.globalAlpha = clamp(fade, 0, 1); g.drawImage(spr, bx - sz / 2, by - sz / 2, sz, sz); this.glowAt(g, one.glow, bx, by, cell * 0.7 * sc, 0.3 * hdr * clamp(fade, 0, 1)); g.restore(); } }
         if (e.captured && u < 0.7 && !e.drop && !soft) this.burst(g, e, P, u);
       }
       if (!floor) {                                                                                                                                                                                                                    // couronne « Winner » (vert) et badge « Checkmate » (rouge) sur les deux rois
@@ -349,9 +352,9 @@
     }
     /** UN SEUL signe par coup : badge de qualité (✖ / ?? si coup illégal) > lunettes > logo IA — jamais empilés */
     badgeOne(e) {
-      if (e.illegal) return e.glasses ? { glasses: true } : { img: "img/badges/miss.png", glow: "#ff2a2a" };
+      if (e.illegal) return { img: "img/badges/miss.png", glow: "#ff2a2a" };                                   // (plus de lunettes de soleil)
       if (e.badge && e.badge.img) return { img: "img/badges/" + e.badge.img + ".png", glow: e.badge.color || "#fff" };
-      if (e.glasses) return { glasses: true }; if (e.aiImg) return { img: e.aiImg, glow: "#ffffff" }; return null;
+      if (e.aiImg) return { img: e.aiImg, glow: "#ffffff" }; return null;
     }
     badgeList(e) {
       const out = [], key = e.illegal ? (e.glasses ? "img/badges/blunder.png" : "img/badges/miss.png") : e.badge && e.badge.img ? "img/badges/" + e.badge.img + ".png" : "";
@@ -362,6 +365,24 @@
       if ((e.piece || "").toLowerCase() === "n" || (dx && dy && Math.abs(dx) !== Math.abs(dy))) { const sx = Math.sign(dx), sy = Math.sign(dy); sqs.push(from); if (Math.abs(dx) >= Math.abs(dy)) { for (let k = 1; k <= Math.abs(dx); k++) sqs.push(nm(f[0] + sx * k, f[1])); for (let k = 1; k <= Math.abs(dy); k++) sqs.push(nm(t[0], f[1] + sy * k)); } else { for (let k = 1; k <= Math.abs(dy); k++) sqs.push(nm(f[0], f[1] + sy * k)); for (let k = 1; k <= Math.abs(dx); k++) sqs.push(nm(f[0] + sx * k, t[1])); } }
       else { const n = Math.max(Math.abs(dx), Math.abs(dy)), sx = Math.sign(dx), sy = Math.sign(dy); for (let k = 0; k <= n; k++) sqs.push(nm(f[0] + sx * k, f[1] + sy * k)); }
       return sqs;
+    }
+    /** CHATGPT PRIME annonce son coup aberrant : flèche verte « meilleur coup » qui pousse depuis la pièce (ou case visée qui pulse pour une pièce inventée / ressuscitée / convertie), puis s'efface juste avant le coup */
+    announceFx(g, t, flip) {
+      const c = this.cell;
+      for (const e of this.imp) {
+        if (!e.announce) continue; const A0 = e.t - e.announce, A1 = e.t; if (t < A0 || t >= A1) continue;
+        const k = t - A0, grow = EASE.out3(clamp(k / 0.3, 0, 1)), al = clamp((A1 - t) / 0.18, 0, 1) * clamp(k / 0.1, 0, 1), B = this.sq(e.to, flip);
+        g.save(); g.globalAlpha = 0.35 * al; g.fillStyle = "#9bd34f"; g.fillRect(B.x - c / 2, B.y - c / 2, c, c); g.restore();
+        if (e.from) {
+          const a = this.sq(e.from, flip), ang = Math.atan2(B.y - a.y, B.x - a.x), len = Math.hypot(B.x - a.x, B.y - a.y), hs = c * 0.5, w = c * 0.2, d = Math.max(0, len * grow - hs * 0.9);
+          g.save(); g.globalAlpha = 0.35 * al; g.fillStyle = "#9bd34f"; g.fillRect(a.x - c / 2, a.y - c / 2, c, c); g.globalAlpha = 0.88 * al; g.translate(a.x, a.y); g.rotate(ang);
+          g.beginPath(); g.moveTo(0, -w / 2); g.lineTo(d, -w / 2); g.lineTo(d, -hs * 0.5); g.lineTo(d + hs, 0); g.lineTo(d, hs * 0.5); g.lineTo(d, w / 2); g.lineTo(0, w / 2); g.closePath();
+          g.lineJoin = "round"; g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = c * 0.06; g.stroke(); g.fillStyle = "#81b64c"; g.fill(); g.restore();
+        } else {
+          const pul = 1 + 0.08 * Math.sin(k * 14); g.save(); g.globalAlpha = 0.9 * al; g.strokeStyle = "#81b64c"; g.lineWidth = c * 0.08; g.strokeRect(B.x - (c / 2) * pul * grow, B.y - (c / 2) * pul * grow, c * pul * grow, c * pul * grow); g.restore();
+          const gp = e.conv ? null : e.dropPiece; if (gp) this.piece(g, gp, B.x, B.y, c * 1.02, { alpha: 0.4 * al * grow });                     // la pièce « fantôme » qui va apparaître
+        }
+      }
     }
     lastImp(t) { let l = null; for (const e of this.imp) { if (e.impact <= t) l = e; else break; } return l; }
     /** ÉCHEC : la case du roi s'embrase en rouge et une COLONNE LASER rouge tombe sur lui (crépite, puis s'éteint) */
@@ -426,10 +447,15 @@
       if (!did && tg) { this.drawTag(g, tg, t); did = true; }
       if (!did) { const hid = this.prompts.some((e) => t >= e.t - 0.25 && t < e.t + e.dur + 0.5); if (!hid) this.drawSay(g, t); }
     }
+    /** STYLE NÉON (police condensée Bebas Neue, sans contour noir) : halo coloré large + halo serré + cœur clair */
+    neon(g, text, x, y, color, core) {
+      const k = this.k(); g.save(); g.shadowColor = color; g.fillStyle = core || color;
+      g.shadowBlur = 46 * k; g.fillText(text, x, y); g.shadowBlur = 18 * k; g.fillText(text, x, y); g.shadowBlur = 5 * k; g.fillText(text, x, y); g.restore();
+    }
     stampText(g, text, color, a, fade) {
       const { W, H } = this, k = this.k(), sc = lerp(2.4, 1, EASE.out3(a)); g.save(); g.translate(W / 2, H * 0.42); g.rotate(-0.12); g.scale(sc, sc); g.globalAlpha = clamp(a * fade, 0, 1); g.font = FONT(64 * k); g.textAlign = "center"; g.textBaseline = "middle";
       const lines = this.wrap(g, text, W * 0.8), lh = 70 * k, hh = lines.length * lh + 28 * k, ww = Math.min(W * 0.86, Math.max(...lines.map((l) => g.measureText(l).width)) + 50 * k);
-      g.fillStyle = "rgba(0,0,0,.62)"; g.fillRect(-ww / 2, -hh / 2, ww, hh); g.strokeStyle = color; g.lineWidth = 6 * k; g.strokeRect(-ww / 2, -hh / 2, ww, hh); g.fillStyle = color; lines.forEach((l, i) => g.fillText(l, 0, (i - (lines.length - 1) / 2) * lh)); g.restore();
+      lines.forEach((l, i) => this.neon(g, l, 0, (i - (lines.length - 1) / 2) * lh, color, "#fff6ea")); g.restore();                                   // néon, sans boîte
     }
     wrap(g, text, maxW) { const words = String(text).split(" "), lines = []; let cur = ""; words.forEach((w) => { const tt = cur ? cur + " " + w : w; if (g.measureText(tt).width > maxW && cur) { lines.push(cur); cur = w; } else cur = tt; }); if (cur) lines.push(cur); return lines; }
     drawEnd(g, t) {
@@ -480,7 +506,7 @@
     /** « THE ROOK ! » : l'étiquette claque à l'écran au moment exact de la voix, en blanc et cyan */
     drawTag(g, e, t) {
       const { W, H } = this, k = this.k(), u = t - e.impact, a = u < 0.12 ? u / 0.12 : u > 0.75 ? 1 - (u - 0.75) / 0.2 : 1, sc = lerp(2.6, 1, EASE.out3(clamp(u / 0.16, 0, 1)));
-      g.save(); g.translate(W / 2, H * 0.17); g.rotate(-0.06); g.scale(sc, sc); g.globalAlpha = clamp(a, 0, 1); this.glowAt(g, "#00F7FF", 0, 0, W * 0.5, 0.7); g.font = FONT(128 * k); g.textAlign = "center"; g.textBaseline = "middle"; g.lineWidth = 16 * k; g.lineJoin = "round"; g.strokeStyle = "#007a85"; g.strokeText(e.voiceTag, 0, 0); g.strokeStyle = "#00F7FF"; g.lineWidth = 8 * k; g.strokeText(e.voiceTag, 0, 0); g.fillStyle = "#ffffff"; g.fillText(e.voiceTag, 0, 0); g.restore();
+      g.save(); g.translate(W / 2, H * 0.17); g.rotate(-0.06); g.scale(sc, sc); g.globalAlpha = clamp(a, 0, 1); this.glowAt(g, "#00F7FF", 0, 0, W * 0.5, 0.7); g.font = FONT(150 * k); g.textAlign = "center"; g.textBaseline = "middle"; this.neon(g, e.voiceTag, 0, 0, "#00E5FF", "#E9FDFF"); g.restore();
     }
     drawCut3(g, e, t) {
       const { W, H } = this, k = this.k(), u = (t - e.t) / e.dur, r = e.ref, a = u < 0.12 ? u / 0.12 : u > 0.85 ? (1 - u) / 0.15 : 1; g.save(); g.globalAlpha = clamp(a, 0, 1) * 0.62; g.fillStyle = "#000"; g.fillRect(0, 0, W, H); g.globalAlpha = clamp(a, 0, 1);
@@ -490,8 +516,8 @@
     }
     drawSay(g, t) {
       const { W, H } = this, k = this.k(); let cur = null;
-      for (const e of this.imp) { const u = t - e.impact - 0.25; if (u >= 0 && u < 2.4 && e.lines && e.lines.length) cur = { l: e.lines[0], u }; }
-      if (!cur) return; const b = E.botChat && E.botChat.bots[cur.l.bot], text = cur.l.text, shown = text.slice(0, Math.ceil(text.length * clamp(cur.u / 0.7, 0, 1))), fade = cur.u > 2.1 ? 1 - (cur.u - 2.1) / 0.3 : clamp(cur.u / 0.15, 0, 1);
+      for (const e of this.imp) { const u = e.announce ? t - (e.t - e.announce) : t - e.impact - 0.25, d = e.announce ? e.announce + 2.3 : 2.4; if (u >= 0 && u < d && e.lines && e.lines.length) cur = { l: e.lines[0], u, d }; }      // coup aberrant : ChatGPT parle DÈS la flèche
+      if (!cur) return; const b = E.botChat && E.botChat.bots[cur.l.bot], text = cur.l.text, shown = text.slice(0, Math.ceil(text.length * clamp(cur.u / 0.7, 0, 1))), fade = cur.u > cur.d - 0.3 ? 1 - (cur.u - (cur.d - 0.3)) / 0.3 : clamp(cur.u / 0.15, 0, 1);
       g.save(); g.globalAlpha = clamp(fade, 0, 1); const bh = 150 * k, y = H - bh - 120 * k, x = 40 * k, w = W - 80 * k; g.fillStyle = "rgba(0,0,0,.78)"; g.fillRect(x, y, w, bh); g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 2 * k; g.strokeRect(x, y, w, bh);
       const pn = !!cur.l.panic, jx = pn ? Math.sin(t * 95) * 4 * k : 0, jy = pn ? Math.cos(t * 83) * 3 * k : 0; if (pn) { g.translate(jx, jy); g.strokeStyle = "#ff3b3b"; g.lineWidth = 4 * k; g.strokeRect(x, y, w, bh); }
       const av = b && b.img && this.av[b.img]; if (av && b.anim && E.animIcons) { E.animIcons.draw(g, b.anim, av, x + 70 * k, y + bh / 2, 112 * k, t, E.animIcons.moodOf(b.anim, cur.l.kind), cur.u); } else if (av) { g.save(); g.beginPath(); g.arc(x + 70 * k, y + bh / 2, 50 * k, 0, TAU); g.clip(); g.drawImage(av, x + 20 * k, y + bh / 2 - 50 * k, 100 * k, 100 * k); g.restore(); }

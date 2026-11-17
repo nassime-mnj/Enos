@@ -1,4 +1,4 @@
-"""Chess Edit — 16 bruitages : réserves sans répétition, pré-sons calés sur l'impact, voix de Levy une seule fois par partie, intro Cuphead, nulle Bob l'éponge, gaffe flash bang (flash blanc + image figée)."""
+"""Chess Edit — 18 bruitages : réserves sans répétition, pré-sons calés sur l'impact, voix de Levy une seule fois par partie, intro Cuphead, nulle Bob l'éponge, gaffe flash bang (flash blanc + image figée)."""
 import json, os
 from mobile_common import *
 
@@ -21,16 +21,16 @@ with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(120000)
     pg.wait_for_function("window.ENOS && ENOS.editMap && !!ENOS.editSfx && !!window.ENOS_EDITSFX")
     au = json.load(open(AN))
-    n = pg.evaluate("Object.keys(window.ENOS_EDITSFX).length"); check(n == 16, "16 bruitages embarqués (%d)" % n)
+    n = pg.evaluate("Object.keys(window.ENOS_EDITSFX).length"); check(n == 18, "18 bruitages embarqués (%d)" % n)
     dec = pg.evaluate("(async () => { const p = new ENOS.editSfx.Player(new OfflineAudioContext(2, 44100, 44100)); await p.load(); return Object.keys(p.bufs).filter((k) => /^sx_/.test(k) && p.bufs[k]).map((k) => [k, +p.bufs[k].duration.toFixed(2)]); })()")
-    check(len(dec) == 16 and all(d > 0.9 for _, d in dec), "les 16 mp3 se décodent (Web Audio) : %s" % dec[:4])
+    check(len(dec) == 18 and all(d > 0.9 for _, d in dec), "les 18 mp3 se décodent (Web Audio) : %s" % dec[:4])
     r = pg.evaluate(JS, [au, G1, [6, 8, 10, 14, 17, 20, 24, 28], [], 11, "Les Blancs gagnent par mat"])
     if "err" in r: print(r["err"]); raise SystemExit(1)
     S = r["sfx"]; ids = [x[0] for x in S]
     rook = ids.count("the_rook"); check(rook <= 1 and all(ids.count(v) <= 1 for v in ("the_queen", "the_bishop", "the_knight")), "chaque voix de Levy au plus UNE fois par partie (THE ROOK ×%d)" % rook)
     check(ids.count("sx_boom") >= 3 and ids.count("mateboom") >= 3, "brillants : boom cinéma et tonnerre en alternance (%d / %d)" % (ids.count("sx_boom"), ids.count("mateboom")))
     th = [x for x in S if x[0] == "sx_thankyou"]; check(len(th) == 1 and th[0][1] < r["intro"], "intro : « Thank you » de Cuphead pendant l'intro (t=%.2f)" % (th[0][1] if th else -1))
-    mi, msnd, mpre = r["mate"]; check(msnd in ("sx_knockout", "sx_cupdeath", "sx_nba", "sx_amogus", "sx_finish") and msnd in ids, "échec et mat : son de la réserve (%s)" % msnd)
+    mi, msnd, mpre = r["mate"]; check(msnd in ("sx_knockout", "sx_cupdeath", "sx_nba", "sx_amogus", "sx_finish", "sx_mariodeath") and msnd in ids, "échec et mat : son de la réserve (%s)" % msnd)
     pres = [x for x in S if x[3] and x[0] in PRE]
     ok = all(any(abs(x[1] + PRE[x[0]] - e) < 0.01 for e in [mi] + [q[0] for q in r["brill"]]) for x in pres)
     check(len(pres) >= 2 and ok, "pré-sons calés : la chute tombe pile sur l'impact (%s)" % [(x[0], round(x[1], 2)) for x in pres])

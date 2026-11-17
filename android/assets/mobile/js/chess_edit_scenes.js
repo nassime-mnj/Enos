@@ -9,8 +9,8 @@
   if (!RR || !RR.Renderer) return;
   const P = RR.Renderer.prototype, EASE = RR.EASE;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, TAU = Math.PI * 2;
-  const FONT = (px) => `900 ${Math.round(px)}px Impact, "Arial Black", system-ui, sans-serif`;
-  const TXT = (px, w) => `${w || 600} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  const FONT = (px) => `400 ${Math.round(px)}px "Bebas Neue", Impact, "Arial Black", system-ui, sans-serif`;
+  const TXT = (px, w) => `${(w || 600) >= 650 ? 700 : 500} ${Math.round(px)}px Oswald, system-ui, -apple-system, "Segoe UI", sans-serif`;
   const MONO = (px) => `700 ${Math.round(px)}px ui-monospace, Menlo, Consolas, monospace`;
   const mulberry = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const hashS = (s) => { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -44,10 +44,10 @@
   };
   P.sceneName = function (g, text, cx, y, maxW, px, color, alpha) {
     const k = this.k(); g.save(); g.globalAlpha *= alpha == null ? 1 : alpha; g.textAlign = "center"; g.textBaseline = "alphabetic"; text = String(text || "").toUpperCase();
-    const s = fitFont(g, text, maxW, px, FONT); g.lineWidth = Math.max(4, s * 0.14); g.strokeStyle = "#000"; g.lineJoin = "round"; g.strokeText(text, cx, y); g.fillStyle = color || "#fff"; g.fillText(text, cx, y); g.restore(); return s;
+    const s = fitFont(g, text, maxW, px, FONT); this.neon(g, text, cx, y, color && color !== "#fff" ? color : "rgba(255,255,255,.75)", "#fffaf0"); g.restore(); return s;          // nom en néon
   };
   P.sceneElo = function (g, s, cx, y, t0, t, px) {
-    if (!s || s.elo == null) return; const kk = EASE.out4(clamp((t - t0) / 1.4, 0, 1)); g.save(); g.textAlign = "center"; g.font = FONT(px); g.fillStyle = cols.gold; g.lineWidth = px * 0.12; g.strokeStyle = "#000"; const txt = Math.round(s.elo * kk) + " ELO"; g.strokeText(txt, cx, y); g.fillText(txt, cx, y); g.restore();
+    if (!s || s.elo == null) return; const kk = EASE.out4(clamp((t - t0) / 1.4, 0, 1)); g.save(); g.textAlign = "center"; g.font = FONT(px); const txt = Math.round(s.elo * kk) + " ELO"; this.neon(g, txt, cx, y, "#ffb020", "#fff1c4"); g.restore();
   };
   P.sceneVignette = function (g, t, T) {
     const { W, H } = this, tension = clamp((t - (T - 1.3)) / 1.3, 0, 1); if (tension <= 0) return;
@@ -72,10 +72,50 @@
   P.drawIntro2 = function (t) {
     const info = (this.intro && this.intro.intro) || {}, st = this.introStyle();
     if (info.teams) return this.introTeams(t, info, st);
+    if (!(this.rec && this.rec.introStyle != null)) return this.introVersus(t, info);                          // 1 contre 1 : l'écran VERSUS rouge / bleu (les anciens styles restent forçables par rec.introStyle)
     if (st === 1) return this.introSlash(t, info);
     if (st === 2) return this.introCards(t, info);
     if (st === 3) return this.introTerminal(t, info);
     return orig.intro.call(this, t);
+  };
+
+  // ------------------------------------------------------------------ INTRO VERSUS : moitié ROUGE (joueur 1) / moitié BLEUE (joueur 2), séparées par une diagonale de lumière, étincelles, « VS » sombre éclairé orange / cyan
+  P.introVersus = function (t, info) {
+    const { W, H } = this, k = this.k(), g = this.ctx, T = this.introEnd, [A, B] = duel(info), tension = clamp((t - 2.5) / 1.3, 0, 1);
+    const open = EASE.out4(clamp(t / 0.5, 0, 1)), xt = W * 0.66, xb = W * 0.34, ang = Math.atan2(H, xb - xt), xAt = (y) => lerp(xt, xb, y / H);
+    g.save(); g.fillStyle = "#050308"; g.fillRect(0, 0, W, H);
+    const shake = tension * 9 * k + (t > 0.75 && t < 1.0 ? (1 - (t - 0.75) / 0.25) * 22 * k : 0); g.translate(Math.sin(t * 95) * shake, Math.cos(t * 83) * shake);
+    const half = (left) => {
+      g.save(); g.translate((left ? -1 : 1) * (1 - open) * W * 0.9, 0); g.beginPath();
+      if (left) { g.moveTo(-W * 0.2, -H * 0.05); g.lineTo(xt, -H * 0.05); g.lineTo(xb, H * 1.05); g.lineTo(-W * 0.2, H * 1.05); } else { g.moveTo(xt, -H * 0.05); g.lineTo(W * 1.2, -H * 0.05); g.lineTo(W * 1.2, H * 1.05); g.lineTo(xb, H * 1.05); }
+      g.closePath(); g.clip();
+      const gr = left ? g.createLinearGradient(0, 0, W * 0.55, 0) : g.createLinearGradient(W, 0, W * 0.45, 0);
+      if (left) { gr.addColorStop(0, "#5a0603"); gr.addColorStop(0.55, "#b81d0b"); gr.addColorStop(1, "#ff5a17"); } else { gr.addColorStop(0, "#020b2c"); gr.addColorStop(0.55, "#0a3d9a"); gr.addColorStop(1, "#22a6ff"); }
+      g.fillStyle = gr; g.fillRect(-W * 0.3, -H * 0.1, W * 1.6, H * 1.2);
+      const rn = mulberry(left ? 31 : 47); g.save(); g.globalCompositeOperation = "lighter";                    // rayons lumineux parallèles à la diagonale, qui glissent
+      for (let i = 0; i < 16; i++) { const d = (rn() * 0.9 + 0.05) * W * 0.6, w = (rn() < 0.3 ? 60 + rn() * 90 : 3 + rn() * 10) * k, sp = (8 + rn() * 26) * k, off = (d + t * sp) % (W * 0.65), x0 = left ? xt - off : xt + off;
+        g.save(); g.translate(x0, 0); g.rotate(ang - Math.PI / 2); g.globalAlpha = (w > 40 * k ? 0.07 : 0.22) * (0.5 + 0.5 * Math.sin(t * 1.7 + i)); g.fillStyle = left ? "#ffb37a" : "#8fd8ff"; g.fillRect(-w / 2, -H * 0.2, w, H * 1.6); g.restore(); }
+      g.restore(); g.restore();
+    };
+    half(true); half(false);
+    const fl = clamp(1 - Math.abs(t - 0.5) / 0.2, 0, 1), lineA = clamp((t - 0.3) / 0.2, 0, 1);                      // la diagonale de lumière : halo orange côté rouge, cyan côté bleu, cœur blanc
+    if (lineA > 0) { g.save(); g.globalCompositeOperation = "lighter"; g.lineCap = "round";
+      [[70, "rgba(255,110,30,.22)", -18], [70, "rgba(40,170,255,.22)", 18], [26, "rgba(255,150,60,.55)", -6], [26, "rgba(80,200,255,.55)", 6], [7 + 14 * fl, "#ffffff", 0]].forEach(([w, c, dx]) => { g.globalAlpha = lineA; g.strokeStyle = c; g.lineWidth = w * k; g.beginPath(); g.moveTo(xt + dx * k, -H * 0.05); g.lineTo(xb + dx * k, H * 1.05); g.stroke(); });
+      this.glowAt(g, "#ff7a2a", xAt(H * 0.5) - 40 * k, H * 0.5, W * 0.45, 0.55 * lineA); this.glowAt(g, "#2ab0ff", xAt(H * 0.5) + 40 * k, H * 0.5, W * 0.45, 0.55 * lineA);
+      const rn = mulberry(83); for (let i = 0; i < 46; i++) { const y = rn() * H, side = rn() < 0.5 ? -1 : 1, life = (t * (0.5 + rn()) + rn()) % 1, x = xAt(y) + side * (8 + life * 120 * rn()) * k, yy = y - life * 90 * k, r = (2 + rn() * 4) * k;          // étincelles
+        g.globalAlpha = lineA * (1 - life); g.fillStyle = side < 0 ? "#ffcf8a" : "#b8ecff"; g.beginPath(); g.arc(x, yy, r, 0, TAU); g.fill(); }
+      g.restore(); }
+    const R = W * 0.2, ax = W * 0.27, ay = H * 0.2, bx = W * 0.73, by = H * 0.68, a1 = EASE.back(clamp((t - 0.4) / 0.5, 0, 1)), a2 = EASE.back(clamp((t - 0.55) / 0.5, 0, 1));
+    if (a1 > 0) { this.glowAt(g, "#ff5a17", ax, ay, R * 2.2, 0.5 * a1); g.save(); g.translate(ax, ay); g.scale(a1, a1); this.sceneDisc(g, A, 0, 0, R, "#ff5a17"); g.restore(); }
+    if (a2 > 0) { this.glowAt(g, "#22a6ff", bx, by, R * 2.2, 0.5 * a2); g.save(); g.translate(bx, by); g.scale(a2, a2); this.sceneDisc(g, B, 0, 0, R, "#22a6ff"); g.restore(); }
+    const nA = clamp((t - 0.9) / 0.4, 0, 1), nB = clamp((t - 1.05) / 0.4, 0, 1);
+    if (A && nA > 0) { this.sceneName(g, A.name, ax, ay + R + 105 * k, W * 0.44, 96 * k, "#ff6a2a", nA); this.sceneElo(g, A, ax, ay + R + 165 * k, 1.0, t, 50 * k); }
+    if (B && nB > 0) { this.sceneName(g, B.name, bx, by + R + 105 * k, W * 0.44, 96 * k, "#2ab0ff", nB); this.sceneElo(g, B, bx, by + R + 165 * k, 1.15, t, 50 * k); }
+    const vs = clamp((t - 0.75) / 0.25, 0, 1); if (vs > 0) {                                                       // « VS » : lettres sombres, V éclairé orange, S éclairé cyan, qui claquent au centre
+      const sc = lerp(2.4, 1, EASE.out3(vs)), cx = xAt(H * 0.5), cy = H * 0.5; g.save(); g.translate(cx, cy); g.scale(sc, sc); g.globalAlpha = vs; g.font = FONT(250 * k); g.textBaseline = "middle"; g.textAlign = "center";
+      [["V", -48, -18, "#ff6a1a", "#1c0a06"], ["S", 48, 22, "#2ab8ff", "#06101e"]].forEach(([ch, dx, dy, glow, fill]) => { g.save(); g.shadowColor = glow; g.shadowBlur = 40 * k; g.fillStyle = fill; g.fillText(ch, dx * k, dy * k); g.shadowBlur = 0; g.lineWidth = 4 * k; g.strokeStyle = glow; g.globalAlpha = vs * 0.9; g.strokeText(ch, dx * k, dy * k); g.restore(); });
+      g.restore(); if (t > 0.75 && t < 0.9) { g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.6 * (1 - (t - 0.75) / 0.15); g.fillStyle = "#fff"; g.fillRect(-W, -H, W * 3, H * 3); g.restore(); } }
+    this.sceneVignette(g, t, T); g.restore();
   };
 
   // ------------------------------------------------------------------ INTRO 1 : SLASH diagonal

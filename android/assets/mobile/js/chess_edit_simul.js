@@ -6,7 +6,7 @@
   const E = window.ENOS, RR = E.editRender; if (!RR || !RR.Renderer) return;
   const SM = (E.editSimul = {}), EASE = RR.EASE, fenMapOf = RR.fenMapOf, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, TAU = Math.PI * 2;
   const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };
-  const FONT = (px) => `900 ${Math.round(px)}px Impact, "Arial Black", system-ui, sans-serif`, TXT = (px, w) => `${w || 600} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", sans-serif`;
+  const FONT = (px) => `400 ${Math.round(px)}px "Bebas Neue", Impact, "Arial Black", system-ui, sans-serif`, TXT = (px, w) => `${(w || 600) >= 650 ? 700 : 500} ${Math.round(px)}px Oswald, system-ui, -apple-system, "Segoe UI", sans-serif`;
   const TONE = { brilliant: "#00F7FF", best: "#2CE65C", great: "#2CE65C", excellent: "#2CE65C", good: "#8fd16b", blunder: "#ff2020", mistake: "#ff9a1f", miss: "#ff9a1f", inaccuracy: "#f7c631" };
   const errSfxOf = (key, t, k) => E.editMap.errSfx(key, +t.toFixed(3), k, false);
   const MOVE_DUR = 0.62, REPLY_DUR = 0.5;

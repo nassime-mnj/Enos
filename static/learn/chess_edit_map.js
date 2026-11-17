@@ -30,7 +30,7 @@
       const prevEv = i ? acts[i - 1].ev : 0; if (a.ev != null) d += Math.min(30, Math.abs(a.ev - (prevEv || 0)) / 20);
       const to = a.to, piece = (a.piece || "p"), color = a.side || "w", fen = a.fen, mapAfter = mapOf(fen);
       out.push({ i, n: i + 1, pid: a.n + ":" + to, fenBefore: prevFen, color, san: a.san || "", uci: a.uci || "@" + to, from: drop ? "" : a.from, to, piece, captured: a.cap || (smash.length ? "p" : ""), promo: a.promo || "", key, loss: a.loss || 0, ev: a.ev == null ? null : a.ev, best: "",
-        check: /\+/.test(a.san || "") && !/#/.test(a.san || ""), mate: over || (/#/.test(a.san || "") && cheat !== "twist"), sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, cheat, lines: a.say && (cheat || i % 3 === 0) ? [{ bot: a.side === (V.primeSide || "") || V.mode === "prime" ? "prime" : "", text: a.say, kind: cheat ? "prime_cheat" : "prime" }].filter((l) => l.bot) : [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "" });
+        check: /\+/.test(a.san || "") && !/#/.test(a.san || ""), mate: over || (/#/.test(a.san || "") && cheat !== "twist"), sacrifice: false, boss: special === "mk" && smash.length >= 2, drama: Math.round(d * 10) / 10, tags, cheat, lines: a.say && (cheat || i % 3 === 0) ? [{ bot: a.side === (V.primeSide || "") || V.mode === "prime" ? "prime" : "", text: a.say, kind: cheat ? "prime_cheat" : "prime" }].filter((l) => l.bot) : [], fen, drop, special: SPN2[special] || "", smash, filled: a.filled || [], elim: a.elim || [], variant: true, dropPiece: mapAfter[to] || "", conv: a.conv || "" });
     });
     return out;
   }
@@ -277,7 +277,7 @@
   // BANQUE DE BRUITAGES D'EDIT (js/edit_sfx_data.js) — rôle de chaque son ; « lead » = durée d'élan d'un PRÉ-SON (sa chute tombe pile sur l'impact du coup qui suit)
   const PRE = { sx_mario: 2.1, sx_nowait: 5.05, sx_reload: 0.6, sx_heaven: 4.2 };
   const POOL = {
-    mate: ["sx_knockout", "sx_cupdeath", "sx_nba", "sx_amogus", "sx_finish"],        // échec et mat (+ le choc « finishing hit » sous les annonces)
+    mate: ["sx_knockout", "sx_cupdeath", "sx_nba", "sx_amogus", "sx_finish", "sx_mariodeath"],        // échec et mat (+ le choc « finishing hit » sous les annonces)
     matePre: ["sx_mario", "sx_nowait", "sx_reload"],                                  // juste AVANT le mat
     blunder: ["fahh_slow", "sx_gong", "sx_flashbang"],                                // gaffe (flash bang = vrai flash blanc + image figée)
     miss: ["op_gaffe", "sx_awkward"],                                                 // coup manqué
@@ -316,7 +316,7 @@
   /** bruitages + voix d'une liste d'événements (calés sur l'impact de chaque coup). Variété : chaque rôle a une RÉSERVE de sons tirés sans répétition ; chaque voix de Levy au plus UNE fois par partie. */
   function sfxFor(ev, opts) {
     const sfx = [], deck = sfxDeck(opts.seed != null ? opts.seed : hashS(ev.map((e) => e.san || "").join(" ")));
-    const real = (e) => e.kind !== "ff" && !e.soft;
+    const real = (e) => e.kind !== "ff" && !e.soft, illegalOf = (e) => e.illegal || (!!e.cheat && e.cheat !== "double" && e.cheat !== "revive");
     ev.forEach((e) => {
       const id = e.cheat === "twist" ? "mate" : e.mate ? "mate" : e.promo ? "promote" : e.check ? "check" : e.captured ? "capture" : "move";
       // bruitages LOURDS avec écho spatial (delay 140 / 280 ms, feedback 0,38, passe-haut 200 Hz) et +3 dB au-dessus de la musique (gain 1,35) ; couches synthétisées : bois + sub-bass (prise), cristal (échec), explosion grave (mat)
@@ -325,11 +325,12 @@
       const wet = id === "check" || id === "mate" || id === "promote";
       sfx.push({ t: e.impact, id, gain: wet ? g : Math.min(g, 1.2), bus: wet ? "echo" : "sfx", ply: e.n, duck: wet && !e.soft && e.kind !== "ff" });
       if (real(e)) { if (id === "capture") sfx.push({ t: e.impact, id: "thud", gain: 1.0, bus: "sfx", ply: e.n }); else if (id === "check") sfx.push({ t: e.impact, id: "crystal", gain: 1.1, bus: "echo", ply: e.n }); else if (id === "mate") sfx.push({ t: e.impact, id: "mateboom", gain: 1.35, bus: "echo", ply: e.n }); }
-      if (e.mate && real(e) && e.cheat !== "twist" && opts.voices !== false) {                                                    // ÉCHEC ET MAT : un son de la réserve (KO Cuphead, mort Cuphead, klaxon NBA, Among Us, Smash) ; les annonces ont le choc « finishing hit » dessous
+      if (e.mate && real(e) && e.cheat !== "twist" && opts.voices !== false) {                                                    // ÉCHEC ET MAT : un son de la réserve (KO Cuphead, mort Cuphead, klaxon NBA, Among Us, Smash, mort de Mario) ; les annonces ont le choc « finishing hit » dessous
         const m = deck.pick(POOL.mate); e.mateSnd = m;
         sfx.push({ t: +(e.impact + (m === "sx_finish" || m === "sx_cupdeath" ? 0 : 0.12)).toFixed(3), id: m, gain: m === "sx_nba" ? 1.15 : 1.45, bus: "hit", level: 0.25, ply: e.n });
-        if (m === "sx_knockout" || m === "sx_nba" || m === "sx_amogus") sfx.push({ t: e.impact, id: "sx_finish", gain: 1.1, bus: "echo", ply: e.n });
+        if (m === "sx_knockout" || m === "sx_nba" || m === "sx_amogus" || m === "sx_mariodeath") sfx.push({ t: e.impact, id: "sx_finish", gain: 1.1, bus: "echo", ply: e.n });
       }
+      if (opts.prime && e.kind !== "ff" && illegalOf(e) && e.captured) { sfx.push({ t: e.impact, id: "sx_gunshot", gain: 1.5, bus: "hit", level: 0.3, ply: e.n }); e.gunshot = true; }       // CHATGPT PRIME : prise aberrante = coup de feu
       if (e.key === "brilliant") sfx.push({ t: +(e.impact + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: e.n });
       if (e.slowKnight) { sfx.push({ t: +(e.impact - e.dur / 1000).toFixed(3), id: "horse", gain: 1.9, bus: "epic", ply: e.n }); sfx.push({ t: e.impact, id: "mateboom", gain: 1.5, bus: "echo", ply: e.n }); sfx.push({ t: e.impact, id: "thud", gain: 1.6, bus: "echo", ply: e.n }); }      // hennissement épique avec beaucoup d'écho pendant le vol, puis GROS impact à l'atterrissage
       if (e.kind !== "ff" && !e.forced) {                                                              // erreurs : FAHH / One Piece / gong / flash bang / awkward ; ça FRAPPE (impact grave) comme les autres bruitages
@@ -362,12 +363,13 @@
       const br = ev.filter((e) => e.key === "brilliant" && real(e) && !e.alien && !e.slowKnight), hero = br.slice().sort((a, b) => (b.kind === "drop") - (a.kind === "drop") || (b.drama || 0) - (a.drama || 0))[0];
       if (hero) tryPre(hero, ["sx_heaven", "sx_reload"]);
       for (const e of br.filter((x) => x !== hero && x.kind !== "drop")) if (!deck.used.sx_reload && tryPre(e, ["sx_reload"])) break;                           // « reload » : UNE seule fois sur un autre brillant (jamais en boucle)
-      ev.filter((e) => e.mate && real(e) && e.cheat !== "twist").forEach((e) => { const first = deck.pick(POOL.matePre); deck.used[first] = Math.max(0, deck.used[first] - 1); tryPre(e, [first].concat(POOL.matePre.filter((x) => x !== first).sort((a, b) => PRE[a] - PRE[b]))); });
+      ev.filter((e) => e.mate && real(e) && e.cheat !== "twist").forEach((e) => { const first = deck.pick(POOL.matePre); deck.used[first] = Math.max(0, deck.used[first] - 1); tryPre(e, [first].concat(POOL.matePre.filter((x) => x !== first).sort((a, b) => PRE[a] - PRE[b])).filter((x) => !deck.used[x])); });                // jamais un pré-son déjà entendu dans la vidéo
     }
     sfx.sort((a, b) => a.t - b.t);
     return sfx;
   }
 
+  const primeOf = (rec) => ({ prime: rec.pw === "ChatGPT Prime" || rec.pb === "ChatGPT Prime", primeSide: rec.pw === "ChatGPT Prime" ? "w" : rec.pb === "ChatGPT Prime" ? "b" : "" });
   /** INTRO : « Thank you! » de Cuphead à l'ouverture ; NULLE : Bob l'éponge déçu sur l'écran de fin */
   function bookends(sfx, opts, introEnd, outT, rec, noWinner) {
     if (opts.voices === false) return;
@@ -401,28 +403,30 @@
     const kickAfter = (tMin) => { const a = SK.find((k) => k[0] >= tMin), b = MK.find((k) => k[0] >= tMin); return a && (!b || a[0] <= b[0] + 1.2) ? a : b || a || null; };
     const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), isBl = (i) => plies[i].key === "blunder" && !isHero(i), KN_S = 2.8, isKn = (i) => plies[i].key === "brilliant" && plies[i].piece === "n";
     const score = (i) => plies[i].drama + (L[i] >= 3 ? 40 : L[i] >= 2 ? 15 : 0) + (i === n - 1 ? 60 : 0), dtOf = (m) => Math.max(0.06, Math.min(0.14, 3.5 / Math.max(1, m)));
-    const holdOf = (i, t) => (isHero(i) ? (plies[i].piece === "r" ? 1.8 : 1.6) : isBl(i) ? 1.7 : gapAt(t));
+    const ANN = 1.0, isCheat = (i) => !!plies[i].cheat && plies[i].cheat !== "double" && plies[i].cheat !== "twist";              // CHATGPT PRIME : coup aberrant = flèche annoncée 1 s AVANT, puis le coup, puis 1,6 s pour lire
+    const holdOf = (i, t) => (isHero(i) ? (plies[i].piece === "r" ? 1.8 : 1.6) : isBl(i) ? 1.7 : isCheat(i) ? 1.6 : gapAt(t));
     const layout = (set) => {
       const out = []; let prevT = -9, prevI = -1;
       for (const i of set) {
         const m = i - prevI - 1, burst = m > 0 ? m * dtOf(m) : 0; let need = prevI < 0 ? tFirst + (m > 0 ? burst + 0.4 : 0) : prevT + holdOf(prevI, prevT) + (m > 0 ? burst + 0.4 : 0);
         if (prevI >= 0 && isKn(i)) need = Math.max(need, prevT + KN_S + 0.25);
+        if (isCheat(i)) need += ANN;
         const k = kickAfter(need); if (!k || k[0] > tLast + (i === n - 1 ? 0.3 : 0)) return null;
         out.push({ i, t: k[0], m, burst, p: k[1] }); prevT = k[0]; prevI = i;
       }
       return out;
     };
     const tryset = (idxs) => { const s = Array.from(new Set(idxs)).sort((a, b) => a - b); return layout(s) ? s : null; };
-    const mand = []; for (let i = 0; i < n; i++) if (isHero(i) || isBl(i)) mand.push(i); mand.push(n - 1);
+    const mand = []; for (let i = 0; i < n; i++) if (isHero(i) || isBl(i) || isCheat(i)) mand.push(i); mand.push(n - 1);
     const openN = Math.min(n, 6), open = Array.from({ length: openN }, (_, i) => i);
     let set = tryset(mand.concat(open)) || tryset(mand.concat(open.slice(0, 3))) || tryset(mand) || tryset(mand.filter(isHero).concat([n - 1])) || tryset([n - 1]); if (!set) return null;
     const rest = []; for (let i = 0; i < n; i++) if (!set.includes(i)) rest.push(i); rest.sort((a, b) => score(b) - score(a));
     for (const i of rest) { const cand = tryset(set.concat(i)); if (cand) set = cand; }
     const lay = layout(set), heroes = set.filter(isHero), dropI = heroes.length ? heroes.reduce((b, i) => (plies[i].drama > plies[b].drama ? i : b), heroes[0]) : set.reduce((b, i) => (score(i) > score(b) ? i : b), set[0]), sched = [];
     lay.forEach((q) => {
-      if (q.m > 0) { const dd = dtOf(q.m), st = q.t - 0.4 - q.burst; for (let j = 0; j < q.m; j++) sched.push({ i: q.i - q.m + j, t: +(st + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }
+      if (q.m > 0) { const dd = dtOf(q.m), st = q.t - 0.4 - q.burst - (isCheat(q.i) ? ANN : 0); for (let j = 0; j < q.m; j++) sched.push({ i: q.i - q.m + j, t: +(st + (j + 1) * dd).toFixed(3), dur: Math.round(Math.min(140, dd * 950)), kind: "ff", soft: true }); }
       const room = sched.length ? q.t - sched[sched.length - 1].t : 9;                                                                  // DÉPLACEMENT VISIBLE : 300 ms (coup clé) / 200 ms, jamais plus que la moitié de l'écart avec le coup précédent
-      sched.push({ i: q.i, t: +q.t.toFixed(3), dur: isKn(q.i) ? Math.round(KN_S * 1000) : q.i < openN && !isHero(q.i) ? 240 : Math.round(Math.max(90, Math.min(isHero(q.i) ? 300 : 200, room * 450))), kind: q.i === dropI ? "drop" : "crit", soft: q.i < openN && !isHero(q.i) && q.i !== dropI, kn: isKn(q.i) });
+      sched.push({ i: q.i, t: +q.t.toFixed(3), dur: isKn(q.i) ? Math.round(KN_S * 1000) : isCheat(q.i) ? 380 : q.i < openN && !isHero(q.i) ? 240 : Math.round(Math.max(90, Math.min(isHero(q.i) ? 300 : 200, room * 450))), kind: q.i === dropI ? "drop" : "crit", soft: q.i < openN && !isHero(q.i) && q.i !== dropI, kn: isKn(q.i) });
     });
     sched.sort((a, b) => a.i - b.i);
     const bots = (E.botChat && E.botChat.bots) || {}, botLine = (i) => { for (let k = i; k >= Math.max(0, i - 6); k--) { const l = plies[k].lines.find((x) => x.bot && bots[x.bot]); if (l) return l; } return null; };
@@ -498,25 +502,29 @@
         dur: qdur, soft, forced, bigMove, blunderHold, slowKnight: !!q.kn && bigMove, pre: lead, freeze: big ? 0.35 : 0, impact: +q.t.toFixed(3), ev: p.ev, threats: [], stats: null, badge: bd, sacrifice: p.sacrifice, ffRun: false, check: p.check, mate: p.mate,
         fx: q.kind === "ff" ? "FASTFORWARD" : fxOf(p, sl), text: "", shot: "", tone: q.kind === "ff" ? "green" : toneOf(p), cut: q.kind === "ff" ? null : cutOf(p, sl, botName(p) ? "GM " + botName(p).toUpperCase() : ""), invert: key === "brilliant",
         snap: q.i !== lastShown + 1 ? p.fenBefore : "", boss, redPath: false, arrow: false,
-        illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: !soft && illegal && (cheat === "spawn" || cheat === "kill" || cheat === "twist" || !!p.captured), kingEdge: false };
+        conv: p.conv || "", illegal, aiImg: primeSide && p.color === primeSide && bots.prime && q.kind !== "ff" ? bots.prime.img : (illegal && bl ? bots[bl.bot].img : ""), glasses: false, kingEdge: false };
       lastShown = q.i; if (bigMove) e.tone = "cyan";
       e.minor = !soft && !bigMove && !blunderHold && q.kind !== "drop" && q.kind !== "drop1" && !p.check && !p.mate && !(p.captured && ["q", "r", "b", "n"].includes(p.captured)) && !illegal;                  // coup ordinaire de la phase intense : effets sobres
       if (q.cam) e.cam = q.cam;
       (soft ? [] : (q.vfx || [])).forEach((v) => {                                                                                // effets demandés par le script Gemini (ignorés pendant l'intro calme)
         const V = String(v).toUpperCase();
         if (V === "CYAN_HALF_BOARD_GLOW") e.glow = true; else if (V === "SHOCKWAVE_DOUBLE") e.shock2 = true; else if (V === "RGB_FLASH" || V === "STROBE") e.strobe = true; else if (V === "RED_PATH") e.redPath = !!p.from && key === "blunder"; else if (V === "YELLOW_ARROW") e._arrow = !!p.from;
-        else if (V === "SPEED_LINES") e.speed = true; else if (V === "RED_TINT") e.tintRed = key === "blunder"; else if (V === "SPIN") e.spin = true; else if (V === "GLASSES") e.glasses = true; else if (V === "BOSS_PIECE" && p.from && !p.drop) { e.boss = true; e.pre = 0.25; e.t = +(e.t - 0.25).toFixed(3); }
+        else if (V === "SPEED_LINES") e.speed = true; else if (V === "RED_TINT") e.tintRed = key === "blunder"; else if (V === "SPIN") e.spin = true; else if (V === "GLASSES") e.glasses = false; else if (V === "BOSS_PIECE" && p.from && !p.drop) { e.boss = true; e.pre = 0.25; e.t = +(e.t - 0.25).toFixed(3); }
         else if (V === "CHECK_BEAM") { e.check = true; const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; e.kingSq = Object.keys(m).find((z) => m[z] === want) || ""; } else if (V === "CUTSCENE_BADASS_ROOK") e._cutrook = true; else if (V === "CUTSCENE_PAWN_EVOLUTION") e._cutevo = true; else if (V === "PROMPT_STREAM") e._prompt = true;
       });
       if (p.check || p.mate) { const kq = (() => { const m = mapOf(p.fen), want = p.color === "w" ? "k" : "K"; return Object.keys(m).find((z) => m[z] === want) || ""; })(); e.kingEdge = !!kq && (/^[ah]/.test(kq) || /[18]$/.test(kq)); e.kingSq = kq; }
       ev.push(e);
     });
     ev.sort((a, b) => a.impact - b.impact);
+    ev.forEach((e, k) => {                                                                           // ANNONCE d'un coup aberrant de Prime : la flèche (ou la case visée) apparaît, ChatGPT explique fièrement son « bon coup », la flèche s'efface, PUIS le coup est joué
+      if (!e.illegal || e.cheat === "twist" || e.kind === "ff" || e.soft) return; const prev = k ? ev[k - 1].impact : 0, room = e.t - Math.max(prev + 0.12, opts.intro ? INTRO + 0.1 : 0);
+      e.announce = room >= 0.45 ? +Math.min(1.0, room).toFixed(3) : 0;
+    });
     const primeLoses = !!(rec.v && rec.v.beaten && !ev.some((e) => e.cheat === "twist"));
     {                                                                                                  // FLÈCHE JAUNE : UN SEUL coup dans toute la vidéo — le dernier coup illégal / téléportation (ou le mat final quand Prime perd)
       const cand = primeLoses ? ev.filter((e) => e.from && e.mate).concat(ev.filter((e) => e.from).slice(-1)) : ev.filter((e) => e.illegal && e.from && !e.soft);
       const want = script ? ev.filter((e) => e._arrow && e.from) : [];
-      const one = (want.length ? want : cand).slice(-1)[0]; if (one) one.arrow = true;
+      const one = (want.length ? want : cand).slice(-1)[0]; if (one && !one.announce) one.arrow = true;
     }
     if (primeLoses) {                                                                                  // les 3 derniers coups : ChatGPT Prime panique (texte rouge tremblant, excuses d'erreur serveur)
       const EXC = ["Erreur 500 : le serveur est surchargé.", "404 : Elo introuvable (9999 ELO NOT FOUND).", "Je n'ai pas perdu : c'est une hallucination du plateau.", "Veuillez réessayer plus tard… ou jamais."];
@@ -535,7 +543,7 @@
     const primeIn = rec.pw === "ChatGPT Prime" || rec.pb === "ChatGPT Prime";
     if (primeIn && !extra.some((x) => x.kind === "prompt")) ev.filter((e) => e._cutrook || (!script && e.kind !== "ff" && ((e.piece === "r" && (e.sacrifice || e.key === "brilliant")) || e.boss))).sort((a, b) => b.drama - a.drama).slice(0, 1).forEach((e) => { addCut("cutrook", e, 0.9, e.piece || "r"); });          // overlay « Quel est ton prochain coup » : Prime uniquement, UNE fois par edit   // BADASS ROOK (sacrifice / coup de boss)
     ev.filter((e) => e._prompt && !extra.some((x) => x.kind === "prompt" || x.kind === "cutrook")).slice(0, 1).forEach((e) => { const bl = botLine(e.ply); if (bl && bl.bot === "prime") extra.push({ t: +Math.max(0.05, e.impact - 0.62).toFixed(3), kind: "prompt", dur: 0.6, text: bl.text, q: "Quel est ton prochain coup après " + (e.ply ? plies[e.ply - 1].san : "e4") + " ?", piece: e.piece, fx: "PROMPT", ply: -1, ref: e }); });
-    const sfx = sfxFor(ev, Object.assign({ seed: hashS(String(rec.t || rec.title || "") + "|sfx|" + n) }, opts, { introEnd: opts.intro ? INTRO : 0 })), all = [];
+    const sfx = sfxFor(ev, Object.assign({ seed: hashS(String(rec.t || rec.title || "") + "|sfx|" + n) }, opts, { introEnd: opts.intro ? INTRO : 0 }, primeOf(rec))), all = [];
     sfx.forEach((x) => { if (x.id === "the_rook" || x.id === "the_knight") { const e = ev.find((y) => y.n === x.ply); if (e) e.voiceTag = x.id === "the_rook" ? "THE ROOK !" : "THE KNIGHT !"; } });
     if (ev.length) all.push({ t: 0, kind: "setup", dur: 0, fen: ev[0].snap || ev[0].fenBefore || START_FEN, fx: "SETUP", ply: -1 });
     if (opts.intro && INTRO > 0) all.push({ t: 0, kind: "intro", dur: INTRO, intro: introInfo(rec), fx: "INTRO", ply: -1 });
@@ -693,7 +701,7 @@ RÉPONDS UNIQUEMENT PAR UN BLOC JSON (aucun texte autour), exactement ce schéma
     });
     const end = +(t + 0.2).toFixed(3);
     // son : les bruits de base calés à la frame sur l'impact de chaque coup, les voix de Levy sur le SACRIFICE d'une pièce (jamais deux voix à moins de 2,4 s)
-    const sfx = sfxFor(ev, Object.assign({ seed: hashS(String(rec.t || rec.title || "") + "|sfx|" + n) }, opts, { introEnd: opts.intro ? opts.introDur || 0 : 0 }));
+    const sfx = sfxFor(ev, Object.assign({ seed: hashS(String(rec.t || rec.title || "") + "|sfx|" + n) }, opts, { introEnd: opts.intro ? opts.introDur || 0 : 0 }, primeOf(rec)));
     const all = [];
     if (opts.intro) all.push({ t: 0, kind: "intro", dur: opts.introDur, intro: introInfo(rec), fx: "INTRO", ply: -1 });
     if (idle > 0.5) all.push({ t: t0, kind: "idle", dur: idle, fx: "IDLE", ply: -1 });
