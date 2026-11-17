@@ -9,7 +9,7 @@ with sync_playwright() as pw:
     pg.set_default_timeout(200000)
     ev = pg.evaluate
     pg.wait_for_function("window.ENOS && ENOS.clips && ENOS.chessLocal && ENOS.brain && ENOS.editMap")
-    check(ev("ENOS.clips.BOTS.length") == 11 and ev("ENOS.clips.nameOf('eto')") == "ETO Brillant", "11 personnages disponibles")
+    check(ev("ENOS.clips.BOTS.length") == 22 and ev("ENOS.clips.nameOf('eto')") == "ETO Brillant", "22 personnages disponibles (dont les bots IA et les moteurs)")
     t0 = time.time()
     rec = ev("""async () => { const steps = [];
         const r = await ENOS.clips.run({ hero: 'eto', ant: 'lelex', heroColor: 'w', intensity: 'theatre', maxPlies: 20, times: { think: 70, heroTop: 90, heroSac: 140, antLines: 90, antTop: 70, antSac: 110, evalMs: 70 } },
@@ -23,6 +23,8 @@ with sync_playwright() as pw:
     check(ok["fmt"] and rec["clip"]["hero"] == "eto" and rec["clip"]["ant"] == "lelex" and rec["id"] == "clip" and rec["pw"] == "ETO Brillant" and rec["pb"] == "Lelex", "format identique aux parties des Défis + méta de la scène")
     check(all(k in ("book", "best", "brilliant") for k in ok["heroSide"]), "le héros ne joue que des coups de théorie / meilleurs / brillants : %s" % ok["heroSide"])
     check(all(k in ("book", "good", "inaccuracy", "mistake", "blunder") for k in ok["antSide"]) and ok["antSide"][:3] == ["book"] * 3, "l'antagoniste joue plausible dans l'ouverture (aucune gaffe avant le coup 8) : %s" % ok["antSide"])
+    nb = ev("""async () => { const r = await ENOS.clips.run({ hero: 'berserk', ant: 'maia1500', heroColor: 'w', intensity: 'subtle', maxPlies: 12, times: { think: 60, heroTop: 80, heroSac: 100, antLines: 80, antTop: 60, antSac: 80, evalMs: 60 } }, () => {}); return { plies: r.plies, pw: r.pw, pb: r.pb, hero: r.clip.hero, ant: r.clip.ant }; }""")
+    check(nb and nb["plies"] >= 8 and nb["pw"] == "Berserk" and nb["pb"] == "Maia 1500", "scène tournée avec les nouveaux bots : %s" % nb)
     # --- ouvertures mises en scène : Scandinave (Lelex en Noir) et Alien Gambit (Nasko en Blanc) + son
     check(rec["mv"][1][0] == "d7d5" and rec["mv"][5][0] == "d5a5" and rec["clip"]["opening"] == "scand", "Lelex (Noirs) sort la SCANDINAVE : %s" % [m[1] for m in rec["mv"][:6]])
     al = ev("""async () => { const r = await ENOS.clips.run({ hero: 'nasko', ant: 'eto', heroColor: 'w', intensity: 'subtle', maxPlies: 14, times: { think: 60, heroTop: 80, heroSac: 100, antLines: 80, antTop: 60, antSac: 80, evalMs: 60 } }, () => {});
@@ -38,7 +40,7 @@ with sync_playwright() as pw:
     check(ev("ENOS.clips.list().length") == 1, "la scène est dans l'historique (defi.hist) : le Chess Edit et la sauvegarde la voient")
     open_tool(pg, "clips")
     pg.wait_for_timeout(450)
-    check(pg.locator("#cl-hero option").count() == 11 and pg.locator("#cl-go").is_visible() and pg.locator(".cl-item").count() == 1, "module Game Clips : choix du héros / de l'antagoniste / de l'intensité + liste des scènes")
+    check(pg.locator("#cl-hero option").count() == 22 and pg.locator("#cl-go").is_visible() and pg.locator(".cl-item").count() == 1, "module Game Clips : choix du héros / de l'antagoniste / de l'intensité + liste des scènes")
     # le Chess Edit prend la scène
     pg.click(".cl-item [data-t]")
     pg.wait_for_selector("#ce-game", timeout=10000)

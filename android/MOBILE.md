@@ -384,3 +384,7 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 
 - Un journal montrait « MÉMOIRE BASSE (tuée par Android) · importance 400 » et « autre (13) [ISOLATED NOT NEEDED] » : ce n'étaient PAS des plantages (aucune exception Java, aucune erreur JS, aucun « Processus du WebView perdu »). Importance 400 = application **en arrière-plan** (« cachée ») : Android libère sa mémoire quand le téléphone en manque, l'application redémarre au prochain lancement. « ISOLATED NOT NEEDED » = un processus du WebView recyclé.
 - `CrashLog.java` : ignore les processus isolés du WebView, et note une fermeture en arrière-plan comme une simple **INFO** (comportement normal) ; seules les fins au **premier plan** (plantage, ANR, mémoire basse au premier plan…) restent des « FIN » signalées au lancement.
+
+## 1.80 — Game Clips : tous les bots
+
+- **Game Clips** propose maintenant les **22 bots** en héros et en antagoniste (avant : 11) : les personnages, ETO / E.N.O.S. / Stockfish / Prime **+ Claude, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek, Leela Chess Zero, Maia 1100 / 1500 / 1900, Ethereal, Berserk, Koivisto** (liste calculée à partir de `E.aiBots`, donc les futurs bots y seront aussi). Test `t_clips.py` : scène réelle Berserk contre Maia 1500. Le **Battle Royale** garde sa liste de personnages (il tient un journal d'apprentissage par personnage), non modifiée.
