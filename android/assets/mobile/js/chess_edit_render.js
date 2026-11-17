@@ -390,7 +390,7 @@
       const { W, H } = this, k = this.k(), o = this.outro, u = t - o.t - (o.flip3d ? 1.6 : 0), a = clamp((u - 0.2) / 0.35, 0, 1);
       g.save(); g.fillStyle = "rgba(0,0,0,.45)"; g.globalAlpha = a; g.fillRect(0, 0, W, H); g.restore();
       const main = String(o.result || "FIN").split("·")[0].trim().toUpperCase(), tw = o.defeat ? "CHATGPT PRIME : 404 ELO NOT FOUND" : o.winner ? o.winner.name.toUpperCase() + " GAGNE PAR ÉCHEC ET MAT" : main;                      // vrai nom du vainqueur
-      this.stampText(g, tw, o.defeat ? "#ff3b3b" : "#ffd666", a, 1);
+      if (!o.defeat && o.winner && o.winner.mate && this.mateCard) this.mateCard(g, o, u - 0.1, H * 0.44, true); else this.stampText(g, tw, o.defeat ? "#ff3b3b" : "#ffd666", a, 1);
       if (o.final && u > 0.9) { const b = E.botChat && E.botChat.bots[o.final.bot], k2 = clamp((u - 0.9) / 0.6, 0, 1); g.save(); g.globalAlpha = k2; g.font = TXT(34 * k, 600); g.textAlign = "center"; const lines = this.wrap(g, "« " + o.final.text + " »", W * 0.82); g.fillStyle = "#fff"; lines.forEach((l, i) => g.fillText(l, W / 2, H * 0.66 + i * 44 * k)); if (b) { g.font = TXT(26 * k, 700); g.fillStyle = "#ffd666"; g.fillText(b.name, W / 2, H * 0.66 - 50 * k); } g.restore(); }
     }
     drawPrompt(g, e, t) {

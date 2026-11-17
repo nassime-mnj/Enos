@@ -398,7 +398,7 @@
         ov.querySelector(".ce-x").onclick = stop; ov.querySelector(".ce-pp").onclick = () => { paused = !paused; ov.querySelector(".ce-pp").textContent = paused ? "▶" : "⏸"; if (paused) { pausedAt = sfx.ctx.currentTime - T0; sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au) au.play().catch(() => {}); } };
         try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load())]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }
         if (!alive) return; load.remove(); const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
-        if (au) { au.volume = 0.85; setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }
+        if (au) { au.volume = 0.85; try { au.currentTime = Math.max(0, tl.musicStart || 0); } catch (e) { /* métadonnées pas encore prêtes */ } setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }       // la musique démarre au début du groove (musicStart > 0)
         const loop = () => { if (!alive) return; if (!paused) { const vt = Math.max(0, sfx.ctx.currentTime - T0); sfx.pump(vt); R.draw(vt); ov.querySelector(".ce-prog i").style.transform = `scaleX(${clamp01(vt / tl.duration)})`; if (vt > tl.duration + 0.4) return stop(); } raf = requestAnimationFrame(loop); };
         loop();
       }

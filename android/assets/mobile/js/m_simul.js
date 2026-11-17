@@ -17,7 +17,7 @@
   function player(key) {
     if (key.startsWith("h:")) return { human: true, name: key.slice(2) };
     if (key.startsWith("bot:")) { const e = +key.slice(4); return { kind: "sf", elo: e, power: powerOfElo(e), name: "Bot " + e }; }
-    if (key === "stockfish") return { kind: "sf", elo: 3200, power: 100, pure: true, name: "Stockfish" };
+    if (key === "stockfish") return { kind: "sf", elo: 3650, power: 100, pure: true, name: "Stockfish 19" };
     if (key === "eto") return { kind: "eto", elo: 3200, name: (bots().eto && bots().eto.name) || "ETO Brillant", talk: "eto" };
     if (key === "enos") return { kind: "sf", elo: 3200, power: 100, name: "E.N.O.S.", talk: "enos" };
     const b = bots()[key], e = (prof(key) && prof(key).eloEst) || DEF_ELO[key] || 1200;
@@ -27,7 +27,7 @@
     const ids = Object.keys(bots()).filter((k) => !["eto", "enos", "prime"].includes(k)), ai = E.aiBots ? E.aiBots.ids : [];
     const g = (label, items) => `<optgroup label="${label}">${items.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup>`;
     return g("Joueurs (à tour de rôle sur le téléphone)", [["h:Toi", "Toi"], ["h:Joueur 2", "Joueur 2"], ["h:Joueur 3", "Joueur 3"], ["h:Joueur 4", "Joueur 4"]])
-      + g("Personnages", [["eto", "ETO Brillant"], ["enos", "E.N.O.S."], ["stockfish", "Stockfish"], ...ids.filter((k) => !ai.includes(k)).map((k) => [k, bots()[k].name])])
+      + g("Personnages", [["eto", "ETO Brillant"], ["enos", "E.N.O.S."], ["stockfish", "Stockfish 19"], ...ids.filter((k) => !ai.includes(k)).map((k) => [k, bots()[k].name])])
       + g("Bots Stockfish", ELOS.map((e) => ["bot:" + e, "Bot " + e + " Elo"])) + (ai.length ? g("Chat bots IA", ai.map((k) => [k, bots()[k].name])) : "");
   };
 

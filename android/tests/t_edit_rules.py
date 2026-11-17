@@ -35,7 +35,7 @@ with sync_playwright() as pw:
     check(r["script"]["red"] == 0 and r["auto"]["red"] == 0 and all(k == "blunder" or m for k, m in r["auto"]["redTones"]), "rouge réservé aux gaffes et au mat (RED_PATH / RED_TINT ignorés ailleurs) : tons %s" % r["auto"]["tones"])
     check(r["crowns"], "couronne verte du vainqueur + badge # rouge sur le roi maté")
     check(r["rook"]["big"] and all(p in (0.12, 0.25) for _, p, _ in r["rook"]["big"]) and any(abs(p - 0.12) < 1e-6 for _, p, _ in r["rook"]["big"]), "coups brillants / sacrifices : 120 ms d'anticipation : %s" % r["rook"]["big"])
-    check(r["rook"]["tag"] == ["THE ROOK !"] and r["rook"]["rkLevel"] and r["rook"]["rkLevel"][0] <= 0.25, "THE ROOK : étiquette à l'écran + musique écrasée à %s pendant la voix" % r["rook"]["rkLevel"])
+    check(r["rook"]["tag"] == ["THE ROOK !"] and r["rook"]["rkLevel"] and r["rook"]["rkLevel"][0] <= 0.4, "THE ROOK : étiquette à l'écran + musique écrasée à −8 dB (%s) pendant la voix" % r["rook"]["rkLevel"])
     check(len(r["rook"]["hawaii"]) <= 2, "THIS IS THE WAY : au plus deux fois par partie : %s" % r["rook"]["hawaii"])
     check(r["ripple"] and r["hitstop"], "cases qui tremblent autour de l'impact + hit-stop de 90 ms")
     check(not errs, "aucune erreur JS : %s" % errs[:3])

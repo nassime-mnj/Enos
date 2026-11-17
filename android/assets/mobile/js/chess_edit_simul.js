@@ -49,9 +49,10 @@
       [[v.kB, v.tImp], [v.kR, v.tRImp]].forEach(([k, ti]) => { if (k < 0 || ti == null) return; const p = bds[v.b].plies[k], id = p.mate ? "mate" : p.promo ? "promote" : p.check ? "check" : p.captured ? "capture" : "move";
         sfx.push({ t: +ti.toFixed(3), id, gain: 1.3, bus: "echo", ply: k });
         if (id === "capture") sfx.push({ t: +ti.toFixed(3), id: "thud", gain: 1.3, bus: "echo", ply: k }); else if (id === "check") sfx.push({ t: +ti.toFixed(3), id: "crystal", gain: 1.1, bus: "echo", ply: k }); else if (id === "mate") sfx.push({ t: +ti.toFixed(3), id: "mateboom", gain: 1.4, bus: "echo", ply: k });
-        if (p.key === "brilliant") { sfx.push({ t: +(ti + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: k }); sfx.push({ t: +(ti + 0.04).toFixed(3), id: VOICE[p.piece] || "this_is_the_way", gain: 1.3, bus: "voice", level: 0.45, ply: k }); }
+        if (p.key === "brilliant") { sfx.push({ t: +(ti + 0.02).toFixed(3), id: "brilliant", gain: 0.9, bus: "sfx", ply: k }); sfx.push({ t: +(ti + 0.04).toFixed(3), id: VOICE[p.piece] || "the_rook", gain: 1.3, bus: "voice", level: 0.45, ply: k }); }
         else errSfxOf(p.key, ti, k).forEach((x) => sfx.push(x)); });
     });
+    if (teamWon || bossWon) sfx.push({ t: +(outT + 0.25).toFixed(3), id: "this_is_the_way", gain: 1.5, bus: "voice", level: 0.4, ply: -1, outro: true });          // seulement à l'outro de victoire
     sfx.sort((a, b) => a.t - b.t);
     const best = vis.reduce((a, v) => (v.score > a.score ? v : a), vis[0]);
     return { viral: true, events, sfx, duration, stats: { drop: best.tImp, hero: best.tImp }, plies: [], simul: { boards: bds, vis, seq, nB, boss, info, outT, teamIdx: team, winnerTeam: teamWon }, keys: [] };

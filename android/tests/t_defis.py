@@ -38,7 +38,7 @@ with sync_playwright() as pw:
     pg.evaluate("document.querySelector('#tool-defis .suite-body')._api.launch('ebs', {color: 'b'})")
     pg.wait_for_function("document.querySelector('#tool-defis .suite-body')._api.g.moves.length >= 3", timeout=90000)
     names = pg.evaluate("(() => { const g = document.querySelector('#tool-defis .suite-body')._api.g; return [g.pl.w.name, g.pl.b.name]; })()")
-    check(names == ["Stockfish", "ETO Brillant"], "ETO Brillant vs Stockfish, ETO avec les Noirs : %s" % names)
+    check(names == ["Stockfish 19", "ETO Brillant"], "ETO Brillant vs Stockfish 19, ETO avec les Noirs : %s" % names)
     pg.click("#b-stop")
     pg.wait_for_function("document.querySelector('#tool-defis .suite-body')._api.g.over", timeout=8000)
     pg.wait_for_selector("#sheet .opt"); pg.click("#sheet .opt >> text=FERMER"); pg.click("#df-back")

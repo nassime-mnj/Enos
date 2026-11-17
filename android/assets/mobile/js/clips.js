@@ -7,7 +7,7 @@
 (() => {
   const E = window.ENOS;
   const C = (E.clips = {});
-  const FALL = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", naskurieux: "Naskurieux", ghorghor: "GhorGhor", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish", prime: "ChatGPT Prime" };
+  const FALL = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", naskurieux: "Naskurieux", ghorghor: "GhorGhor", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish 19", prime: "ChatGPT Prime" };
   // TOUS les bots : personnages, ETO / E.N.O.S. / Stockfish / Prime + bots IA et moteurs (Claude, GPT, Gemini, DeepSeek, Lc0, Maia ×3, Ethereal, Berserk, Koivisto) — liste calculée à l'usage
   Object.defineProperty(C, "BOTS", { get: () => Object.keys(FALL).concat(((E.aiBots && E.aiBots.ids) || []).filter((id) => !(id in FALL))) });
   C.nameOf = (id) => (E.botChat && E.botChat.bots[id] ? E.botChat.bots[id].name : (E.aiBots && E.aiBots.def[id] ? E.aiBots.def[id].name : FALL[id] || id));

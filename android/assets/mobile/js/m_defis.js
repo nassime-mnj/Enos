@@ -16,7 +16,7 @@
     { id: "coach", t: "Cours avec ETO", s: "Toi contre un bot · ETO commente", human: true },
     { id: "speedrun", t: "Speedrun", s: "ETO contre un bot", human: false },
     { id: "titans", t: "⚔ Choc des Titans", s: "E.N.O.S. contre ETO", human: false, duel: true },
-    { id: "boss", t: "👑 Boss final", s: "Stockfish plein régime", human: false },
+    { id: "boss", t: "👑 Boss final", s: "Stockfish 19 plein régime", human: false },
     { id: "nasko", t: "🎭 Nasko", s: "Le bot qui joue comme La_Loi_De_Fortes", human: true, style: true },
     { id: "lelex", t: "🎭 Lelex", s: "Le bot qui joue comme Lepoissonsteve80", human: true, style: true },
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
@@ -30,8 +30,8 @@
     { id: "teams", t: "👥 Équipes · 2v1 3v1 4v1 2v2 3v2 4v2", s: "Joueurs, bots et chat bots par camp · chacun son tour", human: false, teams: true },
     { id: "combat", t: "⚔ Combat de bots", s: "Nasko vs Pénoire, Lelex vs ETO… tu choisis", human: false, duel: true },
     { id: "ebe", t: "✦ ETO Brillant vs E.N.O.S.", s: "Combat spectateur · enregistré", human: false, duel: true },
-    { id: "ebs", t: "✦ ETO Brillant vs Stockfish", s: "Combat spectateur · enregistré", human: false, duel: true },
-    { id: "ebd", t: "✦ ETO Brillant + E.N.O.S. vs Stockfish", s: "Duo contre le boss · enregistré", human: false, duel: true },
+    { id: "ebs", t: "✦ ETO Brillant vs Stockfish 19", s: "Combat spectateur · enregistré", human: false, duel: true },
+    { id: "ebd", t: "✦ ETO Brillant + E.N.O.S. vs Stockfish 19", s: "Duo contre le boss · enregistré", human: false, duel: true },
   ];
 
   const TAUNT = {
@@ -65,7 +65,7 @@
         lelex: () => ({ kind: "style", style: "lelex", elo: eloOf("lelex"), name: "Lelex", talk: "lelex" }),
         eto: () => ({ kind: "eto", elo: 3200, name: "ETO Brillant", talk: "eto" }),
         enos: () => ({ kind: "sf", elo: 3200, power: 100, name: "E.N.O.S.", talk: "enos" }),
-        stockfish: () => ({ kind: "sf", elo: 3200, power: 100, pure: true, name: "Stockfish" }),
+        stockfish: () => ({ kind: "sf", elo: 3650, power: 100, pure: true, name: "Stockfish 19" }),
         naskurieux: () => ({ kind: "sf", elo: 1, name: "Naskurieux", talk: "naskurieux", title: "GM", gain: true }),       // GM à 1 Elo : +200 à chaque inexactitude / erreur / gaffe de l'adversaire
         naskolit: () => ({ kind: "sf", elo: 3200, name: "Naskolit", talk: "naskolit", title: "GM", lose: true }),             // GM à 3200 Elo : -100 à chaque imprécision (ou pire) de sa part et à chaque meilleur coup de l'adversaire ; il ne parle pas
         jester: () => ({ kind: "sf", elo: 1600, name: "Le Jester", talk: "jester", wheel: true }),                         // la roue tire son Elo (1-3200) avant son 1er coup puis tous les 10 de ses coups
@@ -77,11 +77,11 @@
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
       const FIGHT_NAMES = { ...Object.fromEntries((E.aiBots ? E.aiBots.ids : []).map((id) => [id, E.aiBots.def[id].name])), nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
-        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish"]];
+        ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish 19"]];
 
       // ---- accueil : sections, icônes + noms (les détails de chaque défi sont dans sa feuille de réglage)
       const AIIDS = E.aiBots ? E.aiBots.ids : [], botImg = (id) => (E.botChat && E.botChat.bots[id] && E.botChat.bots[id].img) || "";
-      const DFN = { brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
+      const DFN = { brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
       const DFG = [["Contre l'IA", ["brillant", "enos", "coach", "boss"]], ["Personnages", ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...AIIDS]], ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
       function dfHome() {
         let n = 0;
@@ -172,7 +172,7 @@
         else if (m.ai) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>${m.t.slice(3)}</b> — ${E.aiBots.def[id].tag}. ${E.aiBots.def[id].engine ? "<b>Profil de style</b> : le vrai moteur n'est pas embarqué dans le téléphone (il demande un programme UCI)." : "Une <b>illusion</b> : aucune IA n'est interrogée (zéro token)."} Ses <b>ouvertures préférées</b> et son <b>style</b> sont donnés à Stockfish, qui joue à sa place, avec une fréquence d'erreurs adaptée à son niveau (<b>${E.aiBots.def[id].elo} Elo</b>, ${E.aiBots.def[id].engine ? "niveau estimé" : "estimé d'après les classements publics de parties d'IA"}).</p>` + colorSeg;
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
-        else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
+        else if (id === "boss") body = `<label class="fld">Qui affronte le boss ?</label><select id="su-boss" class="sel"><option value="eto">ETO vs Stockfish 19</option><option value="enos">E.N.O.S. vs Stockfish</option><option value="duo">E.N.O.S. + ETO vs Stockfish</option></select>`;
         const tcSaved = E.settings.get("defi.tc", "none");
         body += `<label class="fld" style="margin-top:14px">Cadence (comme Chess.com)</label><select id="su-tc" class="sel">${Object.values(K.TC).map((x) => `<option value="${x.id}" ${x.id === tcSaved ? "selected" : ""}>${x.name}</option>`).join("")}</select><p class="muted" style="font-size:12px;margin-top:6px;line-height:1.4">Bullet / blitz : les classements affichés sont plus hauts (étiquette) et les bots jouent vite. Différé : pas de pendule, la partie est enregistrée et reprise plus tard.</p>`;
         const s = E.ui.sheet({ title: m.t, html: body, options: [{ label: "COMMENCER", cls: "pri", fn: () => {
@@ -215,7 +215,7 @@
         if (id === "coach") { const op = { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "speedrun") return [{ kind: "eto", elo: 3200, name: "ETO" }, { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }];
         if (id === "titans") return [{ kind: "sf", elo: 3200, power: 100, name: "E.N.O.S." }, { kind: "eto", elo: 3200, name: "ETO" }];
-        const boss = { kind: "sf", elo: 3200, power: 100, name: "Stockfish" };
+        const boss = { kind: "sf", elo: 3650, power: 100, name: "Stockfish 19" };
         const ch = o.boss === "duo" ? { kind: "duo", elo: 3200, power: 100, name: "E.N.O.S. + ETO" } : o.boss === "enos" ? { kind: "sf", elo: 3200, power: 100, name: "E.N.O.S." } : { kind: "eto", elo: 3200, name: "ETO" };
         const EB = { kind: "eto", elo: 3200, name: "ETO Brillant" }, EN = { kind: "sf", elo: 3200, power: 100, name: "E.N.O.S." }, duo = { kind: "duo", elo: 3200, power: 100, name: "ETO Brillant + E.N.O.S." };
         if (id === "ebe" || id === "ebs" || id === "ebd") { const a = id === "ebd" ? duo : EB, b = id === "ebe" ? EN : boss; return o.color === "b" ? [b, a] : [a, b]; }
@@ -223,7 +223,7 @@
       }
 
       function applyTc(p, tc) {                                              // Elo AFFICHÉ selon la cadence ; la force réelle (eloReal) reste celle du niveau
-        const one = (x) => { if (!x || x.human || x.gain || x.lose || x.wheel || !x.elo) return; x.eloReal = x.elo; const who = x.name === "Stockfish" || x.pure ? "sf" : x.kind === "eto" ? "eto" : /^E\.N\.O\.S/.test(x.name || "") ? "enos" : ""; x.elo = K.tcElo(tc, who, x.elo); };
+        const one = (x) => { if (!x || x.human || x.gain || x.lose || x.wheel || !x.elo) return; x.eloReal = x.elo; const who = /^Stockfish/.test(x.name) || x.pure ? "sf" : x.kind === "eto" ? "eto" : /^E\.N\.O\.S/.test(x.name || "") ? "enos" : ""; x.elo = K.tcElo(tc, who, x.elo); };
         if (p && p.list) p.list.forEach(one); else one(p);
       }
       function launch(id, o) {

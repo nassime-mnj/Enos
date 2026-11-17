@@ -29,7 +29,7 @@ with sync_playwright() as pw:
         check(x is not None and x["dur"] == 2800 and x["san"] and x["horse"] and x["horse"][0][1] == "epic", "%s : vol de 2,8 s + horse sound (bus épique) au départ du vol : %s" % (lab, x and x["horse"]))
         check(abs(x["horse"][0][0] - (x["impact"] - 2.8)) < 0.01, "%s : le hennissement part avec le cheval (%.2f) et l'impact tombe à l'atterrissage (%.2f)" % (lab, x["horse"][0][0], x["impact"]))
         check(x["gap"] is not None and x["gap"] >= 0.1, "%s : le coup précédent est fini avant le départ du vol (marge %s s)" % (lab, x["gap"]))
-        check(x["tag"] == "THE KNIGHT !" and x["boom"] == 1 and x["voice"] >= 1, "%s : gros impact + voix « the knight » + tag" % lab)
+        check(x["tag"] == "THE KNIGHT !" and x["boom"] >= 1 and x["voice"] >= 1, "%s : gros impact + voix « the knight » + tag" % lab)
     check(r["horseBuf"] and r["horseBuf"] > 2.9, "horse-sound décodé (%s s)" % r["horseBuf"])
     if OUT:
         os.makedirs(OUT, exist_ok=True)

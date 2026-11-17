@@ -23,7 +23,7 @@ with sync_playwright() as pw:
     pg.evaluate("(() => { %s.launch('boss', { color: 'w', boss: 'eto', tc: 'bullet' }); })()" % API)
     pg.wait_for_selector("#df-board .cb-sq")
     pe = pg.evaluate("[%s.g.pl.w.elo, %s.g.pl.b.elo, %s.g.pl.w.eloReal]" % (API, API, API)); pg.evaluate("%s.g.token++; clearInterval(%s.g.clkI)" % (API, API))
-    check(pe[0] == 4900 and pe[1] == 5000 and pe[2] == 3200, "bullet : ETO 4900, Stockfish 5000 (étiquettes), force réelle conservée : %s" % pe)
+    check(pe[0] == 4900 and pe[1] == 5450 and pe[2] == 3200, "bullet : ETO 4900, Stockfish 19 5450 (étiquettes), force réelle d'ETO conservée : %s" % pe)
     # pendule qui tourne + bot rapide + drapeau
     pg.evaluate("(() => { %s.launch('enos', { color: 'w', pow: 30, elo: 1200, tc: 'bullet' }); })()" % API)
     pg.wait_for_selector("#df-board .cb-sq")

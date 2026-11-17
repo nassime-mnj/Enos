@@ -133,6 +133,20 @@
       res.hats = peaks(flux, 10, Math.max(11, di), st0(flux, 0, di), 0.12, 160).filter((t) => !near(t));
       res.dropTime = D;
     }
+    // --- KICKS PONDÉRÉS (toute la musique) : chaque impact de basse avec sa FORCE 0..1 (rapportée au 95ᵉ centile des impacts) + ÉNERGIE moyenne par demi-seconde.
+    //     Le montage « auto » ne pose un coup QUE sur un vrai pic (force élevée) et règle l'espacement des coups sur cette énergie (calme = coups espacés, intense = resserrés).
+    {
+      const odf = lowOnsets10(sig.low, sr), cand = [];
+      for (let i = 3; i < odf.length - 3; i++) if (odf[i] > 0 && odf[i] >= odf[i - 1] && odf[i] > odf[i + 1] && odf[i] >= odf[i - 3] && odf[i] >= odf[i + 3]) cand.push(i);
+      cand.sort((a, b) => odf[b] - odf[a]); const acc = [], g = 18;
+      for (const i of cand) { if (odf[i] < 1e-12) break; if (!acc.some((j) => Math.abs(j - i) < g)) acc.push(i); if (acc.length > 3000) break; }
+      acc.sort((a, b) => a - b);
+      const vals = acc.map((i) => odf[i]).sort((a, b) => a - b), p95 = vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.95))] : 1;
+      res.kicks = acc.map((i) => [+(i * 0.01).toFixed(3), +Math.min(1, odf[i] / (p95 || 1e-9)).toFixed(2)]);
+      const per = Math.round(0.5 / HOP), E2 = [], sorted = Array.from(env2).sort((a, b) => a - b), q95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] || 1e-6;
+      for (let i = 0; i + per <= n; i += per) E2.push(+Math.min(1.2, mean(env2, i, i + per) / q95).toFixed(2));
+      res.energy = { hop: 0.5, v: E2 };
+    }
     // --- pics de voix : bande 300-3000 Hz, au-dessus de sa propre moyenne sur 1 s
     const vs = smooth(rv, 5), vl = smooth(rv, 50), vc = new Float32Array(n); for (let i = 0; i < n; i++) vc[i] = Math.max(0, vs[i] - vl[i]);
     const sv = stat(vc, 0, n);
