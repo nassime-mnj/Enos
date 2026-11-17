@@ -90,17 +90,17 @@
       }
       if (!B.saveBegin) return false;                                                                           // anciens pilotes natifs : refus propre (pas de plantage)
       const blob = bytes instanceof Blob ? bytes : new Blob([bytes], { type: mime }), CH = 786432;               // 768 Ko (multiple de 3) -> ~1 Mo de base64 par appel
-      if (!B.saveBegin(name, mime, col)) return false;
+      if (!B.saveBegin(name, mime, col)) { if (window.EnosCrash) EnosCrash.add("SAUVEGARDE", "saveBegin refusé : " + name + " (" + Math.round(size / 1048576) + " Mo)"); return false; }
       try {
         for (let o = 0; o < blob.size; o += CH) {
           const u8 = new Uint8Array(await blob.slice(o, o + CH).arrayBuffer()); let bin = ""; const S = 0x8000;
           for (let i = 0; i < u8.length; i += S) bin += String.fromCharCode.apply(null, u8.subarray(i, i + S));
-          if (!B.saveChunk(btoa(bin))) { B.saveEnd(false); return false; }
+          if (!B.saveChunk(btoa(bin))) { B.saveEnd(false); if (window.EnosCrash) EnosCrash.add("SAUVEGARDE", "morceau refusé à " + Math.round(o / 1048576) + " / " + Math.round(size / 1048576) + " Mo"); return false; }
           if (onProgress) onProgress(Math.min(1, (o + CH) / blob.size));
           await new Promise((r) => setTimeout(r, 0));
         }
-        return !!B.saveEnd(true);
-      } catch (e) { try { B.saveEnd(false); } catch (e2) { /* rien */ } return false; }
+        const fin = !!B.saveEnd(true); if (!fin && window.EnosCrash) EnosCrash.add("SAUVEGARDE", "finalisation refusée : " + name); return fin;
+      } catch (e) { if (window.EnosCrash) EnosCrash.add("SAUVEGARDE", "exception : " + (e && e.message)); try { B.saveEnd(false); } catch (e2) { /* rien */ } return false; }
     },
   };
 

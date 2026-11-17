@@ -388,3 +388,7 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 ## 1.80 — Game Clips : tous les bots
 
 - **Game Clips** propose maintenant les **22 bots** en héros et en antagoniste (avant : 11) : les personnages, ETO / E.N.O.S. / Stockfish / Prime **+ Claude, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek, Leela Chess Zero, Maia 1100 / 1500 / 1900, Ethereal, Berserk, Koivisto** (liste calculée à partir de `E.aiBots`, donc les futurs bots y seront aussi). Test `t_clips.py` : scène réelle Berserk contre Maia 1500. Le **Battle Royale** garde sa liste de personnages (il tient un journal d'apprentissage par personnage), non modifiée.
+
+## 1.81 — enregistrement de fichiers : la cause d'un échec est écrite dans le journal
+
+- Quand « Télécharger » / « Enregistrer » échoue, le journal de plantages (Paramètres › Journal) note maintenant la cause exacte (`SAUVEGARDE · saveBegin refusé…`, `morceau refusé à N / M Mo`, `MediaStore a refusé…`, exception Java) côté JavaScript (`native.js`) et Java (`FilesBridge.java`).

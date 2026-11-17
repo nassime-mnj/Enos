@@ -272,7 +272,7 @@ final class FilesBridge {
         saveEnd(false);
         try {
             String safe = name.replaceAll("[^\\p{L}\\p{N} ._\\-()]", "_");
-            if (safe.isEmpty() || !mime.matches("[a-z]+/[a-z0-9.+\\-]+")) return false;
+            if (safe.isEmpty() || !mime.matches("[a-z]+/[a-z0-9.+\\-]+")) { CrashLog.add("SAUVEGARDE", "nom ou type refusé : " + name + " / " + mime); return false; }
             boolean img = "images".equals(collection);
             ContentValues v = new ContentValues();
             v.put(MediaStore.MediaColumns.DISPLAY_NAME, safe);
@@ -282,10 +282,11 @@ final class FilesBridge {
             Uri base = img ? MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) : MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
             curCr = act.getContentResolver();
             curUri = curCr.insert(base, v);
-            if (curUri == null) return false;
+            if (curUri == null) { CrashLog.add("SAUVEGARDE", "MediaStore a refusé de créer le fichier " + safe); return false; }
             curOut = curCr.openOutputStream(curUri);
             return curOut != null;
         } catch (Exception e) {
+            CrashLog.add("SAUVEGARDE", "saveBegin a échoué (" + name + ", " + mime + ", " + collection + ") : " + e);
             saveEnd(false);
             return false;
         }
@@ -297,6 +298,7 @@ final class FilesBridge {
             curOut.write(Base64.decode(b64, Base64.DEFAULT));
             return true;
         } catch (Exception e) {
+            CrashLog.add("SAUVEGARDE", "écriture interrompue : " + e);
             saveEnd(false);
             return false;
         }
