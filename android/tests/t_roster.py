@@ -6,10 +6,11 @@ errs = []
 with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(120000)
     pg.wait_for_function("!!(window.ENOS && ENOS.botRoster)")
-    r = pg.evaluate("""() => { const R = ENOS.botRoster; return { chessgpt: [R.byId.r_chessgpt.elo, R.byId.r_chessgpt.sub], magnus: ENOS.aiBots.def.magnus.elo, n: R.list.length, cats: R.CATS.length, per: R.CATS.map(([c]) => R.list.filter((b) => b.cat === c).length), linked: R.list.filter((b) => b.link).map((b) => b.link),
+    r = pg.evaluate("""() => { const R = ENOS.botRoster; return { pietro: (ENOS_BOT_LINES.r_pietro.bot_brilliant || [])[0], jynxzi: R.byId.r_jynxzi.elo, chessgpt: [R.byId.r_chessgpt.elo, R.byId.r_chessgpt.sub], magnus: ENOS.aiBots.def.magnus.elo, n: R.list.length, cats: R.CATS.length, per: R.CATS.map(([c]) => R.list.filter((b) => b.cat === c).length), linked: R.list.filter((b) => b.link).map((b) => b.link),
       noel: ENOS_AIPROF.r_noel.skill, mittens: ENOS_AIPROF.r_mittens.skill, magnusImg: ENOS.aiBots.def.magnus.img, elos: [R.byId.r_noel.elo, R.byId.r_mittens.elo, R.byId.r_mittens.real] }; }""")
     print(r)
     check(r["chessgpt"][0] == 3000 and "ChatGPT Prime" in r["chessgpt"][1] and r["magnus"] == 2882, "Elo de la planche (ChessGPT 3000, distinct de ChatGPT Prime ; Magnus 2882)")
+    check(r["pietro"] == "What a move. What a masterclass!" and r["jynxzi"] == 450, "Pietro parle avec ses phrases fétiches ; Jynxzi à 450 Elo")
     check(r["n"] == 113 and r["cats"] == 11, "113 bots en 11 catégories : %s" % r["per"])
     check(sorted(r["linked"]) == ["hikaru", "levy", "magnus", "turk"], "Magnus, Hikaru, Levy et le Turc réutilisent leurs profils")
     check(r["noel"]["random"] == 1 and r["mittens"]["random"] == 0 and r["mittens"]["blunder"] == 0, "1 Elo = coups au hasard ; Mittens joue sans gaffe")

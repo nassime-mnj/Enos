@@ -49,7 +49,12 @@
     // STREAMERS : titre et Elo officiels affichés ; Witty Alien = CM ~2200 sur le papier, MONSTRE en vrai (Alien Gambit + chasse au sacrifice brillant à pleine puissance)
     ["str", "Witty Alien", "witty_alien", 2200, "créateur de l'Alien Gambit · a battu Magnus Carlsen", { witty: true, title: "CM", w: ["e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nf6 Ng5 h6 Nxf7 Kxf7", "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nf6 Ng5 e5"] }],
     ["str", "Julien Song", "julien_song", 2320, "streamer · coach des PogChamps", { title: "MI" }], ["str", "Blitzstream", "blitzstream", 2288, "Kévin Bordi · roi du blitz", { title: "MN" }],
-    ["str", "Tushar", "tushar", 1915, "SadisticTushi · bullet", { title: "AGM" }], ["str", "Pietro", "pietro", 1500, "streamer"], ["str", "Jynxzi", "jynxzi", 1000, "streamer · PogChamps Hall of Fame"],
+    ["str", "Tushar", "tushar", 1915, "SadisticTushi · bullet", { title: "AGM" }], ["str", "Pietro", "pietro", 1500, "Pietro Checkmate · speedruns · l'Attaque de la Licorne", { lines: {
+      greet: ["Fools would resign. Wise players might make a draw… but only a true genius will win this position.", "The Unicorn is operational!"],
+      good: ["Beautiful… absolutely beautiful.", "We are completely winning here…", "He doesn't know the theory."], check: ["What a move. What a masterclass!"],
+      bot_brilliant: ["What a move. What a masterclass!"], bot_blunder: ["Oh my goodness, what am I doing?"], bot_mistake: ["We are completely winning here… (oups)", "Oh my goodness, what am I doing?"],
+      h_brilliant: ["Fools would resign. Wise players might make a draw… but only a true genius will win this position."], h_blunder: ["He doesn't know the theory."] } }],
+    ["str", "Jynxzi", "jynxzi", 450, "streamer · PogChamps Hall of Fame"],
     ["coa", "Isaac", "isaac", 1500, "coach : explique ses plans"], ["coa", "Coach", "coach", 1800, "coach : solide et pédagogue"], ["coa", "Dr. Wolf", "dr_wolf", 2000, "coach : exigeant"],
     ["ody", "Cyclops", "cyclops", 1000, "un seul œil, une seule idée"], ["ody", "Siren", "siren", 1400, "pièges envoûtants"], ["ody", "Poseidon", "poseidon", 1800, "tempête sur le plateau"],
     ["ody", "Circe", "circe", 2200, "transforme tes pièces en cochons"], ["ody", "Odysseus", "odysseus", 2600, "rusé, le héros de l'Odyssée"],
@@ -76,7 +81,7 @@
   const adaptElo = () => { try { return Math.max(100, Math.min(3000, +(E.settings && E.settings.get("roster.adapt", 1200)) || 1200)); } catch (e) { return 1200; } };
   const list = R.map(([cat, name, file, elo, sub, x]) => {
     const link = typeof x === "string" ? x : "", o = x && typeof x === "object" ? x : {}, id = link || "r_" + file;
-    return { id, cat, name, img: "img/roster/" + file + ".png", elo, sub, link, adapt: !!o.adapt, real: o.real || null, witty: !!o.witty, title: o.title || "", w: o.w || null, b: o.b || null, person: cat === "pro" || cat === "str" || (cat === "cel" && file !== "beth_harmon") };
+    return { id, cat, name, img: "img/roster/" + file + ".png", elo, sub, link, adapt: !!o.adapt, real: o.real || null, witty: !!o.witty, title: o.title || "", lines: o.lines || null, w: o.w || null, b: o.b || null, person: cat === "pro" || cat === "str" || (cat === "cel" && file !== "beth_harmon") };
   });
   list.forEach((b) => {
     if (b.link) { const d = E.aiBots && E.aiBots.def[b.link]; if (d) d.img = b.img; if (E.botChat && E.botChat.bots && E.botChat.bots[b.link]) E.botChat.bots[b.link].img = b.img; return; }     // Magnus, Hikaru, Levy, le Turc : profils existants, nouvel avatar
@@ -85,7 +90,7 @@
     AIP[b.id] = { name: b.name, eloEst: b.elo, roster: true, skill: b.witty ? { random: 0, blunder: 0, mistake: 0, acpl: 0 } : skillOf(strength), capRate: 0.2 + ((h >> 3) % 20) / 100, checkRate: 0.1 + ((h >> 7) % 20) / 100, games: 0, tag: b.sub,
       get book() { return (bk = bk || { w: book(W, "w"), b: book(Bl, "b") }); } };
     if (E.botChat && E.botChat.bots) E.botChat.bots[b.id] = { name: b.name, img: b.img, style: `Tu es ${b.name}, un personnage qui joue aux échecs (${b.sub}). Phrases courtes, en français.` };
-    window.ENOS_BOT_LINES = window.ENOS_BOT_LINES || {}; window.ENOS_BOT_LINES[b.id] = LINES(b.person ? b.name : "");
+    window.ENOS_BOT_LINES = window.ENOS_BOT_LINES || {}; window.ENOS_BOT_LINES[b.id] = b.lines || LINES(b.person ? b.name : "");          // Pietro : ses vraies phrases fétiches
   });
   E.botRoster = { CATS, list, byId: Object.fromEntries(list.map((b) => [b.id, b])), skillOf, adaptElo,
     /** fin de partie contre un bot adaptatif : il suit ton niveau */
