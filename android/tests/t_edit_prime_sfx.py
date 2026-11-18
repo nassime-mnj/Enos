@@ -47,7 +47,8 @@ with sync_playwright() as pw:
     check(all(x["line"] for x in ill), "chaque coup aberrant a son message de ChatGPT")
     withf = [x for x in ill if x["from"]]
     check(all(x["midFrom"] for x in withf), "pendant l'annonce la pièce est encore sur sa case de départ (le coup n'est pas joué)")
-    check(all(x["green"]["g1"] > x["green"]["g2"] + 120 for x in ill if x["green"]), "flèche verte visible pendant l'annonce puis effacée au moment du coup : %s" % [x["green"] for x in ill][:4])
+    # sans case de départ (pièce inventée / ressuscitée / convertie) : seulement le cadre vert de la case visée
+    check(all(x["green"]["g1"] > x["green"]["g2"] + (120 if x["from"] else 40) for x in ill if x["green"]), "flèche verte visible pendant l'annonce puis effacée au moment du coup : %s" % [x["green"] for x in ill][:4])
     check(all(x["aftTo"] for x in ill), "après l'impact la pièce est bien sur sa case d'arrivée")
     check(r["sfx"].count("sx_gunshot") == sum(1 for x in ill if x["gun"]) >= 1, "prise aberrante = gunshot (%d)" % r["sfx"].count("sx_gunshot"))
     if OUT:
