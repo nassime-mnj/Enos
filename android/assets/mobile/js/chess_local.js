@@ -53,7 +53,7 @@
         catch (e) { ready = null; throw new Error("Moteur d'échecs indisponible : " + e.message); }
       }
       worker = w;
-      w.onerror = () => { ready = null; worker = null; };
+      w.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); ready = null; worker = null; };          // le moteur est mort : on en relancera un au prochain appel (erreur interceptée, pas d'« Uncaught »)
       return w;
     })();
     ready.catch(() => { ready = null; });
@@ -67,11 +67,18 @@
   const MAT = 10000;
 
   /** Recherche générique. o : {skill 0-20, multipv, movetime, depth, searchmoves:[uci]}. Retourne {best, lines:[{uci, pv:[uci], cp|mate (point de vue du camp au trait), depth}]}. Sérialisée. */
+  // Position IMPOSSIBLE (ex. ChatGPT Prime a « capturé » un roi, pion sur la 1re / 8e rangée) : Stockfish 19 s'arrêterait net (exit) -> on ne la lui envoie jamais
+  const validFen = (fen) => { const b = String(fen || "").split(" ")[0], r = b.split("/"); return r.length === 8 && (b.match(/K/g) || []).length === 1 && (b.match(/k/g) || []).length === 1 && !/[pP]/.test(r[0] + r[7]); };
+  L.validFen = validFen;
   const run = (fen, o) => {
+    if (!validFen(fen)) return Promise.resolve({ best: "", lines: [] });
     const job = queue.then(async () => {
       const w = await start();
       return new Promise((resolve) => {
         const byPv = {};
+        let done = false; const end = (r) => { if (done) return; done = true; clearTimeout(guard); w.removeEventListener("message", onMsg); w.removeEventListener("error", onDie); resolve(r); };
+        const onDie = () => end({ best: "", lines: [] });                                          // le moteur meurt pendant la recherche : on rend la main au lieu de bloquer la file
+        const guard = setTimeout(() => { try { w.postMessage("stop"); } catch (e) { /* déjà arrêté */ } setTimeout(() => end({ best: "", lines: [] }), 3000); }, (o.movetime || 600) + 15000);
         const onMsg = (e) => {
           const line = String(e.data);
           if (line.startsWith("info") && / pv /.test(line) && !/lowerbound|upperbound/.test(line)) {
@@ -82,12 +89,11 @@
             }
           }
           if (line.startsWith("bestmove")) {
-            w.removeEventListener("message", onMsg);
             const best = line.split(" ")[1];
-            resolve({ best: best === "(none)" ? "" : best, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
+            end({ best: best === "(none)" ? "" : best, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
           }
         };
-        w.addEventListener("message", onMsg);
+        w.addEventListener("message", onMsg); w.addEventListener("error", onDie);
         w.postMessage("setoption name Skill Level value " + (o.skill == null ? 20 : o.skill));
         w.postMessage("setoption name MultiPV value " + (o.multipv || 1));
         w.postMessage("position fen " + fen);
@@ -118,6 +124,7 @@
 
   /** Les `n` meilleures lignes (MultiPV, pleine puissance), du point de vue du camp au trait, meilleure d'abord : [{uci, pv:[uci…], cp, mate}] (mate > 0 : le camp au trait mate). */
   L.lines = (fen, n, ms) => {
+    if (!validFen(fen)) return Promise.resolve([]);
     const job = queue.then(async () => {
       const w = await start();
       return new Promise((resolve) => {
@@ -133,12 +140,13 @@
             }
           }
           if (line.startsWith("bestmove")) {
-            w.removeEventListener("message", onMsg);
+            w.removeEventListener("message", onMsg); w.removeEventListener("error", onDie); clearTimeout(guard);
             w.postMessage("setoption name MultiPV value 1");
             resolve(Object.keys(best).map(Number).sort((a, b) => a - b).map((k) => best[k]));
           }
         };
-        w.addEventListener("message", onMsg);
+        const onDie = () => { w.removeEventListener("message", onMsg); clearTimeout(guard); resolve([]); }, guard = setTimeout(onDie, (ms || 900) + 15000);
+        w.addEventListener("message", onMsg); w.addEventListener("error", onDie);
         w.postMessage("setoption name Skill Level value 20");
         w.postMessage("setoption name MultiPV value " + Math.max(1, n));
         w.postMessage("position fen " + fen);
