@@ -1,5 +1,5 @@
 "use strict";
-// BOTS « IA » (Défis) : Claude Fable 5, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek V4.1 ; MOTEURS (profils de style, `engine: true`) : Leela Chess Zero, Maia 1100/1500/1900, Ethereal, Berserk, Koivisto.
+// BOTS « IA » (Défis) : Claude Fable 5, ChatGPT 6 Astra, Gemini 4 Argon, DeepSeek V4.1 ; MOTEURS (`engine: true`) : Leela Chess Zero, Maia 1100/1500/1900, Ethereal, Berserk, Koivisto (profils de style) + Obsidian, PlentyChess, Caissa, Viridithas (VRAIS moteurs natifs sur le téléphone, `native`).
 // Les vrais moteurs (Lc0, Maia, Ethereal, Berserk, Koivisto) ne sont PAS embarqués (binaires UCI : pas dans le téléphone) : Stockfish.js joue à leur place avec leur style (ouvertures, agressivité, taux d'erreurs).
 // C'est une ILLUSION assumée : aucun appel à ces IA (zéro token). Chaque bot = un profil de style (ouvertures préférées, prudence / agressivité, fréquence d'erreurs) donné à Stockfish, qui joue à leur place.
 // Niveaux : calés sur les classements publics de parties LLM (ChessBench, oct. 2026 : Gemini 4 Argon 2168 · Claude Opus 5.5 2111 · GPT-6 Astra 2043 · DeepSeek V4.1 1692) ; ce ne sont PAS des Elo FIDE (échelle de benchmark, adversaires logiciels).
@@ -85,6 +85,36 @@
       b: [[4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5"], [3, "d4 Nf6 c4 e6 Nc3 Bb4 Qc2 O-O a3 Bxc3 Qxc3 b6"], [3, "e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6 Bd3 Nf6 O-O Qc7"]],
       lines: { greet: ["Salut {me} ! Moteur d'équipe, partie d'équipe.", "C'est parti, un coup après l'autre."], good: ["Bon développement.", "Je garde la tension."], check: ["Échec !"], bot_brilliant: ["Un coup brillant, toute l'équipe applaudit."], bot_blunder: ["Une erreur de notre part… on corrige."], bot_mistake: ["Pas idéal."], h_brilliant: ["Beau coup {me} !"], h_blunder: ["Attention à ce coup, il coûte cher."], mate_win: ["Échec et mat !"], mate_lose: ["Bien joué {me}, bravo."], draw: ["Nulle, belle bataille."], open_announce: ["Ouverture : {open}."] },
     },
+    // VRAIS MOTEURS embarqués (binaires ARM64 natifs, android/tools/build_engines.sh) : sur le téléphone c'est LE moteur qui joue (`native`) ;
+    // ailleurs (navigateur, PC) Stockfish joue à sa place avec le profil ci-dessous. Elo = ordre de grandeur des listes de moteurs (CCRL), approximatif.
+    obsidian: {
+      name: "Obsidian", short: "Obsidian", elo: 3650, tag: "moteur NNUE · cristal violet · calcul tranchant", img: "img/bots/obsidian.png", engine: true, native: "obsidian",
+      skill: { mistake: 0.002, blunder: 0, acpl: 4 }, capRate: 0.3, checkRate: 0.2,
+      w: [[4, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6"], [4, "d4 Nf6 c4 e6 Nf3 d5 Nc3 Be7 Bf4 O-O e3 c5"]],
+      b: [[4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5"], [4, "d4 Nf6 c4 e6 Nf3 d5 Nc3 Be7 Bf4 O-O e3 c5"]],
+      lines: { greet: ["Obsidian. Que le calcul commence.", "Prêt, {me}."], good: ["Ligne calculée.", "Rien n'échappe au cristal."], check: ["Échec."], bot_brilliant: ["Le sacrifice était dans les calculs."], bot_blunder: ["Une fissure dans le cristal…"], bot_mistake: ["Imprécis."], h_brilliant: ["Très fort, {me}."], h_blunder: ["Je le vois."] },
+    },
+    plenty: {
+      name: "PlentyChess", short: "PlentyChess", elo: 3640, tag: "moteur NNUE · turquoise et or · jeu riche", img: "img/bots/plenty.png", engine: true, native: "plenty",
+      skill: { mistake: 0.002, blunder: 0, acpl: 4 }, capRate: 0.28, checkRate: 0.18,
+      w: [[4, "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O"], [4, "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3 b5"]],
+      b: [[4, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"], [4, "d4 d5 c4 c6 Nf3 Nf6 Nc3 a6 e3 b5"]],
+      lines: { greet: ["PlentyChess : il y a de la place pour tout le monde… sauf pour tes erreurs.", "On joue, {me} ?"], good: ["Plein d'idées.", "Position riche."], check: ["Échec !"], bot_brilliant: ["Un coup en or."], bot_blunder: ["Trop de choix, mauvais choix."], bot_mistake: ["Pas idéal."], h_brilliant: ["Joli, {me}."], h_blunder: ["Merci."] },
+    },
+    caissa: {
+      name: "Caissa", short: "Caissa", elo: 3560, tag: "moteur NNUE · la déesse des échecs · harmonieux", img: "img/bots/caissa.png", engine: true, native: "caissa",
+      skill: { mistake: 0.003, blunder: 0, acpl: 5 }, capRate: 0.22, checkRate: 0.14,
+      w: [[4, "d4 Nf6 c4 e6 Nf3 d5 g3 Be7 Bg2 O-O O-O dxc4"], [3, "Nf3 d5 g3 Nf6 Bg2 c6 O-O Bg4"]],
+      b: [[4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6"], [3, "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6"]],
+      lines: { greet: ["Caissa, déesse des échecs, te salue, {me}.", "Que la partie soit belle."], good: ["L'harmonie avant tout.", "Chaque pièce à sa place."], check: ["Échec, mortel."], bot_brilliant: ["Un coup digne de l'Olympe."], bot_blunder: ["Même une déesse se trompe."], bot_mistake: ["Imparfait."], h_brilliant: ["Tu as la faveur des dieux, {me}."], h_blunder: ["Les dieux sont déçus."] },
+    },
+    viridithas: {
+      name: "Viridithas", short: "Viridithas", elo: 3600, tag: "moteur NNUE · cavalier végétal · étouffe lentement", img: "img/bots/viridithas.png", engine: true, native: "viridithas",
+      skill: { mistake: 0.002, blunder: 0, acpl: 4 }, capRate: 0.24, checkRate: 0.15,
+      w: [[4, "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7"], [4, "d4 Nf6 c4 e6 Nc3 Bb4 Qc2 O-O a3 Bxc3 Qxc3"]],
+      b: [[4, "e4 c5 Nf3 e6 d4 cxd4 Nxd4 Nc6 Nc3 Qc7"], [4, "d4 Nf6 c4 e6 Nc3 Bb4 Qc2 O-O a3 Bxc3 Qxc3"]],
+      lines: { greet: ["Viridithas pousse lentement… comme du lierre.", "On y va, {me}."], good: ["Ça pousse.", "Je prends racine."], check: ["Échec."], bot_brilliant: ["Le lierre a tout recouvert."], bot_blunder: ["Une branche cassée."], bot_mistake: ["Mauvaise herbe."], h_brilliant: ["Belle pousse, {me}."], h_blunder: ["Je prends."] },
+    },
   };
   const toUci = (m) => m.from + m.to + (m.promotion || "");
   function book(lines, color) {                                                                  // arbre {chemin uci : {coup uci : poids}} des seuls coups du camp `color`
@@ -102,7 +132,7 @@
   E.aiBots = { ids: Object.keys(DEF), def: DEF, prof: P };
   Object.entries(DEF).forEach(([id, d]) => {
     let bk = null;                                                                               // livre construit à la demande (chess.js est chargé après ce fichier)
-    P[id] = { name: d.name, eloEst: d.elo, skill: d.skill, capRate: d.capRate, checkRate: d.checkRate, games: 0, ai: true, tag: d.tag, get book() { return (bk = bk || { w: book(d.w, "w"), b: book(d.b, "b") }); } };
+    P[id] = { name: d.name, eloEst: d.elo, native: d.native || "", skill: d.skill, capRate: d.capRate, checkRate: d.checkRate, games: 0, ai: true, tag: d.tag, get book() { return (bk = bk || { w: book(d.w, "w"), b: book(d.b, "b") }); } };
     if (E.botChat && E.botChat.bots) E.botChat.bots[id] = { name: d.name, img: d.img, style: `Tu es ${d.name}, un assistant IA qui joue aux échecs (${d.tag}). Phrases courtes, en français.` };
     window.ENOS_BOT_LINES = window.ENOS_BOT_LINES || {}; window.ENOS_BOT_LINES[id] = d.lines;
   });

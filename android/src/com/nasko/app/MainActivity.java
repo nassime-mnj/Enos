@@ -79,6 +79,7 @@ public class MainActivity extends Activity {
     private KeyVault vault;
     private PcLink pcLink;
     private FilesBridge files;
+    private EngineBridge engines;
     private GalleryScan gallery;
     private ConnectivityManager.NetworkCallback netCb;
     private volatile String pendingShare = "";        // capture d'ecran partagee vers l'application (menu Partager) : base64 en memoire seulement, lue UNE fois par le JavaScript
@@ -129,6 +130,8 @@ public class MainActivity extends Activity {
         files = new FilesBridge(this, sink);
         gallery = new GalleryScan(this, sink);
         web.addJavascriptInterface(new LocalBridge(this, vault, pcLink, new NativeHttp(vault, pcLink, sink), files), "Enos");
+        engines = new EngineBridge(this, web);                    // moteurs d'échecs natifs (Stockfish 19 complet, Obsidian, PlentyChess, Caissa, Viridithas)
+        web.addJavascriptInterface(engines, "EnosEngine");
         watchNetwork();
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
@@ -282,6 +285,7 @@ public class MainActivity extends Activity {
             if (netCb != null) ((ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(netCb);
         } catch (Exception ignored) {
         }
+        if (engines != null) engines.stopAll();
         if (web != null) {
             root.removeView(web);
             web.destroy();

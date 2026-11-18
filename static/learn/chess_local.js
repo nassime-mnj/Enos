@@ -36,7 +36,12 @@
     if (ready) return ready;
     ready = (async () => {
       let w = null;
-      if (typeof WebAssembly === "object" && !L.forceLegacy) {
+      const NE = E.nativeEngine;
+      if (NE && NE.has("sf19") && !L.forceWasm) {                                                  // TÉLÉPHONE : le vrai Stockfish 19 COMPLET en natif ARM64 (gros réseau, plusieurs cœurs)
+        try { w = await boot(() => NE.worker("sf19"), "Stockfish 19 natif", 15000); w.postMessage("setoption name Threads value " + NE.threads()); w.postMessage("setoption name Hash value 256"); L.engine = "Stockfish 19 complet (natif)"; }
+        catch (e) { L.engineError = e.message; w = null; }
+      }
+      if (!w && typeof WebAssembly === "object" && !L.forceLegacy) {
         try {
           if (!window.ENOS_SF19) { const o = document.querySelector('script[src*="stockfish_src.js"]'); await loadScript(o ? o.getAttribute("src").replace("stockfish_src.js", "stockfish19_src.js") : "vendor/stockfish19_src.js"); }      // même dossier que Stockfish 10 (vendor/ sur mobile, static/learn/ sur PC)
           w = await boot(sf19Worker, "Stockfish 19", 20000);
