@@ -22,6 +22,8 @@
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
     { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo par erreur adverse ou meilleur coup", human: true },
     ...(E.aiBots ? E.aiBots.ids.map((id) => ({ id, t: (E.aiBots.def[id].player ? "♟ " : "🤖 ") + E.aiBots.def[id].name, s: E.aiBots.def[id].elo + " Elo · " + E.aiBots.def[id].tag, human: true, style: true, ai: true })) : []),
+    { id: "roster", t: "🎭 Bots (85)", s: "De 1 Elo à Magnus Carlsen · par catégorie", human: true },
+    ...(E.botRoster ? E.botRoster.list.filter((b) => !b.link).map((b) => ({ id: b.id, t: "♟ " + b.name, s: (b.adapt ? "ton niveau" : b.elo + " Elo") + " · " + b.sub, human: true, style: true, roster: true })) : []),
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
     { id: "jester", t: "🃏 Le Jester", s: "Une roue tire son Elo au sort (1-3200) tous les 10 coups", human: true },
@@ -72,17 +74,19 @@
         ghorghor: () => ({ kind: "style", style: "lelex", elo: 1400, skill: { mistake: 0.12, blunder: 0.05 }, name: "GhorGhor", talk: "ghorghor", transform: true }),   // style Lelex ; 3 pièces mineures perdues -> GhorGhor le vrai
       };
       (E.aiBots ? E.aiBots.ids : []).forEach((id) => { FIGHT[id] = () => ({ kind: "style", style: id, elo: eloOf(id), name: E.aiBots.def[id].name, talk: id }); });
-      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...(E.aiBots ? E.aiBots.ids : [])];
+      const RB = E.botRoster ? E.botRoster.list.filter((b) => !b.link) : [];                // échelle des 85 bots (les adaptatifs prennent ton niveau à chaque partie)
+      RB.forEach((b) => { FIGHT[b.id] = () => { const e = b.adapt ? E.botRoster.adaptElo() : b.real || b.elo; return { kind: "style", style: b.id, elo: e, name: b.name, talk: b.id, roster: b.id, ...(b.adapt ? { skill: E.botRoster.skillOf(e) } : {}) }; }; });
+      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...(E.aiBots ? E.aiBots.ids : []), ...RB.map((b) => b.id)];
       const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
-      const FIGHT_NAMES = { ...Object.fromEntries((E.aiBots ? E.aiBots.ids : []).map((id) => [id, E.aiBots.def[id].name])), nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
+      const FIGHT_NAMES = { ...Object.fromEntries((E.aiBots ? E.aiBots.ids : []).map((id) => [id, E.aiBots.def[id].name])), ...Object.fromEntries(RB.map((b) => [b.id, b.name])), nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish" };
       const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO Brillant"], ["penoire", "eto", "Pénoire vs ETO Brillant"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],
         ["penoire", "enos", "Pénoire vs E.N.O.S."], ["naskurieux", "penoire", "Naskurieux vs Pénoire"], ["naskolit", "penoire", "Naskolit vs Pénoire"], ["jester", "eto", "Le Jester vs ETO Brillant"], ["jester", "naskolit", "Le Jester vs Naskolit"], ["ghorghor", "eto", "GhorGhor vs ETO Brillant"], ["ghorghor", "nasko", "GhorGhor vs Nasko"], ["nasko", "nasko", "Nasko vs Nasko"], ["penoire", "penoire", "Pénoire vs Pénoire"], ["eto", "stockfish", "ETO Brillant vs Stockfish 19"]];
 
       // ---- accueil : sections, icônes + noms (les détails de chaque défi sont dans sa feuille de réglage)
       const AIIDS = E.aiBots ? E.aiBots.ids : [], botImg = (id) => (E.botChat && E.botChat.bots[id] && E.botChat.bots[id].img) || "";
-      const DFN = { brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
-      const DFG = [["Contre l'IA", ["brillant", "enos", "coach", "boss"]], ["Personnages", ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...AIIDS]], ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
+      const DFN = { roster: ["Bots (85)", "img/roster/mittens.png"], brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
+      const DFG = [["Contre l'IA", ["brillant", "enos", "coach", "boss"]], ["Personnages", ["roster", "nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...AIIDS]], ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
       function dfHome() {
         let n = 0;
         return DFG.map(([title, ids]) => `<section class="hub-sec"><h4><span>${title}</span></h4><div class="hub-grid">${ids.filter((id) => MODES.some((x) => x.id === id)).map((id) => {
@@ -128,7 +132,15 @@
       };
       el.querySelectorAll(".df-mode").forEach((b) => (b.onclick = () => { const m = MODES.find((x) => x.id === b.dataset.m); if (m && m.x4 !== undefined && E.royale) return E.royale.open(m.x4); setup(b.dataset.m); }));
 
+      /** ÉCHELLE DES BOTS : catégories, avatars, Elo -> la fiche du bot choisi */
+      function rosterPicker() {
+        const BR = E.botRoster; if (!BR) return;
+        const html = BR.CATS.map(([c, title]) => { const bs = BR.list.filter((b) => b.cat === c); return bs.length ? `<h4 class="ro-cat">${title} <small>${bs.length}</small></h4><div class="ro-grid">${bs.map((b) => `<button class="ro-bot" data-b="${b.id}"><img src="${b.img}" alt=""><b>${esc(b.name)}</b><small>${b.adapt ? "ton niveau (" + BR.adaptElo() + ")" : b.elo + " Elo"}</small></button>`).join("")}</div>` : ""; }).join("");
+        const s = E.ui.sheet({ title: "Bots · de 1 Elo à Magnus", html: `<div class="ro-pick">${html}</div>`, options: [{ label: "FERMER" }] });
+        s.querySelectorAll(".ro-bot").forEach((b) => (b.onclick = () => { E.vibrate && E.vibrate(8); setup(b.dataset.b); }));          // la fiche remplace le sélecteur (fermeture instantanée)
+      }
       function setup(id) {
+        if (id === "roster") return rosterPicker();
         const m = MODES.find((x) => x.id === id);
         let color = "w", elo = E.settings.get("defi.elo", 1200), pow = E.settings.get("chess.power", 55), boss = "eto";
         const colorSeg = `<div class="seg" id="su-col" style="margin-bottom:14px"><button data-c="w" class="on">BLANCS</button><button data-c="b">NOIRS</button><button data-c="r">AU HASARD</button><i class="seg-ind"></i></div>`;
@@ -169,6 +181,9 @@
             fsel.onchange = draw; draw();
           };
         }
+        else if (m.roster) { const b = E.botRoster.byId[id], cat = (E.botRoster.CATS.find((c) => c[0] === b.cat) || [0, ""])[1];
+          body = `<div class="ro-head"><img src="${b.img}" alt=""><div><b>${esc(b.name)}</b><small>${cat} · ${b.adapt ? "s'adapte à ton niveau : " + E.botRoster.adaptElo() + " Elo" : b.real ? "affiche " + b.elo + " Elo… joue à " + b.real : b.elo + " Elo"}</small></div></div>
+            <p class="muted" style="margin-bottom:12px;line-height:1.5">${esc(b.sub)}. ${b.person ? "<b>Profil inspiré</b> de son jeu public — ce n'est pas la personne. " : ""}Un <b>profil de style</b> : livre d'ouvertures de son niveau, puis Stockfish joue à sa place avec des erreurs calibrées sur son Elo${b.elo <= 900 && !b.real ? " (et des coups au hasard)" : ""}.${b.adapt ? " Tu gagnes : il monte de 100 Elo ; tu perds : il descend de 100." : ""}</p>` + colorSeg; }
         else if (m.ai) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>${m.t.slice(3)}</b> — ${E.aiBots.def[id].tag}. ${E.aiBots.def[id].player ? "<b>Profil inspiré</b> de son jeu public (répertoire d'ouvertures connu, style) — ce n'est pas la personne : Stockfish joue à sa place avec une force calibrée sur son niveau." : E.aiBots.def[id].native && E.nativeEngine && E.nativeEngine.has(E.aiBots.def[id].native) ? "<b>Le VRAI moteur</b> tourne sur ton téléphone (binaire natif, plusieurs cœurs) : après son livre d'ouvertures, c'est lui qui joue, à pleine force." : E.aiBots.def[id].native ? "<b>Vrai moteur</b> dans l'application Android ; ici (sans le moteur natif) Stockfish joue à sa place avec son style." : E.aiBots.def[id].engine ? "<b>Profil de style</b> : le vrai moteur n'est pas embarqué dans le téléphone (il demande un programme UCI)." : "Une <b>illusion</b> : aucune IA n'est interrogée (zéro token)."} Ses <b>ouvertures préférées</b> et son <b>style</b> sont donnés à Stockfish, qui joue à sa place, avec une fréquence d'erreurs adaptée à son niveau (<b>${E.aiBots.def[id].elo} Elo</b>, ${E.aiBots.def[id].player ? "ordre de grandeur de son classement (estimation pour le Turc)" : E.aiBots.def[id].engine ? "niveau estimé" : "estimé d'après les classements publics de parties d'IA"}).</p>` + colorSeg;
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
@@ -427,6 +442,8 @@
         const legal = new Set(ch.moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion || "")));
         const alien = p.style === "nasko" && turn === "w" ? ALIEN[path] : null;                     // le Gambit Alien contre la Caro-Kann reste son arme favorite
         if (alien && legal.has(alien)) return { uci: alien };
+        const kk = p.skill || (S && S.skill) || {};
+        if (kk.random && Math.random() < kk.random) { const l = [...legal]; return { uci: l[Math.floor(Math.random() * l.length)] }; }        // sous 900 Elo : des coups joués au hasard (1 Elo = toujours)
         const node = S && S.book[turn][path];
         if (node) { const ok = Object.entries(node).filter(([u]) => legal.has(u)); if (ok.length) return { uci: wpick(ok) }; }
         if (S && S.native && E.nativeEngine && E.nativeEngine.has(S.native)) {                   // VRAI MOTEUR natif (Obsidian, PlentyChess, Caissa, Viridithas) : c'est lui qui joue, à pleine force
@@ -665,6 +682,8 @@
       function finish(result, stopped) {
         if (!g) return;
         g.over = result; g.busy = false; g.token++; clearInterval(g.clkI); if (g.tc && g.tc.days) saveDaily();
+        { const rb = ["w", "b"].map((c) => g.pl[c] && g.pl[c].roster && E.botRoster && E.botRoster.byId[g.pl[c].roster]).find((b) => b && b.adapt);                // bot adaptatif : il suit ton niveau
+          if (rb && g.me && !stopped) { const win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : ""; E.botRoster.adapted(win === g.me, !!win && win !== g.me); } }
         paint(); status(result);
         if (E.botChat && E.botChat.count() && !stopped && g.talk) {                // la chat box a le dernier mot
           const win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : "", lose = win === "w" ? "b" : "w";

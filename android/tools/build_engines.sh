@@ -51,14 +51,19 @@ b_obsidian() { echo "== Obsidian"
   cp "$s/sse2neon.h" src/
   sed -i -E 's#<(nmmintrin|immintrin|xmmintrin|emmintrin|pmmintrin|tmmintrin|smmintrin|x86intrin)\.h>#"sse2neon.h"#' src/*.h src/*.cpp   # intrinsics SSE -> NEON
   sed -i 's/#elif defined(__SSSE3__)/#elif defined(__SSSE3__) || defined(__aarch64__)/' src/simd.h                                         # chemin SSSE3 du code (le seul sans AVX)
-  "$CXX" -O3 -std=c++17 -DNDEBUG -DEvalFile=\"$OBS_NET\" $MARCH -static -pthread -w src/*.cpp -x c src/fathom/src/tbprobe.c -o "$OUT/libeng_obsidian.so"
+  "$CC" -O3 -DNDEBUG $MARCH -w -c src/fathom/src/tbprobe.c -o tbprobe.o                                                                    # le C (Fathom) à part : clang refuse -std=c++17 sur un .c
+  "$CXX" -O3 -std=c++17 -DNDEBUG -DEvalFile=\"$OBS_NET\" $MARCH -static -pthread -w src/*.cpp tbprobe.o -o "$OUT/libeng_obsidian.so"
   "$STRIP" "$OUT/libeng_obsidian.so"; smoke "$OUT/libeng_obsidian.so" "Obsidian"
 }
 
 b_plenty() { echo "== PlentyChess"
   d=$(src plenty Yoshie2000/PlentyChess "$PLENTY_SHA"); cd "$d"
-  make -s -j"$JOBS" arch=android EXE=plentychess >/dev/null                  # télécharge le réseau, le prépare (outil hôte, -DARCH_ARM) puis compile avec le NDK (statique)
-  bin=$(ls -t plentychess* 2>/dev/null | head -1); cp "$bin" "$OUT/libeng_plenty.so"; "$STRIP" "$OUT/libeng_plenty.so"; smoke "$OUT/libeng_plenty.so" "PlentyChess"
+  NET_ID=$(tr -d '[:space:]' < network.txt); fetch "https://github.com/Yoshie2000/PlentyNetworks/releases/download/$NET_ID/$NET_ID.bin" "$NET_ID.bin"
+  # outil de préparation du réseau : tourne sur le serveur (x86) mais prépare la disposition ARM (-DARCH_ARM) ; __m128i n'y sert que de bloc de 16 octets -> on lui donne immintrin.h
+  g++ -std=c++17 -O3 -pthread -DARCH_ARM -include immintrin.h -mssse3 tools/process_net.cpp -o tools/process_net
+  ./tools/process_net false "$NET_ID.bin" ./processed.bin
+  make -s -j"$JOBS" _nopgo arch=android SKIP_PROCESS_NET=true EVALFILE="$NET_ID.bin" EXE=plentychess >/dev/null       # compilation NDK (statique) avec le réseau préparé
+  cp plentychess "$OUT/libeng_plenty.so"; "$STRIP" "$OUT/libeng_plenty.so"; smoke "$OUT/libeng_plenty.so" "PlentyChess"
 }
 
 b_caissa() { echo "== Caissa"

@@ -285,3 +285,17 @@ html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-event
 .fx-tap{--rc:#ffd60a}.fx-tap .fx-ring{border-width:3px;animation-duration:.55s}
 .fx-land{--rc:#7dff9a}.fx-land .fx-ring{border-width:2px;animation-duration:.6s}
 @media (prefers-reduced-motion:reduce){.sq.sel::before,.sq.tgt::after,.sq.cap::after,.pce.lift{animation:none}.fx-tap::before,.fx-land::before{animation-duration:.01s}}
+/* ÉCHELLE DES BOTS (85 personnages) : sélecteur par catégorie + en-tête de fiche */
+.ro-pick{max-height:62vh;overflow-y:auto;margin:0 -4px;padding:0 4px}
+.ro-cat{display:flex;align-items:baseline;gap:8px;margin:14px 0 8px;font:800 13px var(--ui);letter-spacing:1.5px;text-transform:uppercase;color:#e8e8ee}
+.ro-cat small{font:700 11px var(--ui);color:var(--muted)}
+.ro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.ro-bot{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 6px;border-radius:12px;border:1px solid var(--line);background:#101012;color:#e8e8ee;min-width:0}
+.ro-bot img{width:52px;height:52px;border-radius:50%}
+.ro-bot b{font:700 11.5px var(--ui);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ro-bot small{font:600 10.5px var(--ui);color:#ffd666}
+.ro-bot:active{border-color:var(--red);transform:scale(.97)}
+.ro-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.ro-head img{width:64px;height:64px;border-radius:50%;flex:none}
+.ro-head b{display:block;font:800 17px var(--ui)}
+.ro-head small{font:600 12px var(--ui);color:#ffd666}
