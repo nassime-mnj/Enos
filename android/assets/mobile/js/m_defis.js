@@ -326,8 +326,8 @@
 
       function paint(anim) {
         const pos = B.parse(g.fen), turn = pos.turn;
-        const targets = g.sel ? new Chess(g.fen).moves({ square: g.sel, verbose: true }).map((m) => m.to) : [];
-        B.render($("#df-board"), pos.m, { flip: g.flip, last: g.last, hint: g.hint, sel: g.sel, targets, check: g.ch.in_check() ? B.kingSquare(pos.m, turn) : "", badge: (() => { const m = g.moves[g.moves.length - 1]; return m && m.uci && m.q && B.BADGES[m.q.key] ? { sq: m.uci.slice(2, 4), key: m.q.key, id: g.moves.length } : null; })(), end: g.ch.in_checkmate() ? { sq: B.kingSquare(pos.m, turn), id: g.moves.length } : null, onTap, anim });
+        const targets = g.sel ? new Chess(g.fen).moves({ square: g.sel, verbose: true }).map((m) => m.to) : g.psel ? preTargets(g.psel) : [];
+        B.render($("#df-board"), pos.m, { flip: g.flip, last: g.last, hint: g.hint, sel: g.sel, psel: g.psel || "", pre: g.pre ? [g.pre.from, g.pre.to] : null, targets, check: g.ch.in_check() ? B.kingSquare(pos.m, turn) : "", badge: (() => { const m = g.moves[g.moves.length - 1]; return m && m.uci && m.q && B.BADGES[m.q.key] ? { sq: m.uci.slice(2, 4), key: m.q.key, id: g.moves.length } : null; })(), end: g.ch.in_checkmate() ? { sq: B.kingSquare(pos.m, turn), id: g.moves.length } : null, onTap, anim });
         const strip = (c) => g.teams ? `<span class="df-dot ${c}"></span><b style="font-size:13px">${g.teams[c].map((m) => (m === g.pl[c] && !g.over ? `<u>${esc(m.name)}</u>` : esc(m.name))).join(" + ")}</b><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>${g.clk ? `<span class="df-clk" data-c="${c}"></span>` : ""}` : `<span class="df-dot ${c}"></span>${tbadge(g.pl[c])}<b>${esc(sideName(c))}</b><small>${g.pl[c].elo ? g.pl[c].elo + " Elo" : ""}</small><span class="df-br" title="Coups brillants">✦ ${g.brill[c]}</span>${g.clk ? `<span class="df-clk" data-c="${c}"></span>` : ""}`;
         const top = g.flip ? "w" : "b", bot = g.flip ? "b" : "w";
         $("#df-top").innerHTML = strip(top); $("#df-bot").innerHTML = strip(bot); paintClock();
@@ -366,8 +366,23 @@
       $("#df-daily").onclick = (e) => { const r = e.target.closest("[data-dres]"), d = e.target.closest("[data-ddel]"); if (r) { const x = dailyList()[+r.dataset.dres]; if (x) launch(x.id, { ...x.o, resume: x }); } if (d) { const l = dailyList(); l.splice(+d.dataset.ddel, 1); E.settings.set("defi.daily", l); paintDaily(); } };
 
       // ---- entrée du joueur
+      /** PREMOVE (comme Chess.com) : pendant que le bot joue, on prépare SON coup (rouge) ; il part tout seul après le coup du bot s'il est légal, sinon il est annulé */
+      const canPre = () => !!(g && g.me && !g.teams && g.pl[g.me] && g.pl[g.me].human === true && g.pl[g.me === "w" ? "b" : "w"].human !== true);
+      function preTargets(from) {                                                // coups « pseudo-légaux » de mon camp dans la position actuelle (trait inversé)
+        try { const f = g.fen.split(" "); f[1] = g.me; f[3] = "-"; const c = new Chess(); if (!c.load(f.join(" "))) return []; return c.moves({ square: from, verbose: true }).map((m) => m.to); } catch (e) { return []; }
+      }
+      function onPre(sq) {
+        const p = g.ch.get(sq);
+        if (g.psel && sq !== g.psel && !(p && p.color === g.me)) { g.pre = { from: g.psel, to: sq }; g.psel = ""; E.vibrate && E.vibrate(6); }
+        else if (p && p.color === g.me && sq !== g.psel) { g.psel = sq; g.pre = null; }
+        else { g.psel = ""; g.pre = null; }                                      // toucher ailleurs : premove annulé
+        paint();
+        if (g.pre && !g.busy && !g.over && g.pl[g.ch.turn()].human === true) next(g.token);          // le bot a déjà joué pendant le geste : le premove part tout de suite
+      }
       function onTap(sq) {
+        if (g && !g.over && !g.paused && (g.busy || g.pl[g.ch.turn()].human !== true) && canPre()) return onPre(sq);
         if (!g || g.over || g.busy || g.paused || g.pl[g.ch.turn()].human !== true) return;
+        if (g.psel) { const from = g.psel; g.psel = ""; if (g.ch.moves({ square: from, verbose: true }).some((m) => m.to === sq)) return humanMove(from, sq); }      // pièce prise en premove, le bot a joué entre-temps : c'est un coup normal
         const turn = g.ch.turn();
         if (g.sel && g.ch.moves({ square: g.sel, verbose: true }).some((m) => m.to === sq)) return humanMove(g.sel, sq);
         const p = g.ch.get(sq);
@@ -387,6 +402,12 @@
         if (!g || tok !== g.token || g.over) return;
         if (g.ch.game_over()) return finish(overText());
         const turn = g.ch.turn(), p = g.pl[turn];
+        if (p.human && g.pre) {                                                    // premove en attente : on le joue tout de suite s'il est légal
+          const pr = g.pre; g.pre = null; g.psel = "";
+          const mv = g.ch.moves({ square: pr.from, verbose: true }).find((m) => m.to === pr.to);
+          if (mv) { paint(); setTimeout(() => { if (g && tok === g.token && !g.over) commit(pr.from + pr.to + (mv.promotion ? "q" : ""), {}, g.token); }, 90); return; }
+          status("Premove annulé (coup illégal)"); paint();
+        }
         if (p.human) { status(g.teams ? (p.name === "Toi" ? "À toi de jouer" : "À " + p.name + " de jouer") + " · équipe " + (turn === "w" ? "Blancs" : "Noirs") : "À toi de jouer"); return; }
         if (g.paused) return;
         g.busy = true; status(`${p.kind === "duo" ? name(g.duoTurn++ % 2 ? "eto" : "enos") : p.name} réfléchit…`); paint();
@@ -673,6 +694,7 @@
         paint(); status("Coup annulé"); next(g.token);
       }
       function undo() {
+        if (g) { g.pre = null; g.psel = ""; }                                      // annuler efface aussi le premove
         if (!g || g.busy || g.over) return;
         const n = g.teams ? 1 : g.pl[g.ch.turn()].human ? 2 : 1;
         if (g.snaps.length < n) return;
