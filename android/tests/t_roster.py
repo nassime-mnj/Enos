@@ -43,6 +43,15 @@ with sync_playwright() as pw:
     w = pg.evaluate("%s.g.moves.map((m) => m.san)" % API)
     check(w[:11] == ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nf6", "Ng5", "h6", "Nxf7"], "Witty Alien sort l'ALIEN GAMBIT jusqu'au sacrifice Cxf7 : %s" % " ".join(w[:11]))
     check(pg.evaluate("%s.g.pl.w.kind" % API) == "witty", "Witty joue en mode monstre (chasse au sacrifice à pleine puissance)")
+    # PIETRO (Blancs) : l'Attaque de la Licorne 1.e4 2.d4 3.f3 4.g4 quoi que fassent les Noirs
+    pg.evaluate("%s.launch('r_pietro', {color: 'b'})" % API); pg.wait_for_selector("#df-board .cb-sq")
+    for k, (f, t) in enumerate([("a7", "a6"), ("h7", "h6"), ("b7", "b6"), ("c7", "c6")]):
+        pg.wait_for_function("(() => { const g = %s.g; return g && !g.busy && g.ch.turn() === 'b' && g.moves.length === %d; })()" % (API, 2 * k + 1), timeout=120000)
+        pg.click('#df-board [data-sq="%s"]' % f); pg.click('#df-board [data-sq="%s"]' % t)
+    pg.wait_for_function("(() => { const g = %s.g; return g && g.moves.length >= 7; })()" % API, timeout=120000)
+    pm = [m for i, m in enumerate(pg.evaluate("%s.g.moves.map((m) => m.san)" % API)) if i % 2 == 0][:4]
+    check(pm == ["e4", "d4", "f3", "g4"], "Pietro : l'Attaque de la Licorne 1.e4 2.d4 3.f3 4.g4 (%s)" % pm)
+    check(pg.evaluate("ENOS.botRoster.byId.r_pietro.elo") == 1760, "Pietro à 1760 (FIDE)")
     # adaptatif : +100 si tu gagnes, -100 si tu perds
     a = pg.evaluate("(() => { ENOS.settings.set('roster.adapt', 1200); ENOS.botRoster.adapted(true, false); const x = ENOS.botRoster.adaptElo(); ENOS.botRoster.adapted(false, true); ENOS.botRoster.adapted(false, true); return [x, ENOS.botRoster.adaptElo()]; })()")
     check(a == [1300, 1100], "bots adaptatifs : 1200 -> 1300 (victoire) -> 1100 (2 défaites) : %s" % a)

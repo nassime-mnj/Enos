@@ -452,6 +452,10 @@
         if (alien && legal.has(alien)) return { uci: alien };
         const kk = p.skill || (S && S.skill) || {};
         if (kk.random && Math.random() < kk.random) { const l = [...legal]; return { uci: l[Math.floor(Math.random() * l.length)] }; }        // sous 900 Elo : des coups joués au hasard (1 Elo = toujours)
+        if (S && S.system && S.system[turn]) {                                                   // SYSTÈME joué quoi que fasse l'adversaire (Pietro : l'Attaque de la Licorne 1.e4 2.d4 3.f3 4.g4)
+          const k = hist.filter((m) => m.color === turn).length, u = S.system[turn][k];
+          if (u && legal.has(u)) return { uci: u };
+        }
         const node = S && S.book[turn][path];
         if (node) { const ok = Object.entries(node).filter(([u]) => legal.has(u)); if (ok.length) return { uci: wpick(ok) }; }
         if (S && S.native && E.nativeEngine && E.nativeEngine.has(S.native)) {                   // VRAI MOTEUR natif (Obsidian, PlentyChess, Caissa, Viridithas) : c'est lui qui joue, à pleine force
