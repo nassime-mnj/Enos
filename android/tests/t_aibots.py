@@ -9,15 +9,15 @@ with sync_playwright() as pw:
     pg = open_app(ctx, errs)
     ev = pg.evaluate
     r = ev("""() => { const A = ENOS.aiBots, out = {}; A.ids.forEach((id) => { const p = A.prof[id]; out[id] = { elo: p.eloEst, w: Object.keys(p.book.w).length, b: Object.keys(p.book.b).length, first: Object.keys(p.book.w[''] || {}) }; }); return out; }""")
-    check(set(r) == {"claude", "gpt", "gemini", "deepseek"}, "4 bots IA : %s" % list(r))
+    check(set(r) == {"claude", "gpt", "gemini", "deepseek", "lc0", "maia1100", "maia1500", "maia1900", "ethereal", "berserk", "koivisto", "obsidian", "plenty", "caissa", "viridithas", "magnus", "hikaru", "levy", "turk"}, "4 bots IA + 7 profils de moteurs + 4 vrais moteurs natifs + 4 grands joueurs : %s" % list(r))
     check(all(v["w"] >= 6 and v["b"] >= 6 and v["first"] for v in r.values()), "livres d'ouvertures construits pour les Blancs et les Noirs")
     check(r["gemini"]["elo"] > r["claude"]["elo"] > r["gpt"]["elo"] > r["deepseek"]["elo"], "niveaux : Gemini %d > Claude %d > GPT %d > DeepSeek %d" % (r["gemini"]["elo"], r["claude"]["elo"], r["gpt"]["elo"], r["deepseek"]["elo"]))
     first = ev("() => ENOS.aiBots.prof.gemini.book.b['e2e4']")
     check(first["c7c5"] > first["e7e5"], "Gemini (Noirs) répond surtout 1.e4 par la Sicilienne : %s" % first)
     open_tool(pg, "defis")
     pg.wait_for_selector(".df-mode", state="attached")
-    names = pg.locator(".df-mode b").all_inner_texts()
-    check(all(any(n in t for t in names) for n in ["Claude Fable 5", "ChatGPT 6 Astra", "Gemini 4 Argon", "DeepSeek V4.1"]), "les 4 bots sont dans les Défis")
+    names = [x.lower() for x in pg.locator(".df-mode b").all_inner_texts()]
+    check(all(any(n.lower() in t for t in names) for n in ["Claude Fable 5", "ChatGPT 6 Astra", "Gemini 4 Argon", "DeepSeek V4.1", "Leela Chess Zero", "Maia 1500", "Ethereal", "Berserk", "Koivisto"]), "les bots IA et les moteurs sont dans les Défis")
     pg.locator(".df-mode", has_text="Gemini 4 Argon").click()
     pg.wait_for_selector("text=COMMENCER", timeout=5000)
     check("zéro token" in pg.inner_text("body") and "2170" in pg.inner_text("body"), "fiche du bot : illusion assumée + Elo")

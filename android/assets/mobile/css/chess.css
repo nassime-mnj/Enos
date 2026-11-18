@@ -83,6 +83,7 @@
 .df-mode b{font:800 15px var(--ui);color:#fff;line-height:1.2}.df-mode small{font-size:12px;color:#8a8a94;line-height:1.3}
 .df-mode:active{border-color:var(--red);transform:scale(.98)}
 .df-mode:first-child{grid-column:1/-1;border-color:#1acfd6;background:linear-gradient(160deg,#0a2a2c,#0a0a0c)}
+.df-clk{margin-left:auto;font:800 17px ui-monospace,Menlo,Consolas,monospace;padding:3px 9px;border-radius:9px;background:#0009;color:#cfd3e6;letter-spacing:.5px}.df-clk.on{background:#f3f3f6;color:#0b0c10}.df-clk.low{color:#ff4a3a}.df-clk.on.low{background:#ff4a3a;color:#fff}
 .df-pl{display:flex;align-items:center;gap:8px;min-height:30px;padding:2px 2px}
 .df-pl b{font:800 14px var(--ui);color:#fff}.df-pl small{color:#6d6d77;font-size:12px}
 .df-dot{width:12px;height:12px;border-radius:50%;border:2px solid #555}.df-dot.w{background:#f2f2f2}.df-dot.b{background:#222}
@@ -212,6 +213,7 @@
 @media (prefers-reduced-motion:reduce){.bot-av.talk,.bot-bubble,.bot-m{animation:none}}
 
 /* ---- combats de bots : avatars sans illustration, vainqueur / perdant, écran VS, transcript partagé */
+.bot-av.bot-anim{background:transparent;border:0;box-shadow:none;image-rendering:pixelated;object-fit:contain}
 .bot-av.ph{display:grid;place-items:center;font:800 15px var(--ui);letter-spacing:1.5px;color:#fff;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--c) 55%,#000),#0b0b0d);border-color:var(--c);text-shadow:0 0 10px var(--c)}
 .bot-av.win{box-shadow:0 0 0 2px #ffd24a,0 0 28px #ffd24a99;transform:scale(1.06);transition:.4s}
 .bot-av.lose{filter:grayscale(1) brightness(.6);transition:.4s}
@@ -283,3 +285,30 @@ html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-event
 .fx-tap{--rc:#ffd60a}.fx-tap .fx-ring{border-width:3px;animation-duration:.55s}
 .fx-land{--rc:#7dff9a}.fx-land .fx-ring{border-width:2px;animation-duration:.6s}
 @media (prefers-reduced-motion:reduce){.sq.sel::before,.sq.tgt::after,.sq.cap::after,.pce.lift{animation:none}.fx-tap::before,.fx-land::before{animation-duration:.01s}}
+/* ÉCHELLE DES BOTS (85 personnages) : sélecteur par catégorie + en-tête de fiche */
+.ro-pick{max-height:62vh;overflow-y:auto;margin:0 -4px;padding:0 4px}
+.ro-cat{display:flex;align-items:baseline;gap:8px;margin:14px 0 8px;font:800 13px var(--ui);letter-spacing:1.5px;text-transform:uppercase;color:#e8e8ee}
+.ro-cat small{font:700 11px var(--ui);color:var(--muted)}
+.ro-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.ro-bot{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px 6px;border-radius:12px;border:1px solid var(--line);background:#101012;color:#e8e8ee;min-width:0}
+.ro-bot img{width:52px;height:52px;border-radius:50%}
+.ro-bot b{font:700 11.5px var(--ui);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ro-bot small{font:600 10.5px var(--ui);color:#ffd666}
+.ro-bot:active{border-color:var(--red);transform:scale(.97)}
+.ro-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.ro-head img{width:64px;height:64px;border-radius:50%;flex:none}
+.ro-head b{display:block;font:800 17px var(--ui)}
+.ro-head small{font:600 12px var(--ui);color:#ffd666}
+/* GLISSER-DÉPOSER + PREMOVE (comme Chess.com) */
+.cboard.dnd{touch-action:none}
+.pce.drag{transition:none!important;z-index:30!important;animation:none!important;scale:1!important;filter:drop-shadow(0 10px 8px rgba(0,0,0,.5))}
+.sq.dragover{box-shadow:inset 0 0 0 4px rgba(255,255,255,.75)}
+.sq.pre::before{content:"";position:absolute;inset:0;z-index:0;background:rgba(244,67,54,.62)}
+.sq.psel::before{content:"";position:absolute;inset:0;z-index:0;background:rgba(244,67,54,.4)}
+/* Défis : familles de bots nombreuses en grille serrée, Elo sous le nom */
+#df-home .hub-grid.dense{grid-template-columns:repeat(4,1fr);gap:8px}
+#df-home .hub-grid.dense .hub-tile{aspect-ratio:auto;padding:10px 3px 8px;gap:6px;border-radius:16px}
+#df-home .hub-grid.dense .hub-ic{width:46px;height:46px}#df-home .hub-grid.dense .hub-cc{width:44px;height:44px}
+#df-home .hub-grid.dense .hub-tile b{font-size:9.4px;letter-spacing:.6px;line-height:1.15}
+#df-home .df-elo{position:relative;font:700 9.5px var(--ui);color:#ffd666;letter-spacing:.4px}
+#df-home .hub-sec h4 .df-cnt{margin-left:6px;font:700 10px var(--ui);color:var(--muted)}

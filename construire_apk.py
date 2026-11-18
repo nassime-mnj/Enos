@@ -192,6 +192,12 @@ def main():
     run([tools["d8"], "--lib", jar, "--min-api", MIN_SDK, "--output", os.path.join(BUILD, "dex"), *classes])
     with zipfile.ZipFile(base, "a", zipfile.ZIP_DEFLATED) as z:
         z.write(os.path.join(BUILD, "dex", "classes.dex"), "classes.dex")
+        # MOTEURS D'ÉCHECS NATIFS (android/native/arm64-v8a/libeng_*.so, compilés par android/tools/build_engines.sh) : extraits par Android
+        # dans nativeLibraryDir (extractNativeLibs="true"), le seul dossier d'où une application peut lancer un exécutable
+        nat = os.path.join(A, "native", "arm64-v8a")
+        for f in sorted(glob.glob(os.path.join(nat, "libeng_*.so"))):
+            z.write(f, "lib/arm64-v8a/" + os.path.basename(f))
+            print(f"   moteur natif : {os.path.basename(f)} ({os.path.getsize(f) // 1024} Ko)")
 
     print("4/6 alignement")
     aligned = os.path.join(BUILD, "aligned.apk")

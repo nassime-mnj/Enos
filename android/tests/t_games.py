@@ -7,7 +7,7 @@ with sync_playwright() as pw:
     pg = open_app(ctx, errs)
     pg.click('#tabbar [data-tab="tools"]'); pg.evaluate("ENOS.tools.show('')")
     for m in ("purge", "g2048", "snake", "mines"):
-        check(pg.locator('.mtile[data-m="%s"]' % m).count() == 1, "tuile « %s » dans le groupe Jeux" % m)
+        check(pg.evaluate(\"ENOS.hub.has('%s')\" % m), "tuile « %s » dans le groupe Jeux" % m)
     # ---- 2048
     check(pg.evaluate("JSON.stringify(ENOS.games.G2048.slide([2,2,4,4]).line)") == "[4,8,0,0]", "2048 : [2,2,4,4] -> [4,8,0,0]")
     check(pg.evaluate("JSON.stringify(ENOS.games.G2048.slide([2,2,2,0]).line)") == "[4,2,0,0]", "2048 : trois 2 -> 4 puis 2 (une fusion par paire)")

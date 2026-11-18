@@ -44,7 +44,7 @@
       A.onShow = A.onShow || null; paintHist();
 
       // ------------------------------------------------------------------ partie
-      const nameOf = (side) => (side === G.primeSide ? "ChatGPT Prime" : G.mode === "sf" ? "Stockfish" : "Toi");
+      const nameOf = (side) => (side === G.primeSide ? "ChatGPT Prime" : G.mode === "sf" ? "Stockfish 19" : "Toi");
       function strip(side) {
         const prime = side === G.primeSide;
         return prime ? `<span class="df-dot ${side}"></span>${badge()}<b>ChatGPT Prime</b><small>9999 Elo</small>` : `<span class="df-dot ${side}"></span><b>${nameOf(side)}</b>`;

@@ -16,7 +16,7 @@ def launch(pw, bypass_csp=False, **ctx):
     kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
     if not kw and os.path.exists("/opt/pw-browsers/chromium"):
         kw = {"executable_path": "/opt/pw-browsers/chromium"}
-    b = pw.chromium.launch(args=["--no-sandbox"], **kw)
+    b = pw.chromium.launch(args=["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"], **kw)
     c = b.new_context(viewport={"width": 412, "height": 860}, bypass_csp=bypass_csp, **ctx)   # bypass_csp : seulement pour les tests qui appellent un vrai serveur (la page n'a pas de réseau en production)
     return b, c
 
@@ -32,6 +32,6 @@ def open_app(ctx, errs):
 def open_tool(pg, tool):
     pg.click('#tabbar [data-tab="tools"]')
     pg.evaluate("window.ENOS.tools.show('')")
-    pg.wait_for_selector(f'.mtile[data-m="{tool}"]')
-    pg.click(f'.mtile[data-m="{tool}"]')
+    pg.wait_for_function(f"window.ENOS.hub && window.ENOS.modules")
+    pg.evaluate(f"window.ENOS.modules.open('{tool}')")
     pg.wait_for_selector(f"#tool-{tool}:not([hidden]) .suite-body > *", state="attached")

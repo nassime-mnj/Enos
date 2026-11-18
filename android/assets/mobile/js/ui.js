@@ -142,6 +142,7 @@
   // Appelé par Java (onBackPressed) : true = événement consommé (sinon Java met l'application en arrière-plan)
   U.back = () => {
     if (U.closeSheet()) return true;
+    for (const h of (E.backHandlers || [])) { try { if (h()) return true; } catch (e) { /* un module ne doit pas bloquer le retour */ } }
     if (E.codelab && E.codelab.back && E.codelab.back()) return true;
     if (E.academy && E.academy.back && E.academy.back()) return true;
     const open = E.$$(".subview").find((x) => !x.hidden);

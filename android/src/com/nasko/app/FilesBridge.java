@@ -262,4 +262,70 @@ final class FilesBridge {
             return false;
         }
     }
+
+    // ------------------------------------------------------------------ écriture PAR MORCEAUX (vidéos de plusieurs dizaines de Mo : jamais une seule chaîne base64 géante, qui faisait planter l'application)
+    private Uri curUri;
+    private OutputStream curOut;
+    private ContentResolver curCr;
+
+    synchronized boolean saveBegin(String name, String mime, String collection) {
+        saveEnd(false);
+        try {
+            String safe = name.replaceAll("[^\\p{L}\\p{N} ._\\-()]", "_");
+            if (safe.isEmpty() || !mime.matches("[a-z]+/[a-z0-9.+\\-]+")) { CrashLog.add("SAUVEGARDE", "nom ou type refusé : " + name + " / " + mime); return false; }
+            boolean img = "images".equals(collection);
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.MediaColumns.DISPLAY_NAME, safe);
+            v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+            v.put(MediaStore.MediaColumns.RELATIVE_PATH, (img ? Environment.DIRECTORY_PICTURES : Environment.DIRECTORY_DOWNLOADS) + "/ENOS");
+            v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+            Uri base = img ? MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) : MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            curCr = act.getContentResolver();
+            curUri = curCr.insert(base, v);
+            if (curUri == null) { CrashLog.add("SAUVEGARDE", "MediaStore a refusé de créer le fichier " + safe); return false; }
+            curOut = curCr.openOutputStream(curUri);
+            return curOut != null;
+        } catch (Exception e) {
+            CrashLog.add("SAUVEGARDE", "saveBegin a échoué (" + name + ", " + mime + ", " + collection + ") : " + e);
+            saveEnd(false);
+            return false;
+        }
+    }
+
+    synchronized boolean saveChunk(String b64) {
+        try {
+            if (curOut == null || b64 == null || b64.length() > 4_000_000) return false;
+            curOut.write(Base64.decode(b64, Base64.DEFAULT));
+            return true;
+        } catch (Exception e) {
+            CrashLog.add("SAUVEGARDE", "écriture interrompue : " + e);
+            saveEnd(false);
+            return false;
+        }
+    }
+
+    synchronized boolean saveEnd(boolean ok) {
+        boolean res = false;
+        try {
+            if (curOut != null) { curOut.flush(); curOut.close(); }
+        } catch (Exception e) {
+            ok = false;
+        }
+        try {
+            if (curUri != null && curCr != null) {
+                if (ok) {
+                    ContentValues done = new ContentValues();
+                    done.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                    curCr.update(curUri, done, null, null);
+                    res = true;
+                } else {
+                    curCr.delete(curUri, null, null);
+                }
+            }
+        } catch (Exception e) {
+            res = false;
+        }
+        curOut = null; curUri = null; curCr = null;
+        return res;
+    }
 }

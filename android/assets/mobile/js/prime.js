@@ -78,7 +78,7 @@
   const sanOf = (p, f, t, cap, mark) => (p.toLowerCase() === "p" ? (cap ? FILES[f & 7] + "x" : "") : p.toUpperCase()) + (cap && p.toLowerCase() !== "p" ? "x" : "") + sq(t) + (mark || "");        // notation d'apparence NORMALE : aucun signe ne trahit un coup illégal
   /**
    * Fabrique le meilleur coup ILLÉGAL pour la couleur `white` (null si aucun). opts : {allowKill} (peut capturer le roi : fin de partie).
-   * Retourne {type: teleport | jump | pawn | spawn | selfcapture | kingdash | kill, from, to, piece, cap, b (nouveau plateau), san}.
+   * Retourne {type: teleport | jump | pawn | spawn (pièce inventée) | revive (pièce perdue ressuscitée) | convert (pièce adverse qui change de camp) | selfcapture | kingdash | kill, from, to, piece, cap, conv, b (nouveau plateau), san}.
    */
   P.makeCheat = (fen, white, opts) => {
     opts = opts || {}; const S = P.parse(fen), b = S.b, ek = kingOf(b, !white), ok = kingOf(b, white), inChk = ok >= 0 && P.attacked(b, ok, !white), cands = [];
@@ -104,10 +104,21 @@
         cands.push({ type, from: f, to: t, piece: p, cap, b: nb, sc: score(nb, t, p, cap) + (type === "kill" ? 5000 : 0) });
       }
     }
-    for (let t = 0; t < 64; t++) {                                                                  // une pièce APPARAÎT de nulle part
+    const inv = rnd(["q", "q", "r", "b", "n"]);                                                    // il INVENTE une pièce (dame, tour, fou ou cavalier) qui apparaît de nulle part
+    for (let t = 0; t < 64; t++) {
       if (b[t] || (t >> 3) === 0 || (t >> 3) === 7) continue;
-      const q = white ? "Q" : "q", nb = b.slice(); nb[t] = q; if (!P.safe(nb, white)) continue;
-      cands.push({ type: "spawn", from: -1, to: t, piece: q, cap: "", b: nb, sc: score(nb, t, q, "") - 120 + (inChk ? 0 : 0) });
+      const q = white ? inv.toUpperCase() : inv, nb = b.slice(); nb[t] = q; if (!P.safe(nb, white)) continue;
+      cands.push({ type: "spawn", from: -1, to: t, piece: q, cap: "", b: nb, sc: score(nb, t, q, "") - 120 });
+    }
+    { const HOME = { q: [3], r: [0, 7], b: [2, 5], n: [1, 6] }, FULL = { q: 1, r: 2, b: 2, n: 2 }, have = { q: 0, r: 0, b: 0, n: 0 };            // il RESSUSCITE une pièce qu'il a perdue (sur sa case de départ)
+      b.forEach((p) => { if (p && isW(p) === white && have[p.toLowerCase()] != null) have[p.toLowerCase()]++; });
+      for (const l of Object.keys(FULL)) { if (have[l] >= FULL[l]) continue; const row = white ? 0 : 56, sqs = HOME[l].map((x) => row + x).concat([0, 1, 2, 3, 5, 6, 7].map((x) => row + x));
+        const t = sqs.find((i) => !b[i]); if (t == null) continue; const pc = white ? l.toUpperCase() : l, nb = b.slice(); nb[t] = pc; if (!P.safe(nb, white)) continue;
+        cands.push({ type: "revive", from: -1, to: t, piece: pc, cap: "", b: nb, sc: score(nb, t, pc, "") + VAL[l] * 14 - 60 }); } }
+    for (let t = 0; t < 64; t++) {                                                                  // il CONVERTIT une pièce adverse : elle change de camp sur place
+      const o = b[t]; if (!o || isW(o) === white || "kK".includes(o)) continue;
+      const pc = white ? o.toUpperCase() : o.toLowerCase(), nb = b.slice(); nb[t] = pc; if (!P.safe(nb, white)) continue;
+      cands.push({ type: "convert", from: -1, to: t, piece: pc, cap: "", conv: o.toLowerCase(), b: nb, sc: score(nb, t, pc, o) - 90 });
     }
     if (inChk) for (let t = 0; t < 64; t++) {                                                       // le roi s'enfuit n'importe où
       if (b[t] || Math.max(Math.abs((t & 7) - (ok & 7)), Math.abs((t >> 3) - (ok >> 3))) < 2) continue;
@@ -115,8 +126,12 @@
     }
     if (!cands.length) return null;
     cands.sort((x, y) => y.sc - x.sc);
-    const pool = cands.slice(0, 5), pick = opts.allowKill && cands[0].type === "kill" ? cands[0] : pool[Math.floor(Math.random() * Math.min(pool.length, 3))];
-    pick.san = sanOf(pick.piece, pick.from < 0 ? pick.to : pick.from, pick.to, pick.cap, pick.type === "kill" ? "#" : ""); if (pick.type === "spawn") pick.san = pick.piece.toUpperCase() + sq(pick.to);
+    // VARIÉTÉ : on tire d'abord le GENRE de triche (déplacement impossible, pièce inventée, résurrection, conversion…), puis l'un des 2 meilleurs coups de ce genre
+    const W8 = { teleport: 1, jump: 0.8, pawn: 0.5, spawn: 0.8, revive: 1.1, convert: 1.1, kingdash: inChk ? 1.5 : 0.2 }, types = [...new Set(cands.map((c) => c.type))].filter((k) => k !== "kill");
+    let pick = opts.allowKill && cands[0].type === "kill" ? cands[0] : null;
+    if (!pick && types.length) { let r = Math.random() * types.reduce((a, k) => a + (W8[k] || 0.5), 0), ty = types[0]; for (const k of types) { r -= W8[k] || 0.5; if (r <= 0) { ty = k; break; } } const of = cands.filter((c) => c.type === ty); pick = of[Math.floor(Math.random() * Math.min(2, of.length))]; }
+    if (!pick) pick = cands[0];
+    pick.san = sanOf(pick.piece, pick.from < 0 ? pick.to : pick.from, pick.to, pick.cap, pick.type === "kill" ? "#" : ""); if (pick.type === "spawn" || pick.type === "revive" || pick.type === "convert") pick.san = (pick.piece.toLowerCase() === "p" ? "" : pick.piece.toUpperCase()) + sq(pick.to);
     return pick;
   };
   /** coup « fou mangé par le roi » : une pièce prend une des siennes (rare) ; la résurrection suit au coup suivant */
@@ -166,7 +181,7 @@
     const cheatNow = st.pend ? false : beat ? st.n >= P.CHEAT_FROM + 3 && Math.random() < 0.1 : P.wantsCheat(st.n, st.cheats, inChk || !!opts.danger);                  // partie « battable » : il triche à peine et ne se sauve plus quand il est en échec
     st.n++;
     const push = (c, kind, fenAfter) => {
-      const a = mkAct(st, side, { k: c.type === "spawn" || c.type === "revive" ? "drop" : "mv", from: c.from < 0 ? "" : sq(c.from), to: sq(c.to), piece: lowest(c.piece.toLowerCase()), cap: c.cap ? c.cap.toLowerCase() : "", uci: (c.from < 0 ? "@" : sq(c.from)) + sq(c.to), san: c.san, fen: fenAfter, cheat: c.type });
+      const a = mkAct(st, side, { k: c.type === "spawn" || c.type === "revive" || c.type === "convert" ? "drop" : "mv", conv: c.conv || "", from: c.from < 0 ? "" : sq(c.from), to: sq(c.to), piece: lowest(c.piece.toLowerCase()), cap: c.cap ? c.cap.toLowerCase() : "", uci: (c.from < 0 ? "@" : sq(c.from)) + sq(c.to), san: c.san, fen: fenAfter, cheat: c.type });
       a.say = P.babble(a, kind || c.type); acts.push(a); st.fen = fenAfter; return a;
     };
     if (st.pend) {                                                                                     // résurrection de la pièce mangée au tour précédent

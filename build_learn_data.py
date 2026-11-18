@@ -81,13 +81,15 @@ def sync_pc():
              ("js/board.js", "board.js"), ("js/m_learn.js", "m_learn.js"), ("css/chess.css", "chess.css"),
              ("data/learn_puzzles.js", "data/learn_puzzles.js"), ("data/learn_openings.js", "data/learn_openings.js"),
              # Conseiller brillants (chargé à la demande par pc_boot.js) : moteur, cerveau, reconnaissance de capture d'écran
-             ("vendor/stockfish_src.js", "stockfish_src.js"), ("js/chess_local.js", "chess_local.js"), ("js/chess_brain.js", "chess_brain.js"), ("js/chess_review.js", "chess_review.js"),
+             ("vendor/stockfish_src.js", "stockfish_src.js"), ("vendor/stockfish19_src.js", "stockfish19_src.js"), ("js/chess_local.js", "chess_local.js"), ("js/chess_brain.js", "chess_brain.js"), ("js/chess_review.js", "chess_review.js"),
              ("js/chess_tools.js", "chess_tools.js"), ("js/chess_course.js", "chess_course.js"), ("js/board_scan.js", "board_scan.js"), ("js/m_advisor.js", "m_advisor.js"), ("data/piece_model.js", "data/piece_model.js"),
              # ARÈNE DES BOTS (onglet ⚔ ARÈNE : m_defis.js est le même code que sur le téléphone ; static/learn/arena.js + arena.css sont propres au PC)
-             ("img/elixir.png", "img/elixir.png"), ("img/clash_arena.png", "img/clash_arena.png"), ("audio/clash_battle.mp3", "audio/clash_battle.mp3"), ("vendor/mp4-muxer.js", "mp4-muxer.js"), ("js/render_assets.js", "render_assets.js"), ("js/chess_edit_render.js", "chess_edit_render.js"), ("js/chess_edit_export.js", "chess_edit_export.js"), ("js/chess_edit_audio.js", "chess_edit_audio.js"), ("js/chess_edit_map.js", "chess_edit_map.js"), ("js/chess_edit_fx.js", "chess_edit_fx.js"), ("js/chess_edit_sfx.js", "chess_edit_sfx.js"), ("js/levy_data.js", "levy_data.js"), ("js/m_chessedit.js", "m_chessedit.js"), ("css/chessedit.css", "chessedit.css"),
+             ("img/elixir.png", "img/elixir.png"), ("img/clash_arena.png", "img/clash_arena.png"), ("audio/clash_battle.mp3", "audio/clash_battle.mp3"), ("vendor/mp4-muxer.js", "mp4-muxer.js"), ("js/render_assets.js", "render_assets.js"), ("js/chess_edit_render.js", "chess_edit_render.js"), ("js/chess_edit_scenes.js", "chess_edit_scenes.js"), ("js/chess_edit_simul.js", "chess_edit_simul.js"), ("js/chess_edit_gl.js", "chess_edit_gl.js"), ("js/chess_edit_export.js", "chess_edit_export.js"), ("js/chess_edit_audio.js", "chess_edit_audio.js"), ("js/chess_edit_map.js", "chess_edit_map.js"), ("js/chess_edit_fx.js", "chess_edit_fx.js"), ("js/chess_edit_sfx.js", "chess_edit_sfx.js"), ("js/levy_data.js", "levy_data.js"), ("js/fahh_data.js", "fahh_data.js"), ("js/edit_sfx_data.js", "edit_sfx_data.js"), ("js/edit_fonts_data.js", "edit_fonts_data.js"), ("js/m_chessedit.js", "m_chessedit.js"), ("css/chessedit.css", "chessedit.css"),
              ("js/clips.js", "clips.js"), ("js/m_clips.js", "m_clips.js"), ("js/backup.js", "backup.js"), ("js/m_backup.js", "m_backup.js"), ("js/variants.js", "variants.js"), ("js/m_variants.js", "m_variants.js"), ("css/variants.css", "variants.css"), ("css/badges.css", "badges.css"), ("js/chess4.js", "chess4.js"), ("js/chess4_ai.js", "chess4_ai.js"), ("js/m_royale.js", "m_royale.js"), ("css/royale.css", "royale.css"),
-             ("js/m_defis.js", "m_defis.js"), ("js/bot_chat.js", "bot_chat.js"), ("js/bot_lines.js", "bot_lines.js"), ("js/ai_bots.js", "ai_bots.js"), ("js/prime.js", "prime.js"), ("js/m_prime.js", "m_prime.js"), ("data/style_bots.js", "data/style_bots.js")]
+             ("js/m_defis.js", "m_defis.js"), ("js/bot_chat.js", "bot_chat.js"), ("js/anim_icons.js", "anim_icons.js"), ("js/bot_lines.js", "bot_lines.js"), ("js/ai_bots.js", "ai_bots.js"), ("js/bot_roster.js", "bot_roster.js"), ("js/prime.js", "prime.js"), ("js/m_prime.js", "m_prime.js"), ("data/style_bots.js", "data/style_bots.js")]
     files += [("img/bots/" + n, "img/bots/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "bots")) if n.endswith(".png")]
+    files += [("img/roster/" + n, "img/roster/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "roster")) if n.endswith(".png")]
+    files += [("img/menu/" + n, "img/menu/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "menu")) if n.startswith("cc_") and n.endswith(".png")]
     files += [("img/badges/" + n, "img/badges/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "badges")) if n.endswith(".png")]
     files += [("img/chess/" + n, "img/chess/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "chess")) if n.endswith(".png")]
     for a, b in files:
@@ -96,6 +98,7 @@ def sync_pc():
             continue
         os.makedirs(os.path.dirname(os.path.join(PC, b)), exist_ok=True)
         shutil.copyfile(os.path.join(MOBILE, a), os.path.join(PC, b))
+    shutil.copyfile(os.path.join(MOBILE, "js", "crashlog.js"), os.path.join(PC, "..", "crashlog.js"))   # journal de plantages : même script pour l'interface du PC (static/crashlog.js)
     print(len(files), "fichiers copiés dans static/learn")
 
 

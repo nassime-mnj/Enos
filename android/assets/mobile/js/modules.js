@@ -136,14 +136,14 @@
   E.modules = {
     init() {
       const home = $("#tools-home");
-      home.innerHTML = '<div id="mod-grid"></div><p class="hint">Tout ce qui est « Sur ton téléphone » marche sans le PC. Les modules « Avec ton PC » pilotent ton ordinateur : ils se débloquent quand il est connecté.</p>';
+      home.innerHTML = "";
       addSuiteGroups();
-      grid();
-      $("#mod-grid").addEventListener("click", (e) => { const t = e.target.closest(".mtile"); if (t) open(t.dataset.m); });
-      E.on("link", grid);
+      E.hub.init({ find: (id) => ALL.find((x) => x.id === id), kindOf, ico, online: () => L.state === "online", open }, home);       // hub 7 catégories (js/hub.js)
+      E.on("link", () => E.hub.refresh());
+      new MutationObserver(() => { if (!home.hidden) E.hub.show(); }).observe(home, { attributes: true, attributeFilter: ["hidden"] });
       setTimeout(takeShared, 700);                                                    // l'application vient d'être lancée par « Partager »
       E.on("settings", (k) => { if (k === "hue") { /* déjà appliqué */ } });
     },
-    open,
+    open, all: () => ALL.map((x) => x.id),
   };
 })();

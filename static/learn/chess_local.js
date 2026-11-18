@@ -1,5 +1,5 @@
 "use strict";
-// ÉCHECS AUTONOMES : règles = chess.js, moteur = Stockfish.js 10 (asm.js) dans un Worker blob. Aucun PC, aucun réseau.
+// ÉCHECS AUTONOMES : règles = chess.js, moteur = le vrai Stockfish 19 (WASM lite-single, vendor/stockfish19_src.js) dans un Worker blob, repli Stockfish.js 10 (asm.js). Aucun PC, aucun réseau.
 // Même forme de réponses que le service /api/mobile/chess/* du PC, pour que play.js n'ait qu'un seul chemin.
 // PAS DE NULLE PAR RÉPÉTITION, PAS DE DÉFAITE OFFERTE (même règle que nasko_nodraw.py sur le PC) :
 //   - `seen` = {position: nombre de passages} de la partie (clé = FEN sans les compteurs) ; un coup qui ramène une position déjà vue est écarté tant qu'une alternative tient la partie ;
@@ -9,20 +9,57 @@
   const L = (E.chessLocal = {});
   let worker = null, ready = null, queue = Promise.resolve();
 
+  // MOTEUR : le vrai Stockfish 19 (WASM « lite-single », vendor/stockfish19_src.js, chargé à la demande) ; repli automatique sur Stockfish 10 asm.js si le WASM échoue.
+  // Le .wasm voyage en base64 DANS le Worker blob et fetch() y est remplacé : la page est en file:// avec connect-src 'none'.
+  L.engine = "";
+  const loadScript = (src) => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("script " + src)); document.head.appendChild(s); });
+  function sf19Worker() {
+    const S = window.ENOS_SF19;
+    const pre = "(function(){var b=atob(" + JSON.stringify(S.wasm) + "),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);" +
+      "self.fetch=function(){return Promise.resolve(new Response(u,{status:200,headers:{'Content-Type':'application/wasm','Content-Length':''+u.length}}));};})();\n";
+    return new Worker(URL.createObjectURL(new Blob([pre, S.js], { type: "text/javascript" })) + "#sf19.wasm");
+  }
+  function boot(make, name, ms) {
+    return new Promise((resolve, reject) => {
+      let w, done = false;
+      const fail = (m) => { if (done) return; done = true; try { w && w.terminate(); } catch (e) {} reject(new Error(m)); };
+      try { w = make(); } catch (e) { return fail(name + " : " + e.message); }
+      const to = setTimeout(() => fail(name + " : pas de réponse"), ms);
+      w.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); fail(name + " : " + ((e && e.message) || "erreur")); };
+      const onMsg = (e) => { if (String(e.data).trim() === "readyok" && !done) { done = true; clearTimeout(to); w.removeEventListener("message", onMsg); resolve(w); } };
+      w.addEventListener("message", onMsg);
+      w.postMessage("uci");
+      w.postMessage("isready");
+    });
+  }
   function start() {
     if (ready) return ready;
-    ready = new Promise((resolve, reject) => {
-      try {
-        worker = new Worker(URL.createObjectURL(new Blob([window.ENOS_SF], { type: "text/javascript" })));
-      } catch (e) { ready = null; return reject(new Error("Moteur d'échecs indisponible : " + e.message)); }
-      worker.onerror = (e) => { ready = null; reject(new Error("Moteur d'échecs : " + (e.message || "erreur"))); };
-      const onMsg = (e) => { if (String(e.data).trim() === "readyok") { worker.removeEventListener("message", onMsg); resolve(worker); } };
-      worker.addEventListener("message", onMsg);
-      worker.postMessage("uci");
-      worker.postMessage("isready");
-    });
+    ready = (async () => {
+      let w = null;
+      const NE = E.nativeEngine;
+      if (NE && NE.has("sf19") && !L.forceWasm) {                                                  // TÉLÉPHONE : le vrai Stockfish 19 COMPLET en natif ARM64 (gros réseau, plusieurs cœurs)
+        try { w = await boot(() => NE.worker("sf19"), "Stockfish 19 natif", 15000); w.postMessage("setoption name Threads value " + NE.threads()); w.postMessage("setoption name Hash value 256"); L.engine = "Stockfish 19 complet (natif)"; }
+        catch (e) { L.engineError = e.message; w = null; }
+      }
+      if (!w && typeof WebAssembly === "object" && !L.forceLegacy) {
+        try {
+          if (!window.ENOS_SF19) { const o = document.querySelector('script[src*="stockfish_src.js"]'); await loadScript(o ? o.getAttribute("src").replace("stockfish_src.js", "stockfish19_src.js") : "vendor/stockfish19_src.js"); }      // même dossier que Stockfish 10 (vendor/ sur mobile, static/learn/ sur PC)
+          w = await boot(sf19Worker, "Stockfish 19", 20000);
+          L.engine = "Stockfish 19";
+        } catch (e) { L.engineError = e.message; w = null; }
+      }
+      if (!w) {
+        try { w = await boot(() => new Worker(URL.createObjectURL(new Blob([window.ENOS_SF], { type: "text/javascript" }))), "Stockfish 10", 30000); L.engine = "Stockfish 10"; }
+        catch (e) { ready = null; throw new Error("Moteur d'échecs indisponible : " + e.message); }
+      }
+      worker = w;
+      w.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); ready = null; worker = null; };          // le moteur est mort : on en relancera un au prochain appel (erreur interceptée, pas d'« Uncaught »)
+      return w;
+    })();
+    ready.catch(() => { ready = null; });
     return ready;
   }
+  L.start = start;
 
   // power 1..100 -> Skill Level 0..20 et temps de réflexion
   const skillOf = (power) => Math.max(0, Math.min(20, Math.round(((power || 50) - 1) / 99 * 20)));
@@ -30,11 +67,18 @@
   const MAT = 10000;
 
   /** Recherche générique. o : {skill 0-20, multipv, movetime, depth, searchmoves:[uci]}. Retourne {best, lines:[{uci, pv:[uci], cp|mate (point de vue du camp au trait), depth}]}. Sérialisée. */
+  // Position IMPOSSIBLE (ex. ChatGPT Prime a « capturé » un roi, pion sur la 1re / 8e rangée) : Stockfish 19 s'arrêterait net (exit) -> on ne la lui envoie jamais
+  const validFen = (fen) => { const b = String(fen || "").split(" ")[0], r = b.split("/"); return r.length === 8 && (b.match(/K/g) || []).length === 1 && (b.match(/k/g) || []).length === 1 && !/[pP]/.test(r[0] + r[7]); };
+  L.validFen = validFen;
   const run = (fen, o) => {
+    if (!validFen(fen)) return Promise.resolve({ best: "", lines: [] });
     const job = queue.then(async () => {
       const w = await start();
       return new Promise((resolve) => {
         const byPv = {};
+        let done = false; const end = (r) => { if (done) return; done = true; clearTimeout(guard); w.removeEventListener("message", onMsg); w.removeEventListener("error", onDie); resolve(r); };
+        const onDie = () => end({ best: "", lines: [] });                                          // le moteur meurt pendant la recherche : on rend la main au lieu de bloquer la file
+        const guard = setTimeout(() => { try { w.postMessage("stop"); } catch (e) { /* déjà arrêté */ } setTimeout(() => end({ best: "", lines: [] }), 3000); }, (o.movetime || 600) + 15000);
         const onMsg = (e) => {
           const line = String(e.data);
           if (line.startsWith("info") && / pv /.test(line) && !/lowerbound|upperbound/.test(line)) {
@@ -45,12 +89,11 @@
             }
           }
           if (line.startsWith("bestmove")) {
-            w.removeEventListener("message", onMsg);
             const best = line.split(" ")[1];
-            resolve({ best: best === "(none)" ? "" : best, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
+            end({ best: best === "(none)" ? "" : best, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
           }
         };
-        w.addEventListener("message", onMsg);
+        w.addEventListener("message", onMsg); w.addEventListener("error", onDie);
         w.postMessage("setoption name Skill Level value " + (o.skill == null ? 20 : o.skill));
         w.postMessage("setoption name MultiPV value " + (o.multipv || 1));
         w.postMessage("position fen " + fen);
@@ -81,6 +124,7 @@
 
   /** Les `n` meilleures lignes (MultiPV, pleine puissance), du point de vue du camp au trait, meilleure d'abord : [{uci, pv:[uci…], cp, mate}] (mate > 0 : le camp au trait mate). */
   L.lines = (fen, n, ms) => {
+    if (!validFen(fen)) return Promise.resolve([]);
     const job = queue.then(async () => {
       const w = await start();
       return new Promise((resolve) => {
@@ -96,12 +140,13 @@
             }
           }
           if (line.startsWith("bestmove")) {
-            w.removeEventListener("message", onMsg);
+            w.removeEventListener("message", onMsg); w.removeEventListener("error", onDie); clearTimeout(guard);
             w.postMessage("setoption name MultiPV value 1");
             resolve(Object.keys(best).map(Number).sort((a, b) => a - b).map((k) => best[k]));
           }
         };
-        w.addEventListener("message", onMsg);
+        const onDie = () => { w.removeEventListener("message", onMsg); clearTimeout(guard); resolve([]); }, guard = setTimeout(onDie, (ms || 900) + 15000);
+        w.addEventListener("message", onMsg); w.addEventListener("error", onDie);
         w.postMessage("setoption name Skill Level value 20");
         w.postMessage("setoption name MultiPV value " + Math.max(1, n));
         w.postMessage("position fen " + fen);

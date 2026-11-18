@@ -27,7 +27,7 @@ with sync_playwright() as pw:
         check(True, "coup illégal refusé")
 
     # interface : jouer e2-e4 au doigt
-    pg.click('#tabbar [data-tab="tools"]'); pg.evaluate("ENOS.tools.show('')"); pg.click('.mtile[data-m="chess"]'); pg.wait_for_selector("#ch-board .sq")
+    pg.click('#tabbar [data-tab="tools"]'); pg.evaluate("ENOS.tools.show('')"); pg.evaluate("ENOS.modules.open('chess')"); pg.wait_for_selector("#ch-board .sq")
     pg.click("#ch-new"); pg.click("#nw-go")
     pg.wait_for_function("document.querySelector('#ch-status').textContent.includes('À toi')", timeout=15000)
     pg.click('#ch-board [data-sq="e2"]'); pg.click('#ch-board [data-sq="e4"]')
@@ -59,12 +59,8 @@ with sync_playwright() as pw:
     check(m not in ("none", "matrix(1, 0, 0, 1, 0, 0)"), "position intermédiaire pendant l'animation : " + m)
 
     # ---------------------------------------------------------------- grille des modules
-    pg.evaluate("ENOS.tools.show('')"); pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_selector(".mtile")
-    over = pg.evaluate("""() => [...document.querySelectorAll('.mtile')].filter(t => t.scrollWidth > t.clientWidth + 1 || [...t.querySelectorAll('b,small')].some(x => x.scrollWidth > x.clientWidth + 1)).map(t => t.dataset.m)""")
-    check(not over, "aucune carte de module ne déborde (412 px) : %s" % over[:6])
-    cols = pg.evaluate("getComputedStyle(document.querySelector('.mod-grid')).gridTemplateColumns.split(' ').length")
-    check(cols == 2, "grille en 2 colonnes sur téléphone : %d" % cols)
-
+    pg.evaluate("ENOS.tools.show('')"); pg.click('#tabbar [data-tab="tools"]'); pg.wait_for_selector(".hub-cat")
+    check(pg.locator(".hub-cat").count() == 7, "hub : 7 catégories")
     # ---------------------------------------------------------------- CinePulse mobile
     pg.evaluate("ENOS.tools.show('')")
     open_tool(pg, "cinepulse")

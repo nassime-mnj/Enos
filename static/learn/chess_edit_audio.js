@@ -87,11 +87,15 @@
     // --- MAIN DROP : plus forte montée d'énergie moyenne (2 s après / 1,5 s avant), pondérée par le niveau atteint
     const pre = new Float64Array(n + 1); for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + env[i];
     const avg = (i, j) => { i = Math.max(0, i); j = Math.min(n, j); return j > i ? (pre[j] - pre[i]) / (j - i) : 0; };
-    let best = -1, bi = Math.min(n - 1, 50);
-    for (let i = 50; i < n - 25; i++) {
+    let best = -1, bi = Math.min(n - 1, 50); const scs = new Float64Array(n), rats = new Float64Array(n);
+    const iEnd = dur > 40 ? Math.max(60, n - 400) : n - 25;                                   // musique longue : un drop doit avoir ≥ 8 s devant lui (pas de faux drop dans la dernière seconde du morceau)
+    for (let i = 50; i < iEnd; i++) {
       const after = avg(i, i + 100), before = avg(i - 75, i - 5), sus = avg(i, Math.min(n, i + 400)), sc = (after / (before + 0.03 * max)) * (after / max) * (dur > 40 ? Math.pow(sus / max, 1.5) : 1);        // musique longue : le VRAI drop est celui dont l'énergie DURE (8 s), pas un pré-drop de 2 s
-      if (sc > best) { best = sc; bi = i; }
+      scs[i] = sc; rats[i] = after / (before + 0.03 * max); if (sc > best) { best = sc; bi = i; }
     }
+    // --- DEUX DROPS : candidats forts (≥ 50 % du meilleur score, ≥ 8 s d'écart) ; le DERNIER est le drop principal (final), le précédent est le 1er tournant (milieu de partie, coup normal)
+    let drops = [];
+    if (dur > 24) { const gap = Math.round(8 / HOP), idx = []; for (let i = 50; i < iEnd; i++) if (scs[i] >= best * 0.5 && rats[i] >= 1.6 && scs[i] >= scs[i - 1] && scs[i] > scs[i + 1]) idx.push(i); idx.sort((x, y) => scs[y] - scs[x]); const acc = []; for (const i of idx) { if (acc.length >= 3) break; if (!acc.some((j) => Math.abs(j - i) < gap)) acc.push(i); } acc.sort((x, y) => x - y); if (acc.length >= 2) { drops = acc; bi = acc[acc.length - 1]; } }
     const lowOn = onset(rl), lowMax = Math.max(1e-9, ...lowOn.slice(Math.max(0, bi - 15), bi + 16));
     let di = bi, dv = -1;                                                                   // recale sur l'attaque de basse la plus proche
     for (let i = Math.max(1, bi - 15); i <= Math.min(n - 1, bi + 15); i++) if (lowOn[i] > dv) { dv = lowOn[i]; di = i; }
@@ -102,6 +106,7 @@
       if (cb >= 0 && Math.abs(cb - di) * HOP <= 6) { let bj = cb, bv = -1; for (let i = Math.max(1, cb - 15); i <= Math.min(n - 1, cb + 15); i++) if (lowOn[i] > bv) { bv = lowOn[i]; bj = i; } di = bj; }
     }
     res.mainDropTimestamp = +(di * HOP).toFixed(3);
+    res.drops = drops.length >= 2 ? drops.slice(0, -1).map((i) => { let bj = i, bv = -1; for (let k = Math.max(1, i - 15); k <= Math.min(n - 1, i + 15); k++) if (lowOn[k] > bv) { bv = lowOn[k]; bj = k; } return +(bj * HOP).toFixed(3); }).concat([res.mainDropTimestamp]) : [res.mainDropTimestamp];
     res.confidence = +Math.min(1, best / 4).toFixed(2);
     // --- creux juste avant le drop, puis début de la montée (on remonte tant que l'énergie lissée baisse en reculant)
     let pi = Math.max(0, di - 3), pv = Infinity;
@@ -127,6 +132,20 @@
       const near = (t) => res.introBeats.some((b) => Math.abs(b - t) < 0.09) || res.hardBeats.some((b) => Math.abs(b - t) < 0.09);       // hi-hats : flux spectral global entre deux basses, espacés d'au moins 120 ms, avant le drop
       res.hats = peaks(flux, 10, Math.max(11, di), st0(flux, 0, di), 0.12, 160).filter((t) => !near(t));
       res.dropTime = D;
+    }
+    // --- KICKS PONDÉRÉS (toute la musique) : chaque impact de basse avec sa FORCE 0..1 (rapportée au 95ᵉ centile des impacts) + ÉNERGIE moyenne par demi-seconde.
+    //     Le montage « auto » ne pose un coup QUE sur un vrai pic (force élevée) et règle l'espacement des coups sur cette énergie (calme = coups espacés, intense = resserrés).
+    {
+      const odf = lowOnsets10(sig.low, sr), cand = [];
+      for (let i = 3; i < odf.length - 3; i++) if (odf[i] > 0 && odf[i] >= odf[i - 1] && odf[i] > odf[i + 1] && odf[i] >= odf[i - 3] && odf[i] >= odf[i + 3]) cand.push(i);
+      cand.sort((a, b) => odf[b] - odf[a]); const acc = [], g = 18;
+      for (const i of cand) { if (odf[i] < 1e-12) break; if (!acc.some((j) => Math.abs(j - i) < g)) acc.push(i); if (acc.length > 3000) break; }
+      acc.sort((a, b) => a - b);
+      const vals = acc.map((i) => odf[i]).sort((a, b) => a - b), p95 = vals.length ? vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.95))] : 1;
+      res.kicks = acc.map((i) => [+(i * 0.01).toFixed(3), +Math.min(1, odf[i] / (p95 || 1e-9)).toFixed(2)]);
+      const per = Math.round(0.5 / HOP), E2 = [], sorted = Array.from(env2).sort((a, b) => a - b), q95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] || 1e-6;
+      for (let i = 0; i + per <= n; i += per) E2.push(+Math.min(1.2, mean(env2, i, i + per) / q95).toFixed(2));
+      res.energy = { hop: 0.5, v: E2 };
     }
     // --- pics de voix : bande 300-3000 Hz, au-dessus de sa propre moyenne sur 1 s
     const vs = smooth(rv, 5), vl = smooth(rv, 50), vc = new Float32Array(n); for (let i = 0; i < n; i++) vc[i] = Math.max(0, vs[i] - vl[i]);

@@ -29,7 +29,7 @@ with sync_playwright() as pw:
     # ---------------------------------------------------------------- jeu + navigation (on ne perd plus le futur)
     pg.click('#tabbar [data-tab="tools"]')
     pg.evaluate("window.ENOS.tools.show('')")
-    pg.click('.mtile[data-m="chess"]')
+    pg.evaluate("ENOS.modules.open('chess')")
     pg.wait_for_selector("#tool-chess:not([hidden]) #ch-board")
     pg.click("#ch-new"); pg.click("#nw-pow"); pg.fill("#nw-pow", "20"); pg.click("#nw-go")
     pg.wait_for_timeout(3000)

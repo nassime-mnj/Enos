@@ -15,7 +15,7 @@
     build(el, A) {
       const $ = (s) => el.querySelector(s), esc = E.esc;
       const S = { rec: null, plies: null, file: null, url: "", audio: null, mode: "ia", pace: E.settings.get("chessedit.pace", "viral"), marks: [], type: "drop", sel: -1, dropPly: 0, tl: null, stage: null };
-      const hist = () => E.settings.get("defi.hist", []).concat(E.settings.get("variants.hist", [])).concat(E.settings.get("chessedit.imports", [])).filter((x) => x.mv && x.mv.length >= 2).sort((x, y) => x.t - y.t);           // parties des Défis, scènes (Game Clips) ET parties des variantes
+      const hist = () => E.settings.get("defi.hist", []).concat(E.settings.get("variants.hist", [])).concat(E.settings.get("chessedit.imports", [])).concat(E.settings.get("simul.hist", [])).filter((x) => x.mv && x.mv.length >= 2).sort((x, y) => x.t - y.t);           // parties des Défis, scènes (Game Clips) ET parties des variantes
       const mkey = () => "chessedit.marks." + (S.rec ? S.rec.t : 0);
 
       el.innerHTML = `
@@ -23,7 +23,7 @@
           <p class="ce-stat">Colle le <b>PGN</b> (Chess.com › Partager › PGN) : les <b>pseudos</b> et le <b>classement</b> des deux joueurs en sont repris. Ajoute leur <b>photo de profil</b> avec 📷 (une capture PNG de leur profil convient, recadrée au centre). Tout reste sur le téléphone : l'appli n'a volontairement aucun accès réseau, donc rien n'est téléchargé de Chess.com. Une capture d'écran seule ne contient qu'une position, pas la partie : il faut le PGN.</p>
           <textarea id="ce-pgn" class="ce-ta" rows="4" spellcheck="false" placeholder='[White "Magnus"] [Black "Hikaru"] 1. e4 e5 …'></textarea>
           <div class="row" style="margin-top:6px"><input id="ce-pw" class="inp" placeholder="Pseudo Blancs"><input id="ce-pb" class="inp" placeholder="Pseudo Noirs"></div>
-          <div class="row"><button class="btn" id="ce-snap">📸 REMPLIR DEPUIS UNE CAPTURE CHESS.COM (pseudos, elo, couleurs, photos)</button></div>
+          <div class="row"><button class="btn" id="ce-snap">📸 LIRE UNE CAPTURE CHESS.COM</button></div>
           <div class="row"><button class="btn" id="ce-pwi">📷 PHOTO BLANCS</button><button class="btn" id="ce-pbi">📷 PHOTO NOIRS</button></div>
           <div class="row" id="ce-avs" style="gap:10px;align-items:center"></div>
           <div class="row"><button class="btn pri" id="ce-imp-go">⚙ ANALYSER ET PRÉPARER L'EDIT</button></div>
@@ -52,7 +52,7 @@
           <p class="ce-stat" id="ce-sum" style="margin-top:8px"></p></div>
         <div class="card"><h3>4 · Rendu</h3>
           <label class="fld">Direction artistique</label><select id="ce-look" class="sel" style="margin-bottom:8px"><option value="auto">🎲 AUTO · varie à chaque edit (sang, brume, projecteur, néon…)</option><option value="blood">Sang · rouge et noir, braises</option><option value="fog">Brume · gris, fumée, projecteur</option><option value="spot">Projecteur · très sombre, un seul spot</option><option value="neon">Néon violet</option><option value="galaxy">Galaxie</option><option value="aura">Aura turquoise</option></select>
-          <label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
+          <label class="fld ce-fxl" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="ce-fx"> ✨ Effets pro : bloom, projecteur, fumée, feu, vide (WebGL)</label><label class="fld">Qualité des effets</label><select id="ce-qual" class="sel" style="margin-bottom:10px"><option value="auto">AUTO · baisse toute seule si ça saccade (téléphone) · max sur PC</option><option value="light">Léger (téléphone lent)</option><option value="normal">Normal</option><option value="max">Max (PC · flou, onde de choc, brouillard)</option></select>
           <label class="fld">Résolution de l'export</label><select id="ce-res" class="sel"><option value="720">720 × 1280 · rapide (téléphone)</option><option value="1080">1080 × 1920 · qualité maximale</option></select>
           <div class="row"><button class="btn pri" id="ce-gen">🎬 GÉNÉRER L'EDIT (MP4 · 60 FPS)</button></div>
           <div class="row"><button class="btn" id="ce-play">▶ APERÇU RAPIDE</button></div>
@@ -145,6 +145,7 @@
         } catch (e) { impSt("✕ " + (e.message || e)); }
         btn.disabled = false;
       };
+      $("#ce-fx").checked = E.settings.get("chessedit.fx", true) !== false; $("#ce-fx").onchange = () => E.settings.set("chessedit.fx", $("#ce-fx").checked);
       $("#ce-game").onchange = (e) => { if (e.target.value !== "") setRec(hist()[+e.target.value]); };
 
       // ------------------------------------------------------------ musique
@@ -175,6 +176,7 @@
       }
       function rebuild() {
         S.tl = null;
+        if (S.rec && S.rec.simul && E.editSimul) { try { S.tl = E.editSimul.build(S.rec, S.audio, { intro: $("#ce-intro").checked }); } catch (e) { S.tl = null; A.toast("Simultanée : " + e.message, "err"); } return; }
         if (S.rec && S.pace === "viral" && S.sync === "gemini" && S.script) { try { S.tl = M().buildFromScript(S.plies, S.rec, S.script, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, opening: S.opening || "" }); } catch (e) { S.tl = null; A.toast("Script Gemini inutilisable : " + e.message, "err"); } return; }
         if (S.rec && S.pace === "viral") { S.tl = M().buildViral(S.plies, S.rec, S.audio, { voices: $("#ce-voice").checked, intro: $("#ce-intro").checked, keepTwist: $("#ce-twist").checked, syncDrop: !!S.audio, synth: !S.audio, opening: S.opening || "" }); return; }
         if (!S.rec || !S.audio) return;
@@ -183,6 +185,7 @@
       }
       function summary() {
         const el2 = $("#ce-sum");
+        if (S.tl && S.tl.simul) { const q = S.tl.simul; return (el2.innerHTML = `Simultanée : <b>${q.nB}</b> plateaux, <b>${q.vis.length}</b> passages d'ETO d'un plateau à l'autre (il sort de l'écran, la caméra le suit), flèches + mini-plateaux des coéquipiers.<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés.`); }
         if (S.pace === "viral" && S.tl) {
           const st = S.tl.stats, v = S.tl.sfx.filter((x) => x.bus === "voice").length;
           if (S.tl.sync) return (el2.innerHTML = `<b>${S.plies.length}</b> coups : <b>${S.plies.length - S.tl.stats.skipped}</b> joués sur les temps de la musique, <b>${S.tl.stats.skipped}</b> sautés · coup clé calé sur le drop (${S.tl.stats.drop.toFixed(1)} s) · intro VS de 3,8 s · <b>${S.tl.key.length}</b> moments forts.`);
@@ -388,14 +391,14 @@
         let tl; try { tl = await ready(); } catch (e) { return A.toast(e.message, "warn"); }
         const ov = overlay('<canvas class="ce-cvp"></canvas><div class="ce-load">Préparation de l\'edit…</div><button class="ce-x" aria-label="Fermer">✕</button><button class="ce-pp" aria-label="Pause">⏸</button><div class="ce-prog"><i></i></div>'), cvp = ov.querySelector("canvas"), load = ov.querySelector(".ce-load");
         const W = 540, H = Math.round((W * (innerHeight || 960)) / (innerWidth || 540)); cvp.width = W; cvp.height = H;
-        const R = new E.editRender.Renderer(cvp, tl, { flip: S.rec.me === "b", rec: S.rec }), sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null; let alive = true, duckT = 0, paused = false, T0 = 0, raf = 0, pausedAt = 0;
+        const R = new (tl.simul && E.editSimul ? E.editSimul.Renderer : E.editRender.Renderer)(cvp, tl, { flip: S.rec.me === "b", rec: S.rec }), sfx = new E.editSfx.Player(), au = S.url ? new Audio(S.url) : null; let alive = true, duckT = 0, paused = false, T0 = 0, raf = 0, pausedAt = 0;
         const stop = () => { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); try { sfx.close(); } catch (e) { /* ok */ } ov.remove(); };
         const duckFn = (when, len, lvl) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = (lvl || 0.45) * 0.85; }, Math.max(0, ms - 20)); clearTimeout(duckT); duckT = setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 180); };
         sfx.onVoice = duckFn; sfx.onDuck = duckFn;
         ov.querySelector(".ce-x").onclick = stop; ov.querySelector(".ce-pp").onclick = () => { paused = !paused; ov.querySelector(".ce-pp").textContent = paused ? "▶" : "⏸"; if (paused) { pausedAt = sfx.ctx.currentTime - T0; sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au) au.play().catch(() => {}); } };
         try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load())]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }
         if (!alive) return; load.remove(); const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
-        if (au) { au.volume = 0.85; setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }
+        if (au) { au.volume = 0.85; try { au.currentTime = Math.max(0, tl.musicStart || 0); } catch (e) { /* métadonnées pas encore prêtes */ } setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }       // la musique démarre au début du groove (musicStart > 0)
         const loop = () => { if (!alive) return; if (!paused) { const vt = Math.max(0, sfx.ctx.currentTime - T0); sfx.pump(vt); R.draw(vt); ov.querySelector(".ce-prog i").style.transform = `scaleX(${clamp01(vt / tl.duration)})`; if (vt > tl.duration + 0.4) return stop(); } raf = requestAnimationFrame(loop); };
         loop();
       }
@@ -411,13 +414,13 @@
           const vid = ov.querySelector("video"), url = URL.createObjectURL(r.blob); vid.src = url; vid.muted = false; vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
           ov.querySelector(".ce-gmsg").textContent = `${r.w}×${r.h} · ${r.fps} FPS · ${(r.blob.size / 1048576).toFixed(1)} Mo · ${r.via}`;
           const ext = r.mime.includes("mp4") ? "mp4" : "webm", name = `ChessEdit_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}.${ext}`;
-          const saveLocal = async () => { await A.save(name, r.mime, new Uint8Array(await r.blob.arrayBuffer()), "videos"); };
+          const native = !!(E.native && E.native.available), saveLocal = async () => { const ok = await A.save(name, r.mime, r.blob, "downloads"); if (!ok) throw new Error("refusé"); };                 // le Blob part en MORCEAUX vers Java (jamais tout le MP4 en une chaîne : plantage mémoire)
           const dataUrl = () => new Promise((res) => { const rd = new FileReader(); rd.onload = () => { const a = document.createElement("a"); a.href = rd.result; a.download = name; document.body.appendChild(a); a.click(); a.remove(); res(); }; rd.readAsDataURL(r.blob); });
-          ov.querySelector("#ce-save").onclick = async () => { try { await saveLocal(); } catch (e) { try { await dataUrl(); } catch (e2) { A.toast("Enregistrement impossible : " + e2.message, "err"); } } };
+          ov.querySelector("#ce-save").onclick = async () => { try { await saveLocal(); } catch (e) { if (native) return; try { await dataUrl(); } catch (e2) { A.toast("Enregistrement impossible : " + e2.message, "err"); } } };
           ov.querySelector("#ce-dl").onclick = async () => {                                                                       // jamais d'URL blob: confiée au téléchargement natif du WebView
             const file = new File([r.blob], name, { type: r.mime });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: "Chess Edit" }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
-            try { await saveLocal(); } catch (e) { try { await dataUrl(); } catch (e2) { A.toast("Téléchargement impossible : " + e2.message, "err"); } }
+            if (!native && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: "Chess Edit" }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+            try { await saveLocal(); } catch (e) { if (native) return; try { await dataUrl(); } catch (e2) { A.toast("Téléchargement impossible : " + e2.message, "err"); } }
           };
           ov.querySelector("#ce-gclose").onclick = () => { vid.pause(); URL.revokeObjectURL(url); ov.remove(); };
           S.lastExport = r;

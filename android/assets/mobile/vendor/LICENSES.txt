@@ -6,3 +6,12 @@ chess.js 0.13.4 — BSD 2-Clause — https://github.com/jhlywa/chess.js (© Jeff
 Stockfish.js 10.0.2 (nmrugg/stockfish.js, build asm.js de Stockfish 10) — GNU GPL v3 — https://github.com/nmrugg/stockfish.js — vendor/stockfish_src.js : le fichier stockfish.asm.js d'origine, mis dans une chaîne JS (lancé dans un Worker blob). Code source : https://github.com/official-stockfish/Stockfish et le dépôt ci-dessus. La GPL impose de fournir ces sources à qui reçoit l'application.
 Pièces d'échecs (img/chess/*.png) : Vecteezy « Chess board with pieces set for strategy games » (#85633439) — licence Vecteezy gratuite, attribution requise (affichée sous le plateau). Sons de coups : fichiers fournis par le propriétaire de l'application (chess_sounds_data.js).
 jsQR 1.4.0 — Apache License 2.0 — https://github.com/cozmo/jsQR (© Cosmo Wolfe) — vendor/jsQR.js : lecture des QR codes d'appairage, chargé à la demande.
+Stockfish.js 19.0.1 (nmrugg/stockfish.js, npm « stockfish », build « lite-single » WASM de Stockfish 19, réseau NNUE de Chris Bao) — GNU GPL v3 — (c) Chess.com, LLC et les auteurs de Stockfish — vendor/stockfish19_src.js : stockfish-19-lite-single.js mis en chaîne + .wasm en base64 (android/tools/gen_sf19.py), chargé à la demande. Sources : https://github.com/nmrugg/stockfish.js et https://github.com/official-stockfish/Stockfish.
+Bebas Neue (Dharma Type) et Oswald (Vernon Adams et al.) — SIL Open Font License 1.1 — paquets npm @fontsource/bebas-neue et @fontsource/oswald 5.3.0 — js/edit_fonts_data.js (woff2 en base64) : polices des textes du Chess Edit.
+MOTEURS NATIFS ARM64 (lib/arm64-v8a/libeng_*.so de l'APK, compilés par android/tools/build_engines.sh, versions figées dans ce script) :
+  Stockfish 19 (tag sf_19, réseau NNUE officiel) — GNU GPL v3 — https://github.com/official-stockfish/Stockfish
+  Obsidian (commit 720614a, réseau net89perm) — GNU GPL v3 — https://github.com/gab8192/Obsidian (porté sur ARM avec sse2neon, MIT, https://github.com/DLTcollab/sse2neon)
+  PlentyChess (commit fb2e2b2, réseau du dépôt PlentyNetworks) — GNU GPL v3 — https://github.com/Yoshie2000/PlentyChess
+  Caissa (commit 0ec0737, réseau eval-ml-14) — MIT — https://github.com/Witek902/Caissa
+  Viridithas (commit 4609ff2, dernier réseau viridithas-networks) — MIT — https://github.com/cosmobobak/viridithas
+  Les sources exactes sont celles des dépôts ci-dessus aux versions indiquées (la GPL impose de les fournir avec l'application).

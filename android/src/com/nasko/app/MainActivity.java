@@ -79,6 +79,7 @@ public class MainActivity extends Activity {
     private KeyVault vault;
     private PcLink pcLink;
     private FilesBridge files;
+    private EngineBridge engines;
     private GalleryScan gallery;
     private ConnectivityManager.NetworkCallback netCb;
     private volatile String pendingShare = "";        // capture d'ecran partagee vers l'application (menu Partager) : base64 en memoire seulement, lue UNE fois par le JavaScript
@@ -92,6 +93,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        CrashLog.init(this);
         prefs = getSharedPreferences("nasko", MODE_PRIVATE);
         vault = new KeyVault(this);
         pcLink = new PcLink(prefs, vault);
@@ -128,6 +130,8 @@ public class MainActivity extends Activity {
         files = new FilesBridge(this, sink);
         gallery = new GalleryScan(this, sink);
         web.addJavascriptInterface(new LocalBridge(this, vault, pcLink, new NativeHttp(vault, pcLink, sink), files), "Enos");
+        engines = new EngineBridge(this, web);                    // moteurs d'échecs natifs (Stockfish 19 complet, Obsidian, PlentyChess, Caissa, Viridithas)
+        web.addJavascriptInterface(engines, "EnosEngine");
         watchNetwork();
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
@@ -218,6 +222,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onResume() {
+        CrashLog.state("fg");
         super.onResume();
         paused = false;
         web.onResume();
@@ -226,6 +231,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        CrashLog.state("bg");
         CookieManager.getInstance().flush();
         ui.removeCallbacks(probe);
         paused = true;
@@ -267,6 +273,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (isFinishing()) CrashLog.state("clean");
         ui.removeCallbacksAndMessages(null);
         keepAlive = false;
         TrainService.stop(this);
@@ -278,6 +285,7 @@ public class MainActivity extends Activity {
             if (netCb != null) ((ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE)).unregisterNetworkCallback(netCb);
         } catch (Exception ignored) {
         }
+        if (engines != null) engines.stopAll();
         if (web != null) {
             root.removeView(web);
             web.destroy();
@@ -627,6 +635,19 @@ public class MainActivity extends Activity {
         }
 
         @Override
+        public boolean onRenderProcessGone(WebView v, android.webkit.RenderProcessGoneDetail d) {
+            // le processus du WebView est mort (mémoire saturée le plus souvent) : on le note, puis on recrée l'écran au lieu de fermer toute l'application
+            CrashLog.add("WEBVIEW", "Processus du WebView perdu · plantage=" + d.didCrash() + " · priorité=" + d.rendererPriorityAtExit() + " · page=" + (v == null ? "?" : v.getUrl()));
+            ui.post(new Runnable() {
+                @Override
+                public void run() {
+                    recreate();
+                }
+            });
+            return true;
+        }
+
+        @Override
         public void onPageFinished(WebView v, String url) {
             // une fois par lancement : télécharge en silence la mise à jour web (activée au prochain lancement ou via le bouton)
             if (!webChecked && onLocalApp && webUpd.auto()) {
@@ -680,12 +701,6 @@ public class MainActivity extends Activity {
                 return;
             }
             showAsset("offline");
-        }
-
-        @Override
-        public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
-            ui.post(MainActivity.this::recreate);
-            return true;
         }
     }
 

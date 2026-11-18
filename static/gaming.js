@@ -35,6 +35,31 @@
     return c;
   }
 
+  function copilotCard() {
+    const c = section("COPILOTE DE JEU", "l'Œil regarde ton écran en direct · lecture seule"), n = note(), st = el("div", { className: "tm-note" }), hist = el("div", { className: "tm-note", style: "white-space:pre-wrap" }), ans = el("div", { className: "tm-note" });
+    api("/api/gamecoach/status").then((o) => {
+      const save = (k) => (v) => api("/api/gamecoach/config", { [k]: v }).then((s) => paint(s)).catch((e) => say(n, e.message));
+      const game = el("input", { type: "text", placeholder: "Jeu (Valorant, CS2, échecs, Elden Ring…)", value: o.game, maxLength: 60, style: "min-width:220px", onchange: () => save("game")(game.value) });
+      const goal = el("input", { type: "text", placeholder: "Ton objectif (facultatif) : ex. « mieux placer mes utilitaires »", value: o.goal, maxLength: 200, style: "min-width:300px", onchange: () => save("goal")(goal.value) });
+      const mode = el("select", { onchange: () => save("mode")(mode.value) }, el("option", { value: "text", text: "Conseils textuels (bulle au-dessus de l'Œil)" }), el("option", { value: "voice", text: "Conseils vocaux (voix + bulle)" })); mode.value = o.mode;
+      const focus = el("select", { onchange: () => save("focus")(focus.value) }, el("option", { value: "screen", text: "Tout l'écran principal" }), el("option", { value: "window", text: "Seulement la fenêtre active" })); focus.value = o.focus;
+      const every = el("input", { type: "number", min: 3, max: 120, value: o.interval, style: "width:70px", onchange: () => save("interval")(+every.value) });
+      const proc = el("input", { type: "text", placeholder: "ex. valorant.exe (facultatif)", value: o.process, style: "width:200px", onchange: () => save("process")(proc.value) });
+      const q = el("input", { type: "text", placeholder: "Pose une question sur ce que tu vois à l'écran…", style: "min-width:300px", maxLength: 300 });
+      const pauseBtn = btn("PAUSE", guard(n, async () => { const cur = await api("/api/gamecoach/status"); paint(await api("/api/gamecoach/pause", { paused: !cur.paused })); }));
+      const paint = (s) => { pauseBtn.textContent = s.paused ? "REPRENDRE" : "PAUSE"; say(st, (s.running ? (s.paused ? "En pause" : s.waiting ? "En attente du jeu…" : "Actif") : "Inactif") + " · " + s.frames + " captures, " + s.calls + " analyses" + (s.latency ? " (" + s.latency + " s par analyse)" : "") + (s.summary ? " · vu : " + s.summary : "") + (s.error ? " · " + s.error : "")); hist.textContent = (s.history || []).slice().reverse().map((h) => "• " + h.advice).join("\n"); };
+      c.append(el("div", { className: "tm-note", text: "Un copilote pour n'importe quel jeu : il capture ton écran toutes les quelques secondes, regarde ce qui se passe et te souffle UN conseil court. 100 % lecture seule (pixels de l'écran uniquement) : aucune touche ni clic envoyés, aucune lecture de la mémoire du jeu, c'est toi qui joues. Désactive-le dans un jeu compétitif qui interdit toute aide extérieure. Les captures partent vers ton LLM de vision uniquement et ne sont jamais gardées." }),
+        toggle("Activer le copilote (une capture réduite part vers ton LLM de vision toutes les N secondes tant que l'écran change)", o.enabled, save("enabled")),
+        el("div", { className: "tm-row" }, game, goal), el("div", { className: "tm-row" }, el("span", { text: "Mode" }), mode, el("span", { text: "Capture" }), focus, el("span", { text: "Toutes les (s)" }), every),
+        toggle("Seulement les alertes importantes (danger, occasion à saisir) : pas de remarques de routine", o.alerts_only, save("alerts_only")),
+        toggle("Attendre que le jeu soit lancé avant de capturer (processus ci-dessous ; connu pour LoL et Valorant)", o.need_game, save("need_game")), el("div", { className: "tm-row" }, el("span", { text: "Processus du jeu" }), proc),
+        el("div", { className: "tm-row" }, pauseBtn, btn("ANALYSER MAINTENANT", guard(n, async () => { say(n, "Analyse en cours…"); const r = await api("/api/gamecoach/analyse", {}); say(n, r.context && r.context.advice ? "Conseil : " + r.context.advice : "Rien à signaler."); paint(r); }))),
+        el("div", { className: "tm-row" }, q, btn("DEMANDER", guard(n, async () => { if (!q.value.trim()) return; say(ans, "…"); const r = await api("/api/gamecoach/ask", { question: q.value }); say(ans, r.answer); }))), ans, st, hist, n);
+      paint(o); setInterval(() => { if (!document.hidden && $("rg") && !$("rg").hidden) api("/api/gamecoach/status").then(paint).catch(() => {}); }, 4000);
+    }).catch(() => c.append(el("div", { className: "tm-note", text: "Indisponible dans cette édition." })));
+    return c;
+  }
+
   function lolCard() {
     const c = section("ASSISTANT LEAGUE OF LEGENDS", "lecture d'écran seule · conseils de l'Œil"), n = note(), st = el("div", { className: "tm-note" });
     api("/api/lol/status").then((o) => {
@@ -51,6 +76,13 @@
       paint(o); setInterval(() => { if (!document.hidden && $("rg") && !$("rg").hidden) api("/api/lol/status").then(paint).catch(() => {}); }, 5000);
     }).catch(() => c.append(el("div", { className: "tm-note", text: "Indisponible dans cette édition." })));
     return c;
+  }
+
+  function crashCard() {
+    const c = section("JOURNAL DE PLANTAGES", "erreurs Python / pages · arrêts anormaux"), n = note(), pre = el("pre", { style: "white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto;font-size:11.5px;margin:6px 0" });
+    const paint = () => api("/api/crash/log").then((o) => { pre.textContent = o.text ? o.text.split("\n").slice(-200).join("\n") : "Aucun problème enregistré."; say(n, o.count + " entrée(s). Le journal reste sur ce PC (data/crash.log) : rien n'est envoyé."); }).catch((e) => say(n, e.message));
+    c.append(el("div", { className: "tm-row" }, btn("ACTUALISER", paint), btn("COPIER", guard(n, async () => { const o = await api("/api/crash/log"); await navigator.clipboard.writeText("E.N.O.S. PC — journal de plantages\n" + navigator.userAgent + "\n\n" + (o.text || "(vide)")); say(n, "Journal copié."); })), btn("EFFACER", guard(n, async () => { await api("/api/crash/clear", {}); paint(); }))), pre, n);
+    paint(); return c;
   }
 
   function clipperCard() {
@@ -135,7 +167,7 @@
   function build() {
     const p = document.querySelector('#rg [data-p="th"]');
     if (!p || $("gm-root")) return;
-    const root = el("div", { id: "gm-root" }, el("h2", { text: "GAMING" }), petCard(), lolCard(), clipperCard(), babelCard(), tiltCard(), brbCard());
+    const root = el("div", { id: "gm-root" }, el("h2", { text: "GAMING" }), petCard(), copilotCard(), lolCard(), clipperCard(), babelCard(), tiltCard(), brbCard(), crashCard());
     p.appendChild(root);
   }
   function init() {

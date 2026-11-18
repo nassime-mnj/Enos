@@ -47,7 +47,7 @@
   K.attackers = attackers;
 
   /** Le coup abandonne-t-il ≥ 2 pions de matériel, même après l'échange ? (estimation : 1 échange évalué à la volée) */
-  K.isSacrifice = (fen, uci) => {
+  K.isSacrifice = (fen, uci, minNet) => {
     const ch = new Chess(fen), mover = ch.turn();
     const m = play(ch, uci);
     if (!m) return false;
@@ -58,7 +58,7 @@
     if (!att.length) return false;
     const defended = attackers(map, m.to, mover).length > 0, cheapest = Math.min(...att.map((t) => VAL[t])), mine = VAL[(map[m.to] || "p").toLowerCase()];
     const lost = !defended ? mine : cheapest < mine ? mine - cheapest : 0;
-    return lost - gain >= 2;
+    return lost - gain >= (minNet || 2);
   };
 
   /** FILTRE DE SACRIFICE sur une ligne (liste UCI) : l'adversaire prend une pièce lourde, déficit ≥ 2 pions, et on ne reprend pas aussitôt. -> {piece, deficit} | null */
@@ -107,6 +107,7 @@
 
   // ------------------------------------------------------------------ jugement
   /** Jugement d'un coup : beforeW / afterW = évaluations (Blancs) AVANT et APRÈS, color = 'w'|'b'. Mêmes seuils que CHESS (PC). */
+  const heavy = (fen, uci) => { try { const m = play(new Chess(fen), uci); return !!m && VAL[m.piece] >= 5; } catch (e) { return false; } };
   const heavySac = (fen, uci) => { try { const c = new Chess(fen), m = play(c, uci); return !!m && VAL[m.piece] >= 5 && K.isSacrifice(fen, uci); } catch (e) { return false; } };
   K.quality = (fenBefore, uci, beforeW, afterW, color) => {
     const sgn = color === "w" ? 1 : -1;
@@ -122,6 +123,7 @@
       else key = araw >= -100 ? "mistake" : "blunder";                                             // il a jeté la victoire
     }
     else if (loss <= 15 && a >= -50 && braw < 600 && K.isSacrifice(fenBefore, uci)) key = "brilliant";
+    else if (loss <= 15 && braw >= 600 && braw < 2000 && araw >= 300 && K.isSacrifice(fenBefore, uci, 4) && heavy(fenBefore, uci)) key = "brilliant";      // sacrifice de TOUR / DAME (perte nette ≥ 4) qui garde la victoire : « brillant » sur Chess.com même quand on gagnait déjà (ex. Txa7 !! +1,12)
     else if (braw >= 600 && araw >= 200 && araw < braw - 250 && loss >= 70) key = "miss";            // position déjà gagnante : le coup en laisse filer l'essentiel sans tout perdre
     else if (loss <= 8) key = "best";
     else if (loss <= 30) key = "excellent";
@@ -131,6 +133,10 @@
     else key = "blunder";
     return { key, label: K.QUALITY[key], loss: Math.round(loss), before: Math.round(sgn * beforeW), after: Math.round(sgn * afterW) };
   };
+  // CADENCES (comme Chess.com) et ÉCHELLE D'ELO AFFICHÉE : les classements bullet / blitz sont plus HAUTS que le rapide (même moteur). C'est l'ÉTIQUETTE (affichage, vidéo, répliques) : la force réelle du moteur ne change pas.
+  K.TC = { none: { id: "none", name: "Sans pendule" }, bullet: { id: "bullet", name: "Bullet · 1 min", base: 60000, think: 300, k: 0.55, hdr: "60" }, blitz: { id: "blitz", name: "Blitz · 3 min", base: 180000, think: 700, k: 0.3, hdr: "180" }, rapid: { id: "rapid", name: "Rapide · 10 min", base: 600000, think: 1000, k: 0, hdr: "600" }, daily: { id: "daily", name: "Différé · 3 jours par coup", days: 3, think: 1500, k: 0, hdr: "1/259200" } };
+  K.TC_TOP = { rapid: { sf: 3650, eto: 3200, enos: 3200 }, daily: { sf: 3650, eto: 3200, enos: 3200 }, blitz: { sf: 4550, eto: 4000, enos: 3900 }, bullet: { sf: 5450, eto: 4900, enos: 4800 } };       // Stockfish / ETO / E.N.O.S. (modifiable ici)
+  K.tcElo = (tc, who, base) => { if (!tc || !K.TC[tc] || tc === "none") return base; const top = K.TC_TOP[tc]; if (top && who && top[who] != null) return top[who]; return Math.round(base + (K.TC[tc].k || 0) * Math.max(0, base - 1000)); };
   K.winPct = (cp) => 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * Math.max(-2000, Math.min(2000, cp)))) - 1);
   const moveAccuracy = (wb, wa) => Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * Math.max(0, wb - wa)) - 3.1669));
   const sideReview = (moves) => {
@@ -175,11 +181,13 @@
    * ou brillant est donc ré-évalué 3 fois plus longtemps, avant et après, avant de recevoir son étiquette. -> {q, before:{w,best}, after:{w,best}}
    */
   K.judge = async (fenBefore, uci, evBefore, evAfter, color, ms) => {
+    const fixBest = (b, a) => (b.best === uci && Math.abs(a.w) < 9000 && Math.abs(b.w) < 9000 ? { ...a, w: b.w } : a);      // le coup joué EST le meilleur coup du moteur : sa valeur est celle de la position (l'écart vient du bruit entre deux recherches)
+    evAfter = fixBest(evBefore, evAfter);
     let q = K.quality(fenBefore, uci, evBefore.w, evAfter.w, color), res = { q, before: evBefore, after: evAfter };
-    if (q.loss > 60 || ["brilliant", "miss", "mistake", "blunder"].includes(q.key) || Math.abs(evBefore.w) >= 9000) {          // jugement CONFIRMÉ (3× plus long) : on ne colle pas « manqué » / « brillant » sur un score bruité
+    if (q.loss > 60 || ["brilliant", "miss", "mistake", "blunder"].includes(q.key) || Math.abs(evBefore.w) >= 9000 || (q.loss <= 120 && K.isSacrifice(fenBefore, uci))) {         // sacrifice : toujours confirmé à 3× le temps          // jugement CONFIRMÉ (3× plus long) : on ne colle pas « manqué » / « brillant » sur un score bruité
       const c = new Chess(fenBefore); play(c, uci);
       const b2 = await K.evaluate(fenBefore, (ms || 450) * 3), a2 = await K.evaluate(c.fen(), (ms || 450) * 3);
-      q = K.quality(fenBefore, uci, b2.w, a2.w, color); res = { q, before: b2, after: a2 };
+      const a3 = fixBest(b2, a2); q = K.quality(fenBefore, uci, b2.w, a3.w, color); res = { q, before: b2, after: a3 };
     }
     try {                                                                                      // COUP FORCÉ : un seul coup légal, ou le seul qui ne perd pas (Stockfish : l'écart avec le 2ᵉ meilleur ≥ 350 cp)
       const c0 = new Chess(fenBefore), n = c0.moves().length;

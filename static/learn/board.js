@@ -135,14 +135,41 @@
       el.classList.add("cboard");
       el.innerHTML = '<div class="cb-sq"></div><div class="cb-pc"></div><svg class="cb-ar" viewBox="0 0 8 8"></svg><div class="cb-fx"></div>';
       st = el._cb = { sq: el.firstChild, pc: el.children[1], ar: el.children[2], fx: el.children[3], arSig: "", nodes: new Map(), flip, badgeId: null, endId: null };
+      // GLISSER-DÉPOSER (comme Chess.com) : on attrape une pièce, elle suit le doigt (agrandie, au-dessus du doigt), les cibles s'affichent,
+      // la case survolée s'éclaire ; au lâcher = toucher la case de départ puis la case d'arrivée (onTap ×2) : marche avec toutes les UIs « sélectionner puis jouer ».
+      const sqAt = (e) => { const r = el.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / r.width * 8), y = Math.floor((e.clientY - r.top) / r.height * 8); if (x < 0 || x > 7 || y < 0 || y > 7) return ""; return el._cb.flip ? "abcdefgh"[7 - x] + (y + 1) : "abcdefgh"[x] + (8 - y); };
+      const over = (sq) => { const st = el._cb; if (st.dg && st.dg.over !== sq) { const o = st.sq.querySelector(".dragover"); if (o) o.classList.remove("dragover"); const q = sq && st.sq.querySelector(`[data-sq="${sq}"]`); if (q) q.classList.add("dragover"); st.dg.over = sq; } };
+      el.addEventListener("pointerdown", (e) => {
+        const st = el._cb; if (!st.onTap || st.drag === false || (e.button != null && e.button > 0)) return;
+        const sq = sqAt(e), n = sq && st.nodes.get(sq); if (!n) return;
+        st.dg = { from: sq, n, x0: e.clientX, y0: e.clientY, on: false, id: e.pointerId, over: "" };
+      });
+      el.addEventListener("pointermove", (e) => {
+        const st = el._cb, d = st.dg; if (!d || e.pointerId !== d.id) return;
+        if (!d.on) {
+          if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 7) return;
+          d.on = true; try { el.setPointerCapture(e.pointerId); } catch (err) { /* pointeur déjà relâché */ }
+          st.onTap(d.from); d.n = st.nodes.get(d.from) || d.n; d.n.classList.add("drag"); if (E.vibrate) E.vibrate(5);
+        }
+        const r = el.getBoundingClientRect(), cell = r.width / 8, x = (e.clientX - r.left) / cell * 100 - 50, y = (e.clientY - r.top) / cell * 100 - 50;
+        d.n.style.transform = `translate(${x}%,${y - 35}%) scale(1.3)`; over(sqAt(e)); e.preventDefault();
+      });
+      const drop = (e) => {
+        const st = el._cb, d = st.dg; if (!d || e.pointerId !== d.id) return; st.dg = null; if (!d.on) return;      // simple toucher : le « click » s'en charge
+        st.noClick = Date.now(); const to = e.type === "pointercancel" ? "" : sqAt(e); over(""); const o = st.sq.querySelector(".dragover"); if (o) o.classList.remove("dragover");
+        d.n.classList.remove("drag");
+        if (to && to !== d.from) { place(d.n, to, st.flip); st.onTap(to); setTimeout(() => { if (st.nodes.get(d.from) === d.n) place(d.n, d.from, st.flip); }, 60); }       // coup refusé / premove : la pièce revient
+        else place(d.n, d.from, st.flip);
+      };
+      el.addEventListener("pointerup", drop); el.addEventListener("pointercancel", drop);
       el.addEventListener("click", (e) => {
-        if (!el._cb.onTap) return;
+        if (!el._cb.onTap || Date.now() - (el._cb.noClick || 0) < 400) return;
         const r = el.getBoundingClientRect(), x = Math.min(7, Math.max(0, Math.floor((e.clientX - r.left) / r.width * 8))), y = Math.min(7, Math.max(0, Math.floor((e.clientY - r.top) / r.height * 8)));
         B.burst(el, el._cb.flip ? "abcdefgh"[7 - x] + (y + 1) : "abcdefgh"[x] + (8 - y), "tap");
         el._cb.onTap(el._cb.flip ? "abcdefgh"[7 - x] + (y + 1) : "abcdefgh"[x] + (8 - y));
       });
     }
-    st.onTap = opts.onTap || null;
+    st.onTap = opts.onTap || null; st.drag = opts.drag; el.classList.toggle("dnd", !!st.onTap && opts.drag !== false);
 
     // ---- cases
     const files = flip ? "hgfedcba" : "abcdefgh", ranks = flip ? [1, 2, 3, 4, 5, 6, 7, 8] : [8, 7, 6, 5, 4, 3, 2, 1];
@@ -153,6 +180,8 @@
       if (opts.last && opts.last.includes(sq)) cls.push("last");
       if (opts.hint && opts.hint.includes(sq)) cls.push("hint");
       if (opts.sel === sq) cls.push("sel");
+      if (opts.pre && opts.pre.includes(sq)) cls.push("pre");                            // PREMOVE (rouge, comme Chess.com)
+      if (opts.psel === sq) cls.push("psel");
       if (opts.check === sq) cls.push("chk");
       if (opts.targets && opts.targets.includes(sq)) cls.push(map[sq] ? "cap" : "tgt");
       const coord = (f === files[0] ? `<i class="rk">${r}</i>` : "") + (r === ranks[ranks.length - 1] ? `<i class="fl">${f}</i>` : "");

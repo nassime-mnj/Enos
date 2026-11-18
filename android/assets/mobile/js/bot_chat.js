@@ -13,8 +13,8 @@
     ghorreal: { name: "GhorGhor le vrai", img: "img/bots/ghorghor_vrai.png", title: "GM", style: "Tu es GhorGhor le vrai, Grand Maître 3200 Elo, calme, froid, menaçant, lunettes noires. Phrases courtes et sombres en français, une pointe d'humour noir." },
     naskolit: { name: "Naskolit", img: "img/bots/naskolit.png", title: "GM", mute: true, style: "" },
     jester: { name: "Le Jester", img: "img/bots/jester.png", style: "Tu es le Jester, bouffon de cour élégant et malicieux, joueur d'échecs. Tu parles en français avec esprit : allusions à la cour, aux cartes, à la roue du destin, jamais lourd ni répétitif ; une phrase courte, un trait d'humour fin, parfois une devinette." },
-    eto: { name: "ETO Brillant", title: "GM", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
-    enos: { name: "E.N.O.S.", title: "GM", ph: ["ENOS", "#e0243c"], style: "Tu es E.N.O.S., IA froide, précise et technique, un brin arrogante. Phrases courtes, en français." },
+    eto: { name: "ETO Brillant", title: "GM", img: "img/bots/eto.png", anim: "eto", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
+    enos: { name: "E.N.O.S.", title: "GM", img: "img/bots/enos.png", anim: "enos", ph: ["ENOS", "#e0243c"], style: "Tu es E.N.O.S., IA froide, précise et technique, un brin arrogante. Phrases courtes, en français." },
   };
   // probabilité qu'un événement déclenche une réplique ; les moments forts parlent toujours
   const PROB = { greet: 1, open_announce: 0.85, open_end: 0.7, open_refused: 1, bot_brilliant: 1, h_brilliant: 1, bot_blunder: 0.95, h_blunder: 0.95, bot_mistake: 0.5, h_mistake: 0.5, super: 0.8, good: 0.18, h_good: 0.2,
@@ -31,7 +31,7 @@
   // TITRES façon Chess.com (badge rouge) selon l'Elo : GM ≥ 2800 · IM ≥ 2500 · FM ≥ 2300 · CM ≥ 2200 ; `special` impose un titre (Naskurieux est GM à 1 Elo)
   const titleOf = (elo, special) => (special !== undefined && special !== null ? special : elo >= 2800 ? "GM" : elo >= 2500 ? "IM" : elo >= 2300 ? "FM" : elo >= 2200 ? "CM" : "");
   const badge = (t) => (t ? `<span class="ttl ttl-${t}" title="${{ GM: "Grand Maître", IM: "Maître International", FM: "Maître FIDE", CM: "Candidat Maître" }[t] || t}">${t}</span>` : "");
-  const avatar = (id, cls) => { const c = CH[id]; return c.img ? `<img class="bot-av ${cls || ""}" src="${c.img}" alt="${esc(c.name)}">` : `<div class="bot-av ph ${cls || ""}" style="--c:${c.ph[1]}">${esc(c.ph[0])}</div>`; };
+  const avatar = (id, cls) => { const c = CH[id]; if (c.anim && E.animIcons) return E.animIcons.canvas(c.anim, cls || ""); return c.img ? `<img class="bot-av ${cls || ""}" src="${c.img}" alt="${esc(c.name)}">` : `<div class="bot-av ph ${cls || ""}" style="--c:${c.ph[1]}">${esc(c.ph[0])}</div>`; };
 
   /**
    * Montre un personnage dans `host`. opts : {opp: () => nom de l'adversaire, ctx: () => ({summary}), log: historique + champ de saisie (face à un seul bot), shared: transcript partagé (combats)}.
@@ -100,10 +100,10 @@
     if (!I.alive || !text) return;
     const bub = I.host.querySelector(".bot-bubble"), t = I.host.querySelector(".bot-t"), av = I.host.querySelector(".bot-av");
     if (!bub) return;
-    bub.hidden = false; t.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; av.classList.add("talk");
+    bub.hidden = false; t.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; av.classList.add("talk"); const animId = CH[I.id] && CH[I.id].anim; if (animId && E.animIcons) E.animIcons.mood(av, animId === "eto" ? "talk" : "think");
     await E.sleep(350 + Math.min(800, text.length * 12));
     if (!I.alive) return;
-    t.textContent = text; av.classList.remove("talk");
+    t.textContent = text; av.classList.remove("talk"); if (animId && E.animIcons) E.animIcons.mood(av, E.animIcons.moodOf(animId, kind), 4200);
     bub.classList.remove("pop"); void bub.offsetWidth; bub.classList.add("pop");
     log(I, "b", text);
     I.gap = 0; lastSpoke = ply;
