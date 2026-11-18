@@ -9,7 +9,7 @@ with sync_playwright() as pw:
     pg.set_default_timeout(200000)
     ev = pg.evaluate
     pg.wait_for_function("window.ENOS && ENOS.clips && ENOS.chessLocal && ENOS.brain && ENOS.editMap")
-    check(ev("ENOS.clips.BOTS.length") == 26 and ev("ENOS.clips.nameOf('eto')") == "ETO Brillant", "26 personnages disponibles (dont les bots IA et les moteurs)")
+    check(ev("ENOS.clips.BOTS.length") == 30 and ev("ENOS.clips.nameOf('eto')") == "ETO Brillant", "30 personnages disponibles (dont les bots IA et les moteurs)")
     t0 = time.time()
     rec = ev("""async () => { const steps = [];
         const r = await ENOS.clips.run({ hero: 'eto', ant: 'lelex', heroColor: 'w', intensity: 'theatre', maxPlies: 20, times: { think: 70, heroTop: 90, heroSac: 140, antLines: 90, antTop: 70, antSac: 110, evalMs: 70 } },
@@ -40,7 +40,7 @@ with sync_playwright() as pw:
     check(ev("ENOS.clips.list().length") == 1, "la scène est dans l'historique (defi.hist) : le Chess Edit et la sauvegarde la voient")
     open_tool(pg, "clips")
     pg.wait_for_timeout(450)
-    check(pg.locator("#cl-hero option").count() == 26 and pg.locator("#cl-go").is_visible() and pg.locator(".cl-item").count() == 1, "module Game Clips : choix du héros / de l'antagoniste / de l'intensité + liste des scènes")
+    check(pg.locator("#cl-hero option").count() == 30 and pg.locator("#cl-go").is_visible() and pg.locator(".cl-item").count() == 1, "module Game Clips : choix du héros / de l'antagoniste / de l'intensité + liste des scènes")
     # le Chess Edit prend la scène
     pg.click(".cl-item [data-t]")
     pg.wait_for_selector("#ce-game", timeout=10000)

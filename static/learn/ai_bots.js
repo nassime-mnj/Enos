@@ -115,6 +115,36 @@
       b: [[4, "e4 c5 Nf3 e6 d4 cxd4 Nxd4 Nc6 Nc3 Qc7"], [4, "d4 Nf6 c4 e6 Nc3 Bb4 Qc2 O-O a3 Bxc3 Qxc3"]],
       lines: { greet: ["Viridithas pousse lentement… comme du lierre.", "On y va, {me}."], good: ["Ça pousse.", "Je prends racine."], check: ["Échec."], bot_brilliant: ["Le lierre a tout recouvert."], bot_blunder: ["Une branche cassée."], bot_mistake: ["Mauvaise herbe."], h_brilliant: ["Belle pousse, {me}."], h_blunder: ["Je prends."] },
     },
+    // GRANDS JOUEURS (`player: true`) : PROFILS DE STYLE inspirés de joueurs réels — répertoire d'ouvertures public, force calibrée ; Stockfish joue
+    // (aucune citation inventée : répliques neutres ; avatars dessinés, pas de photos). Elo = ordre de grandeur FIDE classique (mi-2026) / estimation historique.
+    magnus: {
+      name: "Magnus Carlsen", short: "Carlsen", elo: 2830, tag: "profil inspiré · universel · technique de finale", img: "img/bots/magnus.png", engine: false, player: true,
+      skill: { mistake: 0.01, blunder: 0, acpl: 10 }, capRate: 0.22, checkRate: 0.12,
+      w: [[4, "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O"], [3, "d4 Nf6 c4 e6 Nf3 d5 Nc3 Be7 Bf4 O-O e3 c5"], [2, "Nf3 d5 g3 Nf6 Bg2 c6 O-O Bg4"]],
+      b: [[4, "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5 Ndb5 d6"], [4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5"], [3, "d4 Nf6 c4 e6 Nf3 d5 Nc3 Be7 Bf4 O-O"]],
+      lines: { greet: ["Profil « Magnus Carlsen » : technique, finales, patience.", "Bonne partie, {me}."], good: ["Petit avantage, on le garde."], check: ["Échec."], bot_brilliant: ["Coup précis."], bot_blunder: ["Imprécision, on corrige."], bot_mistake: ["Pas le plus précis."], h_brilliant: ["Bien vu, {me}."], h_blunder: ["Ça se punit."] },
+    },
+    hikaru: {
+      name: "Hikaru Nakamura", short: "Hikaru", elo: 2790, tag: "profil inspiré · rapide · tactique · initiative", img: "img/bots/hikaru.png", engine: false, player: true,
+      skill: { mistake: 0.015, blunder: 0.002, acpl: 13 }, capRate: 0.34, checkRate: 0.26,
+      w: [[4, "e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 c3 d6 O-O O-O"], [3, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3"], [2, "d4 Nf6 c4 g6 Nc3 d5 cxd5 Nxd5 e4 Nxc3 bxc3 Bg7"]],
+      b: [[4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6"], [3, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"], [4, "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5"]],
+      lines: { greet: ["Profil « Hikaru Nakamura » : rapide et tactique.", "Bonne partie, {me}."], good: ["On garde l'initiative."], check: ["Échec."], bot_brilliant: ["Ça part vite !"], bot_blunder: ["Trop rapide sur ce coup."], bot_mistake: ["Pas le plus précis."], h_brilliant: ["Bien vu, {me}."], h_blunder: ["Ça se punit."] },
+    },
+    levy: {
+      name: "Levy Rozman (GothamChess)", short: "GothamChess", elo: 2330, tag: "profil inspiré · Maître International · London et Vienne", img: "img/bots/levy.png", engine: false, player: true,
+      skill: { mistake: 0.06, blunder: 0.008, acpl: 25 }, capRate: 0.3, checkRate: 0.2,
+      w: [[5, "d4 d5 Bf4 Nf6 e3 e6 Nf3 c5 c3 Nc6 Nbd2 Bd6 Bg3"], [3, "e4 e5 Nc3 Nf6 f4 d5 fxe5 Nxe4 Nf3"]],
+      b: [[4, "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6"], [3, "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O"]],
+      lines: { greet: ["Profil « Levy Rozman / GothamChess » : London et Vienne.", "Bonne partie, {me}."], good: ["Développement classique."], check: ["Échec."], bot_brilliant: ["Joli coup !"], bot_blunder: ["Ce coup était une erreur."], bot_mistake: ["Pas le plus précis."], h_brilliant: ["Bien vu, {me}."], h_blunder: ["Ça se punit."] },
+    },
+    turk: {
+      name: "Le Turc mécanique", short: "Le Turc", elo: 1800, tag: "automate de 1770 · un joueur caché dedans · parties ouvertes", img: "img/bots/turk.png", engine: false, player: true,
+      skill: { mistake: 0.12, blunder: 0.03, acpl: 45 }, capRate: 0.36, checkRate: 0.28,
+      w: [[4, "e4 e5 f4 exf4 Nf3 g5 Bc4 g4 O-O"], [3, "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb4+"]],
+      b: [[4, "e4 e5 Qf3 Nc6 Bc4 Nf6 Ne2 Bc5 a3 d6 O-O Bg4"], [3, "d4 d5 c4 dxc4 e3 e5 Bxc4 exd4 exd4"]],
+      lines: { greet: ["Le Turc mécanique (1770) : ses engrenages se mettent en marche…", "Bonne partie, {me}."], good: ["Les rouages tournent."], check: ["Échec."], bot_brilliant: ["Mécanique implacable."], bot_blunder: ["Un engrenage a grincé."], bot_mistake: ["Pas le plus précis."], h_brilliant: ["Bien vu, {me}."], h_blunder: ["Ça se punit."] },
+    },
   };
   const toUci = (m) => m.from + m.to + (m.promotion || "");
   function book(lines, color) {                                                                  // arbre {chemin uci : {coup uci : poids}} des seuls coups du camp `color`
@@ -132,7 +162,7 @@
   E.aiBots = { ids: Object.keys(DEF), def: DEF, prof: P };
   Object.entries(DEF).forEach(([id, d]) => {
     let bk = null;                                                                               // livre construit à la demande (chess.js est chargé après ce fichier)
-    P[id] = { name: d.name, eloEst: d.elo, native: d.native || "", skill: d.skill, capRate: d.capRate, checkRate: d.checkRate, games: 0, ai: true, tag: d.tag, get book() { return (bk = bk || { w: book(d.w, "w"), b: book(d.b, "b") }); } };
+    P[id] = { name: d.name, eloEst: d.elo, native: d.native || "", player: !!d.player, skill: d.skill, capRate: d.capRate, checkRate: d.checkRate, games: 0, ai: true, tag: d.tag, get book() { return (bk = bk || { w: book(d.w, "w"), b: book(d.b, "b") }); } };
     if (E.botChat && E.botChat.bots) E.botChat.bots[id] = { name: d.name, img: d.img, style: `Tu es ${d.name}, un assistant IA qui joue aux échecs (${d.tag}). Phrases courtes, en français.` };
     window.ENOS_BOT_LINES = window.ENOS_BOT_LINES || {}; window.ENOS_BOT_LINES[id] = d.lines;
   });

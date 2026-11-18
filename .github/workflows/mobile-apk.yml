@@ -65,7 +65,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q qemu-user-static
+          sudo apt-get update -q && (sudo apt-get install -y -q qemu-user || sudo apt-get install -y -q qemu-user-static || echo "qemu indisponible : tests d'exécution sautés")
           bash android/tools/build_engines.sh
       - name: Construire l'APK
         run: |

@@ -30,8 +30,9 @@ fetch() { curl -fsSL --retry 4 --retry-delay 3 -o "$2" "$1"; }
 src() { local d="$W/$1"; rm -rf "$d"; git init -q "$d"; git -C "$d" fetch -q --depth 1 "https://github.com/$2" "$3"; git -C "$d" checkout -q FETCH_HEAD; echo "$d"; }
 smoke() {                                                                    # le binaire répond-il en UCI et joue-t-il un coup ?
   local bin="$1" name="$2"
-  if ! command -v qemu-aarch64-static >/dev/null 2>&1; then echo "  (qemu absent : test d'exécution sauté pour $name)"; return 0; fi
-  local o; o=$( (printf 'uci\nisready\nposition startpos moves e2e4\ngo depth 8\n'; sleep "${SMOKE_WAIT:-40}"; echo quit) | timeout 120 qemu-aarch64-static "$bin" 2>&1 || true)
+  local Q; Q=$(command -v qemu-aarch64-static || command -v qemu-aarch64 || true)
+  if [ -z "$Q" ]; then echo "  (qemu absent : test d'exécution sauté pour $name)"; return 0; fi
+  local o; o=$( (printf 'uci\nisready\nposition startpos moves e2e4\ngo depth 8\n'; sleep "${SMOKE_WAIT:-40}"; echo quit) | timeout 120 "$Q" "$bin" 2>&1 || true)
   echo "$o" | grep -m1 "^id name" || true
   echo "$o" | grep -q "^bestmove [a-h][1-8]" || { echo "ÉCHEC : $name ne joue pas de coup"; echo "$o" | tail -15; exit 1; }
   echo "  OK $name : $(echo "$o" | grep -m1 '^bestmove')"

@@ -9,7 +9,7 @@ with sync_playwright() as pw:
     pg = open_app(ctx, errs)
     ev = pg.evaluate
     r = ev("""() => { const A = ENOS.aiBots, out = {}; A.ids.forEach((id) => { const p = A.prof[id]; out[id] = { elo: p.eloEst, w: Object.keys(p.book.w).length, b: Object.keys(p.book.b).length, first: Object.keys(p.book.w[''] || {}) }; }); return out; }""")
-    check(set(r) == {"claude", "gpt", "gemini", "deepseek", "lc0", "maia1100", "maia1500", "maia1900", "ethereal", "berserk", "koivisto", "obsidian", "plenty", "caissa", "viridithas"}, "4 bots IA + 7 profils de moteurs + 4 vrais moteurs natifs (Obsidian, PlentyChess, Caissa, Viridithas) : %s" % list(r))
+    check(set(r) == {"claude", "gpt", "gemini", "deepseek", "lc0", "maia1100", "maia1500", "maia1900", "ethereal", "berserk", "koivisto", "obsidian", "plenty", "caissa", "viridithas", "magnus", "hikaru", "levy", "turk"}, "4 bots IA + 7 profils de moteurs + 4 vrais moteurs natifs + 4 grands joueurs : %s" % list(r))
     check(all(v["w"] >= 6 and v["b"] >= 6 and v["first"] for v in r.values()), "livres d'ouvertures construits pour les Blancs et les Noirs")
     check(r["gemini"]["elo"] > r["claude"]["elo"] > r["gpt"]["elo"] > r["deepseek"]["elo"], "niveaux : Gemini %d > Claude %d > GPT %d > DeepSeek %d" % (r["gemini"]["elo"], r["claude"]["elo"], r["gpt"]["elo"], r["deepseek"]["elo"]))
     first = ev("() => ENOS.aiBots.prof.gemini.book.b['e2e4']")
