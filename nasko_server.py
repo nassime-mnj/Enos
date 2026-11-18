@@ -35,6 +35,7 @@ import nasko_receipts
 import nasko_studio
 import nasko_syllabus
 import nasko_academy
+import nasko_animsetup
 import subs_analyzer
 import nasko_roles
 import nasko_cloud
@@ -1253,7 +1254,7 @@ def ping():
 
 
 _VENDOR = {"codemirror.bundle.js": "codemirror.bundle.js", "wavesurfer.min.js": "wavesurfer.min.js", "wavesurfer.regions.min.js": "wavesurfer.regions.min.js"}
-_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "purge_launch.js": "text/javascript", "purge.js": "text/javascript", "scan_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
+_STATIC_FILES = {"subs.js": "text/javascript", "subs.css": "text/css", "roles.js": "text/javascript", "cloud.js": "text/javascript", "gaming.js": "text/javascript", "depot.js": "text/javascript", "depot.css": "text/css", "updatebar.js": "text/javascript", "updatebar.css": "text/css", "roles.css": "text/css", "accent.css": "text/css", "tour.js": "text/javascript", "tour.css": "text/css", "deeplink.js": "text/javascript", "pair.js": "text/javascript", "pair.css": "text/css", "onboarding.js": "text/javascript", "onboarding.css": "text/css", "home.js": "text/javascript", "home.css": "text/css", "agenda.js": "text/javascript", "agenda.css": "text/css", "study.js": "text/javascript", "learn_launch.js": "text/javascript", "animsetup.js": "text/javascript", "purge_launch.js": "text/javascript", "purge.js": "text/javascript", "scan_launch.js": "text/javascript", "study.css": "text/css", "cm_base.css": "text/css", "theme.js": "text/javascript", "team.js": "text/javascript", "team.css": "text/css", "themes.css": "text/css", "theme_coreboard.css": "text/css", "sysdash.js": "text/javascript", "sysdash.css": "text/css", "sysdiag.js": "text/javascript", "motion.js": "text/javascript", "motion.css": "text/css", "sec.js": "text/javascript", "security.js": "text/javascript", "security.css": "text/css", "f6.js": "text/javascript", "f6.css": "text/css", "power.js": "text/javascript",
                  "imgproc.js": "text/javascript", "imgproc.css": "text/css", "anim.js": "text/javascript", "anim.css": "text/css",
                  "sync.js": "text/javascript", "sync.css": "text/css", "chill.js": "text/javascript", "chill.css": "text/css", "voicemod.js": "text/javascript", "voicemod.css": "text/css",
                  "tabs.js": "text/javascript", "tabs.css": "text/css", "env.js": "text/javascript", "env.css": "text/css", "audio.js": "text/javascript", "audio.css": "text/css", "compress.js": "text/javascript", "compress.css": "text/css", "pdfed.js": "text/javascript", "pdfed.css": "text/css", "studio.js": "text/javascript", "studio.css": "text/css", "syllabus.js": "text/javascript", "syllabus.css": "text/css", "quick.js": "text/javascript", "background.js": "text/javascript", "background.css": "text/css", "quick.css": "text/css", "quicklib.js": "text/javascript", "talk.js": "text/javascript", "talk.css": "text/css", "colis.js": "text/javascript", "colis.css": "text/css", "search.js": "text/javascript", "search.css": "text/css",
@@ -6501,6 +6502,21 @@ def static_academy(path: str):
     if not full.startswith(base + os.sep) or ext not in _ACAD_MIME or not os.path.isfile(full):
         raise HTTPException(404)
     return FileResponse(full, media_type=_ACAD_MIME[ext], headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/animsetup/run", dependencies=_LOCAL)
+async def animsetup_run():
+    """Setup Animation : ouvre le sélecteur de dossier natif puis range chaque fichier dans un sous-dossier portant son nom."""
+    try:
+        path = await asyncio.to_thread(nasko_devmanager.pick_folder, "Setup Animation : choisis le dossier à ranger (un sous-dossier par fichier)")
+    except nasko_devmanager.DevError as e:
+        raise HTTPException(400, str(e))
+    if not path:
+        return {"cancelled": True}
+    try:
+        return {"cancelled": False, **await asyncio.to_thread(nasko_animsetup.organize, path)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 
 @app.get("/api/academy/status", dependencies=_LOCAL)
