@@ -118,21 +118,21 @@
     // GRANDS JOUEURS (`player: true`) : PROFILS DE STYLE inspirés de joueurs réels — répertoire d'ouvertures public, force calibrée ; Stockfish joue
     // (aucune citation inventée : répliques neutres ; avatars du pack illustré img/roster, pas de photos). Elo = ordre de grandeur FIDE classique (mi-2026) / estimation historique.
     magnus: {
-      name: "Magnus Carlsen", short: "Carlsen", elo: 2830, tag: "profil inspiré · universel · technique de finale", img: "img/roster/magnus_carlsen.png", engine: false, player: true,
+      name: "Magnus Carlsen", short: "Carlsen", elo: 2882, tag: "profil inspiré · universel · technique de finale", img: "img/roster/magnus_carlsen.png", engine: false, player: true,
       skill: { mistake: 0.01, blunder: 0, acpl: 10 }, capRate: 0.22, checkRate: 0.12,
       w: [[4, "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O"], [3, "d4 Nf6 c4 e6 Nf3 d5 Nc3 Be7 Bf4 O-O e3 c5"], [2, "Nf3 d5 g3 Nf6 Bg2 c6 O-O Bg4"]],
       b: [[4, "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5 Ndb5 d6"], [4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5"], [3, "d4 Nf6 c4 e6 Nf3 d5 Nc3 Be7 Bf4 O-O"]],
       lines: { greet: ["Profil « Magnus Carlsen » : technique, finales, patience.", "Bonne partie, {me}."], good: ["Petit avantage, on le garde."], check: ["Échec."], bot_brilliant: ["Coup précis."], bot_blunder: ["Imprécision, on corrige."], bot_mistake: ["Pas le plus précis."], h_brilliant: ["Bien vu, {me}."], h_blunder: ["Ça se punit."] },
     },
     hikaru: {
-      name: "Hikaru Nakamura", short: "Hikaru", elo: 2790, tag: "profil inspiré · rapide · tactique · initiative", img: "img/roster/hikaru_nakamura.png", engine: false, player: true,
+      name: "Hikaru Nakamura", short: "Hikaru", elo: 2830, tag: "profil inspiré · rapide · tactique · initiative", img: "img/roster/hikaru_nakamura.png", engine: false, player: true,
       skill: { mistake: 0.015, blunder: 0.002, acpl: 13 }, capRate: 0.34, checkRate: 0.26,
       w: [[4, "e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 c3 d6 O-O O-O"], [3, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3"], [2, "d4 Nf6 c4 g6 Nc3 d5 cxd5 Nxd5 e4 Nxc3 bxc3 Bg7"]],
       b: [[4, "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6"], [3, "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6"], [4, "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5"]],
       lines: { greet: ["Profil « Hikaru Nakamura » : rapide et tactique.", "Bonne partie, {me}."], good: ["On garde l'initiative."], check: ["Échec."], bot_brilliant: ["Ça part vite !"], bot_blunder: ["Trop rapide sur ce coup."], bot_mistake: ["Pas le plus précis."], h_brilliant: ["Bien vu, {me}."], h_blunder: ["Ça se punit."] },
     },
     levy: {
-      name: "Levy Rozman (GothamChess)", short: "GothamChess", elo: 2330, tag: "profil inspiré · Maître International · London et Vienne", img: "img/roster/levy_rozman.png", engine: false, player: true,
+      name: "Levy Rozman (GothamChess)", short: "GothamChess", elo: 2500, tag: "profil inspiré · Maître International · London et Vienne", img: "img/roster/levy_rozman.png", engine: false, player: true,
       skill: { mistake: 0.06, blunder: 0.008, acpl: 25 }, capRate: 0.3, checkRate: 0.2,
       w: [[5, "d4 d5 Bf4 Nf6 e3 e6 Nf3 c5 c3 Nc6 Nbd2 Bd6 Bg3"], [3, "e4 e5 Nc3 Nf6 f4 d5 fxe5 Nxe4 Nf3"]],
       b: [[4, "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6"], [3, "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O"]],

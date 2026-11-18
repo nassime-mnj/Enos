@@ -22,7 +22,7 @@
     { id: "penoire", t: "🎭 Nasko (pénoire)", s: "2500 Elo · chasseur de brillants !!", human: true },
     { id: "naskurieux", t: "🕶 Naskurieux", s: "GM à 1 Elo · +200 Elo par erreur adverse ou meilleur coup", human: true },
     ...(E.aiBots ? E.aiBots.ids.map((id) => ({ id, t: (E.aiBots.def[id].player ? "♟ " : "🤖 ") + E.aiBots.def[id].name, s: E.aiBots.def[id].elo + " Elo · " + E.aiBots.def[id].tag, human: true, style: true, ai: true })) : []),
-    { id: "roster", t: "🎭 Bots (85)", s: "De 1 Elo à Magnus Carlsen · par catégorie", human: true },
+    { id: "roster", t: "🎭 Bots (" + (E.botRoster ? E.botRoster.list.length : 0) + ")", s: "De 1 Elo à Magnus Carlsen · par catégorie", human: true },
     ...(E.botRoster ? E.botRoster.list.filter((b) => !b.link).map((b) => ({ id: b.id, t: "♟ " + b.name, s: (b.adapt ? "ton niveau" : b.elo + " Elo") + " · " + b.sub, human: true, style: true, roster: true })) : []),
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
@@ -85,7 +85,7 @@
 
       // ---- accueil : sections, icônes + noms (les détails de chaque défi sont dans sa feuille de réglage)
       const AIIDS = E.aiBots ? E.aiBots.ids : [], botImg = (id) => (E.botChat && E.botChat.bots[id] && E.botChat.bots[id].img) || "";
-      const DFN = { roster: ["Bots (85)", "img/roster/mittens.png"], brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
+      const DFN = { roster: ["Bots (" + (E.botRoster ? E.botRoster.list.length : 0) + ")", "img/roster/mittens.png"], brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
       const DFG = [["Contre l'IA", ["brillant", "enos", "coach", "boss"]], ["Personnages", ["roster", "nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...AIIDS]], ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
       function dfHome() {
         let n = 0;

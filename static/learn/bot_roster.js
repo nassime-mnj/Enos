@@ -1,11 +1,11 @@
 "use strict";
-// ÉCHELLE DES BOTS (85 personnages, pack d'avatars originaux img/roster/ — illustrations, pas les images Chess.com) : de 1 Elo à Magnus Carlsen.
+// ÉCHELLE DES BOTS (107 personnages, pack d'avatars originaux img/roster/ — illustrations, pas les images Chess.com) : de 1 Elo à Magnus Carlsen.
 // Chaque bot = un PROFIL DE STYLE joué par Stockfish (comme ai_bots.js) : livre d'ouvertures de son niveau + erreurs calibrées sur son Elo
 // (coups au hasard sous 900 Elo, gaffes / erreurs de plus en plus rares en montant). Joueurs réels : profils « inspirés », répliques neutres.
 // Mittens affiche 1 Elo… et joue à 3200. Les bots ADAPTATIFS prennent ton niveau (+100 si tu gagnes, −100 si tu perds).
 (() => {
   const E = (window.ENOS = window.ENOS || {}), AIP = (window.ENOS_AIPROF = window.ENOS_AIPROF || {});
-  const CATS = [["deb", "Débutants"], ["int", "Intermédiaires"], ["adv", "Avancés"], ["mai", "Maîtres"], ["pro", "Joueurs pro"], ["cel", "Célébrités"], ["spe", "Spéciaux"], ["ada", "Adaptatifs"], ["ody", "Odyssée"]];
+  const CATS = [["deb", "Débutants"], ["int", "Intermédiaires"], ["adv", "Avancés"], ["mai", "Maîtres"], ["pro", "Joueurs pro"], ["cel", "Célébrités"], ["spe", "Spéciaux"], ["ada", "Adaptatifs"], ["coa", "Coachs"], ["ody", "Odyssée"]];
   // [catégorie, nom, fichier avatar, Elo, sous-titre, id d'un profil existant (ai_bots.js) ou options]
   const R = [
     ["deb", "Noel", "noel", 1, "1 Elo · joue vraiment au hasard"], ["deb", "Oliver", "oliver", 100, "découvre le jeu"], ["deb", "Milica", "milica", 150, "aime pousser les pions"],
@@ -22,21 +22,31 @@
     ["mai", "Noam", "noam", 2200, "théoricien"], ["mai", "Nora", "nora", 2200, "dynamique"], ["mai", "Hans", "hans", 2250, "attaque à outrance"], ["mai", "Ahmed", "ahmed", 2300, "positionnel"],
     ["mai", "Sakura", "sakura", 2300, "calcul tranchant"], ["mai", "Arjun", "arjun", 2350, "jeune prodige"], ["mai", "Francis", "francis", 2350, "joueur de club redoutable"],
     ["mai", "Sofia", "sofia", 2400, "maître international"], ["mai", "Alexander", "alexander", 2400, "défense de fer"], ["mai", "Luke", "luke", 2450, "finales techniques"], ["mai", "Wei", "wei", 2450, "universel"],
-    ["pro", "Magnus Carlsen", "magnus_carlsen", 2830, "profil inspiré · universel", "magnus"], ["pro", "Hikaru Nakamura", "hikaru_nakamura", 2790, "profil inspiré · rapide", "hikaru"],
-    ["pro", "Fabiano Caruana", "fabiano_caruana", 2800, "profil inspiré · préparation"], ["pro", "Ding Liren", "ding_liren", 2750, "profil inspiré · solide"],
-    ["pro", "Viswanathan Anand", "viswanathan_anand", 2750, "profil inspiré · le Tigre de Madras"], ["pro", "Anna Muzychuk", "anna_muzychuk", 2550, "profil inspiré · GM"],
+    ["pro", "Magnus Carlsen", "magnus_carlsen", 2882, "profil inspiré · universel", "magnus"], ["pro", "Hikaru Nakamura", "hikaru_nakamura", 2830, "profil inspiré · rapide", "hikaru"],
+    ["pro", "Fabiano Caruana", "fabiano_caruana", 2803, "profil inspiré · préparation"], ["pro", "Ding Liren", "ding_liren", 2762, "profil inspiré · solide"],
+    ["pro", "Viswanathan Anand", "viswanathan_anand", 2754, "profil inspiré · le Tigre de Madras"], ["pro", "Anna Muzychuk", "anna_muzychuk", 2550, "profil inspiré · GM"],
     ["pro", "Alexandra Kosteniuk", "alexandra_kosteniuk", 2500, "profil inspiré · GM"], ["pro", "Daniel Naroditsky", "daniel_naroditsky", 2650, "profil inspiré · le professeur du speedrun"],
-    ["pro", "Levy Rozman", "levy_rozman", 2330, "profil inspiré · GothamChess", "levy"],
-    ["cel", "Alexandra Botez", "alexandra_botez", 2000, "profil inspiré · streameuse"], ["cel", "Robert Hess", "robert_hess", 2600, "profil inspiré · GM commentateur"],
+    ["pro", "Levy Rozman", "levy_rozman", 2500, "profil inspiré · GothamChess", "levy"],
+    ["pro", "Wesley So", "wesley_so", 2770, "profil inspiré · technique"], ["pro", "Anish Giri", "anish_giri", 2764, "profil inspiré · préparation"],
+    ["pro", "Alireza Firouzja", "alireza_firouzja", 2760, "profil inspiré · agressif"], ["pro", "Ian Nepomniachtchi", "ian_nepomniachtchi", 2758, "profil inspiré · rapide et tranchant"],
+    ["pro", "Sergey Karjakin", "sergey_karjakin", 2757, "profil inspiré · défenseur"], ["pro", "Levon Aronian", "levon_aronian", 2755, "profil inspiré · créatif"],
+    ["pro", "Maxime Vachier-Lagrave", "maxime_vachier_lagrave", 2752, "profil inspiré · Najdorf et Grünfeld"], ["pro", "Teimour Radjabov", "teimour_radjabov", 2747, "profil inspiré · solide"],
+    ["pro", "Shakhriyar Mamedyarov", "shakhriyar_mamedyarov", 2746, "profil inspiré · attaquant"], ["pro", "Richard Rapport", "richard_rapport", 2743, "profil inspiré · ouvertures originales"],
+    ["pro", "Judit Polgár", "judit_polgar", 2735, "profil inspiré · attaquante légendaire"], ["pro", "Hou Yifan", "hou_yifan", 2658, "profil inspiré · championne du monde"],
+    ["pro", "Nana Dzagnidze", "nana_dzagnidze", 2541, "profil inspiré · GM"], ["pro", "Sophie Milliet", "sophie_milliet", 2400, "profil inspiré · MI"], ["pro", "Irina Krush", "irina_krush", 2388, "profil inspiré · GM"],
+    ["cel", "Alexandra Botez", "alexandra_botez", 2200, "profil inspiré · streameuse"], ["cel", "Robert Hess", "robert_hess", 2600, "profil inspiré · GM commentateur"],
     ["cel", "Danny Rensch", "danny_rensch", 2400, "profil inspiré · IM"], ["cel", "MrBeast", "mrbeast", 600, "profil inspiré · défi fun"], ["cel", "boxbox", "boxbox", 1500, "profil inspiré · streamer"],
+    ["cel", "Andrea Botez", "andrea_botez", 2000, "profil inspiré · streameuse"], ["cel", "Anna Cramling", "anna_cramling", 2200, "profil inspiré · streameuse"],
     ["cel", "Beth Harmon", "beth_harmon", 2600, "personnage de fiction · Le Jeu de la dame"],
-    ["spe", "Mittens", "mittens", 1, "« 1 Elo »… joue à 3200", { real: 3200 }], ["spe", "Scaredy Cat", "scaredy_cat", 400, "fuit au moindre échec"], ["spe", "Angry Cat", "angry_cat", 1200, "attaque tout"],
-    ["spe", "Mr. Grumpers", "mr_grumpers", 1700, "grognon mais solide"], ["spe", "Catspurrov", "catspurrov", 2400, "le chat champion"], ["spe", "Deadlost", "deadlost", 1300, "revenant d'Halloween"],
-    ["spe", "Grandpa Gambit", "grandpa_gambit", 1600, "que des gambits"], ["spe", "FrankenIsla", "frankenisla", 1900, "monstre de fêtes"], ["spe", "ChessGPT", "chessgpt", 1000, "IA bavarde"],
-    ["spe", "Chippy", "chippy", 800, "petit robot"], ["spe", "PAL 9000", "pal_9000", 2900, "IA spatiale implacable"], ["spe", "Skyweb", "skyweb", 3000, "IA qui voit tout"],
-    ["spe", "Agent Chess", "agent_chess", 2200, "espion"], ["spe", "Le Turc mécanique", "le_turc_mecanique", 1800, "automate de 1770", "turk"],
+    ["spe", "Mittens", "mittens", 1, "« 1 Elo »… joue à 3200", { real: 3200 }], ["spe", "Scaredy Cat", "scaredy_cat", 1200, "fuit au moindre échec"], ["spe", "Angry Cat", "angry_cat", 1800, "attaque tout"],
+    ["spe", "Cool Cat", "cool_cat", 2000, "trop cool pour paniquer"], ["spe", "Sassy Cat", "sassy_cat", 2100, "insolente et précise"],
+    ["spe", "Mr. Grumpers", "mr_grumpers", 1700, "grognon mais solide"], ["spe", "Catspurrov", "catspurrov", 2400, "le chat champion"], ["spe", "Deadlost", "deadlost", 1800, "revenant d'Halloween"],
+    ["spe", "Grandpa Gambit", "grandpa_gambit", 1700, "que des gambits"], ["spe", "FrankenIsla", "frankenisla", 1500, "monstre de fêtes"], ["spe", "ChessGPT", "chessgpt", 3000, "IA d'échecs (rien à voir avec ChatGPT Prime)"],
+    ["spe", "Chippy", "chippy", 1800, "petit robot"], ["spe", "PAL 9000", "pal_9000", 2500, "IA spatiale implacable"], ["spe", "Skyweb", "skyweb", 2400, "IA qui voit tout"],
+    ["spe", "Agent Chess", "agent_chess", 2350, "espion"], ["spe", "Le Turc mécanique", "le_turc_mecanique", 1800, "automate de 1770", "turk"],
     ["ada", "Nisha", "nisha", 0, "s'adapte à ton niveau", { adapt: true }], ["ada", "Tomas", "tomas", 0, "s'adapte à ton niveau", { adapt: true }],
     ["ada", "Devon", "devon", 0, "s'adapte à ton niveau", { adapt: true }], ["ada", "Natasha", "natasha", 0, "s'adapte à ton niveau", { adapt: true }],
+    ["coa", "Isaac", "isaac", 1500, "coach : explique ses plans"], ["coa", "Coach", "coach", 1800, "coach : solide et pédagogue"], ["coa", "Dr. Wolf", "dr_wolf", 2000, "coach : exigeant"],
     ["ody", "Cyclops", "cyclops", 1000, "un seul œil, une seule idée"], ["ody", "Siren", "siren", 1400, "pièges envoûtants"], ["ody", "Poseidon", "poseidon", 1800, "tempête sur le plateau"],
     ["ody", "Circe", "circe", 2200, "transforme tes pièces en cochons"], ["ody", "Odysseus", "odysseus", 2600, "rusé, le héros de l'Odyssée"],
   ];
