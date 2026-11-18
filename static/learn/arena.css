@@ -44,3 +44,11 @@ body.arena-on main{max-width:1500px}
 .arena .df-vs .vp .bot-av{width:min(22vw,260px);height:min(22vw,260px)}
 .arena #df-btns .btn{flex:none;min-width:150px}
 @media (max-width:1100px){.arena #df-game>.card{grid-template-columns:minmax(0,1fr)}.arena #df-game>.card>*{grid-column:1!important;grid-row:auto!important}.arena .bot-av{width:110px;height:110px}.arena .bot-banner{flex-direction:row;align-items:flex-end}.arena .bot-bubble::before{left:-9px;top:auto;bottom:16px;border:9px solid transparent;border-right-color:#fff;border-left:0}}
+/* familles de bots (Légendes, Joueurs pro, Streamers…) : grille compacte */
+.ar-mini{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.ar-bot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px 10px;border:1px solid var(--line);border-radius:14px;background:#0b0b0d;color:#e8e8ee;cursor:pointer;transition:transform .15s,border-color .2s}
+.ar-bot:hover{transform:translateY(-2px);border-color:var(--red)}
+.ar-bot img,.ar-bot .ar-ini{width:72px;height:72px;border-radius:50%;object-fit:cover}
+.ar-bot .ar-ini{display:grid;place-items:center;background:#202026;font:800 22px var(--ui)}
+.ar-bot b{font:700 12.5px var(--ui);text-align:center;line-height:1.2}
+.ar-bot small{font:700 11.5px var(--ui);color:#ffd666}

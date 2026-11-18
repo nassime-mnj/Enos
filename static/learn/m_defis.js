@@ -85,13 +85,22 @@
 
       // ---- accueil : sections, icônes + noms (les détails de chaque défi sont dans sa feuille de réglage)
       const AIIDS = E.aiBots ? E.aiBots.ids : [], botImg = (id) => (E.botChat && E.botChat.bots[id] && E.botChat.bots[id].img) || "";
-      const DFN = { roster: ["Bots (" + (E.botRoster ? E.botRoster.list.length : 0) + ")", "img/roster/mittens.png"], brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Boss final", "cc:rook_b"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
-      const DFG = [["Contre l'IA", ["brillant", "enos", "coach", "boss"]], ["Personnages", ["roster", "nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...AIIDS]], ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
+      const DFN = { brillant: ["ETO Brillant", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Stockfish 19", "img/bots/stockfish.png"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
+      // TOUT est un bot : on range par FAMILLES (pas une catégorie « Bots ») — les bots inventés pour E.N.O.S., les LÉGENDES (ordis surpuissants), puis les autres
+      const RBI = (c) => (E.botRoster ? E.botRoster.list.filter((b) => b.cat === c).map((b) => b.id) : []), LEG_R = ["r_mittens", "r_pal_9000", "r_skyweb", "r_chessgpt"];
+      const DFG = [["Bots E.N.O.S.", ["brillant", "enos", "nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester"]],
+        ["Légendes", ["boss", "obsidian", "plenty", "caissa", "viridithas", "lc0", "berserk", "ethereal", "koivisto", ...LEG_R]],
+        ["Joueurs pro", RBI("pro")], ["Streamers", RBI("str")], ["Célébrités", RBI("cel")], ["IA", ["claude", "gpt", "gemini", "deepseek", "maia1100", "maia1500", "maia1900"]],
+        ["Débutants", RBI("deb")], ["Intermédiaires", RBI("int")], ["Avancés", RBI("adv")], ["Maîtres", RBI("mai")],
+        ["Chats & spéciaux", RBI("spe").filter((id) => !LEG_R.includes(id))], ["Coachs", ["coach", ...RBI("coa")]], ["Adaptatifs", RBI("ada")], ["Odyssée", RBI("ody")],
+        ["En équipe", ["teams"]], ["Spectacle", ["speedrun", "titans", "combat", "ebe", "ebs", "ebd", "x4a", "x4b"]]];
       function dfHome() {
         let n = 0;
-        return DFG.map(([title, ids]) => `<section class="hub-sec"><h4><span>${title}</span></h4><div class="hub-grid">${ids.filter((id) => MODES.some((x) => x.id === id)).map((id) => {
-          const m = MODES.find((x) => x.id === id), d = DFN[id] || [m.t.replace(/^[^\p{L}\p{N}]+/u, "")], src = d[1] || botImg(id), name = d[0], ic = src && src.startsWith("cc:") ? `<img class="hub-cc" src="img/menu/cc_${src.slice(3)}.png" alt="">` : src ? `<img class="hub-cc hub-av" src="${src}" alt="">` : `<span class="hub-ini">${esc(name.slice(0, 2).toUpperCase())}</span>`;
-          return `<button class="df-mode hub-tile" data-m="${id}" style="--i:${n++}"><span class="hub-ic">${ic}</span><b>${esc(name)}</b></button>`;
+        const BIG = ["Bots E.N.O.S.", "Légendes", "En équipe", "Spectacle"];                // les familles de bots nombreuses : grille serrée (4 par ligne, Elo sous le nom)
+        return DFG.map(([title, ids]) => `<section class="hub-sec"><h4><span>${title}</span><small class="df-cnt">${ids.filter((id) => MODES.some((x) => x.id === id)).length}</small></h4><div class="hub-grid${BIG.includes(title) ? "" : " dense"}">${ids.filter((id) => MODES.some((x) => x.id === id)).map((id) => {
+          const m = MODES.find((x) => x.id === id), d = DFN[id] || [m.t.replace(/^[^\p{L}\p{N}]+/u, "")], src = d[1] || botImg(id), name = d[0], ic = src && src.startsWith("cc:") ? `<img class="hub-cc" src="img/menu/cc_${src.slice(3)}.png" alt="">` : src ? `<img class="hub-cc hub-av" src="${src}" alt="" loading="lazy">` : `<span class="hub-ini">${esc(name.slice(0, 2).toUpperCase())}</span>`;
+          const rb = E.botRoster && E.botRoster.byId[id], ad = E.aiBots && E.aiBots.def[id], elo = rb ? (rb.adapt ? "ton niveau" : (rb.title ? rb.title + " " : "") + rb.elo) : ad ? ad.elo : "";
+          return `<button class="df-mode hub-tile" data-m="${id}" style="--i:${Math.min(n++, 24)}"><span class="hub-ic">${ic}</span><b>${esc(name)}</b>${elo !== "" ? `<small class="df-elo">${elo}</small>` : ""}</button>`;
         }).join("")}</div></section>`).join("");
       }
       el.innerHTML = `
@@ -793,7 +802,11 @@
         go(0);
       }
 
-      el._api = { launch, replay, get g() { return g; }, setup };
+      el._api = { launch, replay, get g() { return g; }, setup,
+        /** familles de l'accueil (pour l'Arène PC) : [[titre, [{id, name, img, elo}]]] */
+        families: () => DFG.map(([t, ids]) => [t, ids.filter((id) => MODES.some((x) => x.id === id)).map((id) => { const m = MODES.find((x) => x.id === id), d = DFN[id] || [m.t.replace(/^[^\p{L}\p{N}]+/u, "")], rb = E.botRoster && E.botRoster.byId[id], ad = E.aiBots && E.aiBots.def[id];
+          return { id, name: d[0], img: d[1] && !d[1].startsWith("cc:") ? d[1] : botImg(id), elo: rb ? (rb.adapt ? "ton niveau" : (rb.title ? rb.title + " " : "") + rb.elo) : ad ? ad.elo : "" }; })]),
+        fighters: () => ({ ...FIGHT_NAMES }) };
       paintHist(); paintDaily();
     },
   });
