@@ -75,7 +75,7 @@
       };
       (E.aiBots ? E.aiBots.ids : []).forEach((id) => { FIGHT[id] = () => ({ kind: "style", style: id, elo: eloOf(id), name: E.aiBots.def[id].name, talk: id }); });
       const RB = E.botRoster ? E.botRoster.list.filter((b) => !b.link) : [];                // échelle des 85 bots (les adaptatifs prennent ton niveau à chaque partie)
-      RB.forEach((b) => { FIGHT[b.id] = () => { const e = b.adapt ? E.botRoster.adaptElo() : b.real || b.elo; return { kind: "style", style: b.id, elo: e, name: b.name, talk: b.id, roster: b.id, ...(b.adapt ? { skill: E.botRoster.skillOf(e) } : {}) }; }; });
+      RB.forEach((b) => { FIGHT[b.id] = () => { const e = b.adapt ? E.botRoster.adaptElo() : b.real || b.elo; return { kind: b.witty ? "witty" : "style", style: b.id, elo: e, name: b.name, talk: b.id, roster: b.id, ...(b.adapt ? { skill: E.botRoster.skillOf(e) } : {}) }; }; });
       const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...(E.aiBots ? E.aiBots.ids : []), ...RB.map((b) => b.id)];
       const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
@@ -135,7 +135,7 @@
       /** ÉCHELLE DES BOTS : catégories, avatars, Elo -> la fiche du bot choisi */
       function rosterPicker() {
         const BR = E.botRoster; if (!BR) return;
-        const html = BR.CATS.map(([c, title]) => { const bs = BR.list.filter((b) => b.cat === c); return bs.length ? `<h4 class="ro-cat">${title} <small>${bs.length}</small></h4><div class="ro-grid">${bs.map((b) => `<button class="ro-bot" data-b="${b.id}"><img src="${b.img}" alt=""><b>${esc(b.name)}</b><small>${b.adapt ? "ton niveau (" + BR.adaptElo() + ")" : b.elo + " Elo"}</small></button>`).join("")}</div>` : ""; }).join("");
+        const html = BR.CATS.map(([c, title]) => { const bs = BR.list.filter((b) => b.cat === c); return bs.length ? `<h4 class="ro-cat">${title} <small>${bs.length}</small></h4><div class="ro-grid">${bs.map((b) => `<button class="ro-bot" data-b="${b.id}"><img src="${b.img}" alt=""><b>${esc(b.name)}</b><small>${b.adapt ? "ton niveau (" + BR.adaptElo() + ")" : (b.title ? b.title + " · " : "") + b.elo + " Elo"}</small></button>`).join("")}</div>` : ""; }).join("");
         const s = E.ui.sheet({ title: "Bots · de 1 Elo à Magnus", html: `<div class="ro-pick">${html}</div>`, options: [{ label: "FERMER" }] });
         s.querySelectorAll(".ro-bot").forEach((b) => (b.onclick = () => { E.vibrate && E.vibrate(8); setup(b.dataset.b); }));          // la fiche remplace le sélecteur (fermeture instantanée)
       }
@@ -182,8 +182,8 @@
           };
         }
         else if (m.roster) { const b = E.botRoster.byId[id], cat = (E.botRoster.CATS.find((c) => c[0] === b.cat) || [0, ""])[1];
-          body = `<div class="ro-head"><img src="${b.img}" alt=""><div><b>${esc(b.name)}</b><small>${cat} · ${b.adapt ? "s'adapte à ton niveau : " + E.botRoster.adaptElo() + " Elo" : b.real ? "affiche " + b.elo + " Elo… joue à " + b.real : b.elo + " Elo"}</small></div></div>
-            <p class="muted" style="margin-bottom:12px;line-height:1.5">${esc(b.sub)}. ${b.person ? "<b>Profil inspiré</b> de son jeu public — ce n'est pas la personne. " : ""}Un <b>profil de style</b> : livre d'ouvertures de son niveau, puis Stockfish joue à sa place avec des erreurs calibrées sur son Elo${b.elo <= 900 && !b.real ? " (et des coups au hasard)" : ""}.${b.adapt ? " Tu gagnes : il monte de 100 Elo ; tu perds : il descend de 100." : ""}</p>` + colorSeg; }
+          body = `<div class="ro-head"><img src="${b.img}" alt=""><div><b>${esc(b.name)}</b><small>${cat} · ${b.adapt ? "s'adapte à ton niveau : " + E.botRoster.adaptElo() + " Elo" : b.real ? "affiche " + b.elo + " Elo… joue à " + b.real : (b.title ? b.title + " · " : "") + b.elo + " Elo" + (b.witty ? "… sur le papier" : "")}</small></div></div>
+            <p class="muted" style="margin-bottom:12px;line-height:1.5">${esc(b.sub)}. ${b.person ? "<b>Profil inspiré</b> de son jeu public — ce n'est pas la personne. " : ""}Un <b>profil de style</b> : livre d'ouvertures de son niveau, puis Stockfish joue à sa place avec des erreurs calibrées sur son Elo${b.elo <= 900 && !b.real ? " (et des coups au hasard)" : ""}.${b.adapt ? " Tu gagnes : il monte de 100 Elo ; tu perds : il descend de 100." : ""}${b.witty ? " <b style=\"color:#1acfd6\">Sauf qu'en vrai c'est un monstre</b> : il sort l'<b>Alien Gambit</b> dès que tu joues la Caro-Kann, puis il joue à <b>pleine puissance</b> et cherche à chaque coup le <b>sacrifice brillant !!</b> (comme ETO, avec encore plus de temps de calcul). Il a éteint des grands maîtres, Magnus Carlsen compris." : ""}</p>` + colorSeg; }
         else if (m.ai) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5"><b>${m.t.slice(3)}</b> — ${E.aiBots.def[id].tag}. ${E.aiBots.def[id].player ? "<b>Profil inspiré</b> de son jeu public (répertoire d'ouvertures connu, style) — ce n'est pas la personne : Stockfish joue à sa place avec une force calibrée sur son niveau." : E.aiBots.def[id].native && E.nativeEngine && E.nativeEngine.has(E.aiBots.def[id].native) ? "<b>Le VRAI moteur</b> tourne sur ton téléphone (binaire natif, plusieurs cœurs) : après son livre d'ouvertures, c'est lui qui joue, à pleine force." : E.aiBots.def[id].native ? "<b>Vrai moteur</b> dans l'application Android ; ici (sans le moteur natif) Stockfish joue à sa place avec son style." : E.aiBots.def[id].engine ? "<b>Profil de style</b> : le vrai moteur n'est pas embarqué dans le téléphone (il demande un programme UCI)." : "Une <b>illusion</b> : aucune IA n'est interrogée (zéro token)."} Ses <b>ouvertures préférées</b> et son <b>style</b> sont donnés à Stockfish, qui joue à sa place, avec une fréquence d'erreurs adaptée à son niveau (<b>${E.aiBots.def[id].elo} Elo</b>, ${E.aiBots.def[id].player ? "ordre de grandeur de son classement (estimation pour le Turc)" : E.aiBots.def[id].engine ? "niveau estimé" : "estimé d'après les classements publics de parties d'IA"}).</p>` + colorSeg;
         else if (m.style) body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">${m.t.slice(3)} reprend <b>les ouvertures</b>, <b>le niveau</b> et <b>la fréquence d'erreurs</b> mesurés sur ses vraies parties Chess.com (${STY && STY[id] ? STY[id].games + " parties analysées, " + STY[id].skill.acpl + " cp de perte moyenne" : "profil en chargement"}). Il tombe dans les mêmes pièges que lui${id === "nasko" ? " et sort le Gambit Alien contre la Caro-Kann" : ""}.</p>` + colorSeg;
         else if (m.duel && id !== "titans") body = `<p class="muted" style="margin-bottom:12px;line-height:1.5">Match spectateur, 3200 Elo de chaque côté. La partie est <b>enregistrée en entier</b> : tu pourras la revoir coup par coup, avec les mêmes jugements et accélérer la lecture.</p><label class="fld">Camp d'${id === "ebd" ? "ETO + E.N.O.S." : "ETO Brillant"}</label>` + colorSeg;
@@ -423,6 +423,14 @@
           return { uci: r.uci };
         }
         const tcf = g.tcMs ? g.tcMs(ch.turn()) / 1000 : 1, er = p.eloReal != null ? p.eloReal : p.elo;                    // cadence : réflexion proportionnelle au temps restant (≤ 1 s)
+        if (p.kind === "witty") {                                              // WITTY ALIEN : CM sur le papier, MONSTRE en vrai — Alien Gambit, puis chasse au sacrifice brillant à pleine puissance, avec plus de temps que ETO
+          const S = prof(p.style), turn = ch.turn(), path = g.ch.history({ verbose: true }).map((m) => m.from + m.to + (m.promotion || "")).join(" "), legal = new Set(ch.moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion || "")));
+          const al = turn === "w" ? ALIEN[path] : null; if (al && legal.has(al)) return { uci: al };
+          const node = S && S.book[turn][path]; if (node) { const ok = Object.entries(node).filter(([u]) => legal.has(u)); if (ok.length) return { uci: wpick(ok) }; }
+          const m = await K.etoMove(fen, { topMs: Math.max(300, 1600 * tcf), sacMs: Math.max(500, 2800 * tcf) });
+          const u = await nodraw(fen, m.uci);
+          return u === m.uci ? { uci: m.uci, brilliant: m.brilliant } : { uci: u };
+        }
         if (p.kind === "eto" || (p.kind === "duo" && duo % 2 === 1)) {
           const m = await K.etoMove(fen, { topMs: Math.max(80, 900 * tcf), sacMs: Math.max(120, 1500 * tcf) });
           const u = await nodraw(fen, m.uci);

@@ -1,11 +1,11 @@
 "use strict";
-// ÉCHELLE DES BOTS (107 personnages, pack d'avatars originaux img/roster/ — illustrations, pas les images Chess.com) : de 1 Elo à Magnus Carlsen.
+// ÉCHELLE DES BOTS (113 personnages, pack d'avatars originaux img/roster/ — illustrations, pas les images Chess.com) : de 1 Elo à Magnus Carlsen.
 // Chaque bot = un PROFIL DE STYLE joué par Stockfish (comme ai_bots.js) : livre d'ouvertures de son niveau + erreurs calibrées sur son Elo
 // (coups au hasard sous 900 Elo, gaffes / erreurs de plus en plus rares en montant). Joueurs réels : profils « inspirés », répliques neutres.
 // Mittens affiche 1 Elo… et joue à 3200. Les bots ADAPTATIFS prennent ton niveau (+100 si tu gagnes, −100 si tu perds).
 (() => {
   const E = (window.ENOS = window.ENOS || {}), AIP = (window.ENOS_AIPROF = window.ENOS_AIPROF || {});
-  const CATS = [["deb", "Débutants"], ["int", "Intermédiaires"], ["adv", "Avancés"], ["mai", "Maîtres"], ["pro", "Joueurs pro"], ["cel", "Célébrités"], ["spe", "Spéciaux"], ["ada", "Adaptatifs"], ["coa", "Coachs"], ["ody", "Odyssée"]];
+  const CATS = [["deb", "Débutants"], ["int", "Intermédiaires"], ["adv", "Avancés"], ["mai", "Maîtres"], ["pro", "Joueurs pro"], ["cel", "Célébrités"], ["spe", "Spéciaux"], ["ada", "Adaptatifs"], ["str", "Streamers"], ["coa", "Coachs"], ["ody", "Odyssée"]];
   // [catégorie, nom, fichier avatar, Elo, sous-titre, id d'un profil existant (ai_bots.js) ou options]
   const R = [
     ["deb", "Noel", "noel", 1, "1 Elo · joue vraiment au hasard"], ["deb", "Oliver", "oliver", 100, "découvre le jeu"], ["deb", "Milica", "milica", 150, "aime pousser les pions"],
@@ -46,6 +46,10 @@
     ["spe", "Agent Chess", "agent_chess", 2350, "espion"], ["spe", "Le Turc mécanique", "le_turc_mecanique", 1800, "automate de 1770", "turk"],
     ["ada", "Nisha", "nisha", 0, "s'adapte à ton niveau", { adapt: true }], ["ada", "Tomas", "tomas", 0, "s'adapte à ton niveau", { adapt: true }],
     ["ada", "Devon", "devon", 0, "s'adapte à ton niveau", { adapt: true }], ["ada", "Natasha", "natasha", 0, "s'adapte à ton niveau", { adapt: true }],
+    // STREAMERS : titre et Elo officiels affichés ; Witty Alien = CM ~2200 sur le papier, MONSTRE en vrai (Alien Gambit + chasse au sacrifice brillant à pleine puissance)
+    ["str", "Witty Alien", "witty_alien", 2200, "créateur de l'Alien Gambit · a battu Magnus Carlsen", { witty: true, title: "CM", w: ["e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nf6 Ng5 h6 Nxf7 Kxf7", "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Nf6 Ng5 e5"] }],
+    ["str", "Julien Song", "julien_song", 2320, "streamer · coach des PogChamps", { title: "MI" }], ["str", "Blitzstream", "blitzstream", 2288, "Kévin Bordi · roi du blitz", { title: "MN" }],
+    ["str", "Tushar", "tushar", 1915, "SadisticTushi · bullet", { title: "AGM" }], ["str", "Pietro", "pietro", 1500, "streamer"], ["str", "Jynxzi", "jynxzi", 1000, "streamer · PogChamps Hall of Fame"],
     ["coa", "Isaac", "isaac", 1500, "coach : explique ses plans"], ["coa", "Coach", "coach", 1800, "coach : solide et pédagogue"], ["coa", "Dr. Wolf", "dr_wolf", 2000, "coach : exigeant"],
     ["ody", "Cyclops", "cyclops", 1000, "un seul œil, une seule idée"], ["ody", "Siren", "siren", 1400, "pièges envoûtants"], ["ody", "Poseidon", "poseidon", 1800, "tempête sur le plateau"],
     ["ody", "Circe", "circe", 2200, "transforme tes pièces en cochons"], ["ody", "Odysseus", "odysseus", 2600, "rusé, le héros de l'Odyssée"],
@@ -72,13 +76,13 @@
   const adaptElo = () => { try { return Math.max(100, Math.min(3000, +(E.settings && E.settings.get("roster.adapt", 1200)) || 1200)); } catch (e) { return 1200; } };
   const list = R.map(([cat, name, file, elo, sub, x]) => {
     const link = typeof x === "string" ? x : "", o = x && typeof x === "object" ? x : {}, id = link || "r_" + file;
-    return { id, cat, name, img: "img/roster/" + file + ".png", elo, sub, link, adapt: !!o.adapt, real: o.real || null, person: cat === "pro" || (cat === "cel" && file !== "beth_harmon") };
+    return { id, cat, name, img: "img/roster/" + file + ".png", elo, sub, link, adapt: !!o.adapt, real: o.real || null, witty: !!o.witty, title: o.title || "", w: o.w || null, b: o.b || null, person: cat === "pro" || cat === "str" || (cat === "cel" && file !== "beth_harmon") };
   });
   list.forEach((b) => {
     if (b.link) { const d = E.aiBots && E.aiBots.def[b.link]; if (d) d.img = b.img; if (E.botChat && E.botChat.bots && E.botChat.bots[b.link]) E.botChat.bots[b.link].img = b.img; return; }     // Magnus, Hikaru, Levy, le Turc : profils existants, nouvel avatar
     const strength = b.real || b.elo || 1200, t = tierOf(strength), h = hash(b.name), pick = (arr, k) => [arr[(h + k) % arr.length], arr[(h + k * 7 + 1) % arr.length]];
-    let bk = null; const W = pick(BOOK[t].w, 0), Bl = pick(BOOK[t].b, 3);
-    AIP[b.id] = { name: b.name, eloEst: b.elo, roster: true, skill: skillOf(strength), capRate: 0.2 + ((h >> 3) % 20) / 100, checkRate: 0.1 + ((h >> 7) % 20) / 100, games: 0, tag: b.sub,
+    let bk = null; const W = b.w || pick(BOOK[t].w, 0), Bl = b.b || pick(BOOK[t].b, 3);
+    AIP[b.id] = { name: b.name, eloEst: b.elo, roster: true, skill: b.witty ? { random: 0, blunder: 0, mistake: 0, acpl: 0 } : skillOf(strength), capRate: 0.2 + ((h >> 3) % 20) / 100, checkRate: 0.1 + ((h >> 7) % 20) / 100, games: 0, tag: b.sub,
       get book() { return (bk = bk || { w: book(W, "w"), b: book(Bl, "b") }); } };
     if (E.botChat && E.botChat.bots) E.botChat.bots[b.id] = { name: b.name, img: b.img, style: `Tu es ${b.name}, un personnage qui joue aux échecs (${b.sub}). Phrases courtes, en français.` };
     window.ENOS_BOT_LINES = window.ENOS_BOT_LINES || {}; window.ENOS_BOT_LINES[b.id] = LINES(b.person ? b.name : "");

@@ -458,3 +458,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 
 - 40 portraits illustrés (planche fournie par le propriétaire, découpée en médaillons 256 px, liseré à la couleur de la catégorie) : Carlsen, Nakamura, Caruana, Rozman, Anand, So, Giri, Firouzja, Nepomniachtchi, Ding, Karjakin, Aronian, Vachier-Lagrave, Radjabov, Mamedyarov, Rapport, Alexandra et Andrea Botez, Anna Cramling, Polgár, Hou Yifan, Dzagnidze, Milliet, Krush, les chats (Mittens, Scaredy, Angry, Cool, Sassy), ChessGPT, Chippy, PAL 9000, Skyweb, Agent Chess, Deadlost, Grandpa Gambit, FrankenIsla, Isaac, Coach, Dr. Wolf. Les autres gardent leur médaillon aux initiales.
 - **22 nouveaux bots** (107 au total) et une catégorie **Coachs** (Isaac, Coach, Dr. Wolf). Elo repris de la planche (Magnus 2882, Hikaru 2830, Caruana 2803, Levy 2500, ChessGPT 3000…). **Mittens** affiche toujours « 1 Elo » (la vanne) et joue à 3200. **ChessGPT** est un bot d'échecs à part, sans lien avec ChatGPT Prime.
+
+## 1.94 — Streamers : Witty Alien, Julien Song, Blitzstream, Tushar, Pietro, Jynxzi
+
+- Nouvelle catégorie **Streamers** dans l'échelle (113 bots), icônes fournies par le propriétaire (médaillons, liseré orange ; Witty Alien en cyan). Titre et Elo officiels affichés : Julien Song **MI 2320**, Blitzstream (Kévin Bordi) **MN 2288** (pic FIDE), Tushar (SadisticTushi) **AGM 1915**, Witty Alien **CM 2200**. Pietro (1500) et Jynxzi (1000) : Elo non publiés, valeurs provisoires.
+- **Witty Alien = monstre** (`kind: "witty"`) : sort l'**Alien Gambit** (Caro-Kann : 5.Cg5 puis 6.Cxf7) dès que possible, puis joue à **pleine puissance** en cherchant à chaque coup le **sacrifice brillant** (`K.etoMove`, 1,6 s + 2,8 s de recherche de sacrifice, soit plus que ETO ; Stockfish 19 complet natif sur le téléphone). Affiché « CM · 2200 Elo… sur le papier ».
+- Répertoires : Witty = Alien Gambit (vérifié). Pour les autres, aucun répertoire public fiable trouvé : livre d'ouvertures de leur niveau en attendant leurs vraies ouvertures.
+- Test : `t_roster.py` (113 bots, Witty sort l'Alien Gambit jusqu'à Cxf7 contre la Caro-Kann, mode monstre).
