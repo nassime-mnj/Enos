@@ -48,6 +48,7 @@
     "b-au": ["music", "crea"], "b-yt": ["yt", "crea"], "b-api": ["gauge", "sys"], "b-sys": ["cpu", "sys"], "b-dc": ["trash", "sys"], "b-og": ["folder", "sys"], "b-cp": ["box", "crea"], "b-cine": ["film", "crea"], "b-subs": ["gauge", "sys"], "b-pdf": ["file", "crea"], "b-sm": ["film", "crea"], "b-syl": ["cal", "school"], "b-qt": ["wrench", "sys"],
     "b-colis": ["box", "crea"], "b-vm": ["music", "crea"],
   };
+  const CHESS = new Set(["b-st", "b-learn", "b-royale", "b-variants", "b-chessedit", "b-clips", "b-backup", "b-arena", "b-adv"]);    // regroupés derrière « Échecs »
   const CATS = [["all", "TOUT"], ["fav", "FAVORIS"], ["school", "ÉCOLE"], ["dev", "DÉVELOPPEMENT"], ["crea", "CRÉATION"], ["sys", "SYSTÈME"], ["ia", "IA & LOISIRS"]];
 
   // ------------------------------------------------------------------ vues : accueil / chat
@@ -261,7 +262,7 @@
 
   // ------------------------------------------------------------------ LANCEUR
   function collect() {
-    const out = [{ id: "__agenda", name: "Agenda", sub: "Emploi du temps Zeus · rendus Moodle · tâches · IA proactive", icon: "cal", cat: "school", badge: "NEW" }];
+    const out = [{ id: "__chess", name: "Échecs", sub: "Hub de tous les modes : E.N.O.S., arène des bots, Royale ×4, variantes, apprendre, Chess Edit", icon: "chess", cat: "ia", badge: "HUB" }, { id: "__agenda", name: "Agenda", sub: "Emploi du temps Zeus · rendus Moodle · tâches · IA proactive", icon: "cal", cat: "school", badge: "NEW" }];
     out.push({ id: "__pair", name: "Appairer le téléphone", sub: "QR code : clés, agenda et jumelage envoyés en un scan", icon: "phone", cat: "sys", badge: "NEW" });
     out.push({ id: "__afk", name: "Smart AFK", sub: "Anti-AFK jeu : micro-mouvements caméra + ZQSD · Échap ou souris = arrêt immédiat", icon: "play", cat: "ia", badge: "PREMIUM" });
     out.push({ id: "__clipper", name: "Auto-Clipper IA", sub: "Moments forts (cri de victoire…) → clip vertical 9:16 · activer / désactiver", icon: "film", cat: "ia", badge: "PREMIUM" });
@@ -295,6 +296,7 @@
       }).catch(() => toast({ level: "warn", title: name, message: "Module indisponible (réservé au PC local)." }));
     }
     if (id === "__setup") { closeLx(true); return window.enosOnboarding && window.enosOnboarding.open(); }
+    if (id === "__chess") { closeLx(true); bump(id); return window.enosOpenChess ? window.enosOpenChess() : window.enosOpenLearn && window.enosOpenLearn(""); }      // hub Échecs (tous les modes)
     bump(id);
     closeLx(true);
     if (id === "__agenda") return openAgenda();
@@ -333,11 +335,14 @@
     const q = $("lx-q").value.trim().toLowerCase();
     const u = readUse();
     const favs = new Set(Object.entries(u).sort((a, b) => b[1] - a[1]).slice(0, 8).map((x) => x[0]));
-    const list = lxMods.filter((m) => (lxCat === "all" || (lxCat === "fav" ? favs.has(m.id) : m.cat === lxCat)) && (!q || (m.name + " " + m.sub).toLowerCase().includes(q)));
-    $("lx-grid").innerHTML = list.length
+    const list = lxMods.filter((m) => (lxCat === "all" || (lxCat === "fav" ? favs.has(m.id) : m.cat === lxCat)) && (!q || (m.name + " " + m.sub).toLowerCase().includes(q)) && (q || !CHESS.has(m.id)));   // les modules d'échecs sont réunis dans le hub (toujours trouvables par la recherche)
+    const hero = !q && (lxCat === "all" || lxCat === "ia") ? `<div class="lx-hero"><img src="/static/learn/img/ui/knight.webp" alt=""><div class="lx-hc"><small>CHESS</small><h3>Échecs E.N.O.S.</h3><p>Tous les modes réunis : partie contre E.N.O.S., arène des bots, Royale ×4, variantes, apprentissage, conseiller, Chess Edit Studio.</p>
+      <div class="lx-hb"><button class="lx-hgo" data-id="__chess">▶ OUVRIR</button>${$("df-chess") ? `<button class="lx-hgo alt" data-play="1">JOUER CONTRE E.N.O.S.</button>` : ""}</div></div></div>` : "";
+    $("lx-grid").innerHTML = hero + (list.length
       ? list.map((m, i) => `<button class="lx-t" style="--i:${Math.min(i, 30)}" data-id="${esc(m.id)}">${m.badge ? `<span class="lx-badge">${m.badge}</span>` : ""}<span class="lx-ico">${svg(m.icon)}</span><span class="lx-n">${esc(m.name)}</span><span class="lx-s">${esc(m.sub)}</span></button>`).join("")
-      : `<div class="lx-none">${lxCat === "fav" ? "Lance quelques modules : tes favoris apparaîtront ici." : "Aucun module ne correspond."}</div>`;
-    $("lx-grid").querySelectorAll(".lx-t").forEach((t) => (t.onclick = () => launch(t.dataset.id)));
+      : `<div class="lx-none">${lxCat === "fav" ? "Lance quelques modules : tes favoris apparaîtront ici." : "Aucun module ne correspond."}</div>`);
+    $("lx-grid").querySelectorAll(".lx-t, .lx-hgo[data-id]").forEach((t) => (t.onclick = () => launch(t.dataset.id)));
+    const pl = $("lx-grid").querySelector("[data-play]"); if (pl) pl.onclick = () => { closeLx(true); $("df-chess").click(); };
   }
   function openLx() {
     buildLx();

@@ -36,15 +36,26 @@
     const FAM = api.families ? api.families().filter(([t]) => !["Bots E.N.O.S.", "En équipe", "Spectacle"].includes(t)) : [];     // familles partagées avec le téléphone
     const ALLF = { ...FIGHTERS, ...(api.fighters ? api.fighters() : {}) };                                   // le combat de bots accepte TOUS les bots
     const opts = (v) => Object.entries(ALLF).map(([k, n]) => `<option value="${k}" ${k === v ? "selected" : ""}>${esc(n)}</option>`).join("");
+    const I = (n) => (E.hubIcon ? E.hubIcon(n) : "");
+    const big = ROSTER.slice(0, 5), small = ROSTER.slice(5);
+    const pick = `<div class="ar-pick" hidden><small>Tu joues avec…</small><button class="btn" data-c="w"><i class="kw"></i>BLANCS</button><button class="btn" data-c="b"><i class="kb"></i>NOIRS</button><button class="btn pri" data-c="r">🎲 AU HASARD</button></div>`;
     lobby.innerHTML = `
-      <section class="ar-sec"><h3>⚔ ARÈNE ×4<span>le plateau d'échecs à 4 joueurs : 4 bots, tempête, alliances</span></h3><div class="ar-others">
-        <button class="btn pri" data-x4="0">1v1v1v1 · CHACUN POUR SOI</button><button class="btn pri" data-x4="1">2v2 · OPPOSÉS ALLIÉS</button><button class="btn" data-x4="2">2v2 · VOISINS ALLIÉS</button></div></section>
-      <section class="ar-sec"><h3>BOTS E.N.O.S.<span>les personnages inventés pour E.N.O.S.</span></h3><div class="ar-cards">${ROSTER.map((r) => `
-        <article class="ar-card" data-id="${r.id}">
+      <section class="ar-hero"><img class="ar-hero-bg" src="img/ui/arena.webp" alt=""><div class="ar-hero-c">
+        <div class="ar-kick">ARÈNE ×4</div><h2>Quatre joueurs. Une seule victoire.</h2><p>Le plateau d'échecs à 4 joueurs : alliances, trahisons et stratégie totale. 4 bots, tempête, équipes.</p>
+        <div class="ar-others ar-x4"><button class="btn pri" data-x4="0">${I("swords")}1v1v1v1 · CHACUN POUR SOI</button><button class="btn" data-x4="1">${I("users")}2v2 · OPPOSÉS ALLIÉS</button><button class="btn" data-x4="2">${I("grid4")}2v2 · VOISINS ALLIÉS</button></div></div></section>
+      <section class="ar-sec ar-own"><h3>CHOISIR UN ADVERSAIRE<span>les bots E.N.O.S. : affronte-les en duel, ils te parlent pendant la partie</span></h3>
+        <div class="ar-cards">${big.map((r, i) => `
+        <article class="ar-card" data-id="${r.id}" style="--d:${i}">
           <div class="ar-pt">${portrait(r.fighter || r.id)}</div>
-          <div class="ar-nm">${tbadge(r.elo, r.title)}<b>${esc(r.name)}</b><span>${r.eloText || r.elo + " Elo"}</span></div>
+          <div class="ar-nm">${tbadge(r.elo, r.title)}<b>${esc(r.name)}</b><span class="ar-elo">${I("chart")}${r.eloText || r.elo}</span></div>
           <p>${esc(r.text)}</p>
-          <div class="ar-go"><button class="btn" data-c="w">BLANCS</button><button class="btn" data-c="b">NOIRS</button><button class="btn pri" data-c="r">🎲 AU HASARD</button></div>
+          <div class="ar-go2"><button class="btn pri ar-defy">${I("swords")}DÉFIER</button><button class="btn ar-info">${I("search")}DÉTAILS</button></div>${pick}
+        </article>`).join("")}</div>
+        <div class="ar-cards ar-small">${small.map((r, i) => `
+        <article class="ar-card compact" data-id="${r.id}" style="--d:${i + 5}">
+          <div class="ar-pt">${portrait(r.fighter || r.id)}</div>
+          <div class="ar-cc"><div class="ar-nm">${tbadge(r.elo, r.title)}<b>${esc(r.name)}</b><span class="ar-elo">${r.eloText || r.elo + " Elo"}</span></div><p>${esc(r.text)}</p>
+          <div class="ar-go2"><button class="btn pri ar-defy">${I("swords")}DÉFIER</button><button class="btn ar-info">${I("search")}DÉTAILS</button></div></div>${pick}
         </article>`).join("")}</div></section>
       ${FAM.map(([t, list]) => `<section class="ar-sec"><h3>${esc(t.toUpperCase())}<span>${list.length} bot${list.length > 1 ? "s" : ""}</span></h3><div class="ar-mini">${list.map((b) => `
         <button class="ar-bot" data-b="${b.id}">${b.img ? `<img src="${b.img}" alt="" loading="lazy">` : `<span class="ar-ini">${esc(b.name.slice(0, 2).toUpperCase())}</span>`}<b>${esc(b.name)}</b><small>${b.elo !== "" ? esc(String(b.elo)) + (typeof b.elo === "number" ? " Elo" : "") : ""}</small></button>`).join("")}</div></section>`).join("")}
@@ -71,14 +82,18 @@
     lobby.querySelector(".ar-presets").onclick = (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; const p = PRESETS[+b.dataset.p]; lobby.querySelector("#ar-cw").value = p[0]; lobby.querySelector("#ar-cb").value = p[1]; slots(); };
     lobby.querySelectorAll("[data-x4]").forEach((b) => (b.onclick = () => E.royale ? E.royale.open(+b.dataset.x4) : (location.hash = "#royale", location.reload())));
     lobby.querySelector("#ar-fight").onclick = () => { const [cw, cb] = slots(); E.settings.set("defi.combat", [cw, cb]); api.launch("combat", { color: "w", cw, cb }); };
-    lobby.querySelector(".ar-cards").onclick = (e) => {
-      const b = e.target.closest("button[data-c]"), card = e.target.closest(".ar-card");
-      if (!b || !card) return;
+    lobby.querySelector(".ar-own").onclick = (e) => {
+      const card = e.target.closest(".ar-card"); if (!card) return;
+      if (e.target.closest(".ar-defy")) { const p = card.querySelector(".ar-pick"), was = !p.hidden; lobby.querySelectorAll(".ar-pick").forEach((x) => (x.hidden = true)); lobby.querySelectorAll(".ar-card.picking").forEach((x) => x.classList.remove("picking")); p.hidden = was; card.classList.toggle("picking", !was); return; }
+      if (e.target.closest(".ar-info")) return api.setup(card.dataset.id);                                  // fiche du bot (couleur, cadence, Elo)
+      const b = e.target.closest("button[data-c]");
+      if (!b) return;
       const c = b.dataset.c === "r" ? (Math.random() < 0.5 ? "w" : "b") : b.dataset.c, id = card.dataset.id;
       api.launch(id, { color: c, elo: 1200, pow: 100, boss: "eto" });
     };
+    document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".ar-card.picking")) { lobby.querySelectorAll(".ar-pick").forEach((x) => (x.hidden = true)); lobby.querySelectorAll(".ar-card.picking").forEach((x) => x.classList.remove("picking")); } });   // clic ailleurs : le choix de couleur se referme
     lobby.querySelectorAll(".ar-mini").forEach((g) => (g.onclick = (e) => { const b = e.target.closest(".ar-bot"); if (b) api.setup(b.dataset.b); }));     // fiche du bot (couleur, cadence)
-    lobby.querySelector(".ar-others").onclick = (e) => { const b = e.target.closest("button[data-m]"); if (b) api.setup(b.dataset.m); };
+    lobby.querySelectorAll(".ar-others").forEach((g) => (g.onclick = (e) => { const b = e.target.closest("button[data-m]"); if (b) api.setup(b.dataset.m); }));
 
     // le lobby est visible quand la liste des défis de m_defis l'est (retour d'une partie) ; la partie occupe tout l'écran
     const sync = () => { const inGame = !game.hidden; lobby.hidden = inGame; host.classList.toggle("in-game", inGame); document.body.classList.toggle("arena-game", inGame); };

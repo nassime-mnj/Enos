@@ -304,3 +304,4 @@ p.ce-stat{position:static;white-space:normal;overflow-wrap:anywhere}
 .ce-gmsg{font-size:13px;line-height:1.4;color:#c8c8d0;overflow-wrap:anywhere}
 .ce-ta{width:100%;box-sizing:border-box;min-height:120px;background:#0c0c10;color:#e8e8f0;border:1px solid #ffffff22;border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Menlo,monospace}
 .btn.ce-red{background:#e0243c;color:#fff;border-color:#ff5a6e}
+label.ce-fxl{position:static;pointer-events:auto}                              /* case « Effets pro » : même classe que le calque d'effets, mais reste dans le formulaire */

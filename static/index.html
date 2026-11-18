@@ -205,6 +205,7 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <link rel="stylesheet" href="/static/study.css">
 <link rel="stylesheet" href="/static/mobile.css">
 <link rel="stylesheet" href="/static/defi.css">
+<link rel="stylesheet" href="/static/chess_ui.css">
 <link rel="stylesheet" href="/static/train.css?v=1">
 <link rel="stylesheet" href="/static/persona.css?v=20261005d">
 <link rel="stylesheet" href="/static/sysdash.css">
@@ -1170,10 +1171,21 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
       </div><div id="mob-amsg"></div></div>
   </div>
 </section>
-<section id="df" class="local-only" role="dialog" aria-label="Défi" hidden>
-  <div class="tm-top"><h2>DÉFI<small>AFFRONTEZ E.N.O.S.</small></h2><button class="btn sm" id="df-close">✕ FERMER</button></div>
-  <div class="tm-body"><div class="tm-card"><h3>JEUX DISPONIBLES</h3>
-    <div class="mob-grid"><button class="btn" id="df-chess">CHESS<small>Échecs · Stockfish · jugement de chaque coup</small></button><button class="btn" id="df-g-menu">JEUX NÉON · GODOT<small>2048 Néon · Serpent · Démineur : jeux en fenêtre Godot, halo néon, effets sonores, records</small></button><button class="btn" id="df-bots">⚔ BOTS<small>Nasko, Pénoire, Lelex, Naskurieux, GhorGhor, ETO Brillant… · chat · titres GM/IM · combats entre bots</small></button><button class="btn" id="df-cond">MISE EN CONDITION<small>Plateau libre · posez vos pièces · interrogez ETO · réveillez E.N.O.S. ou ETO</small></button></div><div class="tm-note" id="df-gmsg"></div></div></div>
+<section id="df" class="local-only df-x" role="dialog" aria-label="Défi" hidden>
+  <div class="tm-top df-top"><img class="df-logo" src="/static/learn/img/ui/eye.webp" alt=""><h2>DÉFI<small>AFFRONTEZ E.N.O.S.</small></h2>
+    <nav class="df-pills" aria-label="Accès directs"><button class="on" data-proxy="" data-ic="grid4">Tous les défis</button><button data-proxy="df-chess" data-ic="knight">Chess</button><button data-proxy="df-g-menu" data-ic="zap">Jeux Néon</button><button data-proxy="df-bots" data-ic="users">Bots</button><button data-proxy="df-cond" data-ic="target">Mise en condition</button></nav>
+    <button class="btn sm df-allchess" id="df-hub" data-ic="crown" title="Tous les modes d'échecs : Arène, Royale ×4, Variantes, Apprendre, Chess Edit…">TOUS LES MODES D'ÉCHECS</button><button class="btn sm" id="df-close">✕ FERMER</button></div>
+  <div class="df-body">
+    <div class="df-grid">
+      <article class="df-hero"><img src="/static/learn/img/ui/eyeking.webp" alt=""><div class="df-hc"><h3>Repousse tes limites</h3><p>Choisis ton épreuve.</p><button class="df-go" data-proxy="df-chess" data-ic="play">Commencer</button></div></article>
+      <button class="df-card" id="df-chess"><img class="df-art" src="/static/learn/img/ui/knight.webp" alt=""><span class="df-ic" data-ic="knight"></span><b>CHESS</b><small>Échecs · Stockfish · jugement de chaque coup</small><i class="df-arr" data-ic="arrow"></i></button>
+      <button class="df-card" id="df-g-menu"><img class="df-art cover" src="/static/learn/img/ui/neon.webp" alt=""><span class="df-ic" data-ic="zap"></span><b>JEUX NÉON · GODOT</b><small>2048 Néon · Serpent · Démineur<br>Jeux en fenêtre Godot, halo néon, effets sonores, records</small><i class="df-arr" data-ic="arrow"></i></button>
+      <button class="df-card" id="df-bots"><span class="df-fan"><img src="/static/learn/img/bots/nasko.png" alt=""><img src="/static/learn/img/bots/penoire.png" alt=""><img src="/static/learn/img/bots/enos.png" alt=""><img src="/static/learn/img/bots/lelex.png" alt=""><img src="/static/learn/img/bots/naskurieux.png" alt=""></span><span class="df-ic" data-ic="users"></span><b>BOTS</b><small>Nasko, Pénoire, Lelex, Naskurieux, GhorGhor, ETO Brillant…<br>Chat · titres GM/IM · combats entre bots</small><i class="df-arr" data-ic="arrow"></i></button>
+      <button class="df-card" id="df-cond"><span class="df-mini" aria-hidden="true"></span><span class="df-ic" data-ic="target"></span><b>MISE EN CONDITION</b><small>Plateau libre · posez vos pièces · interrogez ETO<br>Réveillez E.N.O.S. ou ETO</small><i class="df-arr" data-ic="arrow"></i></button>
+    </div>
+    <div class="df-last"><div class="df-lh"><span data-ic="history"></span><b>Dernières parties d'échecs</b><small id="df-lcount"></small></div><div class="df-lrow" id="df-lrow"></div></div>
+    <div class="tm-note" id="df-gmsg"></div>
+  </div>
 </section>
 <section id="cd" class="local-only" role="dialog" aria-label="Mise en condition" hidden>
   <div class="tm-top"><h2>MISE EN CONDITION<small id="cd-sub">PLATEAU LIBRE · E.N.O.S. ET ETO SONT EN SOMMEIL</small></h2><button class="btn sm" id="cd-close">✕ FERMER</button></div>
@@ -1207,25 +1219,53 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
     </div>
   </div>
 </section>
-<section id="cs" class="local-only" role="dialog" aria-label="Échecs" hidden>
-  <div class="tm-top"><h2>CHESS<small>VOUS CONTRE E.N.O.S. · STOCKFISH</small></h2>
-    <label class="cs-power" for="cs-pow"><span id="cs-powtxt">Puissance : 100 % (Équivalent : 3200 Elo)</span><input type="range" id="cs-pow" min="1" max="100" step="1" value="100" aria-label="Puissance d'E.N.O.S."></label>
-    <select id="cs-opp" class="cs-sel" title="Adversaire du duel" aria-label="Adversaire du duel"><option value="enos">ADVERSAIRE · E.N.O.S.</option><option value="eto">ADVERSAIRE · ETO</option><option value="eto_brillant">ADVERSAIRE · ETO BRILLANT (3200)</option></select>
-    <select id="cs-mode" class="cs-sel" title="Mode de jeu : défi contre E.N.O.S., ou cours avec ETO qui commente votre partie contre un bot virtuel" aria-label="Mode de jeu"><option value="enos">DÉFI · E.N.O.S.</option><option value="coach">COURS · MOI VS BOT + COACH ETO</option><option value="speedrun">SPEEDRUN · ETO VS BOT</option><option value="titans">⚔ CHOC DES TITANS · E.N.O.S. VS ETO</option><option value="boss">👑 BOSS FINAL · STOCKFISH</option><option value="bots">⚔ BOTS · ARÈNE (Nasko, Pénoire, GhorGhor…)</option></select><select id="cs-boss" class="cs-sel" hidden title="Qui affronte le boss Stockfish ?" aria-label="Challenger du boss"><option value="eto">ETO VS STOCKFISH</option><option value="enos">E.N.O.S. VS STOCKFISH</option><option value="duo">E.N.O.S. + ETO VS STOCKFISH</option></select><select id="cs-elo" class="cs-sel" hidden title="Niveau du bot virtuel (ETO le simule à partir de ses 3200 Elo)" aria-label="Elo du bot"><option value="400">Bot 400 Elo</option><option value="600" selected>Bot 600 Elo</option><option value="800">Bot 800 Elo</option><option value="1000">Bot 1000 Elo</option><option value="1200">Bot 1200 Elo</option><option value="1500">Bot 1500 Elo</option><option value="1800">Bot 1800 Elo</option><option value="2200">Bot 2200 Elo</option><option value="2600">Bot 2600 Elo</option><option value="3200">⭐ ETO Brillant · 3200 Elo (sacrifices !!)</option></select><button class="btn sm" id="cs-sr-pause" hidden title="Mettre la partie en pause">⏸ PAUSE</button><button class="btn sm titans" id="cs-titans" title="Match spectateur : E.N.O.S. contre ETO, 3200 Elo chacun, ils se répondent en direct">⚔ ORGANISER UN 1v1 E.N.O.S. VS ETO</button><button class="btn sm" id="cs-w">NOUVELLE PARTIE · BLANCS</button><button class="btn sm" id="cs-b">NOIRS</button><button class="btn sm" id="cs-hbtn">HISTORIQUE</button><button class="btn sm" id="cs-trbtn" title="Super Enos s'entraîne en arrière-plan (LLM) contre E.N.O.S., Stockfish et ETO">🧠 SUPER ENOS</button><select id="cs-theme" class="cs-sel" title="Thème des pièces (plateau Godot)" aria-label="Thème des pièces"></select><select id="cs-board" class="cs-sel" title="Plateau : couleurs des cases (26 plateaux)" aria-label="Plateau"></select><select id="cs-vtheme" class="cs-sel" title="Style visuel du plateau (matériaux, néon, yeux des cavaliers)" aria-label="Style visuel du plateau"></select><span class="persona-slot" data-persona-slot></span><button class="btn sm" id="cs-mic" title="Parler à E.N.O.S. pendant la partie (trash talk)">🎤 TRASH TALK</button><button class="btn sm" id="cs-discord" title="Écoute Discord : E.N.O.S. / ETO entendent la voix de votre ami en appel (audio de sortie du PC) et lui répondent à voix haute">🎧 ÉCOUTE DISCORD : OFF</button><label class="dim" id="cs-discord-mixl" style="font-size:11px;white-space:nowrap" title="Fusionner aussi votre micro avec l'audio du bureau"><input type="checkbox" id="cs-discord-mic"> + mon micro</label><span id="cs-discord-lv" class="dim" style="font-size:11px" hidden></span><button class="btn sm" id="cs-stop" title="Couper la voix d'E.N.O.S. et lui répondre tout de suite">⏹ INTERROMPRE</button><button class="btn sm" id="cs-revbtn" title="Bilan de la partie : précision, niveau estimé, coups par catégorie">BILAN</button><button class="btn sm" id="cs-ana" title="Revoir la partie coup par coup (⏮ ◂ ▸ ⏭ sans rien perdre), voir le meilleur coup, les brillants, les excellents et les bons coups de n'importe quelle position">🔍 REVUE</button><button class="btn sm warn" id="cs-resign" title="Abandonner la partie en cours">ABANDONNER</button><button class="btn sm" id="cs-cond" hidden title="Revenir à la position posée pour la rejouer autrement">↩ MISE EN CONDITION</button><button class="btn sm" id="cs-close">✕ FERMER</button></div>
-  <div class="cs-wrap">
-    <div class="cs-left"><div id="cs-board" aria-label="Plateau d'échecs"></div><div id="cs-embed" hidden aria-hidden="true"></div><div id="cs-promo" hidden></div><div id="cs-status"></div></div>
-    <div class="cs-right">
-      <div id="cs-eye" aria-label="Emplacement de l'œil 3D d'E.N.O.S." title="Emplacement réservé : l'œil 3D animé d'E.N.O.S."></div>
-      <div id="cs-coach" class="cs-coach" hidden>
-        <div class="cc-head"><div id="cs-coach-face" class="cc-face" aria-hidden="true"></div><div class="cc-t"><b id="cc-title">COACH ETO</b><small id="cc-sub">commente la partie en direct</small></div>
-          <label class="cc-opt" title="ETO parle à voix haute"><input type="checkbox" id="cc-voice" checked> VOIX</label><label class="cc-opt" title="Seulement si ElevenLabs n'a plus de crédits : parler quand même avec la voix du navigateur (décoché par défaut)"><input type="checkbox" id="cc-bvoice"> VOIX SECOURS</label><label class="cc-opt" id="cc-onwrap" title="Laisser ETO commenter ce duel"><input type="checkbox" id="cc-on" checked> COACH</label></div>
-        <div id="cs-coach-log" class="cc-log" aria-live="polite"></div>
+<section id="cs" class="local-only cs-x" role="dialog" aria-label="Échecs" hidden>
+  <div class="tm-top cs-top">
+    <button class="cs-brand" id="cs-hub" title="Accueil Échecs : tous les modes"><img src="/static/learn/img/ui/eye.webp" alt=""><span><b>E.N.O.S.</b> CHESS</span></button>
+    <h2>CHESS<small>VOUS CONTRE E.N.O.S. · STOCKFISH</small></h2>
+    <div class="cs-modes"><select id="cs-mode" class="cs-sel cs-big" title="Mode de jeu : défi contre E.N.O.S., ou cours avec ETO qui commente votre partie contre un bot virtuel" aria-label="Mode de jeu"><option value="enos">DÉFI · E.N.O.S. VS VOUS</option><option value="coach">COURS · MOI VS BOT + COACH ETO</option><option value="speedrun">SPEEDRUN · ETO VS BOT</option><option value="titans">⚔ CHOC DES TITANS · E.N.O.S. VS ETO</option><option value="boss">👑 BOSS FINAL · STOCKFISH</option><option value="bots">⚔ BOTS · ARÈNE (Nasko, Pénoire, GhorGhor…)</option></select><select id="cs-boss" class="cs-sel" hidden title="Qui affronte le boss Stockfish ?" aria-label="Challenger du boss"><option value="eto">ETO VS STOCKFISH</option><option value="enos">E.N.O.S. VS STOCKFISH</option><option value="duo">E.N.O.S. + ETO VS STOCKFISH</option></select><select id="cs-elo" class="cs-sel" hidden title="Niveau du bot virtuel (ETO le simule à partir de ses 3200 Elo)" aria-label="Elo du bot"><option value="400">Bot 400 Elo</option><option value="600" selected>Bot 600 Elo</option><option value="800">Bot 800 Elo</option><option value="1000">Bot 1000 Elo</option><option value="1200">Bot 1200 Elo</option><option value="1500">Bot 1500 Elo</option><option value="1800">Bot 1800 Elo</option><option value="2200">Bot 2200 Elo</option><option value="2600">Bot 2600 Elo</option><option value="3200">⭐ ETO Brillant · 3200 Elo (sacrifices !!)</option></select><button class="btn sm" id="cs-sr-pause" hidden title="Mettre la partie en pause">⏸ PAUSE</button></div>
+    <div class="cs-acts"><button class="btn sm cs-i" id="cs-ana" data-ic="chart" title="Revoir la partie coup par coup (⏮ ◂ ▸ ⏭ sans rien perdre), voir le meilleur coup, les brillants, les excellents et les bons coups de n'importe quelle position">ANALYSE</button><button class="btn sm cs-i" id="cs-trbtn" data-ic="brain" title="Super Enos s'entraîne en arrière-plan (LLM) contre E.N.O.S., Stockfish et ETO">ENTRAÎNEMENT</button><button class="btn sm cs-i pri" id="cs-w" data-ic="plus" title="Nouvelle partie avec les Blancs">NOUVELLE PARTIE · BLANCS</button><button class="btn sm" id="cs-b" title="Nouvelle partie avec les Noirs">NOIRS</button><button class="btn sm cs-x-close" id="cs-close" title="Fermer (Échap)">✕ FERMER</button></div></div>
+  <div class="cs-body">
+    <nav class="cs-rail" aria-label="Raccourcis de la partie">
+      <button data-proxy="cs-hub" data-ic="home" title="Accueil Échecs : tous les modes"><span>Échecs</span></button>
+      <button data-proxy="cs-hbtn" data-ic="history" title="Historique des 10 dernières parties"><span>Historique</span></button>
+      <button data-proxy="cs-revbtn" data-ic="chart" title="Bilan de la partie"><span>Bilan</span></button>
+      <button data-proxy="cs-ana" data-ic="scan" title="Revue coup par coup"><span>Revue</span></button>
+      <button data-proxy="cs-trbtn" data-ic="brain" title="Super ENOS"><span>Super ENOS</span></button>
+      <button data-goto="cs-set" data-ic="settings" title="Réglages de la partie"><span>Réglages</span></button>
+    </nav>
+    <div class="cs-wrap">
+      <div class="cs-center">
+        <div class="cs-ban opp"><div id="cs-eye" aria-label="Emplacement de l'œil 3D d'E.N.O.S." title="E.N.O.S."></div><div class="cs-bn"><b id="cs-oname">E.N.O.S.</b><small>RATING <em id="cs-orate">—</em></small></div><span class="cs-chip" id="cs-ocol"></span><span class="cs-think" id="cs-othink"></span></div>
+        <div class="cs-left"><div id="cs-board" aria-label="Plateau d'échecs"></div><div id="cs-embed" hidden aria-hidden="true"></div><div id="cs-promo" hidden></div></div>
+        <div class="cs-ban me"><div class="cs-av" aria-hidden="true"></div><div class="cs-bn"><b id="cs-mname">VOUS</b><small>RATING <em>—</em></small></div><span class="cs-chip" id="cs-mcol"></span><div id="cs-status"></div></div>
       </div>
-      <div id="cs-dec" class="cs-dec" hidden><b>GAFFE CATASTROPHIQUE</b><div id="cs-dec-t"></div>
-        <button class="btn" id="cs-dec-go">CONTINUER AVEC CETTE ERREUR</button><button class="btn" id="cs-dec-undo">ANNULER LE COUP (TAKEBACK)</button></div>
-      <div id="cs-judge" class="cs-judge"></div>
-      <div class="cs-evalw"><div class="cs-evalb"><i id="cs-evalf"></i></div><b id="cs-evalv">0.0</b></div>
-      <div id="cs-moves"></div>
+      <div class="cs-right">
+        <div class="cs-card cs-evc"><div class="cs-evh"><b id="cs-evalv">0.0</b><span id="cs-evtxt">Égalité</span></div><div class="cs-evalw"><div class="cs-evalb"><i id="cs-evalf"></i></div></div></div>
+        <div id="cs-dec" class="cs-dec" hidden><b>GAFFE CATASTROPHIQUE</b><div id="cs-dec-t"></div>
+          <button class="btn" id="cs-dec-go">CONTINUER AVEC CETTE ERREUR</button><button class="btn" id="cs-dec-undo">ANNULER LE COUP (TAKEBACK)</button></div>
+        <div id="cs-coach" class="cs-coach" hidden>
+          <div class="cc-head"><div id="cs-coach-face" class="cc-face" aria-hidden="true"></div><div class="cc-t"><b id="cc-title">COACH ETO</b><small id="cc-sub">commente la partie en direct</small></div>
+            <label class="cc-opt" title="ETO parle à voix haute"><input type="checkbox" id="cc-voice" checked> VOIX</label><label class="cc-opt" title="Seulement si ElevenLabs n'a plus de crédits : parler quand même avec la voix du navigateur (décoché par défaut)"><input type="checkbox" id="cc-bvoice"> VOIX SECOURS</label><label class="cc-opt" id="cc-onwrap" title="Laisser ETO commenter ce duel"><input type="checkbox" id="cc-on" checked> COACH</label></div>
+          <div id="cs-coach-log" class="cc-log" aria-live="polite"></div>
+        </div>
+        <div class="cs-card cs-mvc"><h3><span class="cs-hic" data-ic="list"></span>COUPS<span class="cs-mvh"><i>#</i><i>Blancs</i><i>Noirs</i></span></h3><div id="cs-moves"></div></div>
+        <div class="cs-card cs-jc"><h3><span class="cs-hic" data-ic="book"></span>ANALYSE DU COUP</h3><div id="cs-judge" class="cs-judge"></div></div>
+        <div class="cs-card cs-actc"><h3><span class="cs-hic" data-ic="zap"></span>ACTIONS</h3><div class="cs-actg">
+          <button class="btn sm" id="cs-hbtn">HISTORIQUE</button><button class="btn sm" id="cs-revbtn" title="Bilan de la partie : précision, niveau estimé, coups par catégorie">BILAN</button>
+          <button class="btn sm titans" id="cs-titans" title="Match spectateur : E.N.O.S. contre ETO, 3200 Elo chacun, ils se répondent en direct">⚔ 1v1 E.N.O.S. VS ETO</button><button class="btn sm" id="cs-mic" title="Parler à E.N.O.S. pendant la partie (trash talk)">🎤 TRASH TALK</button>
+          <button class="btn sm" id="cs-stop" title="Couper la voix d'E.N.O.S. et lui répondre tout de suite">⏹ INTERROMPRE</button><button class="btn sm" id="cs-discord" title="Écoute Discord : E.N.O.S. / ETO entendent la voix de votre ami en appel (audio de sortie du PC) et lui répondent à voix haute">🎧 ÉCOUTE DISCORD : OFF</button>
+          <label class="dim cs-mixl" id="cs-discord-mixl" title="Fusionner aussi votre micro avec l'audio du bureau"><input type="checkbox" id="cs-discord-mic"> + mon micro</label><span id="cs-discord-lv" class="dim" style="font-size:11px" hidden></span>
+          <button class="btn sm" id="cs-cond" hidden title="Revenir à la position posée pour la rejouer autrement">↩ MISE EN CONDITION</button><button class="btn sm warn" id="cs-resign" title="Abandonner la partie en cours">ABANDONNER</button></div></div>
+        <details class="cs-card cs-setc" id="cs-set" open><summary><span class="cs-hic" data-ic="settings"></span>RÉGLAGES DE LA PARTIE</summary>
+          <label class="cs-power" for="cs-pow"><span id="cs-powtxt">Puissance : 100 % (Équivalent : 3200 Elo)</span><input type="range" id="cs-pow" min="1" max="100" step="1" value="100" aria-label="Puissance d'E.N.O.S."></label>
+          <div class="cs-setg"><label>Adversaire<select id="cs-opp" class="cs-sel" title="Adversaire du duel" aria-label="Adversaire du duel"><option value="enos">ADVERSAIRE · E.N.O.S.</option><option value="eto">ADVERSAIRE · ETO</option><option value="eto_brillant">ADVERSAIRE · ETO BRILLANT (3200)</option></select></label>
+            <label>Pièces<select id="cs-theme" class="cs-sel" title="Thème des pièces (plateau Godot)" aria-label="Thème des pièces"></select></label>
+            <label>Plateau<select id="cs-boardsel" class="cs-sel" title="Plateau : couleurs des cases (26 plateaux)" aria-label="Plateau"></select></label>
+            <label>Style<select id="cs-vtheme" class="cs-sel" title="Style visuel du plateau (matériaux, néon, yeux des cavaliers)" aria-label="Style visuel du plateau"></select></label></div>
+          <div class="cs-pers"><span>Personnalité</span><span class="persona-slot" data-persona-slot></span></div>
+        </details>
+      </div>
     </div>
   </div>
   <div id="cs-rev" hidden role="dialog" aria-label="Bilan de la partie">
@@ -1280,7 +1320,9 @@ pre#ascii.is-speaking{animation:speak-glow .7s ease-in-out infinite alternate}
 <script src="/static/team.js"></script>
 <script src="/static/power.js"></script>
 <script src="/static/mobile.js"></script>
-<script src="/static/defi.js?v=20261026a"></script>
+<script src="/static/defi.js?v=20261118a"></script>
+<script src="/static/learn/hub_icons.js"></script>
+<script src="/static/chess_ui.js?v=20261118a"></script>
 <script src="/static/train.js?v=1"></script>
 <script src="/static/notify.js?v=2"></script>
 <script src="/static/agenda.js?v=2"></script>

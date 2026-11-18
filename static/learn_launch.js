@@ -13,6 +13,7 @@
     box.append(f); document.body.append(box);
   };
   window.enosOpenLearn = open;
+  window.enosOpenChess = () => open("");                                       // le hub Échecs (Applications, Défi)
   const learn = document.getElementById("b-learn"), adv = document.getElementById("b-adv");
   if (learn) learn.addEventListener("click", () => open(""));
   if (adv) adv.addEventListener("click", () => open("#advisor"));
@@ -44,6 +45,31 @@
       if (gmsg) gmsg.textContent = r.ok ? "Jeu lancé dans une nouvelle fenêtre." : (j.detail || "Erreur " + r.status);
     } catch (e) { if (gmsg) gmsg.textContent = "Impossible de contacter ENOS."; }
   }));
-  window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data && e.data.enos === "learn-close") close(); });
+  // HUB ÉCHECS (static/learn/hub.js) : les modes qui vivent dans cette fenêtre (partie contre E.N.O.S., mise en condition, ouvertures avec ETO,
+  // Super ENOS, historique) sont demandés par postMessage ; en les refermant, on revient au hub.
+  const $ = (id) => document.getElementById(id);
+  let fromHub = false;
+  function hubAct(act, mode) {
+    const need = { play: "df-chess", hist: "df-chess", train: "df-chess", cond: "df-cond", study: "b-st" }[act];
+    const btn = need && $(need);
+    if (!btn) { const f = box && box.querySelector("iframe"); if (f) f.contentWindow.postMessage({ enos: "learn-toast", msg: "Ce mode n'est disponible que sur le PC où tourne E.N.O.S." }, "*"); return; }
+    close(); fromHub = true;
+    if (act === "play" && mode && $("cs-mode") && [...$("cs-mode").options].some((o) => o.value === mode)) {
+      $("cs-mode").value = mode; $("cs-mode").dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    btn.click();
+    if (act === "hist" && $("cs-hbtn")) setTimeout(() => $("cs-hbtn").click(), 60);
+    if (act === "train" && $("cs-trbtn")) setTimeout(() => $("cs-trbtn").click(), 60);
+  }
+  ["cs-close", "cd-close", "st-close"].forEach((id) => { const b = $(id); if (b) b.addEventListener("click", () => {
+    if (!fromHub) return;
+    fromHub = false;
+    setTimeout(() => { const df = $("df"); if (df) df.hidden = true; open(""); }, 0);       // après le gestionnaire d'origine (qui rouvre la liste DÉFI)
+  }); });
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin || !e.data) return;
+    if (e.data.enos === "learn-close") close();
+    if (e.data.enos === "learn-act") hubAct(String(e.data.act || ""), String(e.data.mode || ""));
+  });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 })();

@@ -478,3 +478,8 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Plus de tuile « Bots » à part : l'accueil des Défis est rangé par **familles** : **Bots E.N.O.S.** (les personnages inventés : ETO Brillant, E.N.O.S., Nasko, Lelex, Pénoire, Naskurieux, GhorGhor, Naskolit, le Jester), **Légendes** (Stockfish 19, Obsidian, PlentyChess, Caissa, Viridithas, Lc0, Berserk, Ethereal, Koivisto, Mittens, PAL 9000, Skyweb, ChessGPT), puis Joueurs pro, Streamers, Célébrités, IA, Débutants, Intermédiaires, Avancés, Maîtres, Chats & spéciaux, Coachs, Adaptatifs, Odyssée, En équipe, Spectacle. Familles nombreuses en grille serrée (4 par ligne, Elo sous le nom), compteur par famille. 148 tuiles.
 - `el._api.families()` / `fighters()` exposent ces familles : l'**Arène PC** (`static/learn/arena.js`, propre au PC) affiche les mêmes familles sous ses grandes cartes « Bots E.N.O.S. » (grille d'avatars, clic = fiche du bot) et son combat de bots propose tous les bots (138).
 - Tests : `t_roster.py` (familles), `t_defis.py` (148 tuiles), `t_pc_arena.py` (Arène PC, serveur statique sur static/learn).
+
+## 1.97 — Chess Edit : case « Effets pro » remise à sa place (+ refonte Échecs du PC)
+
+- Chess Edit Studio : la case « ✨ Effets pro » partageait la classe `ce-fxl` du calque d'effets (positionné en absolu) et s'affichait collée en haut à gauche de l'écran. `label.ce-fxl` reste maintenant dans le formulaire (`css/chessedit.css`).
+- Côté PC (aucun autre changement sur le téléphone) : refonte « Obsidian Crimson » de tout ce qui touche aux échecs — hub Échecs unifié, écran de partie, Défi, Arène, lanceur Applications. Voir `docs/INTERFACE_ECHECS_PC.md`.

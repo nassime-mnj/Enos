@@ -131,6 +131,7 @@ E.N.O.S. est un logiciel de bureau Windows : un serveur local (Python / FastAPI)
 | Apprentissage échecs | `opening_manager`, `/api/study`, ouvertures PGN animées par ETO | 🖥 |
 | Thèmes visuels du plateau | `nasko_visualtheme` : le LLM choisit une esthétique | 🖥 |
 | Échecs sur téléphone | Stockfish.js embarqué (`chess_local.js`, `chess_brain.js`) : parties, Défis (ETO Brillant, Titans, Boss…), analyse de PGN, Conseiller brillants (capture d'écran → position) — sans PC. `nasko_mobchess` n'est plus nécessaire. | — |
+| Hub Échecs (PC) | `static/learn/hub.js` + `hub.css` + `hub_icons.js` : accueil unique de tous les modes (partie contre E.N.O.S., Arène, Royale ×4, Variantes, Prime, Apprendre, Cours, Conseiller, Revue, Chess Edit, Clips, Sauvegarde…), héros 3D animé, Ctrl+K. Écran de partie et Défi : `static/chess_ui.css` + `chess_ui.js`. Voir `docs/INTERFACE_ECHECS_PC.md` | 🖥 |
 | Arène des bots | `static/learn/arena.js` + `m_defis.js` (même code que le mobile) : Nasko, Pénoire, Lelex, Naskurieux, GhorGhor, combats au choix, chat, titres | 🖥 |
 | Super Enos (entraînement) | `nasko_train` : LLM contre E.N.O.S./Stockfish/ETO en arrière-plan, leçons mémorisées ; `nasko_nodraw` : pas de nulle par répétition | 🖥 (⭐ pilotage depuis le téléphone) |
 | Œil de bureau | Widget Godot flottant (`nasko_pet`, WebSocket `/ws/pet`) | 🖥 |

@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Échecs · Apprendre & Conseiller</title>
+<meta name="color-scheme" content="dark">
+<title>E.N.O.S. · Échecs</title>
+<link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="pc.css">
 <link rel="stylesheet" href="chess.css">
 <link rel="stylesheet" href="arena.css">
@@ -11,23 +13,58 @@
 <link rel="stylesheet" href="variants.css">
 <link rel="stylesheet" href="badges.css">
 <link rel="stylesheet" href="chessedit.css">
+<link rel="stylesheet" href="hub.css">
 </head>
-<body>
-<header><b>E.N.O.S.</b><span id="ttl">ÉCHECS</span><button id="close" hidden>FERMER ✕</button></header>
-<main>
-  <div class="seg" id="tabs" data-p="enos" style="margin-bottom:14px"><button data-t="learn" class="on">APPRENDRE</button><button data-t="advisor">CONSEILLER</button><button data-t="course">COURS EN DIRECT</button><button data-t="game">REVUE</button><button data-t="arena">⚔ ARÈNE</button><button data-t="royale">👑 ROYALE ×4</button><button data-t="prime">🤖 PRIME</button><button data-t="variants">🧪 VARIANTES</button><button data-t="chessedit">🎬 CHESS EDIT</button><button data-t="clips">🎭 CLIPS</button><button data-t="backup">💾 SAUVEGARDE</button><i class="seg-ind"></i></div>
-  <div id="tool-learn"><div class="suite-body" id="app-learn"></div></div>
-  <div id="tool-advisor" hidden><div class="suite-body" id="app-advisor"></div></div>
-  <div id="tool-chessedit" hidden><div class="suite-body" id="app-chessedit"></div></div>
-  <div id="tool-clips" hidden><div class="suite-body" id="app-clips"></div></div>
-  <div id="tool-backup" hidden><div class="suite-body" id="app-backup"></div></div>
-  <div id="tool-prime" hidden><div class="suite-body" id="app-prime"></div></div>
-  <div id="tool-variants" hidden><div class="suite-body" id="app-variants"></div></div>
-  <div id="tool-royale" hidden><div class="suite-body" id="app-royale"></div></div>
-  <div id="tool-arena" hidden><div class="suite-body" id="app-arena"></div></div>
-  <div id="tool-game" hidden><div class="suite-body" id="app-game"></div></div>
-  <div id="tool-course" hidden><div class="suite-body" id="app-course"><div class="card"><p class="muted">Le cours en direct s'ouvre en plein écran.</p><div class="row"><button class="btn pri" id="course-go">OUVRIR LE COURS</button></div></div></div></div>
-</main>
+<body class="on-hub" data-view="hub">
+<canvas id="fx-embers" aria-hidden="true"></canvas><div id="fx-aura" aria-hidden="true"><i></i><i></i><i></i></div>
+<nav id="tabs" class="rail" data-p="enos" aria-label="Modes d'échecs">
+  <div class="rail-logo"><span class="rl-eye"><img src="img/ui/eye.webp" alt=""></span><span class="rl-t"><b>E.N.O.S.</b><small>ÉCHECS</small></span></div>
+  <div class="rail-sc">
+    <button data-t="hub" data-i="home" class="on"><span>Accueil Échecs</span></button>
+    <div class="rail-h">Jouer</div>
+    <button data-x="play" data-i="eye"><span>Contre E.N.O.S.</span></button>
+    <button data-t="arena" data-i="swords"><span>Arène des bots</span></button>
+    <button data-t="royale" data-i="crown"><span>Royale ×4</span></button>
+    <button data-t="variants" data-i="flask"><span>Variantes</span></button>
+    <button data-t="prime" data-i="bot"><span>ChatGPT Prime</span></button>
+    <button data-x="cond" data-i="target"><span>Mise en condition</span></button>
+    <div class="rail-h">Apprendre</div>
+    <button data-t="learn" data-i="grad"><span>Apprendre</span></button>
+    <button data-t="course" data-i="radio"><span>Cours en direct</span></button>
+    <button data-x="study" data-i="book"><span>Ouvertures avec ETO</span></button>
+    <button data-t="advisor" data-i="bulb"><span>Conseiller</span></button>
+    <div class="rail-h">Analyser &amp; créer</div>
+    <button data-t="game" data-i="scan"><span>Revue</span></button>
+    <button data-x="hist" data-i="history"><span>Historique</span></button>
+    <button data-x="train" data-i="brain"><span>Super ENOS</span></button>
+    <button data-t="chessedit" data-i="clapper"><span>Chess Edit</span></button>
+    <button data-t="clips" data-i="drama"><span>Game Clips</span></button>
+    <button data-t="backup" data-i="database"><span>Sauvegarde</span></button>
+  </div>
+  <div class="rail-foot"><button id="close" data-i="close" hidden title="Revenir à E.N.O.S. (Échap)"><span>Fermer</span></button></div>
+</nav>
+<div id="stage">
+  <div id="topbar">
+    <div id="top-t"><b>Échecs</b></div>
+    <button id="top-search" title="Rechercher un mode (Ctrl+K)"><span class="ts-i"></span><span>Rechercher un mode…</span><kbd>Ctrl</kbd><kbd>K</kbd></button>
+    <button id="top-play" class="hb pri sm"><span class="tp-i"></span><span>Jouer</span></button>
+  </div>
+  <div id="page-head" hidden></div>
+  <section id="hub" aria-label="Accueil Échecs"></section>
+  <main>
+    <div id="tool-learn" hidden><div class="suite-body" id="app-learn"></div></div>
+    <div id="tool-advisor" hidden><div class="suite-body" id="app-advisor"></div></div>
+    <div id="tool-chessedit" hidden><div class="suite-body" id="app-chessedit"></div></div>
+    <div id="tool-clips" hidden><div class="suite-body" id="app-clips"></div></div>
+    <div id="tool-backup" hidden><div class="suite-body" id="app-backup"></div></div>
+    <div id="tool-prime" hidden><div class="suite-body" id="app-prime"></div></div>
+    <div id="tool-variants" hidden><div class="suite-body" id="app-variants"></div></div>
+    <div id="tool-royale" hidden><div class="suite-body" id="app-royale"></div></div>
+    <div id="tool-arena" hidden><div class="suite-body" id="app-arena"></div></div>
+    <div id="tool-game" hidden><div class="suite-body" id="app-game"></div></div>
+    <div id="tool-course" hidden><div class="suite-body" id="app-course"><div class="card"><p class="muted">Le cours en direct s'ouvre en plein écran.</p><div class="row"><button class="btn pri" id="course-go">OUVRIR LE COURS</button></div></div></div></div>
+  </main>
+</div>
 <div id="scrim" hidden></div><div id="sheet" class="sheet" hidden></div><div id="toast" hidden></div>
 <script src="pc_shim.js"></script>
 <script src="chess.js"></script>
@@ -40,6 +77,8 @@
 <script src="bot_chat.js"></script>
 <script src="ai_bots.js"></script>
 <script src="bot_roster.js"></script>
+<script src="hub_icons.js"></script>
+<script src="hub.js"></script>
 <script src="pc_boot.js"></script>
 </body>
 </html>

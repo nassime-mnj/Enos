@@ -39,7 +39,7 @@ try:
         pg.wait_for_selector("#ar-lobby:not([hidden])", timeout=5000)
         check(True, "Échap = retour au lobby")
         # un seul bot face à moi : chat + historique
-        pg.click('.ar-card[data-id="penoire"] button[data-c="w"]')
+        pg.click('.ar-card[data-id="penoire"] .ar-defy'); pg.click('.ar-card[data-id="penoire"] .ar-pick button[data-c="w"]')
         pg.wait_for_selector("#df-botchat .bot-log", timeout=5000)
         check(pg.is_visible("#df-botchat .bot-log") and pg.inner_text("#df-botchat .bot-bubble").strip() != "", "face à Pénoire : bulle + messagerie visibles")
         check("Nassime" in "".join(pg.evaluate("[...document.querySelectorAll('#df-botchat .bot-m')].map(m => m.innerText)")) or True, "prénom")
