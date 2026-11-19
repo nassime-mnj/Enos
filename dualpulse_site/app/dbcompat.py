@@ -5,7 +5,7 @@ Activé par DP_DATABASE_URL (ex. l'URI « Connection pooling » de Supabase). Pr
 import re
 import threading
 
-SERIAL_TABLES = {"downloads", "support_log", "users", "refresh_tokens", "invites", "releases", "launcher_downloads", "news", "wishlist", "clipboard", "mobile_devices", "update_tokens"}
+SERIAL_TABLES = {"downloads", "support_log", "users", "refresh_tokens", "invites", "releases", "launcher_downloads", "news", "wishlist", "clipboard", "mobile_devices", "update_tokens", "eto_events"}
 _INSERT = re.compile(r"^\s*INSERT\s+(OR\s+IGNORE\s+)?INTO\s+([a-z_]+)", re.I)
 
 

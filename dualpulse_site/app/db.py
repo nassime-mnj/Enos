@@ -35,7 +35,7 @@ def conn():
               CREATE TABLE IF NOT EXISTS downloads(id INTEGER PRIMARY KEY AUTOINCREMENT, t REAL NOT NULL, entry TEXT, ip TEXT, ok INTEGER NOT NULL);
               CREATE TABLE IF NOT EXISTS support_log(id INTEGER PRIMARY KEY AUTOINCREMENT, t REAL NOT NULL, question TEXT NOT NULL, matched TEXT);
               CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT NOT NULL DEFAULT '', pw_hash TEXT NOT NULL,
-                role TEXT NOT NULL CHECK(role IN ('friends','dev','ceo')), active INTEGER NOT NULL DEFAULT 1, created_at REAL NOT NULL, last_login REAL,
+                role TEXT NOT NULL CHECK(role IN ('public','friends','dev','ceo')), active INTEGER NOT NULL DEFAULT 1, created_at REAL NOT NULL, last_login REAL,
                 token_version INTEGER NOT NULL DEFAULT 0, fails INTEGER NOT NULL DEFAULT 0, locked_until REAL NOT NULL DEFAULT 0,
                 totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0, totp_last INTEGER NOT NULL DEFAULT 0, invited_by INTEGER);
               CREATE TABLE IF NOT EXISTS refresh_tokens(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, token_hash TEXT NOT NULL UNIQUE, family TEXT NOT NULL,
@@ -58,10 +58,32 @@ def conn():
                 created_at REAL NOT NULL, expires_at REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0, last_used REAL);
               CREATE TABLE IF NOT EXISTS mobile_devices(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, device_id TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', platform TEXT NOT NULL DEFAULT '',
                 lan_ips TEXT NOT NULL DEFAULT '[]', adb_port INTEGER NOT NULL DEFAULT 0, app_version TEXT NOT NULL DEFAULT '', last_seen REAL NOT NULL, UNIQUE(user_id, device_id));
+              CREATE TABLE IF NOT EXISTS eto_subs(user_id INTEGER PRIMARY KEY, plan TEXT NOT NULL, period TEXT NOT NULL DEFAULT 'month', status TEXT NOT NULL, period_end REAL NOT NULL DEFAULT 0,
+                source TEXT NOT NULL DEFAULT 'manual', ext_customer TEXT NOT NULL DEFAULT '', ext_sub TEXT NOT NULL DEFAULT '', seats INTEGER NOT NULL DEFAULT 1, updated REAL NOT NULL);
+              CREATE TABLE IF NOT EXISTS eto_events(id INTEGER PRIMARY KEY AUTOINCREMENT, t REAL NOT NULL, user_id INTEGER, kind TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}');
             """)
             _conn.commit()
+            migrate(_conn)
             seed()
         return _conn
+
+
+def migrate(c):
+    """Comptes ETO grand public (rôle « public ») : élargit la contrainte de rôle des bases créées avant elle (SQLite : table reconstruite ; PostgreSQL : contrainte remplacée)."""
+    with _lock:
+        if database_url():
+            try:
+                c.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check")
+                c.execute("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('public','friends','dev','ceo'))")
+                c.commit()
+            except Exception:                                          # base partagée déjà migrée ou droits insuffisants : rien à faire ici
+                pass
+            return
+        row = c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").fetchone()
+        if not row or "'public'" in row[0]:
+            return
+        new_sql = row[0].replace("CHECK(role IN ('friends','dev','ceo'))", "CHECK(role IN ('public','friends','dev','ceo'))").replace("CREATE TABLE users(", "CREATE TABLE users_new(", 1)
+        c.executescript("BEGIN; " + new_sql + "; INSERT INTO users_new SELECT * FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users; COMMIT;")
 
 
 def reset():
