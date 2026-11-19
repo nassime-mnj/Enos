@@ -32,7 +32,7 @@
     { id: "outils", n: "OUTILS", t: "Outils", img: "cat_outils", sections: [
       { n: "Documents", items: [["pdf"], ["scan", "Scanner"], ["syllabus"]] },
       { n: "Photo, audio, vidéo", items: [["img", "Photos"], ["compress"], ["audiolab"], ["cinepulse"]] },
-      { n: "Nettoyage", items: [["clean", "Nettoyeur"], ["cleaner", "Stockage"]] },
+      { n: "Nettoyage", items: [["improver", "Mobile Improver"], ["clean", "Nettoyeur"], ["cleaner", "Stockage"]] },
       { n: "Détente", items: [["eye", "Œil"], ["chill"], ["purge"], ["g2048"], ["snake"], ["mines"]] },
     ] },
     { id: "organisation", n: "ORGANISATION", t: "Organisation", img: "cat_organisation", sections: [

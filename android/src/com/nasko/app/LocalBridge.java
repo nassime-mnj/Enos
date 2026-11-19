@@ -250,6 +250,86 @@ final class LocalBridge {
         return ok() ? act.gallery().thumb(uri) : "";
     }
 
+    // ------------------------------------------------------------------ Mobile Improver (Improver : préparation, remplacement avec autorisation système, corbeille 30 jours)
+    @JavascriptInterface
+    public String improverState() {
+        return ok() ? Improver.summary(act) : "{}";
+    }
+
+    @JavascriptInterface
+    public void improverConfig(String json) {
+        if (ok()) Improver.configure(act, json == null ? "{}" : json);
+    }
+
+    @JavascriptInterface
+    public boolean improverSchedule(boolean on) {
+        return ok() && Improver.schedule(act, on);
+    }
+
+    /** Prépare maintenant (fil d'arrière-plan) : événements « progress » {done,total,saved} puis « done » {staged}. */
+    @JavascriptInterface
+    public void improverRun(final long id) {
+        if (!ok()) return;
+        if (!act.gallery().hasPermission()) {
+            act.emit(id, "error", "Accès aux photos refusé.");
+            return;
+        }
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int n = Improver.analyze(act, 20 * 60 * 1000L, 2000, new Improver.Progress() {
+                    @Override
+                    public void on(int done, int total, long saved) {
+                        act.emit(id, "progress", "{\"done\":" + done + ",\"total\":" + total + ",\"saved\":" + saved + "}");
+                    }
+                });
+                act.emit(id, n < 0 ? "error" : "done", n < 0 ? "Une préparation est déjà en cours." : "{\"staged\":" + n + "}");
+            }
+        }, "improver-run");
+        t.setPriority(Thread.MIN_PRIORITY + 1);
+        t.start();
+    }
+
+    @JavascriptInterface
+    public void improverCancel() {
+        if (ok()) Improver.CANCEL.set(true);
+    }
+
+    @JavascriptInterface
+    public void improverApply(final long id) {
+        if (ok()) act.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                act.improver().apply(id);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void improverRestore(final long id, final String tid) {
+        if (ok() && tid != null && tid.matches("[0-9]{1,18}_[0-9]{1,12}")) act.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                act.improver().restore(id, tid);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void improverDiscard() {
+        if (ok()) Improver.discard(act);
+    }
+
+    @JavascriptInterface
+    public void improverEmptyTrash() {
+        if (ok()) Improver.emptyTrash(act);
+    }
+
+    @JavascriptInterface
+    public String pendingModule() {
+        return ok() ? act.pendingModule() : "";
+    }
+
     // ------------------------------------------------------------------ divers
     /** Stockage interne : {total, free} en octets (pour le Nettoyeur). */
     @JavascriptInterface

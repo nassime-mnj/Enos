@@ -16,7 +16,7 @@
       feats: [["knight", "Tous les échecs : 142 bots, Stockfish 19 et moteurs natifs, Arène, Royale ×4, Variantes, 5D, Fog"], ["clapper", "Chess Edit Studio et Game Clips, sans filigrane"], ["puzzle", "Puzzles, leçons, revues et Conseiller « !! » illimités"], ["grid", "Outils : PDF, scanner, agenda, compression et nettoyage à la main"], ["chat", "Chat ETO avec ta propre clé d'API"]],
       roi: "Gratuit, sans publicité, et ça le restera." },
     { id: "eto_pro", brand: "E.T.O.", name: "ETO", tier: "Pro", color: "#3b82f6", hue: 217, month: 2.99, year: 28.7, pitch: "Mobile Improver : un téléphone plus léger, tout seul.", icon: "zap", badge: "Le plus choisi",
-      feats: [["zap", "Mobile Improver : photos et vidéos recompressées la nuit (en charge, écran éteint), qualité visuelle préservée", 1], ["scan", "Doublons, photos floues et vieilles captures repérés chaque semaine", 1], ["shield", "Originaux gardés 30 jours : rien n'est supprimé sans ton accord", 1], ["chart", "Rapport mensuel : gigaoctets libérés, mémoire, batterie", 1], ["cloud", "Sauvegarde vers ton propre PC, sans abonnement cloud"]],
+      feats: [["zap", "Mobile Improver automatique : grosses photos allégées quand le téléphone charge, qualité vérifiée photo par photo (vidéos : bientôt)", 1], ["scan", "Doublons, photos floues et vieilles captures repérés chaque semaine", 1], ["shield", "Originaux gardés 30 jours : rien n'est supprimé sans ton accord", 1], ["chart", "Rapport mensuel : gigaoctets libérés, mémoire, batterie", 1], ["cloud", "Sauvegarde vers ton propre PC, sans abonnement cloud"]],
       roi: "Rentable dès qu'il t'évite un forfait de stockage : Google One 100 Go coûte 1,99 € par mois, iCloud+ 200 Go 2,99 €." },
     { id: "eto_max", brand: "E.T.O.", name: "ETO", tier: "MAX", color: "#facc15", hue: 48, month: 9.99, year: 95.9, pitch: "Ton PC et ton téléphone ne font plus qu'un.", icon: "flame", badge: "Meilleure valeur",
       feats: [["check", "Tout ETO Pro"], ["monitor", "Pilotage du PC depuis le téléphone : allumer, veille, tests, fichiers"], ["clapper", "Auto-Clipper IA : tes meilleurs moments de jeu en clips verticaux"], ["eye", "Copilote de jeu et Smart AFK sur le PC"], ["chat", "Passerelle d'API : tes clés réunies, quotas et bascule automatique", 1], ["code", "Codelab, Studio média, CinePulse"]],
@@ -76,7 +76,7 @@
   P.isPrivate = (id) => PRIVATE.some((p) => p.id === (id || P.current()));
   P.can = (f) => P.features(P.current()).includes(f);
   // modules soumis à une offre ; tout le reste (échecs compris) est libre
-  const MOD = { pc: "pc_control", "b-sy": "pc_control", "b-rg": "pc_control", colis: "pc_control", codelab: "codelab", cinepulse: "studio", audiolab: "studio", "b-hb": "team", fleet: "fleet", improver: "tools", gateway: "gateway" };
+  const MOD = { pc: "pc_control", "b-sy": "pc_control", "b-rg": "pc_control", colis: "pc_control", codelab: "codelab", cinepulse: "studio", audiolab: "studio", "b-hb": "team", fleet: "fleet", improver: "tools", gateway: "gateway", improver_auto_gate: "improver_auto" };
   P.featureOf = (id) => MOD[id] || "";
   /** true si le module est ouvert pour l'offre active ; sinon feuille « Disponible avec ETO … » et false */
   P.gate = (id) => {

@@ -81,6 +81,8 @@ public class MainActivity extends Activity {
     private FilesBridge files;
     private EngineBridge engines;
     private GalleryScan gallery;
+    private Improver improver;
+    private volatile String pendingModule = "";       // notification du Mobile Improver : module à ouvrir (lu une fois par le JavaScript)
     private ConnectivityManager.NetworkCallback netCb;
     private volatile String pendingShare = "";        // capture d'ecran partagee vers l'application (menu Partager) : base64 en memoire seulement, lue UNE fois par le JavaScript
     private volatile String pendingImport = "";       // fichier chiffre recu par enos://import (en memoire seulement) ; applique uniquement apres saisie du code
@@ -129,6 +131,7 @@ public class MainActivity extends Activity {
         };
         files = new FilesBridge(this, sink);
         gallery = new GalleryScan(this, sink);
+        improver = new Improver(this, sink);
         web.addJavascriptInterface(new LocalBridge(this, vault, pcLink, new NativeHttp(vault, pcLink, sink), files), "Enos");
         engines = new EngineBridge(this, web);                    // moteurs d'échecs natifs (Stockfish 19 complet, Obsidian, PlentyChess, Caissa, Viridithas)
         web.addJavascriptInterface(engines, "EnosEngine");
@@ -157,6 +160,7 @@ public class MainActivity extends Activity {
         if (onLocalApp && web != null) {
             web.evaluateJavascript("window.ENOS&&ENOS.importer&&ENOS.importer.check()", null);
             if (!pendingShare.isEmpty()) web.evaluateJavascript("window.ENOS&&ENOS.native&&ENOS.native._shared&&ENOS.native._shared()", null);
+            if (!pendingModule.isEmpty()) web.evaluateJavascript("window.ENOS&&ENOS.native&&ENOS.native._module&&ENOS.native._module()", null);
         }
     }
 
@@ -193,6 +197,8 @@ public class MainActivity extends Activity {
 
     private void handleIntent(Intent i) {
         if (i != null && Intent.ACTION_SEND.equals(i.getAction())) readShared(i);
+        String mod = i == null ? null : i.getStringExtra("module");
+        if (mod != null && mod.matches("[a-z0-9_-]{1,32}")) pendingModule = mod;
         Uri d = i == null ? null : i.getData();
         if (d != null && "enos".equals(d.getScheme()) && "import".equals(d.getHost())) {
             String b = d.getQueryParameter("d");
@@ -320,6 +326,10 @@ public class MainActivity extends Activity {
             files.onTreeResult(res, data);
             return;
         }
+        if (req == Improver.REQ_WRITE || req == Improver.REQ_RESTORE) {
+            improver.onWriteResult(req, res);
+            return;
+        }
         if (req == GalleryScan.REQ_DELETE || req == GalleryScan.REQ_DELETE_ONE) {
             gallery.onDeleteResult(req, res);
             return;
@@ -359,6 +369,14 @@ public class MainActivity extends Activity {
     boolean onLocalApp() { return onLocalApp; }
 
     GalleryScan gallery() { return gallery; }
+
+    Improver improver() { return improver; }
+
+    String pendingModule() {
+        String m = pendingModule;
+        pendingModule = "";
+        return m;
+    }
 
     /** Mise à jour depuis le cloud : l'adresse (avec le jeton d'appareil) est dans le coffre ; même Updater que pour le PC (SHA-256 vérifié, Android exige la même signature que l'application installée). */
     /** CodeLab : aperçu web dans PreviewActivity (aucun pont JS) ; la console de l'aperçu revient dans le terminal de CodeLab. */

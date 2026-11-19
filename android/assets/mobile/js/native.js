@@ -112,6 +112,24 @@
     read: (id) => (N.available && B.backupRead ? B.backupRead(String(id)) : ""),
   };
 
+  // ------------------------------------------------------------------ Mobile Improver (Improver.java) — pont lu paresseusement (un faux pont peut être injecté dans les tests)
+  N.stream = (start, onEvt) => { const id = seq++; calls.set(id, (evt, p) => { let j = p; try { j = JSON.parse(p); } catch (e) { /* texte */ } if (onEvt(evt, j) === true) calls.delete(id); }); start(id); return id; };
+  const IB = () => { const b = window.Enos; return b && typeof b.improverState === "function" ? b : null; };
+  N.improver = {
+    available: () => !!IB(),
+    state: () => (IB() ? parse(IB().improverState(), {}) : {}),
+    config: (o) => { if (IB()) IB().improverConfig(JSON.stringify(o || {})); },
+    schedule: (on) => !!(IB() && IB().improverSchedule(!!on)),
+    run: (onEvt) => (IB() ? N.stream((id) => IB().improverRun(id), onEvt) : 0),
+    cancel: () => { if (IB()) IB().improverCancel(); },
+    apply: () => new Promise((res) => { if (!IB()) return res({ ok: false, error: "pont natif absent" }); N.stream((id) => IB().improverApply(id), (evt, p) => { if (evt === "applied") { res(p || {}); return true; } return false; }); }),
+    restore: (tid) => new Promise((res) => { if (!IB()) return res({ ok: false }); N.stream((id) => IB().improverRestore(id, String(tid)), (evt, p) => { if (evt === "restored") { res(p || {}); return true; } return false; }); }),
+    discard: () => { if (IB()) IB().improverDiscard(); },
+    emptyTrash: () => { if (IB()) IB().improverEmptyTrash(); },
+  };
+  // notification Android -> module à ouvrir (ex. « improver »)
+  N._module = () => { const b = window.Enos; const m = b && b.pendingModule ? String(b.pendingModule() || "") : ""; if (m && E.modules) { if (E.ui) E.ui.go("tools"); E.modules.open(m); } };
+
   // ------------------------------------------------------------------ import de la configuration du PC (fichier chiffré ; le code est vérifié par Java)
   N.pendingImport = () => (N.available ? B.pendingImport() : "");
   N.importApply = (blob, code) => oneShot("import", (id) => B.importApply(id, blob || "", code || ""));
