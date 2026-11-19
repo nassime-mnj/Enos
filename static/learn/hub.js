@@ -49,7 +49,7 @@
 
   // ------------------------------------------------------------------ portraits (défilé + carte Arène)
   function faces() {
-    const own = ["enos", "eto", "nasko", "penoire", "lelex", "ghorghor", "naskurieux", "naskolit", "jester"].map((id) => ({ id, name: { enos: "E.N.O.S.", eto: "ETO Brillant", penoire: "Nasko (pénoire)", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", lelex: "Lelex", nasko: "Nasko" }[id], img: "img/bots/" + id + ".png", elo: { enos: 3200, eto: 3200, nasko: 1300, penoire: 2500, lelex: 1150, ghorghor: 1400, naskurieux: 1, naskolit: 3200, jester: "?" }[id], own: true }));
+    const own = ["enos", "eto", "nasko", "penoire", "lelex", "ghorghor", "naskurieux", "naskolit", "jester"].map((id) => ({ id, name: { enos: "E.N.O.S.", eto: "ETO", penoire: "Nasko (pénoire)", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", lelex: "Lelex", nasko: "Nasko" }[id], img: "img/bots/" + id + ".png", elo: { enos: 3650, eto: 3650, nasko: 1300, penoire: 2500, lelex: 1150, ghorghor: 1400, naskurieux: 1, naskolit: 3200, jester: "?" }[id], own: true }));
     const ros = E.botRoster ? E.botRoster.list.filter((b) => b.img) : [];
     return { own, ros };
   }

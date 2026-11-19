@@ -18,8 +18,8 @@
     if (key.startsWith("h:")) return { human: true, name: key.slice(2) };
     if (key.startsWith("bot:")) { const e = +key.slice(4); return { kind: "sf", elo: e, power: powerOfElo(e), name: "Bot " + e }; }
     if (key === "stockfish") return { kind: "sf", elo: 3650, power: 100, pure: true, name: "Stockfish 19" };
-    if (key === "eto") return { kind: "eto", elo: 3200, name: (bots().eto && bots().eto.name) || "ETO Brillant", talk: "eto" };
-    if (key === "enos") return { kind: "sf", elo: 3200, power: 100, name: "E.N.O.S.", talk: "enos" };
+    if (key === "eto") return { kind: "eto", elo: E.TOP_ELO || 3650, name: (bots().eto && bots().eto.name) || "ETO", talk: "eto" };
+    if (key === "enos") return { kind: "sf", elo: E.TOP_ELO || 3650, power: 100, hunt: true, name: "E.N.O.S.", talk: "enos" };
     const b = bots()[key], e = (prof(key) && prof(key).eloEst) || DEF_ELO[key] || 1200;
     return { kind: "sf", elo: e, power: powerOfElo(e), name: b ? b.name : key, talk: b ? key : "" };
   }
@@ -27,20 +27,20 @@
     const ids = Object.keys(bots()).filter((k) => !["eto", "enos", "prime"].includes(k)), ai = E.aiBots ? E.aiBots.ids : [];
     const g = (label, items) => `<optgroup label="${label}">${items.map(([v, n]) => `<option value="${v}">${esc(n)}</option>`).join("")}</optgroup>`;
     return g("Joueurs (à tour de rôle sur le téléphone)", [["h:Toi", "Toi"], ["h:Joueur 2", "Joueur 2"], ["h:Joueur 3", "Joueur 3"], ["h:Joueur 4", "Joueur 4"]])
-      + g("Personnages", [["eto", "ETO Brillant"], ["enos", "E.N.O.S."], ["stockfish", "Stockfish 19"], ...ids.filter((k) => !ai.includes(k)).map((k) => [k, bots()[k].name])])
+      + g("Personnages", [["eto", "ETO"], ["enos", "E.N.O.S."], ["stockfish", "Stockfish 19"], ...ids.filter((k) => !ai.includes(k)).map((k) => [k, bots()[k].name])])
       + g("Bots Stockfish", ELOS.map((e) => ["bot:" + e, "Bot " + e + " Elo"])) + (ai.length ? g("Chat bots IA", ai.map((k) => [k, bots()[k].name])) : "");
   };
 
   E.suite.register({
-    id: "simul", group: "chess", title: "Simultanée", sub: "4 plateaux · 1 adversaire · un seul doit gagner",
+    id: "simul", group: "chess", title: "Simultanée", sub: "2 à 6 plateaux contre un adversaire",
     icon: '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>',
     build(el, A) {
       const $ = (s) => el.querySelector(s), B = E.board, K = E.brain, L = E.chessLocal;
       let S = null;                                                                                    // partie en cours
       el.innerHTML = `<div id="sm-setup"><div class="card"><h3>Simultanée</h3>
-          <p class="muted" style="line-height:1.5;margin-bottom:12px">Ton équipe affronte <b>un seul adversaire</b> sur <b>plusieurs plateaux en même temps</b>. Chacun joue son plateau ; <b>il suffit qu'un seul batte l'adversaire</b> pour que toute l'équipe gagne.</p>
-          <label class="fld">Adversaire (il joue les Blancs partout)</label><select id="sm-boss" class="sel">${rosterGroups()}</select>
-          <label class="fld" style="margin-top:12px">Nombre de plateaux</label><div class="seg" id="sm-n" data-i="2"><button data-n="2">2</button><button data-n="3">3</button><button data-n="4" class="on">4</button><i class="seg-ind"></i></div>
+          <p class="muted" style="line-height:1.5;margin-bottom:12px">Un adversaire, plusieurs plateaux. Une seule victoire suffit à l'équipe.</p>
+          <label class="fld">Adversaire (Blancs sur tous les plateaux)</label><button class="bp-slot" id="sm-boss"></button>
+          <label class="fld" style="margin-top:12px">Nombre de plateaux</label><div class="cl-count" id="sm-n">${[2, 3, 4, 5, 6].map((n) => `<button data-n="${n}"${n === 4 ? ' class="on"' : ""}>1v${n}</button>`).join("")}</div>
           <div id="sm-mem"></div>
           <div class="row" style="margin-top:14px"><button class="btn pri" id="sm-go">COMMENCER</button></div>
           <p class="ce-stat" id="sm-hist" style="margin-top:10px"></p></div></div>
@@ -51,11 +51,19 @@
             <div class="df-pl" id="sm-top"></div><div id="sm-board"></div><div class="df-pl" id="sm-bot"></div>
             <div class="ch-moves" id="sm-moves"></div><p class="muted" id="sm-st" style="margin:6px 2px"></p>
             <div class="row"><button class="btn" id="sm-res">ABANDONNER CE PLATEAU</button><button class="btn" id="sm-stop">ARRÊTER</button></div></div></div>`;
-      let nB = 4, defMem = E.settings.get("simul.mem", ["h:Toi", "nasko", "lelex", "bot:800"]);
-      const drawMem = () => { const keep = [...el.querySelectorAll("#sm-mem select")].map((x) => x.value); $("#sm-mem").innerHTML = Array.from({ length: nB }, (_, i) => `<label class="fld" style="margin-top:8px">Plateau ${i + 1} · joueur</label><select class="sel" data-i="${i}">${rosterGroups()}</select>`).join("");
-        el.querySelectorAll("#sm-mem select").forEach((x, i) => { const v = keep[i] || defMem[i] || "bot:800"; x.value = [...x.options].some((o) => o.value === v) ? v : "bot:800"; }); };
-      $("#sm-n").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; nB = +b.dataset.n; $("#sm-n").dataset.i = nB - 2; $("#sm-n").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); drawMem(); };
-      $("#sm-boss").value = E.settings.get("simul.boss", "eto"); drawMem();
+      const HUM = ["Toi", "Joueur 2", "Joueur 3", "Joueur 4", "Joueur 5", "Joueur 6"].map((n) => ({ id: "h:" + n, name: n, sub: "sur ce téléphone" }));
+      let mem = E.settings.get("simul.mem", ["h:Toi", "nasko", "lelex", "r_elena", "r_wally", "magnus"]), boss = E.settings.get("simul.boss", "eto"), nB = Math.max(2, Math.min(6, +E.settings.get("simul.n", 4) || 4));
+      while (mem.length < 6) mem.push(["nasko", "lelex", "r_elena", "r_wally", "magnus", "hikaru"][mem.length]);
+      const drawMem = () => {
+        $("#sm-boss").innerHTML = E.botPick.chip(boss, "Adversaire");
+        $("#sm-mem").innerHTML = mem.slice(0, nB).map((k, i) => `<button class="bp-slot" data-i="${i}" style="margin-top:8px">${E.botPick.chip(k, "Plateau " + (i + 1))}</button>`).join("");
+        $("#sm-n").querySelectorAll("button").forEach((x) => x.classList.toggle("on", +x.dataset.n === nB));
+      };
+      $("#sm-n").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; nB = +b.dataset.n; E.settings.set("simul.n", nB); drawMem(); };
+      $("#sm-boss").onclick = async () => { const id = await E.botPick.open({ title: "Adversaire", current: boss, noPrime: true }); if (id) { boss = id; drawMem(); } };
+      $("#sm-mem").onclick = async (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const i = +b.dataset.i;
+        const id = await E.botPick.open({ title: "Plateau " + (i + 1), current: mem[i], noPrime: true, extra: HUM, extraTitle: "Joueurs" }); if (id) { mem[i] = id; drawMem(); } };
+      drawMem();
       const paintHist = () => { const h = E.settings.get("simul.hist", []); $("#sm-hist").textContent = h.length ? h.length + " partie(s) enregistrée(s) · ouvre Chess Edit pour en faire un montage" : ""; }; paintHist();
 
       // ---------------------------------------------------------------- partie
@@ -118,7 +126,7 @@
       }
       async function botMove(p, b) {
         const fen = b.ch.fen(), ch = new Chess(fen);
-        if (p.kind === "eto") { const m = await K.etoMove(fen, { topMs: 600, sacMs: 900 }); return { uci: m.uci, brilliant: m.brilliant }; }
+        if (p.kind === "eto" || p.hunt) { const m = await K.etoMove(fen, { topMs: 1500, sacMs: 2500 }); return { uci: m.uci, brilliant: m.brilliant }; }   // ETO et E.N.O.S. : niveau maximal, chasse aux coups brillants
         if (p.elo < 1300 && Math.random() < Math.max(0, (1300 - p.elo) / 1050 * 0.6)) { const l = ch.moves({ verbose: true }); const m = l[Math.floor(Math.random() * l.length)]; return { uci: m.from + m.to + (m.promotion || "") }; }
         const r = await L.choose(fen, p.power || powerOfElo(p.elo), b.seen, { pure: !!p.pure, ms: p.power >= 100 ? 700 : undefined }); if (!r || !r.uci) throw new Error("Le moteur n'a pas répondu."); return { uci: r.uci };
       }
@@ -137,7 +145,7 @@
       $("#sm-res").onclick = () => { if (!S || S.over) return; const b = cur(); if (b.over) return; E.ui.confirm("Abandonner ce plateau ?", "L'adversaire gagne ce plateau.", "ABANDONNER", true).then((ok) => { if (ok && S && !b.over) { b.over = "Abandon — " + S.boss.name + " gagne"; b.winner = "w"; paint(); checkEnd(); } }); };
       $("#sm-stop").onclick = () => { if (S) { S.token++; S.over = "Partie arrêtée"; paint(); save(null); } };
       $("#sm-back").onclick = () => { if (S) S.token++; $("#sm-game").hidden = true; $("#sm-setup").hidden = false; paintHist(); };
-      $("#sm-go").onclick = () => { const mem = [...el.querySelectorAll("#sm-mem select")].map((x) => x.value); start({ boss: $("#sm-boss").value, members: mem }); };
+      $("#sm-go").onclick = () => { E.settings.set("simul.mem", mem); start({ boss, members: mem.slice(0, nB) }); };
 
       // ---------------------------------------------------------------- fin + enregistrement
       function save(kind, team) {

@@ -119,7 +119,7 @@
       <div class="ch-stats"><div><b>${nBots()}</b><small>bots à affronter</small></div><div><b>SF 19</b><small>moteur embarqué</small></div></div></div>`;
   }
   function chessFoes() {
-    const own = [["enos", "E.N.O.S.", 3200], ["eto", "ETO Brillant", 3200], ["nasko", "Nasko", 1300], ["penoire", "Nasko (pénoire)", 2500], ["lelex", "Lelex", 1150], ["ghorghor", "GhorGhor", 1400], ["naskurieux", "Naskurieux", 1], ["naskolit", "Naskolit", 3200], ["jester", "Le Jester", "?"]].map(([id, n, e]) => ({ id: id === "eto" ? "brillant" : id, name: n, img: "img/bots/" + id + ".png", elo: e }));
+    const own = [["enos", "E.N.O.S.", 3650], ["eto", "ETO", 3650], ["nasko", "Nasko", 1300], ["penoire", "Nasko (pénoire)", 2500], ["lelex", "Lelex", 1150], ["ghorghor", "GhorGhor", 1400], ["naskurieux", "Naskurieux", 1], ["naskolit", "Naskolit", 3200], ["jester", "Le Jester", "?"]].map(([id, n, e]) => ({ id: id === "eto" ? "brillant" : id, name: n, img: "img/bots/" + id + ".png", elo: e }));
     const ros = E.botRoster ? E.botRoster.list.filter((b) => b.img).slice(0, 40) : [];
     const list = own.concat(ros);
     return `<section class="hub-sec"><h4><span>Les adversaires</span></h4><div class="ch-mq"><div class="mq-t">${list.concat(list).map((b, i) => `<button class="mq-b" data-bot="${esc(b.id)}"${i >= list.length ? ' aria-hidden="true" tabindex="-1"' : ""}><img src="${b.img}" alt="" loading="lazy"><b>${esc(b.name)}</b><small>${esc(String(b.elo))}${typeof b.elo === "number" ? " Elo" : ""}</small></button>`).join("")}</div></div></section>`;

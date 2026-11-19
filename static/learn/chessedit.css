@@ -305,3 +305,23 @@ p.ce-stat{position:static;white-space:normal;overflow-wrap:anywhere}
 .ce-ta{width:100%;box-sizing:border-box;min-height:120px;background:#0c0c10;color:#e8e8f0;border:1px solid #ffffff22;border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Menlo,monospace}
 .btn.ce-red{background:#e0243c;color:#fff;border-color:#ff5a6e}
 label.ce-fxl{position:static;pointer-events:auto}                              /* case « Effets pro » : même classe que le calque d'effets, mais reste dans le formulaire */
+/* Game Clips : modes Duel / Simultanée */
+.cl-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
+.cl-modes button{min-height:62px;padding:8px 6px;border-radius:14px;border:1px solid #262732;background:#0d0e13;color:#e9e6ea;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:border-color .2s,background .2s,transform .15s}
+.cl-modes button b{font:700 14px var(--ui)}.cl-modes button small{font:500 10.5px/1.25 var(--ui);color:var(--muted);text-align:center}
+.cl-modes button:active{transform:scale(.97)}
+.cl-modes button.on{border-color:var(--red2,#ff3d63);background:radial-gradient(120% 120% at 50% 0,color-mix(in srgb,var(--red,#ef1748) 22%,transparent),transparent 70%),#0d0e13}
+.cl-many[hidden],#cl-many[hidden]{display:none}
+.cl-boards{display:flex;gap:6px;overflow-x:auto;margin:6px 0 10px;scrollbar-width:none}.cl-boards::-webkit-scrollbar{display:none}
+.cl-boards span{flex:none;padding:5px 10px;border-radius:999px;border:1px solid #262732;font:600 12px var(--ui);color:var(--muted);transition:all .25s}
+.cl-boards span.on{border-color:var(--red2,#ff3d63);color:#fff;background:color-mix(in srgb,var(--red,#ef1748) 18%,transparent)}
+.cl-boards span.done{color:#34d399;border-color:rgba(52,211,153,.4)}
+.cl-grid label[hidden]{display:none}
+.cl-many .cl-grid{grid-template-columns:1fr 1fr}
+.cl-many .cl-grid label{flex-direction:column;align-items:stretch;gap:6px}.cl-many .cl-grid label span{font:600 11px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cl-many .cl-grid select{width:100%}
+.cl-count{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0 10px}
+.cl-count button{height:38px;border-radius:12px;border:1px solid #262732;background:#0d0e13;color:#c9c7cf;font:600 12px var(--ui)}
+.cl-count button.on{border-color:var(--red2,#ff3d63);color:#fff;background:color-mix(in srgb,var(--red,#ef1748) 16%,#0d0e13)}
+.cl-slots{display:grid;grid-template-columns:1fr;gap:8px}
+#cl-herol[hidden],#cl-antl[hidden]{display:none}

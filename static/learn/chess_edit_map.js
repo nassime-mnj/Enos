@@ -248,7 +248,7 @@
   Object.assign(BADGES, { book: { glyph: "📖", label: "THÉORIE", color: "#a8896c", img: "book" }, great: { glyph: "!", label: "GRAND COUP", color: "#1bb3ad", img: "great" }, good: { glyph: "✓", label: "BON", color: "#96bc4b", img: "good" } });
   BADGES.best.img = "best"; BADGES.excellent.img = "excellent";
   const VOICE = { q: "the_queen", r: "the_rook", b: "the_bishop", n: "the_knight" };              // samples vocaux de Levy (audio/levy/*.mp3)
-  const ELO_OF = { prime: 9999, penoire: 2500, eto: 3200, enos: 3200, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
+  const ELO_OF = { prime: 9999, penoire: 2500, eto: 3650, enos: 3650, naskolit: 3200, ghorghor: 1400, ghorreal: 3200, naskurieux: 1 };
   /** Niveau d'importance d'un coup : 3 = moment clé (arrêt sur image long), 2 = important (ralenti), 1 = notable, 0 = passif (accéléré). */
   function lvlOf(p) {
     if (p.variant) { if (p.cheat) return p.cheat === "twist" || p.cheat === "kill" || p.cheat === "teleport" || p.cheat === "spawn" ? 3 : 2; if (p.mate || p.key === "brilliant" || p.key === "blunder" || (p.elim && p.elim.length) || (p.smash && p.smash.length >= 2) || p.special === "mk") return 3; if (p.special || (p.smash && p.smash.length) || p.captured || p.key === "miss" || p.key === "mistake") return 2; return p.drop ? 1 : p.drama >= 14 ? 1 : 0; }

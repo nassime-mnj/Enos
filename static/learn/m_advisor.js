@@ -20,7 +20,7 @@
       el.innerHTML = `
         <div class="card" id="ad-in">
           <h3>1 · La position</h3>
-          <p class="muted" style="font-size:14px;margin-bottom:10px">Fais une capture d'écran de ta partie (Chess.com, Lichess…) puis colle-la ici : les pièces sont reconnues toutes seules.</p>
+          <p class="muted" style="font-size:14px;margin-bottom:10px">Importe une capture d'écran de ta partie. La position est reconnue automatiquement.</p>
           <div class="row"><button class="btn pri" id="ad-pick">CHOISIR UNE CAPTURE</button><button class="btn" id="ad-paste">COLLER</button></div>
           <div id="ad-shot" hidden>
             <canvas id="ad-prev" aria-label="Capture avec l'échiquier repéré"></canvas>
@@ -48,10 +48,10 @@
           <div class="seg" id="ad-lvl" data-p="eto"><button data-l="fast">RAPIDE</button><button data-l="normal" class="on">NORMAL</button><button data-l="deep">PROFOND</button><i class="seg-ind"></i></div>
           <div class="row" style="margin-top:10px"><button class="btn pri" id="ad-go">TROUVER LES COUPS BRILLANTS</button></div>
           <div class="row" style="margin-top:8px"><button class="btn" id="ad-take">🎮 ETO PREND LA MAIN SUR CETTE PARTIE</button></div>
-          <p class="muted" style="font-size:12.5px;margin-top:6px">ETO joue le camp au trait depuis cette position, contre un adversaire de ton choix, et t'explique chaque coup. Tu peux l'interrompre pour reprendre la main.</p>
+          <p class="muted" style="font-size:12.5px;margin-top:6px">ETO joue cette position contre l'adversaire de ton choix et commente chaque coup.</p>
           <div class="rv-prog" id="ad-prog" hidden><i></i></div>
           <div id="ad-out"></div>
-          <p class="muted" style="font-size:12px;margin-top:10px">À utiliser contre des bots ou pour t'entraîner. Contre un humain, c'est de la triche.</p>
+          <p class="muted" style="font-size:12px;margin-top:10px">Réservé à l'entraînement et aux parties contre les bots.</p>
         </div>`;
 
       const fen = () => E.boardScan.fenOf(G.map, G.turn, G.castling != null ? { castling: G.castling } : {});

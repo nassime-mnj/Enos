@@ -7,10 +7,12 @@
 (() => {
   const E = window.ENOS;
   const C = (E.clips = {});
-  const FALL = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", naskurieux: "Naskurieux", ghorghor: "GhorGhor", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO Brillant", enos: "E.N.O.S.", stockfish: "Stockfish 19", prime: "ChatGPT Prime" };
+  const FALL = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", naskurieux: "Naskurieux", ghorghor: "GhorGhor", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO", enos: "E.N.O.S.", stockfish: "Stockfish 19", prime: "ChatGPT Prime" };
   // TOUS les bots : personnages, ETO / E.N.O.S. / Stockfish / Prime + bots IA et moteurs (Claude, GPT, Gemini, DeepSeek, Lc0, Maia ×3, Ethereal, Berserk, Koivisto) — liste calculée à l'usage
   Object.defineProperty(C, "BOTS", { get: () => Object.keys(FALL).concat(((E.aiBots && E.aiBots.ids) || []).filter((id) => !(id in FALL))) });
   C.nameOf = (id) => (E.botChat && E.botChat.bots[id] ? E.botChat.bots[id].name : (E.aiBots && E.aiBots.def[id] ? E.aiBots.def[id].name : FALL[id] || id));
+  /** TOUS les bots de la plateforme (sélecteur commun) */
+  C.ALL = () => (E.botPick ? E.botPick.all().map((x) => x.id) : C.BOTS);
   C.INTENSITY = { subtle: { tol: 120, goal: 2, label: "Subtil" }, normal: { tol: 260, goal: 3, label: "Normal" }, theatre: { tol: 480, goal: 5, label: "Théâtral" } };
   C.LENGTH = { short: 36, normal: 56, long: 84 };
   C.TIMES = {
@@ -112,7 +114,7 @@
     const wName = names.w, bName = names.b, result = (heroWon ? C.nameOf(hero) : C.nameOf(ant)) + " gagne" + (ch.in_checkmate() ? "" : " (l'antagoniste abandonne)");
     const heroBrill = mv.filter((m, i) => m[2] === "brilliant").length;
     return { t: Date.now(), title: "🎭 " + C.nameOf(hero) + " – " + C.nameOf(ant) + " · Scène", result, plies: mv.length, brill: heroBrill, acc: null, pgn: ch.pgn(), id: "clip", pw: wName, pb: bName, pk: ["clip", "clip"],
-      bw: hc === "w" ? heroBrill : 0, bb: hc === "b" ? heroBrill : 0, me: null, accW: null, accB: null, ch: chat, mv, clip: { opening: opn ? opn.id : "", alien: alienPly || 0, hero, ant, heroColor: hc, intensity: o.intensity || "normal", gifts, brilliants: heroBrill } };
+      bw: hc === "w" ? heroBrill : 0, bb: hc === "b" ? heroBrill : 0, me: null, accW: null, accB: null, ch: chat, mv, clip: { opening: opn ? opn.id : "", alien: alienPly || 0, hero, ant, heroColor: hc, heroWon, mate: ch.in_checkmate(), intensity: o.intensity || "normal", gifts, brilliants: heroBrill } };
   };
 
 
@@ -147,6 +149,45 @@
     const heroWon = primeHero ? (!over || over.winner === pc) : false, result = (over && over.why === "kill" ? P.NAME + " gagne (roi capturé, règle 47 bis)" : P.NAME + " gagne (il conteste le reste)");
     return { variant: true, mode: "prime", t: Date.now(), title: "🎭 " + C.nameOf(o.hero) + " – " + C.nameOf(o.ant) + " · Scène", result, plies: acts.length, brill: 0, acc: null, cheats: st.cheats, pgn: "", id: "clip", pw: names.w, pb: names.b, pk: ["clip", "clip"], bw: 0, bb: 0, me: null, accW: null, accB: null, ch: chat,
       mv: acts.map((a) => [a.uci, a.san, a.key || "good", 0, null, ""]), v: { mode: "prime", acts: acts.map((a) => Object.assign({}, a)), start: P.START, over: over ? over.why : "end", duo: false }, clip: { hero: o.hero, ant: o.ant, heroColor: hc, intensity: o.intensity || "normal", gifts: st.cheats, brilliants: 0, opening: "", alien: 0, prime: true } };
+  };
+
+  /**
+   * SCÈNE SIMULTANÉE : 4 plateaux. mode "hero" = 1 héros contre 4 antagonistes (le héros fait le tour des plateaux, Blancs partout) ;
+   * mode "ant" = 4 héros contre 1 antagoniste (l'antagoniste joue les Blancs partout, chaque héros a son plateau).
+   * Chaque plateau est une scène complète (C.run) ; les coups sont ensuite entrelacés comme dans une vraie simultanée (le joueur central joue,
+   * le joueur du plateau répond, puis plateau suivant). Enregistrement au format de la Simultanée : le Chess Edit en fait son montage « plateau à plateau ».
+   * o : {mode, hero, ant, many: [4 ids], intensity, length, quality} ; onStep(st) reçoit en plus {board, boards}.
+   */
+  C.runSimul = async (o, onStep, ctl) => {
+    ctl = ctl || {};
+    const oneHero = o.mode !== "ant", many = (o.many || []).filter((id) => id && id !== "prime").slice(0, 6);
+    const center = oneHero ? o.hero : o.ant;
+    if (!center || center === "prime" || many.length < 2) throw new Error("Choisis un personnage central et au moins deux adversaires.");
+    const boards = [];
+    for (let b = 0; b < many.length && !ctl.stop; b++) {
+      const sub = { stop: false }, rec = await C.run({ hero: oneHero ? center : many[b], ant: oneHero ? many[b] : center, heroColor: oneHero ? "w" : "b", intensity: o.intensity, length: o.length, quality: o.quality, times: o.times, maxPlies: o.maxPlies },
+        onStep ? (st) => onStep(Object.assign({ board: b, boards: many.length, playerId: many[b] }, st)) : null, new Proxy(sub, { get: (t, k) => (k === "stop" ? !!ctl.stop || t.stop : t[k]) }));
+      if (rec && rec.mv.length >= 2) boards.push({ id: many[b], rec });
+    }
+    if (!boards.length) return null;
+    const centerName = C.nameOf(center), names = boards.map((x) => C.nameOf(x.id));
+    { const seen = {}; names.forEach((n, i) => { seen[n] = (seen[n] || 0) + 1; if (seen[n] > 1) names[i] = n + " (" + seen[n] + ")"; }); }
+    const sb = boards.map((x, i) => {
+      const r = x.rec, heroWon = r.clip.heroWon !== false, centerWon = oneHero ? heroWon : !heroWon;
+      return { name: names[i], talk: x.id, human: false, elo: 0, mv: r.mv.map((m, k) => m.slice(0, 6).concat([k % 2 === 0 ? centerName : names[i]])), result: centerWon ? "w" : "b",
+        brilliants: r.clip.brilliants || 0, gifts: r.clip.gifts || 0, chat: r.ch || [] };
+    });
+    // tour de table : coup du joueur central sur le plateau b, réponse du plateau b, puis plateau suivant
+    const order = [], maxLen = Math.max(...sb.map((x) => x.mv.length));
+    for (let k = 0; k < maxLen; k += 2) sb.forEach((x, b) => { if (k < x.mv.length) order.push([b, k]); if (k + 1 < x.mv.length) order.push([b, k + 1]); });
+    const centerWins = sb.filter((x) => x.result === "w").length, teamWin = centerWins < sb.length;
+    const brill = sb.reduce((a, x) => a + x.brilliants, 0), gifts = sb.reduce((a, x) => a + x.gifts, 0), longest = sb.slice().sort((a, b) => b.mv.length - a.mv.length)[0];
+    const result = oneHero ? (centerWins === sb.length ? centerName + " gagne tous les plateaux" : centerName + " gagne " + centerWins + " plateau" + (centerWins > 1 ? "x" : "") + " sur " + sb.length)
+      : (teamWin ? "Les héros gagnent " + (sb.length - centerWins) + " plateau" + (sb.length - centerWins > 1 ? "x" : "") + " sur " + sb.length : centerName + " gagne tous les plateaux");
+    return { t: Date.now(), title: "Simultanée · " + (oneHero ? centerName + " contre " + names.join(", ") : names.join(", ") + " contre " + centerName), result,
+      plies: sb.reduce((a, x) => a + x.mv.length, 0), brill, acc: null, pgn: "", id: "clip", pw: centerName, pb: names.join(" + "), pk: ["team", "team"], me: null, ch: [], mv: longest.mv,
+      simul: { boss: { name: centerName, talk: center, elo: 0, kind: "clip" }, boards: sb.map(({ name, talk, human, elo, mv, result }) => ({ name, talk, human, elo, mv, result })), order, team: teamWin ? sb.findIndex((x) => x.result === "b") : -1 },
+      clip: { simul: true, mode: oneHero ? "hero" : "ant", hero: oneHero ? center : "", ant: oneHero ? "" : center, many: boards.map((x) => x.id), intensity: o.intensity || "normal", gifts, brilliants: brill } };
   };
 
   /** enregistre la scène dans l'historique des Défis (où le Chess Edit la trouve) */

@@ -29,7 +29,7 @@
     ghorreal: { noise: 0.03, mul: { cap: 1.4, hunt: 1.6, threat: 1.3, king: 1.2, foe: 1.2 } },   // GhorGhor « le vrai » (GM 3200) : froid, chasseur
   };
   // Elo de départ affiché de chaque personnage (comme dans les Défis 1v1) ; titre imposé pour Naskurieux et Naskolit (GM)
-  AI.ELO = { nasko: 1300, lelex: 1150, ghorghor: 1400, ghorreal: 3200, penoire: 2500, naskurieux: 1, naskolit: 3200, jester: 1600, eto: 3200, enos: 3200 };
+  AI.ELO = { nasko: 1300, lelex: 1150, ghorghor: 1400, ghorreal: 3200, penoire: 2500, naskurieux: 1, naskolit: 3200, jester: 1600, eto: 3650, enos: 3650 };
   AI.TITLE = { naskurieux: "GM", naskolit: "GM" };
   AI.noiseOfElo = (elo) => Math.max(0.02, Math.min(1.3, 1.3 - (elo / 3200) * 1.28));
   const clampW = (v) => Math.max(0.05, Math.min(3.5, v));

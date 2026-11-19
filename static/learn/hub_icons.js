@@ -46,6 +46,8 @@
     chat: { d: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>', f: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>' },
     grid: { d: '<rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/>', f: '<rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/>' },
     smile: { d: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>', f: '<circle cx="12" cy="12" r="10"/>' },
+    check: { d: '<path d="M20 6 9 17l-5-5"/>' },
+    gauge: { d: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>', f: '<path d="M3.34 19a10 10 0 1 1 17.32 0z"/>' },
     plus: { d: '<path d="M5 12h14"/><path d="M12 5v14"/>' },
     list: { d: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>' },
     search: { d: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>' },

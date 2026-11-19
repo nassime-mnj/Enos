@@ -34,7 +34,7 @@
     if (mode === "coach" || mode === "speedrun") return "Bot " + ($("cs-elo") ? $("cs-elo").value : "") + " Elo";
     if (mode === "boss") return "Stockfish";
     if (mode === "titans") return "ETO";
-    return opp === "eto" ? "ETO" : opp === "eto_brillant" ? "ETO Brillant" : (window.enosPersona ? window.enosPersona.name() : "E.N.O.S.");
+    return opp === "eto" ? "ETO" : opp === "eto_brillant" ? "ETO" : (window.enosPersona ? window.enosPersona.name() : "E.N.O.S.");
   }
   function rating(name, mode) {
     if (/stockfish/i.test(name)) return "MAX";

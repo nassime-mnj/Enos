@@ -10,10 +10,11 @@
     build(el, A) {
       const $ = (s) => el.querySelector(s), C = E.clips;
       let cfg = Object.assign({ mode: "duel", hero: "eto", ant: "lelex", color: "w", intensity: "normal", length: "short", quality: "fast" }, E.settings.get("clips.cfg", {}));
-      const DEF_MANY = { hero: ["lelex", "ghorghor", "jester", "naskurieux"], ant: ["eto", "nasko", "penoire", "stockfish"] };
+      const DEF_MANY = { hero: ["lelex", "ghorghor", "jester", "naskurieux", "magnus", "hikaru"], ant: ["eto", "nasko", "penoire", "stockfish", "enos", "r_witty_alien"] };
       cfg.manyBy = Object.assign({}, DEF_MANY, cfg.manyBy || {});
-      ["hero", "ant"].forEach((m) => { if (!Array.isArray(cfg.manyBy[m]) || cfg.manyBy[m].length !== 4) cfg.manyBy[m] = DEF_MANY[m].slice(); });
-      const many = () => cfg.manyBy[cfg.mode === "ant" ? "ant" : "hero"];
+      ["hero", "ant"].forEach((m) => { const a = Array.isArray(cfg.manyBy[m]) ? cfg.manyBy[m].slice(0, 6) : []; while (a.length < 6) a.push(DEF_MANY[m][a.length]); cfg.manyBy[m] = a; });
+      cfg.count = Math.max(2, Math.min(6, +cfg.count || 4));
+      const many = () => cfg.manyBy[cfg.mode === "ant" ? "ant" : "hero"].slice(0, cfg.count);
       let ctl = null, running = false;
       const opts = (list) => list.map((id) => `<option value="${id}">${esc(C.nameOf(id))}</option>`).join("");
 
@@ -21,13 +22,13 @@
         <div id="cl-setup">
           <div class="card"><h3>Game Clips</h3>
             <p class="muted">Une partie mise en scène pour Chess Edit : l'antagoniste offre au héros ses plus beaux coups.</p>
-            <div class="cl-modes" id="cl-mode">${[["duel", "Duel", "1 contre 1"], ["hero", "Simultanée", "1 héros, 4 antagonistes"], ["ant", "Simultanée", "4 héros, 1 antagoniste"]].map(([v, n, d]) => `<button data-m="${v}"><b>${n}</b><small>${d}</small></button>`).join("")}</div>
+            <div class="cl-modes" id="cl-mode">${[["duel", "Duel", "1 contre 1"], ["hero", "Simultanée", "1 héros, plusieurs antagonistes"], ["ant", "Simultanée", "plusieurs héros, 1 antagoniste"]].map(([v, n, d]) => `<button data-m="${v}"><b>${n}</b><small>${d}</small></button>`).join("")}</div>
             <div class="cl-grid">
-              <label id="cl-herol">Héros<select id="cl-hero">${opts(C.BOTS)}</select></label>
-              <label id="cl-antl">Antagoniste<select id="cl-ant">${opts(C.BOTS)}</select></label>
+              <button class="bp-slot" id="cl-herol" data-slot="hero"></button>
+              <button class="bp-slot" id="cl-antl" data-slot="ant"></button>
               <label id="cl-colorl">Le héros joue<select id="cl-color"><option value="w">Blancs</option><option value="b">Noirs</option></select></label>
             </div>
-            <div class="cl-many" id="cl-many"><h4 class="pl-h4" id="cl-manyt"></h4><div class="cl-grid">${[0, 1, 2, 3].map((i) => `<label><span>Plateau ${i + 1}</span><select data-many="${i}">${opts(C.BOTS.filter((id) => id !== "prime"))}</select></label>`).join("")}</div></div>
+            <div class="cl-many" id="cl-many"><h4 class="pl-h4" id="cl-manyt"></h4><div class="seg cl-count" id="cl-count">${[2, 3, 4, 5, 6].map((n) => `<button data-n="${n}">1v${n}</button>`).join("")}</div><div class="cl-slots" id="cl-slots"></div></div>
             <div class="cl-grid">
               <label>Intensité<select id="cl-int"><option value="subtle">Subtile</option><option value="normal">Normale</option><option value="theatre">Théâtrale</option></select></label>
               <label>Longueur<select id="cl-len"><option value="short">Courte · 36 coups</option><option value="normal">Normale · 56 coups</option><option value="long">Longue · 84 coups</option></select></label>
@@ -45,16 +46,34 @@
         <div id="cl-done" hidden></div>`;
 
       const save = () => E.settings.set("clips.cfg", cfg);
-      const fields = [["#cl-hero", "hero"], ["#cl-ant", "ant"], ["#cl-color", "color"], ["#cl-int", "intensity"], ["#cl-len", "length"], ["#cl-q", "quality"]];
+      const fields = [["#cl-color", "color"], ["#cl-int", "intensity"], ["#cl-len", "length"], ["#cl-q", "quality"]];
       fields.forEach(([id, k]) => { $(id).value = cfg[k]; $(id).onchange = (e) => { cfg[k] = e.target.value; save(); }; });
-      el.querySelectorAll("[data-many]").forEach((x) => { x.onchange = () => { many()[+x.dataset.many] = x.value; save(); }; });
+      const BP = E.botPick;
+      const slots = () => {
+        $("#cl-herol").innerHTML = BP.chip(cfg.hero, "Héros"); $("#cl-antl").innerHTML = BP.chip(cfg.ant, "Antagoniste");
+        const role = cfg.mode === "hero" ? "Antagoniste" : "Héros";
+        $("#cl-slots").innerHTML = many().map((id, i) => `<button class="bp-slot" data-slot="many:${i}">${BP.chip(id, role + " · plateau " + (i + 1))}</button>`).join("");
+        el.querySelectorAll("#cl-count button").forEach((b) => b.classList.toggle("on", +b.dataset.n === cfg.count));
+      };
+      el.addEventListener("click", async (e) => {
+        const c = e.target.closest("#cl-count button"); if (c) { cfg.count = +c.dataset.n; save(); return slots(); }
+        const sl = e.target.closest("[data-slot]"); if (!sl) return;
+        const k = sl.dataset.slot, isMany = k.startsWith("many:"), i = isMany ? +k.slice(5) : -1, list = cfg.manyBy[cfg.mode === "ant" ? "ant" : "hero"];
+        const cur = isMany ? list[i] : cfg[k];
+        const title = isMany ? (cfg.mode === "hero" ? "Antagoniste" : "Héros") + " · plateau " + (i + 1) : k === "hero" ? "Héros" : "Antagoniste";
+        const id = await BP.open({ title, current: cur, noPrime: cfg.mode !== "duel" });
+        if (!id) return;
+        if (isMany) list[i] = id; else cfg[k] = id;
+        save(); slots();
+      });
       const mode = () => {
         el.querySelectorAll("#cl-mode button").forEach((b) => b.classList.toggle("on", b.dataset.m === cfg.mode));
         const sim = cfg.mode !== "duel";
         $("#cl-many").hidden = !sim; $("#cl-colorl").hidden = sim;
         $("#cl-herol").hidden = cfg.mode === "ant"; $("#cl-antl").hidden = cfg.mode === "hero";
         $("#cl-manyt").textContent = cfg.mode === "hero" ? "Antagonistes" : "Héros";
-        if (sim) el.querySelectorAll("[data-many]").forEach((x) => (x.value = many()[+x.dataset.many]));
+        el.querySelectorAll("#cl-count button").forEach((b) => (b.textContent = cfg.mode === "hero" ? "1v" + b.dataset.n : b.dataset.n + "v1"));
+        slots();
       };
       el.querySelectorAll("#cl-mode button").forEach((b) => (b.onclick = () => { cfg.mode = b.dataset.m; save(); mode(); }));
       mode();
@@ -70,12 +89,12 @@
         if (running) return;
         const sim = cfg.mode !== "duel", center = cfg.mode === "ant" ? cfg.ant : cfg.hero;
         if (!sim && cfg.hero === cfg.ant) return A.toast("Choisis deux personnages différents.", "warn");
-        if (sim && (center === "prime" || many().includes(center))) return A.toast("Le personnage central doit être différent des quatre autres.", "warn");
+        if (sim && (center === "prime" || many().includes(center))) return A.toast("Le personnage central doit être différent des autres.", "warn");
         running = true; ctl = { stop: false };
         $("#cl-setup").hidden = true; $("#cl-done").hidden = true; $("#cl-live").hidden = false;
-        const total = C.LENGTH[cfg.length], B = E.board, N = sim ? 4 : 1;
+        const total = C.LENGTH[cfg.length], B = E.board, N = sim ? cfg.count : 1;
         const flip = sim ? cfg.mode === "ant" : cfg.color === "b";
-        $("#cl-ttl").textContent = sim ? (cfg.mode === "hero" ? `${C.nameOf(cfg.hero)} contre 4 antagonistes` : `4 héros contre ${C.nameOf(cfg.ant)}`) : `${C.nameOf(cfg.hero)} contre ${C.nameOf(cfg.ant)}`;
+        $("#cl-ttl").textContent = sim ? (cfg.mode === "hero" ? `${C.nameOf(cfg.hero)} contre ${cfg.count} antagonistes` : `${cfg.count} héros contre ${C.nameOf(cfg.ant)}`) : `${C.nameOf(cfg.hero)} contre ${C.nameOf(cfg.ant)}`;
         $("#cl-say").textContent = ""; $("#cl-bar").style.width = "0%";
         const tabs = $("#cl-boards"); tabs.hidden = !sim;
         if (sim) tabs.innerHTML = many().map((id, i) => `<span data-b="${i}">${i + 1} · ${esc(C.nameOf(id))}</span>`).join("");

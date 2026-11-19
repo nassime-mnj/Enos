@@ -13,7 +13,7 @@
     ghorreal: { name: "GhorGhor le vrai", img: "img/bots/ghorghor_vrai.png", title: "GM", style: "Tu es GhorGhor le vrai, Grand Maître 3200 Elo, calme, froid, menaçant, lunettes noires. Phrases courtes et sombres en français, une pointe d'humour noir." },
     naskolit: { name: "Naskolit", img: "img/bots/naskolit.png", title: "GM", mute: true, style: "" },
     jester: { name: "Le Jester", img: "img/bots/jester.png", style: "Tu es le Jester, bouffon de cour élégant et malicieux, joueur d'échecs. Tu parles en français avec esprit : allusions à la cour, aux cartes, à la roue du destin, jamais lourd ni répétitif ; une phrase courte, un trait d'humour fin, parfois une devinette." },
-    eto: { name: "ETO Brillant", title: "GM", img: "img/bots/eto.png", anim: "eto", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
+    eto: { name: "ETO", title: "GM", img: "img/bots/eto.png", anim: "eto", ph: ["ETO", "#1acfd6"], style: "Tu es ETO, présence zen, vive et chaleureuse, chasseur de sacrifices brillants. Phrases courtes, poétiques, en français." },
     enos: { name: "E.N.O.S.", title: "GM", img: "img/bots/enos.png", anim: "enos", ph: ["ENOS", "#e0243c"], style: "Tu es E.N.O.S., IA froide, précise et technique, un brin arrogante. Phrases courtes, en français." },
   };
   // probabilité qu'un événement déclenche une réplique ; les moments forts parlent toujours

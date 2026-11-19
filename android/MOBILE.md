@@ -560,3 +560,12 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Chaque plateau est une vraie scène mise en scène (`E.clips.run`) ; les coups sont ensuite entrelacés comme dans une simultanée réelle (coup du joueur central, réponse du plateau, plateau suivant). L'enregistrement suit le format de la Simultanée : Chess Edit en fait directement son montage « plateau à plateau » (`E.clips.runSimul`, `js/clips.js`).
 - Chess Edit : le résumé de la Simultanée nomme le joueur central (et non plus toujours ETO).
 - Test : `t_clips_simul.py` (deux modes, coups légaux, tour de table, montage Chess Edit, écran) ; `t_clips.py` inchangé et vert.
+
+## 1.107 — Tous les bots en Simultanée et dans Game Clips, 1v2 à 1v6, ETO et E.N.O.S. au niveau maximal
+
+- **Sélecteur de bots commun** (`js/bot_pick.js`) : les 138 bots de la plateforme (ETO, E.N.O.S., Stockfish 19, personnages, moteurs et IA, toute l'échelle des Défis), par catégories, avec avatar, Elo et recherche.
+- **Game Clips** : héros, antagoniste et chaque plateau se choisissent dans cette liste. Simultanée de **1v2 à 1v6** (ou 2v1 à 6v1).
+- **Simultanée** (mode de jeu) : adversaire et joueurs choisis dans la même liste (avec « Toi », « Joueur 2 »… pour les humains), de **1v2 à 1v6**.
+- **ETO** (anciennement « ETO Brillant ») et **E.N.O.S.** jouent au niveau du bot le plus fort de la plateforme, Stockfish 19 : 3650 Elo affichés (4550 en blitz, 5450 en bullet, comme Stockfish), même temps de réflexion. **Les deux chassent les coups brillants par défaut** (Défis, duels, Simultanée, Titans, Boss).
+- Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
+- Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
