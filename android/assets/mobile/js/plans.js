@@ -12,26 +12,26 @@
   // Positionnement : les échecs sont un divertissement, donc ENTIÈREMENT gratuits. Les offres payantes se vendent sur ce qu'elles font gagner
   // (stockage, temps, outils remplacés) et tournent sur le téléphone ou le PC de l'utilisateur : presque aucun coût de serveur (voir docs/STRATEGIE_OFFRES.md).
   const PUBLIC = [
-    { id: "eto_free", brand: "E.T.O.", name: "ETO", tier: "Free", color: "#34d399", hue: 152, month: 0, year: 0, pitch: "Tous les échecs, gratuits pour toujours.", icon: "smile",
-      feats: [["knight", "Tous les échecs : 142 bots, Stockfish 19 et moteurs natifs, Arène, Royale ×4, Variantes, 5D, Fog"], ["clapper", "Chess Edit Studio et Game Clips, sans filigrane"], ["puzzle", "Puzzles, leçons, revues et Conseiller « !! » illimités"], ["grid", "Outils : PDF, scanner, agenda, compression et nettoyage à la main"], ["chat", "Chat ETO avec ta propre clé d'API"]],
-      roi: "Gratuit, sans publicité, et ça le restera." },
-    { id: "eto_pro", brand: "E.T.O.", name: "ETO", tier: "Pro", color: "#3b82f6", hue: 217, month: 2.99, year: 28.7, pitch: "Mobile Improver : un téléphone plus léger, tout seul.", icon: "zap", badge: "Le plus choisi",
-      feats: [["zap", "Mobile Improver automatique : grosses photos allégées quand le téléphone charge, qualité vérifiée photo par photo (vidéos : bientôt)", 1], ["scan", "Doublons, photos floues et vieilles captures repérés chaque semaine", 1], ["shield", "Originaux gardés 30 jours : rien n'est supprimé sans ton accord", 1], ["chart", "Rapport mensuel : gigaoctets libérés, mémoire, batterie", 1], ["cloud", "Sauvegarde vers ton propre PC, sans abonnement cloud"]],
-      roi: "Rentable dès qu'il t'évite un forfait de stockage : Google One 100 Go coûte 1,99 € par mois, iCloud+ 200 Go 2,99 €." },
-    { id: "eto_max", brand: "E.T.O.", name: "ETO", tier: "MAX", color: "#facc15", hue: 48, month: 9.99, year: 95.9, pitch: "Ton PC et ton téléphone ne font plus qu'un.", icon: "flame", badge: "Meilleure valeur",
-      feats: [["check", "Tout ETO Pro"], ["monitor", "Pilotage du PC depuis le téléphone : allumer, veille, tests, fichiers"], ["clapper", "Auto-Clipper IA : tes meilleurs moments de jeu en clips verticaux"], ["eye", "Copilote de jeu et Smart AFK sur le PC"], ["chat", "Passerelle d'API : tes clés réunies, quotas et bascule automatique", 1], ["code", "Codelab, Studio média, CinePulse"]],
-      roi: "Remplace un clipper de jeu, un outil de contrôle à distance et un compresseur vidéo payants." },
-    { id: "eto_ultra", brand: "E.T.O.", name: "ETO", tier: "Ultra", color: "#a78bfa", hue: 262, month: 119.99, year: 1151.9, pitch: "Équipes et entreprises : 10 personnes, 25 appareils.", icon: "sparkles",
-      feats: [["users", "10 comptes, 25 appareils (téléphones et PC)", 1], ["shield", "Flotte : inventaire, santé, mises à jour et versions privées déployées à distance", 1], ["code", "Dépôt intranet : Git, éditeur, terminal, sujets et entraînement"], ["history", "Journal de plantages centralisé, applications et jeux Godot", 1], ["monitor", "Tests F6 Godot lancés depuis le téléphone, Hub équipe"], ["crown", "Édition à ta marque : logo, couleurs, modules choisis", 1]],
-      roi: "Moins de 12 € par personne : la gestion d'appareils, le suivi des plantages et l'accès à distance coûtent chacun déjà ce prix ailleurs." },
+    { id: "eto_free", brand: "E.T.O.", name: "ETO", tier: "Free", color: "#34d399", hue: 152, month: 0, year: 0, pitch: "Les échecs, sans limite.", icon: "smile",
+      feats: [["knight", "142 bots, Stockfish 19 et moteurs natifs"], ["grid", "Arène, Royale, variantes, 5D, Fog"], ["clapper", "Chess Edit et Game Clips, sans filigrane"], ["puzzle", "Puzzles, leçons et analyses illimités"], ["scan", "PDF, scanner, agenda, nettoyage"], ["chat", "Chat avec ta clé d'API"]],
+      roi: "Gratuit. Sans publicité." },
+    { id: "eto_pro", brand: "E.T.O.", name: "ETO", tier: "Pro", color: "#3b82f6", hue: 217, month: 2.99, year: 28.7, pitch: "Plus d'espace, automatiquement.", icon: "zap", badge: "Le plus choisi",
+      feats: [["zap", "Mobile Improver automatique"], ["chart", "Rapport d'espace récupéré"], ["shield", "Originaux conservés 30 jours"], ["clapper", "Vidéos allégées", 1], ["scan", "Doublons et photos floues détectés", 1], ["cloud", "Sauvegarde vers ton PC"]],
+      roi: "Moins cher qu'un forfait de stockage en ligne." },
+    { id: "eto_max", brand: "E.T.O.", name: "ETO", tier: "MAX", color: "#facc15", hue: 48, month: 9.99, year: 95.9, pitch: "Ton PC, depuis ton téléphone.", icon: "flame", badge: "Meilleure valeur",
+      feats: [["check", "Tout ETO Pro"], ["monitor", "Pilotage du PC"], ["chat", "ETO Gateway : IA incluse"], ["clapper", "Auto-Clipper de jeu"], ["eye", "Copilote de jeu"], ["code", "Codelab, CinePulse, studio média"]],
+      roi: "Remplace plusieurs outils payants." },
+    { id: "eto_ultra", brand: "E.T.O.", name: "ETO", tier: "Ultra", color: "#a78bfa", hue: 262, month: 119.99, year: 1151.9, pitch: "Pour les équipes.", icon: "sparkles",
+      feats: [["users", "10 comptes, 25 appareils"], ["shield", "ETO Fleet : parc, santé, actions à distance"], ["code", "Dépôt intranet"], ["monitor", "Tests Godot à distance, Hub équipe"], ["history", "Journal de plantages centralisé", 1], ["crown", "Édition à ta marque", 1]],
+      roi: "12 € par personne et par mois." },
   ];
   const PRIVATE = [
     { id: "enos_std", brand: "E.N.O.S.", name: "E.N.O.S.", tier: "Standard Edition", who: "Amis", color: "#cbd5e1", hue: 352, icon: "users", role: "friends",
-      feats: [["calendar", "Agenda, Éditeur PDF, Studio média, Outils rapides"], ["chat", "Assistant IA E.N.O.S."], ["code", "Dépôt Intranet et Dev Manager"], ["shield", "Ni pilotage du PC, ni Google, ni loisirs"]] },
+      feats: [["calendar", "Agenda, PDF, studio média, outils"], ["chat", "Assistant E.N.O.S."], ["code", "Dépôt intranet, Dev Manager"], ["shield", "Sans pilotage du PC"]] },
     { id: "enos_dev", brand: "E.N.O.S.", name: "E.N.O.S.", tier: "Dev", who: "Employés", color: "#fb7185", hue: 352, icon: "code", role: "dev",
-      feats: [["check", "Tous les modules d'E.N.O.S."], ["monitor", "Pilotage du PC, Godot, Tests F6, Hub équipe"], ["shield", "Sauf API Control Panel et Notes de frais"]] },
+      feats: [["check", "Tous les modules"], ["monitor", "Pilotage du PC, Godot, Hub équipe"], ["shield", "Hors API Control Panel et notes de frais"]] },
     { id: "enos_ceo", brand: "E.N.O.S.", name: "E.N.O.S.", tier: "CEO", who: "Toi et ton associé", color: "#ef1748", hue: 352, icon: "crown", role: "ceo",
-      feats: [["check", "Accès total, sans aucune limite"], ["scan", "Tous les éléments de test : versions TEST, Tests F6, journal de plantages"], ["gauge", "API Control Panel, Notes de frais, droits complets sur le PC"], ["crown", "Espace CEO : éditions privées et simulateur d'abonnement"]] },
+      feats: [["check", "Accès complet"], ["scan", "Versions de test, journal de plantages"], ["gauge", "API Control Panel, notes de frais"], ["crown", "Espace CEO"]] },
   ];
   const ALL = PUBLIC.concat(PRIVATE), BY = Object.fromEntries(ALL.map((p) => [p.id, p]));
   const eur = (v) => (v === 0 ? "0" : v.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -82,7 +82,7 @@
   P.gate = (id) => {
     const f = MOD[id]; if (!f || P.can(f)) return true;
     const need = BY[P.minPlan(f)];
-    E.ui.sheet({ title: `Avec ${need.name} ${need.tier}`, html: `<p class="muted" style="line-height:1.55">Ce module fait partie de l'offre <b style="color:${need.color}">${esc(need.name + " " + need.tier)}</b>${need.month ? ` (${eur(need.month)} € par mois)` : ""}. Les échecs, eux, restent gratuits.</p>`,
+    E.ui.sheet({ title: `Avec ${need.name} ${need.tier}`, html: `<p class="muted" style="line-height:1.55">Inclus dans <b style="color:${need.color}">${esc(need.name + " " + need.tier)}</b>${need.month ? ` · ${eur(need.month)} € / mois` : ""}.</p>`,
       options: [{ label: "Voir les offres", cls: "pri", fn: () => { E.ui.go("tools"); E.modules.open("plans"); } }, { label: "Fermer" }] });
     return false;
   };
@@ -107,7 +107,7 @@
     document.body.classList.toggle("no-pc", !pcOk);
     if (pcv && !pcOk && !document.getElementById("pc-gate")) {
       const need = BY[P.minPlan("pc_control")];
-      pcv.insertAdjacentHTML("afterbegin", `<div class="card pl-gate" id="pc-gate" style="--c:${need.color}"><span class="pl-ic">${ic("monitor")}</span><h2>Ton PC, depuis ton téléphone</h2><p class="muted">Allumer, mettre en veille, lancer tes tests, transférer des fichiers : le pilotage du PC fait partie de <b>${esc(need.name + " " + need.tier)}</b>.</p><button class="btn pri wide" data-plans>Voir les offres</button></div>`);
+      pcv.insertAdjacentHTML("afterbegin", `<div class="card pl-gate" id="pc-gate" style="--c:${need.color}"><span class="pl-ic">${ic("monitor")}</span><h2>Ton PC, depuis ton téléphone</h2><p class="muted">Inclus dans <b>${esc(need.name + " " + need.tier)}</b>.</p><button class="btn pri wide" data-plans>Voir les offres</button></div>`);
       document.getElementById("pc-gate").querySelector("[data-plans]").onclick = () => { E.ui.go("tools"); E.modules.open("plans"); };
     }
     if (pcOk && document.getElementById("pc-gate")) document.getElementById("pc-gate").remove();
@@ -139,12 +139,12 @@
   // carte « Compte ETO » : connexion, offre de la licence, gestion du paiement
   function account() {
     const u = E.cloud && E.cloud.loggedIn() ? E.cloud.user() : null, l = P.license();
-    if (!u) return `<div class="card pl-acc"><h3>Compte ETO</h3><p class="muted">Crée ton compte pour t'abonner et retrouver ton offre sur tous tes appareils. Les échecs restent gratuits sans compte.</p>
+    if (!u) return `<div class="card pl-acc"><h3>Compte ETO</h3><p class="muted">Ton offre sur tous tes appareils.</p>
       <div class="row"><button class="btn pri" data-acc="signup">Créer un compte</button><button class="btn" data-acc="login">Se connecter</button></div>
-      <button class="btn wide pl-keybtn" data-acc="key">${KEYIC}J'ai une clé d'activation</button></div>`;
+      <button class="btn wide pl-keybtn" data-acc="key">${KEYIC}Clé d'activation</button></div>`;
     const p = l ? BY[l.plan] : null;
     return `<div class="card pl-acc"><h3>Compte ETO<span class="sp">${esc(u.email || "")}</span></h3>
-      <p class="muted">${p ? `Offre <b style="color:${p.color}">${esc(p.name + " " + p.tier)}</b>${l.period_end ? " · renouvellement le " + new Date(l.period_end * 1000).toLocaleDateString("fr-FR") : ""}` : "Licence pas encore lue : touche « Actualiser »."}</p>
+      <p class="muted">${p ? `Offre <b style="color:${p.color}">${esc(p.name + " " + p.tier)}</b>${l.period_end ? " · renouvellement le " + new Date(l.period_end * 1000).toLocaleDateString("fr-FR") : ""}` : "Touche Actualiser pour charger ton offre."}</p>
       <div class="row"><button class="btn" data-acc="refresh">Actualiser</button><button class="btn" data-acc="portal">Gérer le paiement</button><button class="btn" data-acc="logout">Déconnexion</button></div>
       <button class="btn wide pl-keybtn" data-acc="key">${KEYIC}Activer une clé</button></div>`;
   }
@@ -155,9 +155,9 @@
         ${signup ? `<label>Prénom<input id="pa-name" type="text" autocomplete="given-name" maxlength="60"></label>` : ""}
         <label>E-mail<input id="pa-mail" type="email" autocomplete="email" maxlength="254"></label>
         <label>Mot de passe<input id="pa-pw" type="password" autocomplete="${signup ? "new-password" : "current-password"}" maxlength="200"></label>
-        ${signup ? `<p class="muted" style="font-size:12px">10 caractères minimum. En créant un compte, tu acceptes les conditions d'utilisation d'ETO.</p>` : ""}
+        ${signup ? `<p class="muted" style="font-size:12px">10 caractères minimum. En créant un compte, tu acceptes les conditions d'utilisation.</p>` : ""}
         <p class="pl-err" id="pa-err"></p><button class="btn pri wide" id="pa-go">${signup ? "Créer mon compte" : "Me connecter"}</button>
-        <button class="pl-link" id="pa-sw" type="button">${signup ? "J'ai déjà un compte : me connecter" : "Pas encore de compte : en créer un"}</button></div>` });
+        <button class="pl-link" id="pa-sw" type="button">${signup ? "J'ai déjà un compte" : "Créer un compte"}</button></div>` });
     s.querySelector("#pa-sw").onclick = () => { E.ui.closeSheet(true); setTimeout(() => accountSheet(signup ? "login" : "signup"), 60); };
     s.querySelector("#pa-go").onclick = async () => {
       const err = s.querySelector("#pa-err"), b = s.querySelector("#pa-go"); err.textContent = ""; b.disabled = true;
@@ -176,7 +176,7 @@
     if (!E.cloud || !E.cloud.loggedIn()) { E.settings.set("plan.pending", { plan: p.id, annual }); return accountSheet("signup"); }
     try {
       const r = await E.cloud.req("/eto/billing/checkout", { method: "POST", body: { plan: p.id, period: annual ? "year" : "month" } });
-      if (r.status === 503) return E.ui.sheet({ title: `${p.name} ${p.tier}`, html: `<p class="muted" style="line-height:1.55">${esc(r.json.detail || "Le paiement n'est pas encore ouvert.")} Aucun montant n'est prélevé.</p>`, options: [{ label: "Fermer" }] });
+      if (r.status === 503) return E.ui.sheet({ title: `${p.name} ${p.tier}`, html: `<p class="muted" style="line-height:1.55">${esc(r.json.detail || "Paiement indisponible pour le moment.")} Aucun montant n'est prélevé.</p>`, options: [{ label: "Fermer" }] });
       if (r.status !== 200 || !r.json.url) throw new Error(r.json.detail || "Paiement indisponible.");
       if (!E.native.openCheckout(r.json.url)) throw new Error("Impossible d'ouvrir la page de paiement.");
       E.settings.set("plan.await", Date.now());
@@ -193,17 +193,17 @@
   function keySheet(prefill) {
     const logged = E.cloud && E.cloud.loggedIn();
     const s = E.ui.sheet({ title: "Activer une clé", html: `<div class="pl-form pl-keyform">
-        <p class="muted" style="line-height:1.5">Une clé ETO ouvre une offre pendant une durée donnée (cadeau, partenaire, presse, entreprise). Elle s'active une fois sur ton compte ETO.</p>
+        <p class="muted" style="line-height:1.5">Saisis ta clé d'activation.</p>
         <label>Clé d'activation<input id="pk-in" class="pl-keyin" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="27" placeholder="ETO-XXXX-XXXX-XXXX-XXXX" value="${esc(prefill || "")}"></label>
         <p class="pl-keyst" id="pk-st"></p>
-        ${logged ? "" : `<p class="muted" style="font-size:12.5px">Il faut un compte ETO pour garder l'offre sur tous tes appareils : la clé sera activée juste après la connexion.</p>`}
+        ${logged ? "" : `<p class="muted" style="font-size:12.5px">Connexion requise. La clé sera activée ensuite.</p>`}
         <p class="pl-err" id="pk-err"></p><button class="btn pri wide" id="pk-go" disabled>${logged ? "Activer" : "Continuer"}</button></div>` });
     const inp = s.querySelector("#pk-in"), st = s.querySelector("#pk-st"), go = s.querySelector("#pk-go"), err = s.querySelector("#pk-err");
     const check = () => {
       const c = keyNorm(inp.value), pos = inp.selectionStart === inp.value.length;
       if (c.length && pos) inp.value = keyFmt(c.slice(0, 16));
       const ok = keyOk(c); go.disabled = !ok; inp.classList.toggle("ok", ok); inp.classList.toggle("bad", c.length === 16 && !ok);
-      st.textContent = !c.length ? "" : c.length < 16 ? `${c.length} / 16 caractères` : ok ? "Format valide" : "Un caractère est faux : vérifie la clé";
+      st.textContent = !c.length ? "" : c.length < 16 ? `${c.length} / 16` : ok ? "Clé valide" : "Clé invalide";
       st.className = "pl-keyst" + (ok ? " ok" : c.length === 16 ? " bad" : "");
     };
     inp.addEventListener("input", check); check(); setTimeout(() => inp.focus(), 250);
@@ -228,7 +228,7 @@
 
   // bandeau « Mode test » (app de test) : toutes les versions, publiques et privées
   const testBar = (priv) => !P.isTest() ? "" : `<div class="card pl-test"><h3>Mode test<span class="sp">app Eto TEST</span></h3>
-      <p class="muted">${priv ? "Simule n'importe quelle version, publique ou privée, pour voir l'application comme ses utilisateurs." : "Simule une offre pour voir l'application comme ses abonnés (les éditions privées se simulent dans l'Espace CEO)."}</p>
+      <p class="muted">${priv ? "Toutes les versions." : "Offres publiques. Éditions privées : Espace CEO."}</p>
       <div class="pl-sw">${(priv ? ALL : PUBLIC).map((p) => `<button class="pl-chip${P.current() === p.id ? " on" : ""}" data-sim="${p.id}" style="--c:${p.color}">${ic(p.icon)}${esc((p.name === "ETO" ? "ETO " : "") + p.tier)}</button>`).join("")}</div>
       ${E.settings.get("plan.test", "") ? `<button class="btn wide pl-reset" data-sim="">Revenir à ma vraie version</button>` : ""}</div>`;
 
@@ -243,15 +243,15 @@
         const cur = P.plan();
         el.innerHTML = `<div class="pl-hero" style="--c:${cur.color}"><div class="pl-orbs"><i></i><i></i><i></i></div>
             <small>${P.isPrivate() ? "Ta version" : "Ton abonnement"}</small><h2>${esc(cur.name)} <em>${esc(cur.tier)}</em></h2>
-            <p>${P.isPrivate() ? "Édition privée : elle n'apparaît pas dans les offres publiques (voir l'Espace CEO)." : "Passe à l'offre supérieure quand tu veux, sans engagement."}</p></div>
+            <p>${P.isPrivate() ? "Édition privée." : "Sans engagement."}</p></div>
           ${account()}
           ${testBar()}
           <div class="pl-period" role="tablist"><button data-a="0" class="${annual ? "" : "on"}">Mensuel</button><button data-a="1" class="${annual ? "on" : ""}">Annuel <i>−20 %</i></button><span class="pl-pind"></span></div>
           <div class="pl-list">${PUBLIC.map((p, i) => card(p, i, annual)).join("")}</div>
           <div class="card pl-cmp"><h3>Comparer</h3><table><thead><tr><th></th>${PUBLIC.map((p) => `<th style="--c:${p.color}">${esc(p.tier)}</th>`).join("")}</tr></thead><tbody>
-            ${[["Tous les échecs", "✓", "✓", "✓", "✓"], ["Compression et nettoyage à la main", "✓", "✓", "✓", "✓"], ["Mobile Improver automatique", "—", "✓", "✓", "✓"], ["Pilotage du PC", "—", "—", "✓", "✓"], ["Auto-Clipper IA, copilote", "—", "—", "✓", "✓"], ["Passerelle d\x27API", "—", "—", "✓", "✓"], ["Personnes / appareils", "1", "1", "1 + PC", "10 / 25"], ["Flotte, édition à ta marque", "—", "—", "—", "✓"]]
+            ${[["Tous les échecs", "✓", "✓", "✓", "✓"], ["Nettoyage manuel", "✓", "✓", "✓", "✓"], ["Mobile Improver automatique", "—", "✓", "✓", "✓"], ["Pilotage du PC", "—", "—", "✓", "✓"], ["Auto-Clipper IA, copilote", "—", "—", "✓", "✓"], ["Passerelle d\x27API", "—", "—", "✓", "✓"], ["Personnes / appareils", "1", "1", "1 + PC", "10 / 25"], ["Flotte, édition à ta marque", "—", "—", "—", "✓"]]
               .map((r) => `<tr><td>${r[0]}</td>${r.slice(1).map((v) => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-          <p class="pl-legal">Prix TTC. Résiliable à tout moment depuis Google Play. Les mentions « bientôt » signalent ce qui est en préparation. Tout tourne sur ton téléphone et ton PC : tes photos et tes fichiers ne passent par aucun serveur.</p>`;
+          <p class="pl-legal">Prix TTC. Résiliable à tout moment. Tes photos et tes fichiers restent sur tes appareils.</p>`;
         el.querySelectorAll(".pl-period button").forEach((b) => (b.onclick = () => { annual = b.dataset.a === "1"; E.settings.set("plan.annual", annual); roll(); el.querySelectorAll(".pl-period button").forEach((x) => x.classList.toggle("on", x === b)); el.querySelector(".pl-period").dataset.a = annual ? "1" : "0"; }));
         el.querySelector(".pl-period").dataset.a = annual ? "1" : "0";
         wire(el, () => paint());
@@ -283,13 +283,13 @@
         if (a === "signup" || a === "login") return accountSheet(a);
         if (a === "key") return keySheet("");
         if (a === "logout") { E.cloud.logout(); E.store.del && E.store.del("eto.license"); apply(true); return repaint(); }
-        if (a === "refresh") return P.refreshLicense().then((c) => { E.ui.toast(c ? "Licence à jour." : "Licence indisponible pour l'instant.", c ? "ok" : "warn"); repaint(); });
-        if (a === "portal") return E.cloud.req("/eto/billing/portal", { method: "POST" }).then((r) => { if (r.status === 200 && r.json.url) E.native.openCheckout(r.json.url); else E.ui.toast(r.json.detail || "Aucun abonnement payé en ligne.", "warn"); });
+        if (a === "refresh") return P.refreshLicense().then((c) => { E.ui.toast(c ? "Licence à jour." : "Serveur indisponible.", c ? "ok" : "warn"); repaint(); });
+        if (a === "portal") return E.cloud.req("/eto/billing/portal", { method: "POST" }).then((r) => { if (r.status === 200 && r.json.url) E.native.openCheckout(r.json.url); else E.ui.toast(r.json.detail || "Aucun abonnement en ligne.", "warn"); });
       }
       const go = e.target.closest(".pl-go"); if (!go) return;
       const p = BY[go.closest(".pl-card").dataset.p]; if (!p || P.current() === p.id) return;
       if (!P.isTest() && p.month) return buy(p, E.settings.get("plan.annual", false));
-      E.ui.sheet({ title: `${p.name} ${p.tier}`, html: `<p class="muted" style="line-height:1.55">${p.month ? `<b>${eur(p.month)} € par mois</b> ou ${eur(p.year)} € par an.<br><br>` : ""}Le paiement arrive avec la publication d'ETO sur le Play Store (abonnements Google Play). Aucun montant n'est prélevé aujourd'hui.${P.isTest() ? "<br><br>Dans l'application de test, tu peux simuler cette offre pour voir l'application comme ses abonnés." : ""}</p>`,
+      E.ui.sheet({ title: `${p.name} ${p.tier}`, html: `<p class="muted" style="line-height:1.55">${p.month ? `<b>${eur(p.month)} € par mois</b> ou ${eur(p.year)} € par an.<br><br>` : ""}Paiement disponible prochainement. Aucun montant n'est prélevé.${P.isTest() ? "<br><br>Version de test : tu peux simuler cette offre." : ""}</p>`,
         options: (P.isTest() ? [{ label: "Simuler " + p.name + " " + p.tier, cls: "pri", fn: () => { P.simulate(p.id); celebrate(p); repaint(); } }] : []).concat([{ label: "Fermer" }]) });
     });
   }
@@ -303,7 +303,7 @@
       const paint = () => {
         if (!P.ceoSpace()) { el.innerHTML = `<div class="card"><p class="muted">Espace réservé aux CEO.</p></div>`; return; }
         el.innerHTML = `<div class="pl-hero ceo" style="--c:#ef1748"><div class="pl-orbs"><i></i><i></i><i></i></div><small>Espace CEO</small><h2>Éditions <em>privées</em></h2>
-            <p>Les versions d'E.N.O.S. réservées à ton entourage. Elles n'apparaissent jamais dans les offres publiques.</p></div>
+            <p>Versions réservées à l'équipe.</p></div>
           ${testBar(true)}
           <div class="pl-list">${PRIVATE.map((p, i) => card(p, i, false)).join("")}</div>
           <div class="card pl-pub"><h3>Offres publiques<span class="sp">aperçu</span></h3>${PUBLIC.map((p) => `<div class="pl-row" style="--c:${p.color}">${ic(p.icon)}<b>${esc(p.name)} ${esc(p.tier)}</b><span>${p.month ? eur(p.month) + " € / mois" : "Gratuit"}</span>${P.current() === p.id ? '<i class="pl-act sm"><i></i>Actif</i>' : ""}</div>`).join("")}</div>
@@ -324,13 +324,13 @@
     if (!box) return;
     const u = E.cloud && E.cloud.loggedIn() ? E.cloud.user() : null;
     if (!u || u.role !== "ceo") {
-      box.innerHTML = `<div class="card pl-adm"><h3>${KEYIC}Clés et abonnements<span class="sp">serveur ETO</span></h3><p class="muted">Le générateur de clés et le révocateur parlent au serveur ETO, seul à signer les licences. Connecte ton compte CEO pour les utiliser${u ? ` (connecté en ${esc(u.email)}, rôle ${esc(u.role)})` : ""}.</p>
+      box.innerHTML = `<div class="card pl-adm"><h3>${KEYIC}Clés et abonnements<span class="sp">serveur ETO</span></h3><p class="muted">Connexion au compte CEO requise${u ? ` (connecté en ${esc(u.email)}, rôle ${esc(u.role)})` : ""}.</p>
         <button class="btn pri wide" data-adm="login">Connecter le compte CEO</button></div>`;
       box.querySelector("[data-adm=login]").onclick = () => { if (u) E.cloud.logout(true); accountSheet("login"); const t = setInterval(() => { if (!document.querySelector("#sheet:not([hidden]) #pa-go")) { clearInterval(t); admin(box, repaint); } }, 600); };
       return;
     }
     box.innerHTML = `<div class="card pl-adm pl-gen"><h3>${KEYIC}Générateur de clés<span class="sp">licences légitimes</span></h3>
-        <p class="muted">Clés signées par le serveur : seule leur empreinte y est gardée, la clé en clair n'est montrée qu'ici, une seule fois.</p>
+        <p class="muted">Chaque clé n'est affichée qu'une fois.</p>
         <div class="pl-form pl-g2">
           <label>Offre<select id="kg-plan">${PUBLIC.filter((p) => p.month).map((p) => `<option value="${p.id}"${p.id === "eto_max" ? " selected" : ""}>${esc(p.name + " " + p.tier)}</option>`).join("")}</select></label>
           <label>Durée<select id="kg-days"><option value="7">7 jours</option><option value="30" selected>1 mois</option><option value="90">3 mois</option><option value="365">1 an</option><option value="0">Sans limite</option></select></label>
@@ -343,7 +343,7 @@
         <div id="kg-out"></div>
         <h4 class="pl-h4">Clés créées<button class="pl-mini" id="kg-ref">Actualiser</button></h4><div id="kg-list" class="pl-klist"><p class="muted">Chargement…</p></div></div>
       <div class="card pl-adm pl-rev"><h3><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>Révocateur d'abonnement</h3>
-        <p class="muted">Coupe l'offre d'un compte ETO (fraude, remboursement, fin de partenariat). L'application redescend en ETO Free dès qu'elle relit sa licence (au plus tard 7 jours hors ligne).</p>
+        <p class="muted">Repasse un compte en ETO Free.</p>
         <div class="pl-form"><input id="rv-q" type="search" placeholder="Rechercher un e-mail…" autocomplete="off"></div>
         <div id="rv-list" class="pl-klist"><p class="muted">Chargement…</p></div></div>`;
     const $ = (q) => box.querySelector(q);
@@ -372,7 +372,7 @@
         const p = BY[r.json.plan];
         $("#kg-out").innerHTML = `<div class="pl-kout" style="--c:${p.color}"><div class="pl-kohead">${PLAB(p.id)}<b>${r.json.codes.length} clé${r.json.codes.length > 1 ? "s" : ""} · ${r.json.days ? r.json.days + " jours" : "sans limite"}</b><button class="pl-mini" id="kg-all">Tout copier</button></div>
             ${r.json.codes.map((c, i) => `<button class="pl-kcodebig" data-copy="${esc(c)}" style="--i:${i}">${esc(c)}<small>copier</small></button>`).join("")}
-            <p class="muted" style="font-size:12px">Note-les maintenant : elles ne seront plus affichées en clair.</p></div>`;
+            <p class="muted" style="font-size:12px">Copie-les maintenant.</p></div>`;
         $("#kg-all").onclick = () => copyText(r.json.codes.join("\n"));
         E.vibrate && E.vibrate(14); keys();
       } catch (e) { err.textContent = e.message; } finally { b.disabled = false; b.textContent = "Générer"; }
@@ -381,7 +381,7 @@
       const cp = e.target.closest("[data-copy]"); if (cp) return copyText(cp.dataset.copy);
       const kr = e.target.closest("[data-krev]");
       if (kr) {
-        const s = E.ui.sheet({ title: "Révoquer la clé", html: `<p class="muted" style="line-height:1.5">Plus personne ne pourra l'activer.</p><label class="pl-chk"><input type="checkbox" id="kr-subs"> Couper aussi les abonnements ouverts avec cette clé</label>`,
+        const s = E.ui.sheet({ title: "Révoquer la clé", html: `<p class="muted" style="line-height:1.5">La clé ne pourra plus être activée.</p><label class="pl-chk"><input type="checkbox" id="kr-subs"> Révoquer aussi les abonnements associés</label>`,
           options: [{ label: "Révoquer", cls: "bad", fn: async () => { const r = await E.cloud.req("/eto/admin/keys/revoke", { method: "POST", body: { id: +kr.dataset.krev, revoke_subs: !!(s.querySelector("#kr-subs") || {}).checked } });
             E.ui.toast(r.status === 200 ? `Clé révoquée${r.json.subscriptions_stopped ? ` · ${r.json.subscriptions_stopped} abonnement(s) coupé(s)` : ""}.` : r.json.detail || "Échec.", r.status === 200 ? "ok" : "warn"); keys(); subs(); } }, { label: "Annuler" }] });
         return;
@@ -391,7 +391,7 @@
         const stripe = sr.dataset.src === "stripe";
         const s = E.ui.sheet({ title: "Révoquer l'abonnement", html: `<p class="muted" style="line-height:1.5"><b>${esc(sr.dataset.srev)}</b> repasse en ETO Free.</p>
             <div class="pl-form"><label>Motif (journal interne)<input id="rv-why" type="text" maxlength="200" placeholder="remboursement, fraude…"></label></div>
-            ${stripe ? `<label class="pl-chk"><input type="checkbox" id="rv-bill" checked> Annuler aussi le prélèvement Stripe</label>` : ""}`,
+            ${stripe ? `<label class="pl-chk"><input type="checkbox" id="rv-bill" checked> Annuler le prélèvement Stripe</label>` : ""}`,
           options: [{ label: "Révoquer", cls: "bad", fn: async () => { const r = await E.cloud.req("/eto/admin/revoke", { method: "POST", body: { email: sr.dataset.srev, reason: (s.querySelector("#rv-why") || {}).value || "", cancel_billing: !!(s.querySelector("#rv-bill") || {}).checked } });
             E.ui.toast(r.status === 200 ? `Abonnement ${BY[r.json.previous].tier} révoqué${r.json.billing === "cancelled" ? " · prélèvement Stripe annulé" : ""}.` : r.json.detail || "Échec.", r.status === 200 ? "ok" : "warn"); subs(); } }, { label: "Annuler" }] });
       }

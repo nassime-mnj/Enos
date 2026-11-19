@@ -249,7 +249,7 @@
       }
       function showCreate() {
         root.innerHTML = `<h3>Coffre-fort</h3>
-          <p class="muted">Cache tes documents, photos et fichiers sensibles dans un espace chiffré sur ce téléphone. Rien ne quitte l'appareil.</p>
+          <p class="muted">Documents et photos chiffrés sur l'appareil.</p>
           <p class="vlt-warn"><b>Attention :</b> si tu perds la phrase secrète, <b>rien n'est récupérable</b>. Personne ne peut la retrouver, ni le contenu du coffre.</p>
           <input type="password" id="vlt-phrase" autocomplete="new-password" placeholder="Phrase secrète (10 caractères minimum)" aria-label="Phrase secrète">
           <input type="password" id="vlt-phrase2" autocomplete="new-password" placeholder="Confirme la phrase" aria-label="Confirmation de la phrase" style="margin-top:8px">
@@ -339,7 +339,7 @@
         let items = [];
         try { items = await V.list(); } catch (e) { return setErr("Lecture impossible : " + e.message); }
         const L = $("#vlt-list"); if (!L) return;
-        L.innerHTML = items.length ? items.map((f) => `<button class="vlt-item" data-id="${esc(f.id)}" aria-label="Ouvrir ${esc(f.name)}"><span class="vlt-th" data-th="${esc(f.id)}">${GLYPH[kindOf(f.type, f.name)]}</span><b>${esc(f.name)}</b><small>${fmt(f.size)}</small></button>`).join("") : '<p class="muted">Le coffre est vide. Ajoute des fichiers : ils seront chiffrés immédiatement.</p>';
+        L.innerHTML = items.length ? items.map((f) => `<button class="vlt-item" data-id="${esc(f.id)}" aria-label="Ouvrir ${esc(f.name)}"><span class="vlt-th" data-th="${esc(f.id)}">${GLYPH[kindOf(f.type, f.name)]}</span><b>${esc(f.name)}</b><small>${fmt(f.size)}</small></button>`).join("") : '<p class="muted">Le coffre est vide.</p>';
         L._items = items;
         items.filter((f) => f.hasThumb).forEach(async (f) => {
           try { const t = await V.thumb(f.id); if (!t || !V.unlocked) return; const sp = L.querySelector(`[data-th="${f.id}"]`); if (sp) sp.innerHTML = `<img alt="" src="${mkUrl(t, "image/jpeg")}">`; } catch (e) { /* vignette illisible */ }

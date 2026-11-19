@@ -51,7 +51,7 @@
       let ctx = null, buf = null, name = "audio", src = null, t0 = 0, startAt = 0, raf = 0, segs = [];
       el.innerHTML = `
         <div class="card"><h3>Fichier</h3>
-          <p class="muted" style="font-size:14px;margin-bottom:10px">Choisis un son ou une vidéo : la piste audio est extraite sur ton téléphone.</p>
+          <p class="muted" style="font-size:14px;margin-bottom:10px">Choisis un fichier audio ou vidéo.</p>
           <div class="row"><button class="btn pri" id="al-pick">CHOISIR UN FICHIER</button></div><div class="muted" id="al-info" style="margin-top:8px;font-size:13px"></div></div>
         <div id="al-main" hidden>
           <div class="card"><canvas id="al-wave" height="130" style="width:100%;border-radius:10px;background:#08080a;touch-action:none"></canvas>
@@ -66,7 +66,7 @@
             <label class="chip2" style="display:inline-flex;gap:8px;margin:0 0 8px 12px"><input type="checkbox" id="al-mono"> Mono</label>
             <div class="row"><button class="btn pri" id="al-save">ENREGISTRER EN WAV</button></div></div>
           <div class="card"><h3>Détecter les sons<span class="sp" id="al-sn"></span></h3>
-            <p class="muted" style="font-size:13.5px;margin-bottom:8px">Sépare automatiquement les effets sonores (coupures aux silences) pour les enregistrer un par un.</p>
+            <p class="muted" style="font-size:13.5px;margin-bottom:8px">Découpe automatiquement les effets sonores aux silences.</p>
             <label class="fld">Seuil de silence<b id="al-tv">−45 dB</b></label><input type="range" id="al-t" min="-70" max="-20" value="-45" style="width:100%;accent-color:var(--red)">
             <div class="row" style="margin-top:8px"><button class="btn" id="al-split">DÉTECTER</button></div><div class="list" id="al-segs" style="margin-top:8px"></div></div>
         </div>`;

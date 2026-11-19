@@ -67,7 +67,7 @@ try:
         pg.evaluate("ENOS.ui.go('tools'); ENOS.modules.open('plans')"); pg.wait_for_timeout(500)
         pg.click('#tool-plans [data-acc="key"]'); pg.wait_for_selector("#sheet #pk-in")
         pg.fill("#pk-in", codes[0][:-1] + ("0" if codes[0][-1] != "0" else "1"))
-        check(pg.is_disabled("#pk-go") and "faux" in pg.inner_text("#pk-st"), "faute de frappe détectée dans l'app avant tout envoi")
+        check(pg.is_disabled("#pk-go") and "invalide" in pg.inner_text("#pk-st"), "faute de frappe détectée dans l'app avant tout envoi")
         pg.fill("#pk-in", codes[0].replace("-", "").lower()); pg.dispatch_event("#pk-in", "input")
         check(pg.input_value("#pk-in") == codes[0] and not pg.is_disabled("#pk-go"), "saisie remise en forme ETO-XXXX-… : %s" % pg.input_value("#pk-in")[:9])
         pg.click("#pk-go"); pg.wait_for_selector("#sheet #pa-name")            # pas connecté : création de compte proposée, la clé est gardée

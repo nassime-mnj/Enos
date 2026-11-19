@@ -289,7 +289,7 @@
     sv.id = "tool-train"; sv.className = "subview"; sv.hidden = true;
     sv.innerHTML = `<button class="back" data-back>◂ MODULES</button>
       <div class="card"><h3>Super Enos<span class="sp" id="su-sub">ARRÊTÉ</span></h3>
-        <p class="muted" style="font-size:14px;margin-bottom:10px">Il s'entraîne en arrière-plan contre E.N.O.S., Stockfish et ETO. Coups brillants de Stockfish en priorité, jamais de nulle par répétition ; le LLM départage les coups équivalents et retient une leçon après chaque partie.</p>
+        <p class="muted" style="font-size:14px;margin-bottom:10px">Entraînement en arrière-plan contre E.N.O.S., Stockfish et ETO.</p>
         <div class="seg" id="su-where" data-p="enos"><button data-w="phone" class="on">SUR LE TÉLÉPHONE</button><button data-w="pc">SUR LE PC</button><i class="seg-ind"></i></div>
         <div id="su-cfg">
           <div class="kchips" id="su-opps">${OPPS.map((o) => `<button class="su-opp on" data-o="${o}">${NAMES[o]}</button>`).join("")}</div>

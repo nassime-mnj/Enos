@@ -34,7 +34,7 @@ with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(20000)
     pg.add_style_tag(content="#toasts{display:none!important}")
     open_tool(pg, "improver")
-    check("Disponible dans l'application Android" in pg.inner_text("#tool-improver"), "sans pont natif : message honnête (Android seulement)")
+    check("Disponible sur Android" in pg.inner_text("#tool-improver"), "sans pont natif : message honnête (Android seulement)")
     pg.evaluate(FAKE); pg.evaluate("ENOS.native.isTestBuild = () => false; ENOS.plans.apply(true); ENOS.modules.open('improver')")
     pg.wait_for_selector('#tool-improver [data-im="run"]')
     # mode automatique en Free -> feuille ETO Pro

@@ -97,12 +97,12 @@
       const mh = moduleHit(part);
       if (mh && (bs < 0.62 || /\b(ou|trouver|ouvrir|acceder|c est quoi|sert|utiliser)\b/.test(norm(part))) && mh.s >= 1.4 && !(best && bs >= 0.9)) {
         const m = mh.m; if (seen.has("m:" + m.id)) continue; seen.add("m:" + m.id);
-        out.push({ id: "module", score: 1, text: `${m.n} : ${m.s || "un module d'ETO"}. Tu le trouves dans Modules (recherche en haut), ou ouvre-le directement.`, act: [["Ouvrir " + m.n, "open:" + m.id]] });
+        out.push({ id: "module", score: 1, text: `${m.n}${m.s ? " · " + m.s : ""}. Disponible dans Modules.`, act: [["Ouvrir " + m.n, "open:" + m.id]] });
         continue;
       }
       if (best && bs >= 0.5 && !seen.has(best.id)) { seen.add(best.id); out.push({ id: best.id, score: bs, text: fill(best.a, v), act: best.act || [], next: best.next || [] }); }
     }
-    if (!out.length) out.push({ id: "fallback", score: 0, text: fill("Je n'ai pas trouvé de réponse sûre à ça. Essaie avec d'autres mots, ou choisis un sujet ci-dessous. Pour une question précise, l'équipe DualPulse te répond par e-mail : {email}.", v),
+    if (!out.length) out.push({ id: "fallback", score: 0, text: fill("Je n'ai pas de réponse à cette question. Reformule-la ou contacte le support : {email}.", v),
       act: [["Écrire au support", "mail"]], next: ["Quelles sont les offres ?", "Comment résilier ?", "Mon téléphone est plein", "L'application plante"] });
     return out;
   };
@@ -110,16 +110,16 @@
 
   // ------------------------------------------------------------------ module « Assistant ETO »
   E.suite.register({
-    id: "support", group: "sync", title: "Assistant ETO", sub: "Questions, offres, aide",
+    id: "support", group: "sync", title: "Assistant ETO", sub: "Aide et support",
     icon: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     onShow() { if (this._focus) this._focus(); },
     build(el) {
       const ic = (n) => (E.hubIcon ? E.hubIcon(n) : "");
-      el.innerHTML = `<div class="sp-wrap"><div class="sp-head"><span class="sp-av">${ic("smile")}</span><div><b>Assistant ETO</b><small><i></i>Hors ligne · réponses immédiates</small></div></div>
+      el.innerHTML = `<div class="sp-wrap"><div class="sp-head"><span class="sp-av">${ic("smile")}</span><div><b>Assistant ETO</b><small><i></i>Support</small></div></div>
         <div class="sp-log" id="sp-log" aria-live="polite"></div>
         <div class="sp-sug" id="sp-sug"></div>
         <form class="sp-in" id="sp-form"><input id="sp-q" type="text" placeholder="Pose ta question…" autocomplete="off" maxlength="600" enterkeyhint="send"><button class="sp-send" aria-label="Envoyer">${ic("arrow")}</button></form>
-        <p class="sp-foot">Un humain ? <button type="button" data-a="mail">${esc(KB.email)}</button></p></div>`;
+        <p class="sp-foot">Contacter le support : <button type="button" data-a="mail">${esc(KB.email)}</button></p></div>`;
       const log = el.querySelector("#sp-log"), sug = el.querySelector("#sp-sug"), q = el.querySelector("#sp-q");
       const bubble = (cls, html) => { const d = document.createElement("div"); d.className = "sp-m " + cls; d.innerHTML = html; log.appendChild(d); log.scrollTop = 1e6; return d; };
       const chips = (list) => { sug.innerHTML = (list || []).map((s) => `<button type="button" class="sp-chip">${esc(s)}</button>`).join(""); };
@@ -146,7 +146,7 @@
         if (a.startsWith("open:")) { E.ui.go("tools"); return E.modules.open(a.slice(5)); }
         if (a.startsWith("go:")) return E.ui.go(a.slice(3));
       });
-      bubble("bot", "Salut ! Je réponds tout de suite à tes questions sur ETO : offres et paiement, échecs, Mobile Improver, PC, compte, problèmes. Pour un humain : <b>" + KB.email + "</b>.");
+      bubble("bot", "Bonjour. Comment puis-je t'aider ?");
       chips(S.suggestions());
       this._focus = () => setTimeout(() => q.focus(), 200);
     },

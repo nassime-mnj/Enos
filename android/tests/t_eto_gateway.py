@@ -63,7 +63,7 @@ try:
         check(out.strip() == "Bonjour depuis ETO Gateway." and last["key_ok"], "le chat ETO répond via OpenRouter avec la clé du client : %r" % out)
         check(last["model"] == "openai/gpt-oss-120b" and last["reasoning"] == {"effort": "low"}, "requête adaptée à OpenRouter (modèle %s, reasoning)" % last["model"])
         # rotation
-        pg.click('#tool-gateway [data-gw="new"]'); pg.wait_for_selector("#sheet:not([hidden])"); pg.click("#sheet button:has-text('RECRÉER')")
+        pg.click('#tool-gateway [data-gw="new"]'); pg.wait_for_selector("#sheet:not([hidden])"); pg.click("#sheet button:has-text('RENOUVELER')")
         pg.wait_for_selector("#tool-gateway .gw-note", timeout=20000)
         s2 = state()
         check(len(s2["keys"]) == 1 and list(s2["keys"]) != list(s1["keys"]), "« Recréer » : l'ancienne clé est supprimée chez OpenRouter, une seule clé vivante")

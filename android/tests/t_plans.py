@@ -16,7 +16,7 @@ with sync_playwright() as pw:
     prices = pg.evaluate("[...document.querySelectorAll('#tool-plans .pl-price b')].map((b) => b.textContent)")
     check(prices == ["0", "2,99", "9,99", "119,99"], "prix mensuels de 0 à 119,99 € : %s" % prices)
     free = pg.inner_text('#tool-plans .pl-card[data-p="eto_free"]')
-    check("Tous les échecs" in free and "Chess Edit" in free and pg.locator("#tool-plans .pl-roi").count() == 4, "ETO Free contient tous les échecs ; chaque offre dit ce qu'elle rapporte")
+    check("142 bots" in free and "Chess Edit" in free and pg.locator("#tool-plans .pl-roi").count() == 4, "ETO Free contient tous les échecs ; chaque offre dit ce qu'elle rapporte")
     pg.click('#tool-plans .pl-period button[data-a="1"]'); pg.wait_for_timeout(800)
     check(pg.inner_text('#tool-plans .pl-card[data-p="eto_pro"] .pl-price b') == "2,39" and "28,70" in pg.inner_text('#tool-plans .pl-card[data-p="eto_pro"] .pl-bill'), "annuel : ETO Pro à 2,39 €/mois (28,70 € par an)")
     pg.click('#tool-plans .pl-chip[data-sim="eto_free"]'); pg.wait_for_timeout(400)

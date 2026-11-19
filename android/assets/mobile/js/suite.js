@@ -100,7 +100,7 @@
   // ------------------------------------------------------------------ IA (Groq via le pont natif : la clé n'est jamais lue par le JavaScript)
   // A.llm({system, user, json, maxTokens}) -> texte ; A.llmVision({system, ask, image: canvas|dataURL, maxTokens}) -> texte
   const groq = async (body) => {
-    if (!E.ai.configured()) throw new Error("Aucune clé d'IA : clé Groq (Réglages → Clés d'API) ou ETO Gateway (ETO MAX).");
+    if (!E.ai.configured()) throw new Error("IA non configurée. Réglages › Clés d'API, ou ETO Gateway.");
     const ep = E.ai.endpoint(body);
     const r = await N.fetch({ provider: ep.provider, path: ep.path, method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ep.body) });
     const j = r.json();

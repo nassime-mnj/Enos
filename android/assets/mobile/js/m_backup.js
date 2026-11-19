@@ -24,7 +24,7 @@
           <div class="row"><button class="btn" id="bk-cl">☁ DEPUIS LE CLOUD</button></div>
           <div id="bk-list"></div></div>
         <div class="card"><h3>Contenu actuel</h3><div id="bk-now-c" class="muted"></div>
-          <p class="muted" style="margin-top:8px;font-size:12.5px">Jamais sauvegardés : clés d'API, jetons, mots de passe (ils restent dans le coffre Android, à ressaisir après une réinstallation).</p></div>`;
+          <p class="muted" style="margin-top:8px;font-size:12.5px">Les clés d'API et mots de passe ne sont pas inclus.</p></div>`;
 
       function paint() {
         const m = B.meta() || {}, c = B.cfg();
@@ -54,7 +54,7 @@
       function offer(snap, from) {
         if (!B.valid(snap)) return A.toast("Ce fichier n'est pas une sauvegarde E.N.O.S.", "err");
         const s = B.summary(snap), cur = B.summary(B.snapshot());
-        E.ui.sheet({ title: "Restaurer ?", html: `<p class="muted"><b>${esc(from)}</b> · ${fmt(snap.t)}<br>Sauvegarde : <b>${s.games}</b> partie(s), ${s.prefs} réglage(s), ${s.training} donnée(s) d'entraînement.<br>Actuellement : ${cur.games} partie(s), ${cur.prefs} réglage(s).</p><p class="muted">Fusionner garde tout (recommandé). Remplacer écrase les données actuelles.</p>`,
+        E.ui.sheet({ title: "Restaurer ?", html: `<p class="muted"><b>${esc(from)}</b> · ${fmt(snap.t)}<br>Sauvegarde : <b>${s.games}</b> partie(s), ${s.prefs} réglage(s), ${s.training} donnée(s) d'entraînement.<br>Actuellement : ${cur.games} partie(s), ${cur.prefs} réglage(s).</p><p class="muted">Fusionner conserve les données actuelles. Remplacer les écrase.</p>`,
           options: [{ label: "FUSIONNER (recommandé)", cls: "pri", fn: () => done(snap, "merge") }, { label: "REMPLACER TOUT", fn: () => done(snap, "replace") }, { label: "ANNULER" }] });
       }
       function done(snap, mode) {
@@ -67,7 +67,7 @@
       };
       $("#bk-phone").onclick = () => {
         const list = N.backup.list(), box = $("#bk-list");
-        if (!list.length) { box.innerHTML = '<p class="muted">Aucune sauvegarde visible par cette installation. Après une réinstallation, Android peut la cacher : utilise « Depuis un fichier » et choisis-la dans Téléchargements/ENOS.</p>'; return; }
+        if (!list.length) { box.innerHTML = '<p class="muted">Aucune sauvegarde trouvée. Utilise « Depuis un fichier » et sélectionne-la dans Téléchargements/ENOS.</p>'; return; }
         box.innerHTML = list.map((x) => `<button class="btn bk-item" data-id="${x.id}">${esc(x.name.replace(/^enos-sauvegarde-|\.json$/g, ""))} · ${kb(x.size)}</button>`).join("");
         box.querySelectorAll("[data-id]").forEach((b) => (b.onclick = () => { try { offer(JSON.parse(N.backup.read(b.dataset.id)), b.textContent); } catch (e) { A.toast("Sauvegarde illisible.", "err"); } }));
       };

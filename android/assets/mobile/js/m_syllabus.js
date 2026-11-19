@@ -204,7 +204,7 @@ N'invente rien : ignore ce qui n'a pas de date précise. Heure inconnue = null. 
       const esc = E.esc, BK = "syllabus.batches";
       let events = [], busy = false;
       el.innerHTML = `<div class="card"><h3>Syllabus Scanner</h3>
-          <p class="muted">Choisis un plan de cours (PDF, Word ou texte). L'IA en extrait examens, rendus et séances ; tu valides avant l'ajout à l'agenda.</p>
+          <p class="muted">Importe un plan de cours (PDF, Word ou texte). Les échéances sont ajoutées à l'agenda après validation.</p>
           <button class="btn pri wide syl-big" id="syl-pick">CHOISIR UN DOCUMENT</button>
           <div class="syl-prog" id="syl-prog" hidden><i></i></div><p class="muted" id="syl-stage" aria-live="polite"></p>
           <p class="err" id="syl-err" hidden role="alert"></p></div>

@@ -55,7 +55,7 @@
             <label>Bots entraînés<input type="checkbox" id="ro-learned"></label></div>
           <div class="row"><button class="btn pri" id="ro-start">⚔ LANCER LA BATAILLE</button><button class="btn" id="ro-train-btn">🧬 ENTRAÎNER LES BOTS</button></div>
           <div class="card" id="ro-train" hidden><h3>🧬 Académie des bots<span class="sp" id="ro-tstat"></span></h3>
-            <p class="muted" style="font-size:13.5px;margin-bottom:8px">Chaque bot invente une variante de sa stratégie, l'affronte dans de vraies parties à 4 et garde la meilleure. Laisse tourner : ça continue en arrière-plan.</p>
+            <p class="muted" style="font-size:13.5px;margin-bottom:8px">Les bots améliorent leur stratégie en arrière-plan.</p>
             <label class="fld">Générations<select id="ro-gens"><option>5</option><option selected>20</option><option>60</option><option>200</option></select></label>
             <label class="fld">Parties par génération<select id="ro-ggames"><option>2</option><option selected>4</option><option>8</option></select></label>
             <div class="ro-bar"><i id="ro-tbar"></i></div><div id="ro-tlog" class="ro-tlog"></div>

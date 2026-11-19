@@ -41,7 +41,7 @@ with sync_playwright() as pw:
     # écran de chat
     open_tool(pg, "support"); pg.wait_for_selector("#sp-q")
     pg.fill("#sp-q", "c'est quoi eto max"); pg.press("#sp-q", "Enter"); pg.wait_for_function("document.querySelectorAll('#sp-log .sp-m.bot:not(.typing)').length >= 2", timeout=5000)
-    check("pilotage de ton PC" in pg.inner_text("#sp-log"), "chat : réponse affichée")
+    check("pilotage du PC" in pg.inner_text("#sp-log"), "chat : réponse affichée")
     pg.click("#sp-sug .sp-chip >> nth=0"); pg.wait_for_function("document.querySelectorAll('#sp-log .sp-m.me').length >= 2", timeout=5000)
     check(True, "suggestion touchée -> nouvelle question")
     pg.add_style_tag(content="#toasts{display:none!important}"); pg.wait_for_timeout(800)

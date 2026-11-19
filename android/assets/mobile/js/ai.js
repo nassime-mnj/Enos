@@ -48,7 +48,7 @@
 
   // ------------------------------------------------------------------ chat en flux (SSE de Groq). onDelta(texte) à chaque morceau ; résout avec le texte final.
   A.chat = (persona, text, onDelta, opts) => new Promise((resolve, reject) => {
-    if (!A.configured()) return reject(new Error("Aucune clé d'IA : ajoute ta clé Groq (Réglages → Clés d'API) ou active ETO Gateway (ETO MAX)."));
+    if (!A.configured()) return reject(new Error("IA non configurée. Réglages › Clés d'API, ou ETO Gateway."));
     const P = A.PERSONAS[persona];
     const hist = opts && opts.oneShot ? [] : A.history(persona);       // oneShot : question isolée (commentaire d'échecs), hors historique
     hist.push({ role: "user", content: text });
@@ -82,7 +82,7 @@
         if (status !== 200) {
           let m = "Erreur Groq " + status;
           try { m = JSON.parse(errBody).error.message || m; } catch (e) { /* corps non JSON */ }
-          return reject(new Error(A.source() === "eto" ? (status === 401 || status === 403 ? "Clé ETO Gateway refusée ou désactivée (offre terminée ?) : Modules › ETO Gateway." : status === 402 ? "Plafond d'IA du mois atteint : il repart le mois prochain (Modules › ETO Gateway)." : status === 429 ? "IA très demandée : réessaie dans un instant." : m)
+          return reject(new Error(A.source() === "eto" ? (status === 401 || status === 403 ? "Clé ETO Gateway inactive. Modules › ETO Gateway." : status === 402 ? "Plafond mensuel atteint." : status === 429 ? "Service saturé. Réessaie dans un instant." : m)
             : status === 401 ? "Clé Groq refusée (Réglages)." : status === 429 ? "Groq : limite de débit, réessaie dans un instant." : m));
         }
         out = out.trim();

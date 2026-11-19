@@ -35,7 +35,7 @@
           <label class="chip2" style="display:inline-flex;gap:8px;margin-top:10px"><input type="checkbox" id="ci-webp"> Format WebP (plus léger)</label>
           <div class="list" id="ci-out" style="margin-top:10px"></div></div>
         <div id="cp-vid" class="card" hidden><h3>Vidéo</h3>
-          <p class="muted" style="font-size:13.5px;margin-bottom:8px">La vidéo est ré-encodée par ton téléphone : garde l'application ouverte, la durée du traitement est celle de la vidéo.</p>
+          <p class="muted" style="font-size:13.5px;margin-bottom:8px">Garde l'application ouverte pendant le traitement.</p>
           <div class="row"><button class="btn pri" id="cv-pick">CHOISIR UNE VIDÉO</button></div>
           <label class="fld" style="margin-top:10px">Hauteur<b id="cv-hv"></b></label><input type="range" id="cv-h" min="0" max="3" value="1" style="width:100%;accent-color:var(--red)">
           <label class="fld">Débit vidéo<b id="cv-bv"></b></label><input type="range" id="cv-b" min="3" max="40" value="12" style="width:100%;accent-color:var(--red)">

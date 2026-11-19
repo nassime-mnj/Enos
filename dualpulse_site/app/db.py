@@ -66,6 +66,13 @@ def conn():
                 expires REAL NOT NULL DEFAULT 0, revoked REAL NOT NULL DEFAULT 0);
               CREATE TABLE IF NOT EXISTS eto_ai_keys(user_id INTEGER PRIMARY KEY, hash TEXT NOT NULL, plan TEXT NOT NULL DEFAULT '', limit_usd REAL NOT NULL DEFAULT 0, created REAL NOT NULL,
                 rotated REAL NOT NULL, disabled INTEGER NOT NULL DEFAULT 0);
+              CREATE TABLE IF NOT EXISTS eto_teams(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, seats INTEGER NOT NULL, created REAL NOT NULL);
+              CREATE TABLE IF NOT EXISTS eto_team_members(team_id INTEGER NOT NULL, user_id INTEGER NOT NULL UNIQUE, role TEXT NOT NULL, joined REAL NOT NULL, PRIMARY KEY(team_id, user_id));
+              CREATE TABLE IF NOT EXISTS eto_team_invites(code_hash TEXT PRIMARY KEY, team_id INTEGER NOT NULL, created REAL NOT NULL, expires REAL NOT NULL, uses INTEGER NOT NULL DEFAULT 0,
+                max_uses INTEGER NOT NULL DEFAULT 1, revoked INTEGER NOT NULL DEFAULT 0);
+              CREATE TABLE IF NOT EXISTS eto_fleet_health(user_id INTEGER NOT NULL, device_id TEXT NOT NULL, t REAL NOT NULL, data TEXT NOT NULL DEFAULT '{}', PRIMARY KEY(user_id, device_id));
+              CREATE TABLE IF NOT EXISTS eto_fleet_cmds(id INTEGER PRIMARY KEY AUTOINCREMENT, team_id INTEGER NOT NULL, target_user INTEGER NOT NULL, target_device TEXT NOT NULL, cmd TEXT NOT NULL,
+                args TEXT NOT NULL DEFAULT '{}', created_by INTEGER, created REAL NOT NULL, status TEXT NOT NULL, result TEXT NOT NULL DEFAULT '', done_t REAL);
               CREATE TABLE IF NOT EXISTS eto_key_uses(key_id INTEGER NOT NULL, user_id INTEGER NOT NULL, t REAL NOT NULL, PRIMARY KEY(key_id, user_id));
             """)
             _conn.commit()

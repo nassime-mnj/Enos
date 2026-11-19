@@ -84,14 +84,20 @@ def signup(email, password, name=""):
     return service.get_user(uid)
 
 
-def subscription(u):
-    """Offre effective : rôle du personnel -> édition privée ; sinon abonnement actif et non expiré, sinon ETO Free."""
+def subscription(u, team=True):
+    """Offre effective : rôle du personnel -> édition privée ; sinon abonnement actif et non expiré ; sinon place dans une équipe ETO Ultra
+    (ETO Fleet, team=True) ; sinon ETO Free."""
     if u["role"] in STAFF_PLAN:
         return {"plan": STAFF_PLAN[u["role"]], "status": "active", "period_end": 0, "source": "staff", "seats": 0, "period": ""}
     with db._lock:
         r = _c().execute("SELECT * FROM eto_subs WHERE user_id=?", (u["id"],)).fetchone()
     if r and r["plan"] in PLANS and r["status"] in ACTIVE and (r["period_end"] == 0 or r["period_end"] > now()):
         return {"plan": r["plan"], "status": r["status"], "period_end": r["period_end"], "source": r["source"], "seats": r["seats"], "period": r["period"]}
+    if team:
+        from . import fleet                                   # import tardif : fleet dépend de ce module
+        t = fleet.team_plan(u["id"])
+        if t:
+            return {"plan": "eto_ultra", "status": "active", "period_end": t["period_end"], "source": "team", "seats": 1, "period": ""}
     return {"plan": "eto_free", "status": "active", "period_end": 0, "source": "free", "seats": 1, "period": ""}
 
 
