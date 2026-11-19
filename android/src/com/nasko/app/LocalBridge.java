@@ -268,6 +268,21 @@ final class LocalBridge {
         return act.versionName();
     }
 
+    /** Paiement ETO : ouvre la page Stripe (Checkout / portail client) dans le navigateur du téléphone. Seules les adresses https de Stripe sont acceptées. */
+    @JavascriptInterface
+    public boolean openCheckout(String url) {
+        if (!ok()) return false;
+        try {
+            android.net.Uri u = android.net.Uri.parse(url == null ? "" : url);
+            String h = u.getHost() == null ? "" : u.getHost();
+            if (!"https".equals(u.getScheme()) || !(h.equals("checkout.stripe.com") || h.equals("billing.stripe.com"))) return false;
+            act.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, u));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Application de TEST (« Eto TEST », identifiant com.nasko.app.test) : l'interface y propose de simuler chaque version / abonnement. */
     @JavascriptInterface
     public boolean isTestBuild() {

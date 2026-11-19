@@ -40,6 +40,7 @@
   const post = async (path, body) => { const r = await call({ path: V1 + path, method: "POST", body: JSON.stringify(body) }); return { status: r.status, json: r.json() || {} }; };
   const adopt = async (j) => { N.vault.set("cloud_access", j.access_token); N.vault.set("cloud_refresh", j.refresh_token); setUser(j.user); return j.user; };
   C.login = async (email, password, totp) => adopt(must(await post("/auth/login", { email, password, totp: totp || "", device: "Téléphone" }), "Connexion refusée"));
+  C.signup = async (email, password, name) => adopt(must(await post("/eto/signup", { email, password, name: name || "", device: "Téléphone" }), "Inscription refusée"));      // compte ETO grand public (sans invitation)
   C.register = async (invite, email, password, name) => adopt(must(await post("/auth/register", { invite, email, password, name: name || "" }), "Inscription refusée"));
   C.logout = async (silent) => { try { await N.fetch({ provider: "cloud_logout", path: "/", method: "POST" }); } catch (e) { /* hors ligne */ } E.store.del("cloud.user"); E.emit("cloud", null); if (!silent && E.ui) E.ui.toast("Déconnecté du cloud.", "ok"); };
 

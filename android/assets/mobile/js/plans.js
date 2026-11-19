@@ -38,10 +38,54 @@
   // ------------------------------------------------------------------ état
   const P = (E.plans = { PUBLIC, PRIVATE, BY, eur });
   P.isTest = () => !!(E.native && E.native.isTestBuild && E.native.isTestBuild());
-  P.real = () => (P.isTest() || (E.store && E.store.get("ceo.done", "")) ? "enos_ceo" : (E.settings.get("plan.owned", "") in BY ? E.settings.get("plan.owned") : "eto_free"));
+  // ------------------------------------------------------------------ licence du compte ETO (serveur Dual Pulse) : jeton Ed25519 signé, vérifié ICI hors ligne
+  // Droits par offre : chaque offre contient les précédentes ; les échecs sont toujours gratuits (même table que le serveur, eto.py).
+  const FEAT = { eto_free: ["chess", "tools", "chat_byok"], eto_pro: ["improver_auto", "cleaner_auto", "backup_pc", "report"], eto_max: ["pc_control", "clipper", "copilot", "gateway", "studio", "codelab"], eto_ultra: ["team", "fleet", "depot", "qa", "white_label", "chess_engine"] };
+  const ORDER = ["eto_free", "eto_pro", "eto_max", "eto_ultra"];
+  P.features = (plan) => { plan = PRIVATE.some((p) => p.id === plan) ? "eto_ultra" : plan; const out = []; for (const p of ORDER) { out.push(...FEAT[p]); if (p === plan) break; } return out; };
+  P.minPlan = (f) => ORDER.find((p) => FEAT[p].includes(f)) || "eto_free";
+  const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  async function verifyLicense(tok, pubB64) {
+    const [h, b, sg] = String(tok).split("."); if (!sg) return null;
+    const claims = JSON.parse(new TextDecoder().decode(b64u(b)));
+    if (claims.typ !== "license" || claims.iss !== "dualpulse") return null;
+    try {
+      const key = await crypto.subtle.importKey("raw", b64u(pubB64), { name: "Ed25519" }, false, ["verify"]);
+      if (!(await crypto.subtle.verify({ name: "Ed25519" }, key, b64u(sg), new TextEncoder().encode(h + "." + b)))) return null;
+    } catch (e) { if (!/Ed25519|not supported|Unrecognized/i.test(String(e && (e.message || e.name)))) return null; }    // WebView trop ancienne sans Ed25519 : on garde la licence (elle arrive en HTTPS du serveur)
+    return claims;
+  }
+  P._verify = verifyLicense;                                                         // (tests)
+  P.license = () => { const l = E.store.get("eto.license", null); return l && l.claims && l.claims.exp * 1000 + 7 * 86400000 > Date.now() ? l.claims : null; };   // 7 jours de grâce hors ligne après l'expiration
+  /** relit la licence auprès du serveur (connexion ETO requise) ; la clé publique est épinglée à la première lecture */
+  P.refreshLicense = async () => {
+    if (!E.cloud || !E.cloud.loggedIn()) return null;
+    const r = await E.cloud.req("/eto/license", { method: "POST" }); if (r.status !== 200) return null;
+    const pin = E.store.get("eto.pubkey", "") || r.json.public_key; if (r.json.public_key !== pin) return null;
+    const claims = await verifyLicense(r.json.license, pin); if (!claims) return null;
+    E.store.set("eto.pubkey", pin); E.store.set("eto.license", { token: r.json.license, claims }); apply(true); E.emit && E.emit("plan", P.current());
+    return claims;
+  };
+  P.real = () => {
+    if (P.isTest() || (E.store && E.store.get("ceo.done", ""))) return "enos_ceo";
+    const l = P.license(); if (l && BY[l.plan]) return l.plan;
+    return "eto_free";
+  };
   P.current = () => { const t = P.isTest() ? E.settings.get("plan.test", "") : ""; return t && BY[t] ? t : P.real(); };
   P.plan = () => BY[P.current()];
   P.isPrivate = (id) => PRIVATE.some((p) => p.id === (id || P.current()));
+  P.can = (f) => P.features(P.current()).includes(f);
+  // modules soumis à une offre ; tout le reste (échecs compris) est libre
+  const MOD = { pc: "pc_control", "b-sy": "pc_control", "b-rg": "pc_control", colis: "pc_control", codelab: "codelab", cinepulse: "studio", audiolab: "studio", "b-hb": "team", fleet: "fleet", improver: "tools", gateway: "gateway" };
+  P.featureOf = (id) => MOD[id] || "";
+  /** true si le module est ouvert pour l'offre active ; sinon feuille « Disponible avec ETO … » et false */
+  P.gate = (id) => {
+    const f = MOD[id]; if (!f || P.can(f)) return true;
+    const need = BY[P.minPlan(f)];
+    E.ui.sheet({ title: `Avec ${need.name} ${need.tier}`, html: `<p class="muted" style="line-height:1.55">Ce module fait partie de l'offre <b style="color:${need.color}">${esc(need.name + " " + need.tier)}</b>${need.month ? ` (${eur(need.month)} € par mois)` : ""}. Les échecs, eux, restent gratuits.</p>`,
+      options: [{ label: "Voir les offres", cls: "pri", fn: () => { E.ui.go("tools"); E.modules.open("plans"); } }, { label: "Fermer" }] });
+    return false;
+  };
   P.ceoSpace = () => P.current() === "enos_ceo" || P.isTest();                 // l'app de test garde toujours l'accès (sinon on ne pourrait plus revenir en arrière)
   /** simuler une version (application de TEST uniquement) ; "" = revenir à la vraie */
   P.simulate = (id) => {
@@ -59,6 +103,14 @@
       b.firstChild.textContent = p.brand;
       if (anim) { const br = b.parentNode; br.classList.remove("flip"); void br.offsetWidth; br.classList.add("flip"); }
     }
+    const pcOk = P.can("pc_control"), pcv = document.querySelector('.view[data-v="pc"] .scroll');
+    document.body.classList.toggle("no-pc", !pcOk);
+    if (pcv && !pcOk && !document.getElementById("pc-gate")) {
+      const need = BY[P.minPlan("pc_control")];
+      pcv.insertAdjacentHTML("afterbegin", `<div class="card pl-gate" id="pc-gate" style="--c:${need.color}"><span class="pl-ic">${ic("monitor")}</span><h2>Ton PC, depuis ton téléphone</h2><p class="muted">Allumer, mettre en veille, lancer tes tests, transférer des fichiers : le pilotage du PC fait partie de <b>${esc(need.name + " " + need.tier)}</b>.</p><button class="btn pri wide" data-plans>Voir les offres</button></div>`);
+      document.getElementById("pc-gate").querySelector("[data-plans]").onclick = () => { E.ui.go("tools"); E.modules.open("plans"); };
+    }
+    if (pcOk && document.getElementById("pc-gate")) document.getElementById("pc-gate").remove();
     if (E.settings.get("plan.hue_for", "") !== p.id) { E.settings.set("plan.hue_for", p.id); if (E.theme) E.theme.apply(p.hue); }     // la couleur suit la version quand elle change (Thèmes reste libre ensuite)
   }
   P.apply = apply;
@@ -84,6 +136,51 @@
       ${p.month != null ? `<button class="btn${act ? "" : " pri"} pl-go">${act ? "Ton offre actuelle" : p.month === 0 ? "Revenir à Free" : "Choisir " + esc(p.name + " " + p.tier)}</button>` : ""}
     </article>`;
   }
+  // carte « Compte ETO » : connexion, offre de la licence, gestion du paiement
+  function account() {
+    const u = E.cloud && E.cloud.loggedIn() ? E.cloud.user() : null, l = P.license();
+    if (!u) return `<div class="card pl-acc"><h3>Compte ETO</h3><p class="muted">Crée ton compte pour t'abonner et retrouver ton offre sur tous tes appareils. Les échecs restent gratuits sans compte.</p>
+      <div class="row"><button class="btn pri" data-acc="signup">Créer un compte</button><button class="btn" data-acc="login">Se connecter</button></div></div>`;
+    const p = l ? BY[l.plan] : null;
+    return `<div class="card pl-acc"><h3>Compte ETO<span class="sp">${esc(u.email || "")}</span></h3>
+      <p class="muted">${p ? `Offre <b style="color:${p.color}">${esc(p.name + " " + p.tier)}</b>${l.period_end ? " · renouvellement le " + new Date(l.period_end * 1000).toLocaleDateString("fr-FR") : ""}` : "Licence pas encore lue : touche « Actualiser »."}</p>
+      <div class="row"><button class="btn" data-acc="refresh">Actualiser</button><button class="btn" data-acc="portal">Gérer le paiement</button><button class="btn" data-acc="logout">Déconnexion</button></div></div>`;
+  }
+  function accountSheet(mode) {
+    const signup = mode === "signup", needUrl = !E.cloud.url();
+    const s = E.ui.sheet({ title: signup ? "Créer ton compte ETO" : "Connexion ETO", html: `<div class="pl-form">
+        ${needUrl ? `<label>Adresse du serveur ETO<input id="pa-url" type="url" placeholder="https://…" autocomplete="off"></label>` : ""}
+        ${signup ? `<label>Prénom<input id="pa-name" type="text" autocomplete="given-name" maxlength="60"></label>` : ""}
+        <label>E-mail<input id="pa-mail" type="email" autocomplete="email" maxlength="254"></label>
+        <label>Mot de passe<input id="pa-pw" type="password" autocomplete="${signup ? "new-password" : "current-password"}" maxlength="200"></label>
+        ${signup ? `<p class="muted" style="font-size:12px">10 caractères minimum. En créant un compte, tu acceptes les conditions d'utilisation d'ETO.</p>` : ""}
+        <p class="pl-err" id="pa-err"></p><button class="btn pri wide" id="pa-go">${signup ? "Créer mon compte" : "Me connecter"}</button></div>` });
+    s.querySelector("#pa-go").onclick = async () => {
+      const err = s.querySelector("#pa-err"), b = s.querySelector("#pa-go"); err.textContent = ""; b.disabled = true;
+      try {
+        if (needUrl) E.cloud.setUrl(s.querySelector("#pa-url").value);
+        const mail = s.querySelector("#pa-mail").value.trim(), pw = s.querySelector("#pa-pw").value;
+        if (signup) await E.cloud.signup(mail, pw, (s.querySelector("#pa-name") || {}).value || ""); else await E.cloud.login(mail, pw);
+        await P.refreshLicense(); E.ui.closeSheet(); E.ui.toast(signup ? "Bienvenue sur ETO." : "Connecté.", "ok");
+        const pend = E.settings.get("plan.pending", null); E.settings.set("plan.pending", null); if (pend) buy(BY[pend.plan], pend.annual);
+      } catch (e) { err.textContent = e.message || "Échec."; } finally { b.disabled = false; }
+    };
+  }
+  // achat : Stripe Checkout dans le navigateur ; le droit arrive par le webhook, la licence est relue au retour dans l'application
+  async function buy(p, annual) {
+    if (!E.cloud || !E.cloud.loggedIn()) { E.settings.set("plan.pending", { plan: p.id, annual }); return accountSheet("signup"); }
+    try {
+      const r = await E.cloud.req("/eto/billing/checkout", { method: "POST", body: { plan: p.id, period: annual ? "year" : "month" } });
+      if (r.status === 503) return E.ui.sheet({ title: `${p.name} ${p.tier}`, html: `<p class="muted" style="line-height:1.55">${esc(r.json.detail || "Le paiement n'est pas encore ouvert.")} Aucun montant n'est prélevé.</p>`, options: [{ label: "Fermer" }] });
+      if (r.status !== 200 || !r.json.url) throw new Error(r.json.detail || "Paiement indisponible.");
+      if (!E.native.openCheckout(r.json.url)) throw new Error("Impossible d'ouvrir la page de paiement.");
+      E.settings.set("plan.await", Date.now());
+    } catch (e) { E.ui.toast(e.message, "warn"); }
+  }
+  P.buy = buy; P.accountSheet = accountSheet;
+  // retour du navigateur après un paiement : on relit la licence
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && E.settings.get("plan.await", 0) > Date.now() - 3600e3) { E.settings.set("plan.await", 0); setTimeout(() => P.refreshLicense().then((c) => c && E.ui.toast("Offre mise à jour : " + BY[c.plan].name + " " + BY[c.plan].tier, "ok")), 1500); } });
+
   // bandeau « Mode test » (app de test) : toutes les versions, publiques et privées
   const testBar = (priv) => !P.isTest() ? "" : `<div class="card pl-test"><h3>Mode test<span class="sp">app Eto TEST</span></h3>
       <p class="muted">${priv ? "Simule n'importe quelle version, publique ou privée, pour voir l'application comme ses utilisateurs." : "Simule une offre pour voir l'application comme ses abonnés (les éditions privées se simulent dans l'Espace CEO)."}</p>
@@ -102,6 +199,7 @@
         el.innerHTML = `<div class="pl-hero" style="--c:${cur.color}"><div class="pl-orbs"><i></i><i></i><i></i></div>
             <small>${P.isPrivate() ? "Ta version" : "Ton abonnement"}</small><h2>${esc(cur.name)} <em>${esc(cur.tier)}</em></h2>
             <p>${P.isPrivate() ? "Édition privée : elle n'apparaît pas dans les offres publiques (voir l'Espace CEO)." : "Passe à l'offre supérieure quand tu veux, sans engagement."}</p></div>
+          ${account()}
           ${testBar()}
           <div class="pl-period" role="tablist"><button data-a="0" class="${annual ? "" : "on"}">Mensuel</button><button data-a="1" class="${annual ? "on" : ""}">Annuel <i>−20 %</i></button><span class="pl-pind"></span></div>
           <div class="pl-list">${PUBLIC.map((p, i) => card(p, i, annual)).join("")}</div>
@@ -134,8 +232,17 @@
       repaint = el._repaint;
       const sim = e.target.closest("[data-sim]");
       if (sim) { const id = sim.dataset.sim; P.simulate(id); if (id) celebrate(BY[id]); E.vibrate && E.vibrate(12); repaint(); return; }
+      const acc = e.target.closest("[data-acc]");
+      if (acc) {
+        const a = acc.dataset.acc;
+        if (a === "signup" || a === "login") return accountSheet(a);
+        if (a === "logout") { E.cloud.logout(); E.store.del && E.store.del("eto.license"); apply(true); return repaint(); }
+        if (a === "refresh") return P.refreshLicense().then((c) => { E.ui.toast(c ? "Licence à jour." : "Licence indisponible pour l'instant.", c ? "ok" : "warn"); repaint(); });
+        if (a === "portal") return E.cloud.req("/eto/billing/portal", { method: "POST" }).then((r) => { if (r.status === 200 && r.json.url) E.native.openCheckout(r.json.url); else E.ui.toast(r.json.detail || "Aucun abonnement payé en ligne.", "warn"); });
+      }
       const go = e.target.closest(".pl-go"); if (!go) return;
       const p = BY[go.closest(".pl-card").dataset.p]; if (!p || P.current() === p.id) return;
+      if (!P.isTest() && p.month) return buy(p, E.settings.get("plan.annual", false));
       E.ui.sheet({ title: `${p.name} ${p.tier}`, html: `<p class="muted" style="line-height:1.55">${p.month ? `<b>${eur(p.month)} € par mois</b> ou ${eur(p.year)} € par an.<br><br>` : ""}Le paiement arrive avec la publication d'ETO sur le Play Store (abonnements Google Play). Aucun montant n'est prélevé aujourd'hui.${P.isTest() ? "<br><br>Dans l'application de test, tu peux simuler cette offre pour voir l'application comme ses abonnés." : ""}</p>`,
         options: (P.isTest() ? [{ label: "Simuler " + p.name + " " + p.tier, cls: "pri", fn: () => { P.simulate(p.id); celebrate(p); repaint(); } }] : []).concat([{ label: "Fermer" }]) });
     });

@@ -105,3 +105,13 @@ body.plan-eto .brand::before{filter:hue-rotate(var(--plan-rot,0deg)) saturate(1.
 /* rentabilité de l'offre */
 .pl-roi{display:flex;align-items:flex-start;gap:9px;margin:12px 0 0;padding:10px 12px;border-radius:14px;border:1px solid color-mix(in srgb,var(--c) 30%,transparent);background:color-mix(in srgb,var(--c) 9%,transparent);font:550 12.5px/1.45 var(--ui);color:#ecebf0}
 .pl-roi .hi{width:17px;height:17px;margin-top:1px;--ic:var(--c);--ic2:#fff}
+/* compte ETO, verrou d'offre */
+.pl-acc{margin-top:14px}.pl-acc p{font-size:13.5px;line-height:1.5}
+.pl-form{display:flex;flex-direction:column;gap:12px}
+.pl-form label{display:flex;flex-direction:column;gap:6px;font:600 12px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pl-form input{height:48px;padding:0 14px;border-radius:14px;border:1px solid var(--ob-edge,#2a2b33);background:#0d0e13;color:#fff;font:500 15px var(--ui);text-transform:none;letter-spacing:0}
+.pl-form input:focus{outline:none;border-color:var(--red2);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 20%,transparent)}
+.pl-err{min-height:18px;color:#ff8fa3;font:600 13px var(--ui)}
+.pl-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:22px!important;border-color:color-mix(in srgb,var(--c) 40%,transparent)!important;background:radial-gradient(90% 100% at 100% 0%,color-mix(in srgb,var(--c) 22%,transparent),transparent 65%),linear-gradient(165deg,#16171d,#0c0d11)!important}
+.pl-gate h2{margin:4px 0 0;font:800 21px var(--ui);color:#fff}.pl-gate p{font-size:14px;line-height:1.5}
+body.no-pc #pc-locked,body.no-pc #pc-live{display:none!important}
