@@ -25,12 +25,30 @@
   A.saveHistory = (p, h) => E.store.set("chat." + p, h.slice(-KEEP));
   A.clear = (p) => E.store.del("chat." + p);
   A.name = () => E.settings.get("name", "Nassime");
-  A.configured = () => N.vault.has("groq");
+  // deux sources : la clé Groq personnelle, ou la clé ETO Gateway (OpenRouter, créée par le serveur ETO, plafonnée par l'offre). Choix : Réglages / module ETO Gateway.
+  A.hasGroq = () => N.vault.has("groq");
+  A.hasEto = () => N.vault.has("openrouter");
+  A.source = () => { const s = E.settings.get("ai.source", ""); return s === "groq" && A.hasGroq() ? "groq" : s === "eto" && A.hasEto() ? "eto" : A.hasGroq() ? "groq" : A.hasEto() ? "eto" : ""; };
+  A.configured = () => !!A.source();
+  // identifiants Groq -> OpenRouter (mêmes modèles, noms différents) ; un identifiant inconnu passe tel quel
+  const OR_MAP = { "llama-3.3-70b-versatile": "meta-llama/llama-3.3-70b-instruct", "llama-3.1-8b-instant": "meta-llama/llama-3.1-8b-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct": "meta-llama/llama-4-scout", "meta-llama/llama-4-maverick-17b-128e-instruct": "meta-llama/llama-4-maverick",
+    "moonshotai/kimi-k2-instruct": "moonshotai/kimi-k2", "deepseek-r1-distill-llama-70b": "deepseek/deepseek-r1-distill-llama-70b", "gemma2-9b-it": "google/gemma-2-9b-it" };
+  /** requête de chat prête pour le pont natif, selon la source active : {provider, path, body} */
+  A.endpoint = (body) => {
+    const b = Object.assign({}, body);
+    if (A.source() !== "eto") return { provider: "groq", path: "/openai/v1/chat/completions", body: b };
+    b.model = OR_MAP[b.model] || b.model;
+    if (b.reasoning_effort) { b.reasoning = { effort: b.reasoning_effort }; delete b.reasoning_effort; }
+    if (b.stream_options) { delete b.stream_options; b.usage = { include: true }; }
+    return { provider: "openrouter", path: "/api/v1/chat/completions", body: b };
+  };
+  A._orModel = (m) => OR_MAP[m] || m;
   A.model = () => E.settings.get("model", "openai/gpt-oss-120b");
 
   // ------------------------------------------------------------------ chat en flux (SSE de Groq). onDelta(texte) à chaque morceau ; résout avec le texte final.
   A.chat = (persona, text, onDelta, opts) => new Promise((resolve, reject) => {
-    if (!A.configured()) return reject(new Error("Clé Groq absente : Réglages → Clés d'API."));
+    if (!A.configured()) return reject(new Error("Aucune clé d'IA : ajoute ta clé Groq (Réglages → Clés d'API) ou active ETO Gateway (ETO MAX)."));
     const P = A.PERSONAS[persona];
     const hist = opts && opts.oneShot ? [] : A.history(persona);       // oneShot : question isolée (commentaire d'échecs), hors historique
     hist.push({ role: "user", content: text });
@@ -38,7 +56,8 @@
       messages: [{ role: "system", content: (opts && opts.system) || P.system(A.name()) }, ...hist.slice(-MAX_CTX)] };
     if (/gpt-oss/.test(body.model)) body.reasoning_effort = "low";             // réflexion courte : première syllabe en < 1 s
     let buf = "", out = "", status = 0, errBody = "";
-    A.current = N.request({ provider: "groq", path: "/openai/v1/chat/completions", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, {
+    const ep = A.endpoint(body);
+    A.current = N.request({ provider: ep.provider, path: ep.path, method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ep.body) }, {
       head: (s) => { status = s; },
       chunk: (c) => {
         if (status !== 200) { errBody += c; return; }
@@ -63,7 +82,8 @@
         if (status !== 200) {
           let m = "Erreur Groq " + status;
           try { m = JSON.parse(errBody).error.message || m; } catch (e) { /* corps non JSON */ }
-          return reject(new Error(status === 401 ? "Clé Groq refusée (Réglages)." : status === 429 ? "Groq : limite de débit, réessaie dans un instant." : m));
+          return reject(new Error(A.source() === "eto" ? (status === 401 || status === 403 ? "Clé ETO Gateway refusée ou désactivée (offre terminée ?) : Modules › ETO Gateway." : status === 402 ? "Plafond d'IA du mois atteint : il repart le mois prochain (Modules › ETO Gateway)." : status === 429 ? "IA très demandée : réessaie dans un instant." : m)
+            : status === 401 ? "Clé Groq refusée (Réglages)." : status === 429 ? "Groq : limite de débit, réessaie dans un instant." : m));
         }
         out = out.trim();
         if (!out) return reject(new Error("Réponse vide."));

@@ -64,6 +64,8 @@ def conn():
               CREATE TABLE IF NOT EXISTS eto_keys(id INTEGER PRIMARY KEY AUTOINCREMENT, code_hash TEXT NOT NULL UNIQUE, hint TEXT NOT NULL, plan TEXT NOT NULL, days INTEGER NOT NULL,
                 max_uses INTEGER NOT NULL DEFAULT 1, uses INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', batch TEXT NOT NULL DEFAULT '', created_by INTEGER, created REAL NOT NULL,
                 expires REAL NOT NULL DEFAULT 0, revoked REAL NOT NULL DEFAULT 0);
+              CREATE TABLE IF NOT EXISTS eto_ai_keys(user_id INTEGER PRIMARY KEY, hash TEXT NOT NULL, plan TEXT NOT NULL DEFAULT '', limit_usd REAL NOT NULL DEFAULT 0, created REAL NOT NULL,
+                rotated REAL NOT NULL, disabled INTEGER NOT NULL DEFAULT 0);
               CREATE TABLE IF NOT EXISTS eto_key_uses(key_id INTEGER NOT NULL, user_id INTEGER NOT NULL, t REAL NOT NULL, PRIMARY KEY(key_id, user_id));
             """)
             _conn.commit()

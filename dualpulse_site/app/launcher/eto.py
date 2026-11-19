@@ -106,6 +106,12 @@ def set_subscription(uid, plan, status, period_end=0, source="manual", period="m
                      (uid, plan, period, status, float(period_end or 0), source, ext_customer, ext_sub, int(seats or SEATS[plan]), now()))
         _c().commit()
     log(uid, "subscription", {"plan": plan, "status": status, "source": source})
+    _ai_sync(uid)
+
+
+def _ai_sync(uid):
+    from . import gateway                                     # import tardif : gateway dépend de ce module
+    gateway.sync(uid)
 
 
 def license_token(u):
@@ -187,10 +193,13 @@ def revoke_key(by_uid, key_id, revoke_subs=False):
         if not k:
             raise service.AuthError(404, "Clé introuvable.")
         c.execute("UPDATE eto_keys SET revoked=? WHERE id=? AND revoked=0", (now(), key_id))
-        n = 0
+        n, uids = 0, []
         if revoke_subs:
+            uids = [x["user_id"] for x in c.execute("SELECT user_id FROM eto_subs WHERE source=? AND status<>'revoked'", ("key:%d" % key_id,)).fetchall()]
             n = c.execute("UPDATE eto_subs SET status='revoked', updated=? WHERE source=? AND status<>'revoked'", (now(), "key:%d" % key_id)).rowcount
         c.commit()
+    for x in uids:
+        _ai_sync(x)
     log(by_uid, "key_revoked", {"key": key_id, "subs": n})
     return {"revoked": True, "subscriptions_stopped": n}
 
@@ -246,6 +255,7 @@ def revoke_subscription(by_uid, email, reason="", cancel_billing=False):
     with db._lock:
         _c().execute("UPDATE eto_subs SET status='revoked', updated=? WHERE user_id=?", (now(), t["id"]))
         _c().commit()
+    _ai_sync(t["id"])
     log(t["id"], "subscription_revoked", {"by": by_uid, "reason": (reason or "")[:200], "plan": r["plan"], "billing": billing})
     return {"email": t["email"], "previous": r["plan"], "billing": billing, "subscription": subscription(service.get_user(t["id"]))}
 

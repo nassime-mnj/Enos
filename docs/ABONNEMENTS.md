@@ -32,3 +32,7 @@ Dans l'app « Eto TEST » : Modules › Paramètres › Abonnement (offres publi
 | `GET /admin/subs?q=` · `POST /admin/revoke` `{email, reason, cancel_billing}` | CEO | recherche des abonnés · coupe l'offre (journal `eto_events`), annule l'abonnement Stripe si demandé |
 
 Limite connue : sans `cancel_billing`, un renouvellement Stripe ultérieur (webhook) peut rouvrir l'abonnement ; cocher l'annulation du prélèvement pour un arrêt définitif. Une révocation prend effet dans l'application à la relecture de la licence (au plus tard 7 jours hors ligne).
+
+## ETO Gateway (`app/launcher/gateway.py`)
+
+DualPulse possède UN compte OpenRouter et une clé de gestion (`DP_OPENROUTER_MGMT`, à créer dans les réglages OpenRouter, rubrique des clés de gestion / provisioning). Le serveur s'en sert, via l'API officielle de gestion des clés, pour créer une clé par client ETO MAX / Ultra plafonnée chaque mois (`DP_AI_LIMIT_ETO_MAX`=2, `DP_AI_LIMIT_ETO_ULTRA`=25 USD par défaut). Une demande alors qu'une clé existe supprime l'ancienne et en crée une nouvelle. Aucun compte n'est créé chez un fournisseur et aucune limite gratuite n'est contournée : DualPulse paie OpenRouter (prépayé) et facture l'abonnement. Marge : MAX 9,99 € → au plus ~1,85 € d'IA par mois et par client.

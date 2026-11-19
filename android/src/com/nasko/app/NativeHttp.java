@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * Proxy HTTP du pont JavaScript. Le JS demande « appelle le service X, ce chemin » ; ICI on choisit l'hôte (liste blanche), on injecte la clé du coffre
  * et on diffuse la réponse par morceaux (flux SSE du chat, audio en base64). Aucun hôte ni en-tête d'authentification ne vient du JavaScript.
  *
- *   groq → api.groq.com/openai/v1/…      eleven_enos / eleven_eto → api.elevenlabs.io/v1/… (clés distinctes)
+ *   groq → api.groq.com/openai/v1/…      openrouter → openrouter.ai/api/v1/… (clé ETO Gateway)      eleven_enos / eleven_eto → api.elevenlabs.io/v1/… (clés distinctes)
  *   zeus / moodle → lien .ics du coffre (GET https uniquement)      pc → API du PC (PcLink : TLS épinglé + Bearer)
  *   cloud → serveur Dual Pulse (/launcher/v1/…, adresse https + jeton d'accès pris dans le coffre)      cloud_refresh → renouvelle la session cloud SANS rien renvoyer au JavaScript
  */
@@ -70,6 +70,15 @@ final class NativeHttp {
                 if (k.isEmpty()) throw new IllegalStateException("clé Groq absente");
                 c = (HttpURLConnection) new URL("https://api.groq.com" + path).openConnection();
                 c.setRequestProperty("Authorization", "Bearer " + k);
+                break;
+            }
+            case "openrouter": {                                     // ETO Gateway : clé OpenRouter créée par le serveur ETO pour CE client (plafonnée par son offre)
+                if (!okPath(path, "/api/v1/")) throw new IllegalArgumentException("chemin refusé");
+                String k = vault.get("openrouter");
+                if (k.isEmpty()) throw new IllegalStateException("clé ETO Gateway absente");
+                c = (HttpURLConnection) new URL("https://openrouter.ai" + path).openConnection();
+                c.setRequestProperty("Authorization", "Bearer " + k);
+                c.setRequestProperty("X-Title", "ETO");
                 break;
             }
             case "eleven_enos":

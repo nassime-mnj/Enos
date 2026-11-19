@@ -25,7 +25,7 @@ import javax.crypto.spec.SecretKeySpec;
  */
 final class Importer {
     static final int ITER = 300000;
-    private static final String[] VAULT = {"groq", "eleven_enos", "eleven_eto", "ics_zeus", "ics_moodle", "pc_token"};      // seuls noms acceptés
+    private static final String[] VAULT = {"groq", "openrouter", "eleven_enos", "eleven_eto", "ics_zeus", "ics_moodle", "pc_token"};      // seuls noms acceptés
     private static final String[] SETTINGS = {"name", "model", "voice_enos", "voice_name_enos", "voice_eto", "voice_name_eto"};
 
     private Importer() {}

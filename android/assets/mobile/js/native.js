@@ -24,7 +24,7 @@
   };
 
   // ------------------------------------------------------------------ HTTP via Java (clés injectées côté Java, liste blanche de services)
-  // providers : groq | eleven_enos | eleven_eto | zeus | moodle | pc
+  // providers : groq | openrouter | eleven_enos | eleven_eto | zeus | moodle | pc
   // opts : {provider, path, method, headers, body, bin}. handlers : {head(status,ctype), chunk(text|Uint8Array), end(), error(msg)}
   N.request = (opts, h) => {
     const id = seq++;
@@ -137,12 +137,12 @@
 
   // ------------------------------------------------------------------ repli navigateur de bureau (développement) : fetch direct, coffre factice
   function devRequest(o, h) {
-    const bases = { groq: "https://api.groq.com", eleven_enos: "https://api.elevenlabs.io", eleven_eto: "https://api.elevenlabs.io" };
+    const bases = { groq: "https://api.groq.com", openrouter: "https://openrouter.ai", eleven_enos: "https://api.elevenlabs.io", eleven_eto: "https://api.elevenlabs.io" };
     const key = (n) => devVault()[n] || "";
     if (o.provider === "cloud" || o.provider === "cloud_refresh" || o.provider === "cloud_logout") return devCloud(o, h);
     if (!bases[o.provider]) { setTimeout(() => { if (h.error) h.error("service indisponible hors de l'application"); }, 0); return; }
     const headers = Object.assign({ "Content-Type": "application/json" }, o.headers || {});
-    if (o.provider === "groq") headers.Authorization = "Bearer " + key("groq");
+    if (o.provider === "groq" || o.provider === "openrouter") headers.Authorization = "Bearer " + key(o.provider);
     else headers["xi-api-key"] = key(o.provider);
     fetch(bases[o.provider] + o.path, { method: o.method || "GET", headers, body: o.body || undefined }).then(async (r) => {
       if (h.head) h.head(r.status, r.headers.get("content-type") || "");

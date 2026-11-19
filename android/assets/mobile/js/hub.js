@@ -18,7 +18,7 @@
       { n: "Profil", items: [["@prof:stats", "Statistiques", "cc:user"], ["@prof:prizes", "Prix", "cc:medal"]] },
     ] },
     { id: "cloud", n: "CLOUD", t: "Cloud", img: "cat_cloud", sections: [
-      { n: "Mon compte", items: [["plans", "Abonnement"], ["support", "Assistant ETO"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
+      { n: "Mon compte", items: [["plans", "Abonnement"], ["gateway", "ETO Gateway"], ["support", "Assistant ETO"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
     ] },
     { id: "parametres", n: "PARAMÈTRES", t: "Paramètres", img: "cat_parametres", sections: [
@@ -27,7 +27,7 @@
     ] },
     { id: "codage", n: "CODAGE", t: "Codage", img: "cat_codage", sections: [
       { n: "Apprendre à coder", items: [["codelab"]] },
-      { n: "Outils de développeur", items: [["text"], ["sprites"], ["b-dev", "Dev Manager"]] },
+      { n: "Outils de développeur", items: [["gateway", "ETO Gateway"], ["text"], ["sprites"], ["b-dev", "Dev Manager"]] },
     ] },
     { id: "outils", n: "OUTILS", t: "Outils", img: "cat_outils", sections: [
       { n: "Documents", items: [["pdf"], ["scan", "Scanner"], ["syllabus"]] },
