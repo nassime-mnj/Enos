@@ -48,6 +48,12 @@ Le plateau 2D affiche les pièces illustrées (`img/chess/*.png`) ; le plateau G
 - **Applications** (Ctrl+K, `home.js`) : bandeau « Échecs E.N.O.S. » avec le cavalier, tuile **Échecs · HUB** ; les 9 tuiles d'échecs séparées
   sont regroupées derrière le hub (elles restent trouvables par la recherche).
 
+## Téléphone
+
+Le même thème existe sur l'application Android depuis la 1.98 (`android/assets/mobile/css/obsidian.css`, `js/obsidian.js`, page Échecs dans `js/hub.js`).
+Les icônes (`js/hub_icons.js`), les polices (`fonts/`) et les illustrations (`img/ui/`) ont leur source dans l'application mobile ;
+`python build_learn_data.py --sync` les recopie dans `static/learn/`. L'échiquier crème / graphite est commun aux deux versions.
+
 ## Tests
 
 - `android/tests/t_pc_hub.py` : hub, palette, en-têtes, actions envoyées à E.N.O.S., Arène (Défier / Détails), aucune erreur JS.

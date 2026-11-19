@@ -47,6 +47,14 @@
     ] },
   ];
   H.CATS = CATS;
+  // THÈME OBSIDIAN : icônes duotone (js/hub_icons.js) pour les catégories et la page Échecs
+  const HI = (n, c) => (E.hubIcon ? E.hubIcon(n, c) : "");
+  const CAT_IC = { echecs: "knight", cloud: "cloud", parametres: "settings", codage: "code", outils: "wrench", organisation: "folder", ordinateur: "monitor" };
+  const CH_IC = { "@tc:bullet": "zap", "@tc:blitz": "flame", "@tc:rapid": "timer", "@tc:daily": "calendar", defis: "swords", chess: "eye", "@resume": "play", "@team": "users", "@combat": "shield", royale: "crown", simul: "grid4", fived: "layers",
+    fog: "fog", variants: "flask", prime: "bot", "@learn:lessons": "grad", "@puz:": "puzzle", "@learn:openings": "book", "@puz:mateIn1": "target", "@puz:fork": "fork", "@puz:pin": "pin", "@puz:skewer": "spear", "@learn:advice": "bulb", train: "brain",
+    advisor: "scan", "@prof:games": "history", "@import": "import", chessedit: "clapper", clips: "drama", "@prof:stats": "chart", "@prof:prizes": "trophy" };
+  const CH_ART = { chess: ["img/ui/eyeking.webp", ""], royale: ["img/ui/arena.webp", ""], variants: ["img/clash_arena.png", ""], prime: ["img/bots/prime.png", "portrait"], chessedit: ["img/ui/knight.webp", "portrait"] };
+  const catCount = (c) => c.sections.reduce((n, s) => n + s.items.filter((it) => it[0].startsWith("@") || meta(it[0])).length, 0);
 
   let api = null, root = null, cur = null, busy = false;
   const meta = (id) => (api && api.find(id)) || null;
@@ -74,18 +82,83 @@
         <label class="hub-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="hub-q" type="search" placeholder="Rechercher" autocomplete="off" enterkeyhint="search"><button type="button" class="hub-x" id="hub-qx" hidden aria-label="Effacer">✕</button></label></div>
       <div class="hub-main">
         ${rec.length ? `<div class="hub-rec"><span>RÉCENTS</span><div class="hub-recs">${rec.map((x, i) => `<button class="hub-chip" data-id="${esc(x.id)}" style="--i:${i}"><span>${iconHtml(x.m, "")}</span>${esc(x.m.n)}</button>`).join("")}</div></div>` : ""}
-        <div class="hub-cats">${CATS.map((c, i) => `<button class="hub-cat" data-c="${c.id}" style="--i:${i}"><span class="hub-ci"><img src="img/menu/${c.img}.png" alt="" draggable="false"></span><span class="hub-cl">${esc(c.n)}</span></button>`).join("")}</div>
+        <div class="hub-cats ob">${CATS.map((c, i) => `<button class="hub-cat${c.id === "echecs" ? " feat" : ""}" data-c="${c.id}" style="--i:${i}">${c.id === "echecs" ? '<img class="ob-art" src="img/ui/knight.webp" alt="" draggable="false">' : ""}<span class="hub-ci">${HI(CAT_IC[c.id] || "grid")}</span><span class="hub-cl">${esc(c.t)}<small>${c.id === "echecs" ? "Jouer, apprendre, analyser, créer : tous les modes d'échecs" : catCount(c) + " modules"}</small></span></button>`).join("")}</div>
         <div class="hub-res" id="hub-res" hidden></div>
       </div>
       <div class="hub-page" id="hub-page" hidden></div>`;
   }
   function renderPage(c) {
     let n = 0;
+    const chess = c.id === "echecs";
     const secs = c.sections.map((s) => {
       const items = s.items.map(resolve).filter(Boolean); if (!items.length) return "";
+      if (chess) items.forEach((r) => { if (CH_IC[r.id]) { r.icon = HI(CH_IC[r.id]); r.cc = false; } });
+      if (chess && s.n === "Affronter") {                                                      // vitrine : les grands modes en cartes illustrées
+        const feat = items.filter((r) => ["defis", "chess", "royale", "variants", "prime"].includes(r.id)), rest = items.filter((r) => !feat.includes(r));
+        return `<section class="hub-sec"><h4><span>${esc(s.n)}</span></h4><div class="hub-grid ob-feat">${feat.map((r) => featTile(r, n++)).join("")}</div><div class="hub-grid" style="margin-top:10px">${rest.map((r) => tile(r, n++, false)).join("")}</div></section>`;
+      }
       return `<section class="hub-sec"><h4><span>${esc(s.n)}</span></h4><div class="hub-grid${s.big ? " big" : ""}">${items.map((r) => tile(r, n++, s.big)).join("")}</div></section>`;
     }).join("");
-    $("#hub-page").innerHTML = `<header class="hub-ph"><button class="hub-back" id="hub-back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span class="hub-pi"><img src="img/menu/${c.img}.png" alt="" draggable="false"></span><h2>${esc(c.n)}</h2></header><div class="hub-body">${secs}</div>`;
+    $("#hub-page").innerHTML = `<header class="hub-ph"><button class="hub-back" id="hub-back" aria-label="Retour"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span class="hub-pi ob">${HI(CAT_IC[c.id] || "grid")}</span><h2>${esc(c.t)}</h2></header><div class="hub-body">${chess ? chessHero() : ""}${secs}${chess ? chessFoes() : ""}</div>`;
+    if (chess) scene($("#hub-page .ch-scene"));
+  }
+  // ---- page Échecs : héros (plateau 3D qui rejoue l'Opéra de Morphy), cartes illustrées, défilé des adversaires
+  function featTile(r, i) {
+    const a = CH_ART[r.id], wide = r.id === "defis" || r.id === "chess" || r.id === "prime";
+    const fan = r.id === "defis" ? `<span class="hub-fan">${["nasko", "enos", "penoire"].map((b) => `<img src="img/bots/${b}.png" alt="">`).join("")}</span>` : "";
+    return `<button class="hub-tile feat${wide ? " wide" : ""} k-${r.kind}" data-id="${esc(r.id)}" style="--i:${i}">${a ? `<img class="hub-art ${a[1]}" src="${a[0]}" alt="" draggable="false">` : ""}${fan}<span class="hub-ic">${r.icon}</span><b>${esc(r.name)}</b></button>`;
+  }
+  const nBots = () => (E.botRoster ? E.botRoster.list.length : 0) + 9 + (E.aiBots ? E.aiBots.ids.length : 0) + 1;
+  function chessHero() {
+    return `<div class="ch-hero"><div class="ch-kick"><i></i>E.N.O.S. · ÉCHECS</div><h3>Joue. Apprends. <em>Domine.</em></h3>
+      <div class="ch-scene" aria-hidden="true"><div class="sc-glow"></div><div class="sc-board"><div class="lb-sq"></div><div class="lb-pc"></div><div class="lb-fx"></div></div>
+        <img class="sc-knight" src="img/ui/knight.webp" alt=""><div class="sc-beam"></div><div class="sc-eye"><img src="img/ui/eye.webp" alt=""></div>
+        <div class="ch-cap"><small>Morphy · Opéra de Paris, 1858</small><em class="lb-san"></em></div></div>
+      <div class="ch-cta"><button class="hub-tile pri" data-id="chess"><span class="hub-ic">${HI("play")}</span><b>Défier E.N.O.S.</b></button><button class="hub-tile" data-id="defis"><span class="hub-ic">${HI("swords")}</span><b>Bots &amp; défis</b></button></div>
+      <div class="ch-stats"><div><b>${nBots()}</b><small>bots à affronter</small></div><div><b>SF 19</b><small>moteur embarqué</small></div></div></div>`;
+  }
+  function chessFoes() {
+    const own = [["enos", "E.N.O.S.", 3200], ["eto", "ETO Brillant", 3200], ["nasko", "Nasko", 1300], ["penoire", "Nasko (pénoire)", 2500], ["lelex", "Lelex", 1150], ["ghorghor", "GhorGhor", 1400], ["naskurieux", "Naskurieux", 1], ["naskolit", "Naskolit", 3200], ["jester", "Le Jester", "?"]].map(([id, n, e]) => ({ id: id === "eto" ? "brillant" : id, name: n, img: "img/bots/" + id + ".png", elo: e }));
+    const ros = E.botRoster ? E.botRoster.list.filter((b) => b.img).slice(0, 40) : [];
+    const list = own.concat(ros);
+    return `<section class="hub-sec"><h4><span>Les adversaires</span></h4><div class="ch-mq"><div class="mq-t">${list.concat(list).map((b, i) => `<button class="mq-b" data-bot="${esc(b.id)}"${i >= list.length ? ' aria-hidden="true" tabindex="-1"' : ""}><img src="${b.img}" alt="" loading="lazy"><b>${esc(b.name)}</b><small>${esc(String(b.elo))}${typeof b.elo === "number" ? " Elo" : ""}</small></button>`).join("")}</div></div></section>`;
+  }
+  const OPERA = ["e4", "e5", "Nf3", "d6", "d4", "Bg4", "dxe5", "Bxf3", "Qxf3", "dxe5", "Bc4", "Nf6", "Qb3", "Qe7", "Nc3", "c6", "Bg5", "b5", "Nxb5", "cxb5", "Bxb5+", "Nbd7", "O-O-O", "Rd8", "Rxd7", "Rxd7", "Rd1", "Qe6", "Bxd7+", "Nxd7", "Qb8+", "Nxb8", "Rd8#"];
+  const SC = { run: 0 };
+  function scene(el) {
+    if (!el || typeof Chess !== "function") return;
+    const run = ++SC.run, live = () => SC.run === run && el.isConnected;
+    const board = el.querySelector(".sc-board"), sq = el.querySelector(".lb-sq"), pcs = el.querySelector(".lb-pc"), fx = el.querySelector(".lb-fx"), san = el.querySelector(".lb-san");
+    sq.innerHTML = Array.from({ length: 64 }, (_, i) => { const x = i % 8, y = 7 - Math.floor(i / 8); return `<i class="${(x + y) % 2 ? "l" : "d"}" data-s="${"abcdefgh"[x] + (y + 1)}" data-x="${x}" data-y="${y}"></i>`; }).join("");
+    const pos = (q) => [q.charCodeAt(0) - 97, +q[1] - 1], place = (n, q) => { const [x, y] = pos(q); n.style.setProperty("--x", x); n.style.setProperty("--y", y); };
+    let ch, P = {}, ply = 0;
+    const setup = () => { ch = new Chess(); pcs.innerHTML = ""; P = {}; ply = 0; board.classList.remove("mate"); for (const row of ch.board()) for (const p of row) if (p) { const n = document.createElement("i"); n.className = "pc"; n.innerHTML = `<b><img src="img/chess/${p.color}${p.type}.png" alt=""></b>`; place(n, p.square); pcs.appendChild(n); P[p.square] = n; } if (san) san.textContent = ""; };
+    const light = (q, c) => { const e = sq.querySelector(`[data-s="${q}"]`); if (e) { e.classList.remove(c); void e.offsetWidth; e.classList.add(c); } };
+    const wave = (q) => { if (reduced()) return; const [x0, y0] = pos(q); sq.querySelectorAll("i").forEach((e) => { e.style.setProperty("--w", (Math.hypot(e.dataset.x - x0, e.dataset.y - y0) * 55).toFixed(0) + "ms"); e.classList.remove("wv"); void e.offsetWidth; e.classList.add("wv"); }); };
+    const burst = (q, big) => { if (reduced()) return; const [x, y] = pos(q); for (let k = 0; k < (big ? 18 : 9); k++) { const p = document.createElement("b"); p.className = "spk"; const a = Math.random() * 6.28, r = (big ? 60 : 34) + Math.random() * 40; p.style.cssText = `--x:${x};--y:${y};--dx:${(Math.cos(a) * r).toFixed(0)}px;--dy:${(Math.sin(a) * r).toFixed(0)}px;--t:${(450 + Math.random() * 450).toFixed(0)}ms`; fx.appendChild(p); setTimeout(() => p.remove(), 1000); } };
+    const visible = () => el.offsetParent !== null && !document.hidden;
+    function step() {
+      if (!live()) return;
+      if (!visible()) return setTimeout(step, 800);                                             // module ouvert par-dessus, appli en arrière-plan : la partie attend
+      if (ply >= OPERA.length) { setup(); return setTimeout(step, 900); }
+      const mv = ch.move(OPERA[ply++]); if (!mv) { ply = OPERA.length; return setTimeout(step, 300); }
+      sq.querySelectorAll(".from,.to").forEach((e) => e.classList.remove("from", "to"));
+      if (mv.captured && P[mv.to]) { const v = P[mv.to]; v.classList.add("dead"); setTimeout(() => v.remove(), 600); delete P[mv.to]; burst(mv.to); }
+      const n = P[mv.from]; delete P[mv.from]; if (n) { place(n, mv.to); P[mv.to] = n; n.classList.remove("hop"); void n.offsetWidth; n.classList.add("hop"); }
+      if (mv.flags.includes("k") || mv.flags.includes("q")) { const r = mv.color === "w" ? "1" : "8", [a, b] = mv.flags.includes("k") ? ["h" + r, "f" + r] : ["a" + r, "d" + r], t = P[a]; if (t) { delete P[a]; place(t, b); P[b] = t; } }
+      light(mv.from, "from"); light(mv.to, "to"); wave(mv.to);
+      const mate = ch.in_checkmate();
+      if (san) { san.textContent = Math.ceil(ply / 2) + (mv.color === "w" ? ". " : "… ") + mv.san + (mate ? "  mat" : ""); san.classList.remove("pop"); void san.offsetWidth; san.classList.add("pop"); }
+      if (mate) { board.classList.add("mate"); burst(mv.to, true); return setTimeout(() => { if (!live()) return; board.classList.add("fade"); setTimeout(() => { board.classList.remove("fade"); setup(); setTimeout(step, 900); }, 700); }, 3600); }
+      setTimeout(step, mv.captured ? 1500 : 1150);
+    }
+    setup(); setTimeout(step, 900);
+    // parallaxe au doigt / gyroscope absent : respiration lente
+    let tx = 0, ty = 0, cx = 0, cy = 0;
+    el.addEventListener("pointermove", (e) => { const r = el.getBoundingClientRect(); tx = (e.clientX - r.left) / r.width - 0.5; ty = (e.clientY - r.top) / r.height - 0.5; }, { passive: true });
+    el.addEventListener("pointerleave", () => { tx = 0; ty = 0; });
+    const frame = (t) => { if (!live()) return; if (visible()) { cx += (tx - cx) * 0.06; cy += (ty - cy) * 0.06; el.style.setProperty("--px", cx.toFixed(4)); el.style.setProperty("--py", cy.toFixed(4)); el.style.setProperty("--idle", reduced() ? 0 : Math.sin(t / 2600).toFixed(4)); } requestAnimationFrame(frame); };
+    requestAnimationFrame(frame);
   }
   function refreshRecents() {                                                                   // met à jour « Récents » sans rejouer l'animation d'entrée des icônes
     const main = root && root.querySelector(".hub-main"); if (!main) return; const old = main.querySelector(".hub-rec"); const rec = recents().map((id) => ({ id, m: meta(id) })).filter((x) => x.m).slice(0, 5);
@@ -107,8 +180,9 @@
   const reduced = () => document.documentElement.classList.contains("no-anim") || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   function flyIcon(fromEl, toEl, dur, back) {                                                   // l'icône voyage de la grille vers l'en-tête (et inversement)
     if (reduced() || !fromEl || !toEl || !fromEl.animate) return Promise.resolve();
-    const a = rect(fromEl), b = rect(toEl), img = fromEl.querySelector("img").cloneNode(true); img.className = "hub-fly";
-    Object.assign(img.style, { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px" }); document.body.appendChild(img);
+    const src = fromEl.querySelector("img, svg"); if (!src) return Promise.resolve();
+    const a = rect(fromEl), b = rect(toEl), img = src.cloneNode(true); img.setAttribute("class", (src.getAttribute("class") || "") + " hub-fly");
+    Object.assign(img.style, { position: "fixed", left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px" }); document.body.appendChild(img);
     const dx = b.left - a.left, dy = b.top - a.top, s = b.width / a.width;
     const an = img.animate([{ transform: "translate(0,0) scale(1)", }, { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 18}px) scale(${(1 + s) / 2 * 1.12})`, offset: 0.55 }, { transform: `translate(${dx}px,${dy}px) scale(${s})` }], { duration: dur, easing: EASE, fill: "forwards" });
     return an.finished.catch(() => 0).then(() => img.remove());
@@ -164,6 +238,7 @@
       const cat = e.target.closest(".hub-cat"); if (cat) return H.openCat(cat.dataset.c);
       if (e.target.closest("#hub-back")) return H.closeCat();
       const t = e.target.closest(".hub-tile, .hub-chip"); if (t) return launch(t.dataset.id, t);
+      const foe = e.target.closest(".mq-b"); if (foe) { remember("defis"); api.open("defis"); return deep("defis", (el) => el._api && el._api.setup(foe.dataset.bot)); }
       if (e.target.closest("#hub-qx")) { const i = $("#hub-q"); i.value = ""; $("#hub-qx").hidden = true; renderResults(""); i.focus(); }
     });
     root.addEventListener("input", (e) => { if (e.target.id === "hub-q") { $("#hub-qx").hidden = !e.target.value; renderResults(e.target.value); } });

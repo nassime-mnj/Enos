@@ -483,3 +483,14 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 
 - Chess Edit Studio : la case « ✨ Effets pro » partageait la classe `ce-fxl` du calque d'effets (positionné en absolu) et s'affichait collée en haut à gauche de l'écran. `label.ce-fxl` reste maintenant dans le formulaire (`css/chessedit.css`).
 - Côté PC (aucun autre changement sur le téléphone) : refonte « Obsidian Crimson » de tout ce qui touche aux échecs — hub Échecs unifié, écran de partie, Défi, Arène, lanceur Applications. Voir `docs/INTERFACE_ECHECS_PC.md`.
+
+## 1.98 — Thème « Obsidian Crimson » : le téléphone au même design que le PC
+
+- **Thème global** (`css/obsidian.css`, chargé en dernier ; `js/obsidian.js` pour la présentation) : police **Inter** embarquée (`fonts/`), noir obsidienne, cartes vitrées, boutons à dégradé cramoisi, feuilles et toasts arrondis, en-tête avec l'œil d'E.N.O.S. qui cligne, barre d'onglets vitrée à **icônes duotone** (`js/hub_icons.js`, tracés Lucide, partagé avec le PC). La couleur d'accent suit toujours le réglage « Thèmes ».
+- **Accueil** : bandeau illustré (œil du kit), salutation, horloge, « Ton centre de commande personnel ».
+- **Modules** : catégories en cartes (icône duotone + nombre de modules) ; carte **Échecs** mise en avant avec le cavalier.
+- **Page Échecs** : héros animé « Joue. Apprends. Domine. » — un plateau 3D rejoue en boucle la partie de l'Opéra (Morphy, 1858) : pièces debout qui glissent, vague de lumière, étincelles sur les prises, mat qui pulse ; l'œil d'E.N.O.S. et son faisceau, le cavalier en parallaxe au doigt. Boutons « Défier E.N.O.S. » / « Bots & défis », vrais chiffres (142 bots, Stockfish 19). Les grands modes (Bots & défis, Contre E.N.O.S., Battle Royale, Variantes, ChatGPT Prime) en cartes illustrées, toutes les tuiles en icônes duotone (sans description), défilé des adversaires (clic = fiche du bot). La partie de démonstration s'arrête quand la page n'est plus visible.
+- **Échiquier Obsidian** (crème / graphite, dernier coup et sélection en cramoisi) sur tous les plateaux du téléphone ; même plateau dans la version PC.
+- **Défis / partie** : tuiles vitrées, bandeaux des joueurs, bulle du bot, plateau encadré. Correctif : dans la fiche d'un bot, le choix **Blancs / Noirs / Au hasard** n'allumait jamais le bon bouton (indicateur à 2 positions pour 3 boutons) : le bouton choisi s'allume maintenant.
+- Les polices et illustrations du kit vivent désormais dans l'application (`fonts/`, `img/ui/`) et sont copiées vers le PC par `build_learn_data.py --sync`.
+- Tests : `t_hub.py` (catégories duotone, héros 3D, défilé), `t_chess_cinepulse.py` (couleurs Obsidian).

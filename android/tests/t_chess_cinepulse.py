@@ -40,7 +40,7 @@ with sync_playwright() as pw:
                light: getComputedStyle(sq).backgroundColor, dark: getComputedStyle(sd).backgroundColor, tr: getComputedStyle(b.querySelector('img.pce')).transitionDuration }; }""")
     check(abs(g["w"] - g["h"]) < 1.5 and g["w"] >= g["inner"] - 2, "plateau carré (aspect 1/1) et pleine largeur : %.0fx%.0f / %.0f" % (g["w"], g["h"], g["inner"]))
     check(g["pieces"] >= 30 and g["imgs"], "pièces en images (PNG chargés) : %d" % g["pieces"])
-    check(g["light"] == "rgb(238, 238, 210)" and g["dark"] == "rgb(118, 150, 86)", "couleurs Chess.com : %s / %s" % (g["light"], g["dark"]))
+    check(g["light"] == "rgb(229, 223, 214)" and g["dark"] == "rgb(56, 60, 69)", "couleurs Obsidian (crème / graphite) : %s / %s" % (g["light"], g["dark"]))
     snd = pg.evaluate("""async () => { await ENOS.chessSound.play('capture'); await ENOS.chessSound.play('move'); await ENOS.chessSound.play('check'); return typeof AudioContext; }""")
     check(snd == "function", "effets sonores Web Audio sans erreur")
 

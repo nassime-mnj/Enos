@@ -89,6 +89,8 @@ def sync_pc():
              ("js/m_defis.js", "m_defis.js"), ("js/bot_chat.js", "bot_chat.js"), ("js/anim_icons.js", "anim_icons.js"), ("js/bot_lines.js", "bot_lines.js"), ("js/ai_bots.js", "ai_bots.js"), ("js/bot_roster.js", "bot_roster.js"), ("js/prime.js", "prime.js"), ("js/m_prime.js", "m_prime.js"), ("data/style_bots.js", "data/style_bots.js")]
     files += [("img/bots/" + n, "img/bots/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "bots")) if n.endswith(".png")]
     files += [("img/roster/" + n, "img/roster/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "roster")) if n.endswith(".png")]
+    # THÈME « OBSIDIAN CRIMSON » partagé téléphone / PC : icônes duotone, polices Inter + Rajdhani, illustrations du kit
+    files += [("js/hub_icons.js", "hub_icons.js")] + [("fonts/" + n, "fonts/" + n) for n in os.listdir(os.path.join(MOBILE, "fonts"))] + [("img/ui/" + n, "img/ui/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "ui"))]
     files += [("img/menu/" + n, "img/menu/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "menu")) if n.startswith("cc_") and n.endswith(".png")]
     files += [("img/badges/" + n, "img/badges/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "badges")) if n.endswith(".png")]
     files += [("img/chess/" + n, "img/chess/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "chess")) if n.endswith(".png")]

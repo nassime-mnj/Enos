@@ -349,3 +349,13 @@ body.arena-on main{max-width:none}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .mc:not(.in),.grp-h:not(.in),.mq:not(.in){opacity:1}
 }
+
+/* ---------- échiquier « Obsidian » (crème / graphite, surbrillances cramoisies) : même plateau que l'écran de partie du PC */
+.cboard{background:#383c45}
+.sq.l{background:#e5dfd6}.sq.d{background:#383c45}
+.sq.l i{color:#383c45}.sq.d i{color:#e5dfd6}
+.sq.last::before{background:rgba(239,23,72,.32)}
+.sq.sel::before{background:rgba(239,23,72,.5)}
+.sq.chk.d{--sqbg:#383c45}.sq.chk.l{--sqbg:#e5dfd6}
+.sq.tgt::after{background:rgba(20,10,14,.32)}
+.sq.cap::after{background:radial-gradient(circle,transparent 58%,rgba(239,23,72,.45) 60%)}
