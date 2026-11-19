@@ -268,6 +268,12 @@ final class LocalBridge {
         return act.versionName();
     }
 
+    /** Application de TEST (« Eto TEST », identifiant com.nasko.app.test) : l'interface y propose de simuler chaque version / abonnement. */
+    @JavascriptInterface
+    public boolean isTestBuild() {
+        return act.getPackageName().endsWith(".test");
+    }
+
     @JavascriptInterface
     public void openPcUi() {
         if (ok()) act.openPcUi();

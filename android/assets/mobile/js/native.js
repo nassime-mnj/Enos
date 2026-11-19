@@ -119,6 +119,7 @@
   // ------------------------------------------------------------------ divers
   N.deviceId = () => (N.available ? B.deviceId() : "dev-browser");
   N.version = () => (N.available ? B.version() : "dev");
+  N.isTestBuild = () => (N.available ? !!(B.isTestBuild && B.isTestBuild()) : true);          // navigateur de développement = environnement de test
   // Mise à jour instantanée du web de l'application depuis GitHub (sans réinstaller l'APK) : {state: uptodate|applied|ready|needs_apk|error, n, msg}
   N.webUpdate = (apply) => oneShot("webupd", (id) => B.webUpdate(id, !!apply));
   N.webUpdateInfo = () => (N.available && B.webUpdateInfo ? parse(B.webUpdateInfo(), {}) : { label: "", branch: "main", auto: true });

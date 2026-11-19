@@ -18,5 +18,6 @@
     box.insertBefore(sub, $("#h-clock"));
     hero.innerHTML = '<img class="ob-hbg" src="img/ui/homeeye.webp" alt="" draggable="false">'; hero.appendChild(box);
   }
+  if (E.plans) E.plans.apply(false);                                       // marque E.T.O. / E.N.O.S. et couleur de la version active
   const meta = document.querySelector("meta[name=theme-color]"); if (meta) meta.content = "#08090d";
 })();

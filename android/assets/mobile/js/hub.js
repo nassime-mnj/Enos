@@ -18,11 +18,11 @@
       { n: "Profil", items: [["@prof:stats", "Statistiques", "cc:user"], ["@prof:prizes", "Prix", "cc:medal"]] },
     ] },
     { id: "cloud", n: "CLOUD", t: "Cloud", img: "cat_cloud", sections: [
-      { n: "Mon compte", items: [["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
+      { n: "Mon compte", items: [["plans", "Abonnement"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
     ] },
     { id: "parametres", n: "PARAMÈTRES", t: "Paramètres", img: "cat_parametres", sections: [
-      { n: "Application", items: [["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
+      { n: "Application", items: [["plans", "Abonnement"], ["ceo", "Espace CEO"], ["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
       { n: "Mon PC", items: [["s-qr", "Appairer le PC"], ["b-rg", "Réglages du PC"]] },
     ] },
     { id: "codage", n: "CODAGE", t: "Codage", img: "cat_codage", sections: [
@@ -69,6 +69,7 @@
   // un élément de menu -> { key, name, icon, kind, off }
   const resolve = (it) => {
     const id = it[0], m = id.startsWith("@") ? null : meta(id);
+    if (id === "ceo" && !(E.plans && E.plans.ceoSpace())) return null;                       // Espace CEO : jamais montré aux autres versions
     if (!id.startsWith("@") && !m) return null;
     const k = m ? api.kindOf(m) : "native";
     return { id, name: it[1] || (m ? m.n : id), icon: iconHtml(m, it[2]), cc: !!(it[2] && it[2].startsWith("cc:")), kind: k, off: k === "pc" && !api.online() };
