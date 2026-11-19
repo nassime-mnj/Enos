@@ -502,3 +502,11 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Version active** (`js/plans.js`) : elle nomme l'application dans l'en-tête — **E.T.O. · AUTONOME** pour les offres ETO, **E.N.O.S. · AUTONOME** pour les éditions privées — avec un effet de bascule, teinte l'œil de l'en-tête et l'accent de l'application à sa couleur (Thèmes reste libre ensuite). Version réelle : E.N.O.S. CEO dans l'app de test ou après import du paquet CEO, sinon ETO Free.
 - **Mode test** (app « Eto TEST » seulement, détectée par `Enos.isTestBuild()` côté Java) : simuler une offre depuis l'Abonnement (offres publiques) ou n'importe laquelle des 7 versions depuis l'Espace CEO, rideau d'activation à la couleur de la version, « Revenir à ma vraie version ».
 - Test : `t_plans.py`.
+
+## 1.100 — Offres repensées : échecs gratuits, abonnements vendus sur leur rentabilité
+
+- **ETO Free** contient désormais **tous les échecs** (142 bots, moteurs natifs, Arène, Royale ×4, Variantes, 5D, Fog, Chess Edit, Game Clips, puzzles et revues illimités), sans publicité.
+- **ETO Pro** (2,99 €/mois · 28,70 €/an) : le **Mobile Improver** (recompression nocturne des photos et vidéos, doublons et flous chaque semaine, corbeille 30 jours, rapport mensuel), sauvegarde vers son propre PC. **ETO MAX** (9,99 €/mois) : pilotage du PC, Auto-Clipper IA, copilote de jeu, passerelle d'API. **ETO Ultra** (119,99 €/mois) : équipes et entreprises, 10 personnes / 25 appareils, flotte, dépôt intranet, journal de plantages, édition à la marque.
+- Chaque offre affiche **ce qu'elle rapporte** (bloc « rentabilité » : forfaits de stockage évités, outils remplacés, coût par personne). Comparatif refait. Ce qui est en préparation reste marqué « bientôt ».
+- Stratégie complète (marché, économie unitaire, idées pour développeurs / entreprises / investisseurs, plan à 90 jours) : `docs/STRATEGIE_OFFRES.md`.
+- Test : `t_plans.py` (nouveaux prix, échecs dans Free, blocs de rentabilité).

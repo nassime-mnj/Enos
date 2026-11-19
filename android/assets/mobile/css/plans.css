@@ -102,3 +102,6 @@ body.plan-eto .brand::before{filter:hue-rotate(var(--plan-rot,0deg)) saturate(1.
 .pl-burst.out{opacity:0;transition:opacity .45s}
 @keyframes plPopIn{from{opacity:0;transform:scale(.7)}}
 @media (prefers-reduced-motion:reduce){.pl-card,.pl-hero,.pl-orbs i,.pl-card::before,.pl-act i,.pl-burst *{animation:none!important}}
+/* rentabilité de l'offre */
+.pl-roi{display:flex;align-items:flex-start;gap:9px;margin:12px 0 0;padding:10px 12px;border-radius:14px;border:1px solid color-mix(in srgb,var(--c) 30%,transparent);background:color-mix(in srgb,var(--c) 9%,transparent);font:550 12.5px/1.45 var(--ui);color:#ecebf0}
+.pl-roi .hi{width:17px;height:17px;margin-top:1px;--ic:var(--c);--ic2:#fff}

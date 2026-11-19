@@ -9,15 +9,21 @@
   const E = window.ENOS, esc = E.esc;
   const ic = (n, c) => (E.hubIcon ? E.hubIcon(n, c) : "");
   // ------------------------------------------------------------------ catalogue (prix TTC ; annuel = 2 mois offerts environ)
+  // Positionnement : les échecs sont un divertissement, donc ENTIÈREMENT gratuits. Les offres payantes se vendent sur ce qu'elles font gagner
+  // (stockage, temps, outils remplacés) et tournent sur le téléphone ou le PC de l'utilisateur : presque aucun coût de serveur (voir docs/STRATEGIE_OFFRES.md).
   const PUBLIC = [
-    { id: "eto_free", brand: "E.T.O.", name: "ETO", tier: "Free", color: "#34d399", hue: 152, month: 0, year: 0, pitch: "Pour découvrir ETO et jouer tous les jours.", icon: "smile",
-      feats: [["knight", "Stockfish 19 sur le téléphone, partie contre E.N.O.S."], ["swords", "Bots E.N.O.S. + 20 adversaires de l'échelle"], ["puzzle", "5 puzzles et 1 revue de partie par jour"], ["chat", "Chat ETO avec ta propre clé (mode autonome)"], ["grid", "Outils : PDF, scanner, photos, dossiers, agenda"]] },
-    { id: "eto_pro", brand: "E.T.O.", name: "ETO", tier: "Pro", color: "#3b82f6", hue: 217, month: 9.99, year: 95.9, pitch: "Les échecs sans limite et ETO dans la poche.", icon: "zap", badge: "Le plus choisi",
-      feats: [["check", "Tout ETO Free"], ["swords", "Les 142 bots : légendes, joueurs pro, streamers, moteurs natifs"], ["puzzle", "Puzzles, leçons et revues illimités"], ["bulb", "Conseiller « !! » sur capture d'écran"], ["chat", "500 messages ETO par mois, sans clé", 1], ["cloud", "Sauvegarde cloud et synchro téléphone ⇄ PC"]] },
-    { id: "eto_max", brand: "E.T.O.", name: "ETO", tier: "MAX", color: "#facc15", hue: 48, month: 29.99, year: 287.9, pitch: "Le créateur : edits, coach à la voix, tous les modes.", icon: "flame", badge: "Meilleure valeur",
-      feats: [["check", "Tout ETO Pro"], ["clapper", "Chess Edit Studio complet : 1080p 60 i/s, effets pro, sans filigrane"], ["crown", "Royale ×4, Variantes, 5D, Fog, ChatGPT Prime, Game Clips"], ["radio", "Coach ETO à la voix : 2 h par mois", 1], ["chat", "3 000 messages ETO par mois + vision", 1], ["code", "Codelab, Studio audio, CinePulse"]] },
-    { id: "eto_ultra", brand: "E.T.O.", name: "ETO", tier: "Ultra", color: "#a78bfa", hue: 262, month: 119.99, year: 1151.9, pitch: "Tout ETO, au maximum, sur le téléphone et le PC.", icon: "sparkles",
-      feats: [["check", "Tout ETO MAX"], ["monitor", "ETO sur le PC : copilote de jeu, Smart AFK, Auto-Clipper IA", 1], ["brain", "Ton bot personnel, entraîné sur tes parties"], ["chat", "Messages et voix sans compter (usage raisonnable)", 1], ["clapper", "Exports 4K, accès anticipé aux nouveautés"], ["users", "Partage famille jusqu'à 6 personnes", 1]] },
+    { id: "eto_free", brand: "E.T.O.", name: "ETO", tier: "Free", color: "#34d399", hue: 152, month: 0, year: 0, pitch: "Tous les échecs, gratuits pour toujours.", icon: "smile",
+      feats: [["knight", "Tous les échecs : 142 bots, Stockfish 19 et moteurs natifs, Arène, Royale ×4, Variantes, 5D, Fog"], ["clapper", "Chess Edit Studio et Game Clips, sans filigrane"], ["puzzle", "Puzzles, leçons, revues et Conseiller « !! » illimités"], ["grid", "Outils : PDF, scanner, agenda, compression et nettoyage à la main"], ["chat", "Chat ETO avec ta propre clé d'API"]],
+      roi: "Gratuit, sans publicité, et ça le restera." },
+    { id: "eto_pro", brand: "E.T.O.", name: "ETO", tier: "Pro", color: "#3b82f6", hue: 217, month: 2.99, year: 28.7, pitch: "Mobile Improver : un téléphone plus léger, tout seul.", icon: "zap", badge: "Le plus choisi",
+      feats: [["zap", "Mobile Improver : photos et vidéos recompressées la nuit (en charge, écran éteint), qualité visuelle préservée", 1], ["scan", "Doublons, photos floues et vieilles captures repérés chaque semaine", 1], ["shield", "Originaux gardés 30 jours : rien n'est supprimé sans ton accord", 1], ["chart", "Rapport mensuel : gigaoctets libérés, mémoire, batterie", 1], ["cloud", "Sauvegarde vers ton propre PC, sans abonnement cloud"]],
+      roi: "Rentable dès qu'il t'évite un forfait de stockage : Google One 100 Go coûte 1,99 € par mois, iCloud+ 200 Go 2,99 €." },
+    { id: "eto_max", brand: "E.T.O.", name: "ETO", tier: "MAX", color: "#facc15", hue: 48, month: 9.99, year: 95.9, pitch: "Ton PC et ton téléphone ne font plus qu'un.", icon: "flame", badge: "Meilleure valeur",
+      feats: [["check", "Tout ETO Pro"], ["monitor", "Pilotage du PC depuis le téléphone : allumer, veille, tests, fichiers"], ["clapper", "Auto-Clipper IA : tes meilleurs moments de jeu en clips verticaux"], ["eye", "Copilote de jeu et Smart AFK sur le PC"], ["chat", "Passerelle d'API : tes clés réunies, quotas et bascule automatique", 1], ["code", "Codelab, Studio média, CinePulse"]],
+      roi: "Remplace un clipper de jeu, un outil de contrôle à distance et un compresseur vidéo payants." },
+    { id: "eto_ultra", brand: "E.T.O.", name: "ETO", tier: "Ultra", color: "#a78bfa", hue: 262, month: 119.99, year: 1151.9, pitch: "Équipes et entreprises : 10 personnes, 25 appareils.", icon: "sparkles",
+      feats: [["users", "10 comptes, 25 appareils (téléphones et PC)", 1], ["shield", "Flotte : inventaire, santé, mises à jour et versions privées déployées à distance", 1], ["code", "Dépôt intranet : Git, éditeur, terminal, sujets et entraînement"], ["history", "Journal de plantages centralisé, applications et jeux Godot", 1], ["monitor", "Tests F6 Godot lancés depuis le téléphone, Hub équipe"], ["crown", "Édition à ta marque : logo, couleurs, modules choisis", 1]],
+      roi: "Moins de 12 € par personne : la gestion d'appareils, le suivi des plantages et l'accès à distance coûtent chacun déjà ce prix ailleurs." },
   ];
   const PRIVATE = [
     { id: "enos_std", brand: "E.N.O.S.", name: "E.N.O.S.", tier: "Standard Edition", who: "Amis", color: "#cbd5e1", hue: 352, icon: "users", role: "friends",
@@ -73,6 +79,7 @@
       <div class="pl-h"><span class="pl-ic">${ic(p.icon)}</span><div><b>${esc(p.name)} <em>${esc(p.tier)}</em></b>${p.pitch ? `<small>${esc(p.pitch)}</small>` : ""}</div></div>
       ${p.month != null ? `<div class="pl-price"><b data-v="${price}">${eur(price)}</b><span>€<br><small>/ mois</small></span></div>
         <div class="pl-bill">${p.month === 0 ? "Gratuit pour toujours" : annual ? `${eur(p.year)} € facturés par an · 2 mois offerts` : `ou ${eur(p.year)} € par an`}</div>` : `<div class="pl-who">${ic("users")}${esc(p.who)}</div>`}
+      ${p.roi ? `<div class="pl-roi">${ic("chart")}<span>${esc(p.roi)}</span></div>` : ""}
       <ul>${p.feats.map(([n, t, soon]) => `<li>${ic(n)}<span>${esc(t)}${soon ? ' <i class="pl-soon">bientôt</i>' : ""}</span></li>`).join("")}</ul>
       ${p.month != null ? `<button class="btn${act ? "" : " pri"} pl-go">${act ? "Ton offre actuelle" : p.month === 0 ? "Revenir à Free" : "Choisir " + esc(p.name + " " + p.tier)}</button>` : ""}
     </article>`;
@@ -99,9 +106,9 @@
           <div class="pl-period" role="tablist"><button data-a="0" class="${annual ? "" : "on"}">Mensuel</button><button data-a="1" class="${annual ? "on" : ""}">Annuel <i>−20 %</i></button><span class="pl-pind"></span></div>
           <div class="pl-list">${PUBLIC.map((p, i) => card(p, i, annual)).join("")}</div>
           <div class="card pl-cmp"><h3>Comparer</h3><table><thead><tr><th></th>${PUBLIC.map((p) => `<th style="--c:${p.color}">${esc(p.tier)}</th>`).join("")}</tr></thead><tbody>
-            ${[["Bots", "29", "142", "142", "142"], ["Puzzles / jour", "5", "∞", "∞", "∞"], ["Revues / jour", "1", "∞", "∞", "∞"], ["Messages ETO / mois", "ta clé", "500", "3 000", "∞"], ["Coach à la voix", "—", "—", "2 h", "∞"], ["Chess Edit", "720p", "1080p", "1080p 60", "4K"], ["ETO sur le PC", "—", "—", "—", "✓"], ["Famille", "—", "—", "—", "6"]]
+            ${[["Tous les échecs", "✓", "✓", "✓", "✓"], ["Compression et nettoyage à la main", "✓", "✓", "✓", "✓"], ["Mobile Improver automatique", "—", "✓", "✓", "✓"], ["Pilotage du PC", "—", "—", "✓", "✓"], ["Auto-Clipper IA, copilote", "—", "—", "✓", "✓"], ["Passerelle d\x27API", "—", "—", "✓", "✓"], ["Personnes / appareils", "1", "1", "1 + PC", "10 / 25"], ["Flotte, édition à ta marque", "—", "—", "—", "✓"]]
               .map((r) => `<tr><td>${r[0]}</td>${r.slice(1).map((v) => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-          <p class="pl-legal">Prix TTC. Résiliable à tout moment depuis Google Play. Les mentions « bientôt » signalent ce qui arrive avec les comptes ETO en ligne.</p>`;
+          <p class="pl-legal">Prix TTC. Résiliable à tout moment depuis Google Play. Les mentions « bientôt » signalent ce qui est en préparation. Tout tourne sur ton téléphone et ton PC : tes photos et tes fichiers ne passent par aucun serveur.</p>`;
         el.querySelectorAll(".pl-period button").forEach((b) => (b.onclick = () => { annual = b.dataset.a === "1"; E.settings.set("plan.annual", annual); roll(); el.querySelectorAll(".pl-period button").forEach((x) => x.classList.toggle("on", x === b)); el.querySelector(".pl-period").dataset.a = annual ? "1" : "0"; }));
         el.querySelector(".pl-period").dataset.a = annual ? "1" : "0";
         wire(el, () => paint());
