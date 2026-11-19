@@ -145,6 +145,6 @@
       setTimeout(takeShared, 700);                                                    // l'application vient d'être lancée par « Partager »
       E.on("settings", (k) => { if (k === "hue") { /* déjà appliqué */ } });
     },
-    open, all: () => ALL.map((x) => x.id),
+    open, all: () => ALL.map((x) => x.id), list: () => ALL.map((x) => ({ id: x.id, n: x.n, s: x.s || "" })),
   };
 })();

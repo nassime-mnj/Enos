@@ -140,11 +140,13 @@
   function account() {
     const u = E.cloud && E.cloud.loggedIn() ? E.cloud.user() : null, l = P.license();
     if (!u) return `<div class="card pl-acc"><h3>Compte ETO</h3><p class="muted">Crée ton compte pour t'abonner et retrouver ton offre sur tous tes appareils. Les échecs restent gratuits sans compte.</p>
-      <div class="row"><button class="btn pri" data-acc="signup">Créer un compte</button><button class="btn" data-acc="login">Se connecter</button></div></div>`;
+      <div class="row"><button class="btn pri" data-acc="signup">Créer un compte</button><button class="btn" data-acc="login">Se connecter</button></div>
+      <button class="btn wide pl-keybtn" data-acc="key">${KEYIC}J'ai une clé d'activation</button></div>`;
     const p = l ? BY[l.plan] : null;
     return `<div class="card pl-acc"><h3>Compte ETO<span class="sp">${esc(u.email || "")}</span></h3>
       <p class="muted">${p ? `Offre <b style="color:${p.color}">${esc(p.name + " " + p.tier)}</b>${l.period_end ? " · renouvellement le " + new Date(l.period_end * 1000).toLocaleDateString("fr-FR") : ""}` : "Licence pas encore lue : touche « Actualiser »."}</p>
-      <div class="row"><button class="btn" data-acc="refresh">Actualiser</button><button class="btn" data-acc="portal">Gérer le paiement</button><button class="btn" data-acc="logout">Déconnexion</button></div></div>`;
+      <div class="row"><button class="btn" data-acc="refresh">Actualiser</button><button class="btn" data-acc="portal">Gérer le paiement</button><button class="btn" data-acc="logout">Déconnexion</button></div>
+      <button class="btn wide pl-keybtn" data-acc="key">${KEYIC}Activer une clé</button></div>`;
   }
   function accountSheet(mode) {
     const signup = mode === "signup", needUrl = !E.cloud.url();
@@ -154,7 +156,9 @@
         <label>E-mail<input id="pa-mail" type="email" autocomplete="email" maxlength="254"></label>
         <label>Mot de passe<input id="pa-pw" type="password" autocomplete="${signup ? "new-password" : "current-password"}" maxlength="200"></label>
         ${signup ? `<p class="muted" style="font-size:12px">10 caractères minimum. En créant un compte, tu acceptes les conditions d'utilisation d'ETO.</p>` : ""}
-        <p class="pl-err" id="pa-err"></p><button class="btn pri wide" id="pa-go">${signup ? "Créer mon compte" : "Me connecter"}</button></div>` });
+        <p class="pl-err" id="pa-err"></p><button class="btn pri wide" id="pa-go">${signup ? "Créer mon compte" : "Me connecter"}</button>
+        <button class="pl-link" id="pa-sw" type="button">${signup ? "J'ai déjà un compte : me connecter" : "Pas encore de compte : en créer un"}</button></div>` });
+    s.querySelector("#pa-sw").onclick = () => { E.ui.closeSheet(true); setTimeout(() => accountSheet(signup ? "login" : "signup"), 60); };
     s.querySelector("#pa-go").onclick = async () => {
       const err = s.querySelector("#pa-err"), b = s.querySelector("#pa-go"); err.textContent = ""; b.disabled = true;
       try {
@@ -163,6 +167,7 @@
         if (signup) await E.cloud.signup(mail, pw, (s.querySelector("#pa-name") || {}).value || ""); else await E.cloud.login(mail, pw);
         await P.refreshLicense(); E.ui.closeSheet(); E.ui.toast(signup ? "Bienvenue sur ETO." : "Connecté.", "ok");
         const pend = E.settings.get("plan.pending", null); E.settings.set("plan.pending", null); if (pend) buy(BY[pend.plan], pend.annual);
+        const pk = E.settings.get("plan.pendingKey", ""); E.settings.set("plan.pendingKey", ""); if (pk) setTimeout(() => keySheet(pk), 350);
       } catch (e) { err.textContent = e.message || "Échec."; } finally { b.disabled = false; }
     };
   }
@@ -177,6 +182,46 @@
       E.settings.set("plan.await", Date.now());
     } catch (e) { E.ui.toast(e.message, "warn"); }
   }
+  // ------------------------------------------------------------------ clés d'activation (format ETO-XXXX-XXXX-XXXX-XXXX, même contrôle que le serveur)
+  const KEYIC = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.3-9.3M17 6l3 3M14 9l2 2"/></svg>';
+  const KA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  const keyNorm = (v) => { let c = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); if (c.startsWith("ETO") && c.length === 19) c = c.slice(3); return c.replace(/O/g, "0").replace(/[IL]/g, "1").replace(/U/g, "V"); };
+  const keyOk = (c) => c.length === 16 && [...c].every((x) => KA.includes(x)) && KA[[...c.slice(0, 15)].reduce((a, x, i) => a + (2 * i + 1) * KA.indexOf(x), 0) % 32] === c[15];
+  const keyFmt = (c) => "ETO-" + (c.match(/.{1,4}/g) || []).join("-");
+  P._key = { norm: keyNorm, ok: keyOk };                                              // (tests)
+  async function copyText(t) { try { await navigator.clipboard.writeText(t); } catch (e) { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (x) { /* rien */ } ta.remove(); } E.ui.toast("Copié.", "ok"); }
+  function keySheet(prefill) {
+    const logged = E.cloud && E.cloud.loggedIn();
+    const s = E.ui.sheet({ title: "Activer une clé", html: `<div class="pl-form pl-keyform">
+        <p class="muted" style="line-height:1.5">Une clé ETO ouvre une offre pendant une durée donnée (cadeau, partenaire, presse, entreprise). Elle s'active une fois sur ton compte ETO.</p>
+        <label>Clé d'activation<input id="pk-in" class="pl-keyin" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="27" placeholder="ETO-XXXX-XXXX-XXXX-XXXX" value="${esc(prefill || "")}"></label>
+        <p class="pl-keyst" id="pk-st"></p>
+        ${logged ? "" : `<p class="muted" style="font-size:12.5px">Il faut un compte ETO pour garder l'offre sur tous tes appareils : la clé sera activée juste après la connexion.</p>`}
+        <p class="pl-err" id="pk-err"></p><button class="btn pri wide" id="pk-go" disabled>${logged ? "Activer" : "Continuer"}</button></div>` });
+    const inp = s.querySelector("#pk-in"), st = s.querySelector("#pk-st"), go = s.querySelector("#pk-go"), err = s.querySelector("#pk-err");
+    const check = () => {
+      const c = keyNorm(inp.value), pos = inp.selectionStart === inp.value.length;
+      if (c.length && pos) inp.value = keyFmt(c.slice(0, 16));
+      const ok = keyOk(c); go.disabled = !ok; inp.classList.toggle("ok", ok); inp.classList.toggle("bad", c.length === 16 && !ok);
+      st.textContent = !c.length ? "" : c.length < 16 ? `${c.length} / 16 caractères` : ok ? "Format valide" : "Un caractère est faux : vérifie la clé";
+      st.className = "pl-keyst" + (ok ? " ok" : c.length === 16 ? " bad" : "");
+    };
+    inp.addEventListener("input", check); check(); setTimeout(() => inp.focus(), 250);
+    go.onclick = async () => {
+      const c = keyNorm(inp.value); if (!keyOk(c)) return;
+      if (!(E.cloud && E.cloud.loggedIn())) { E.settings.set("plan.pendingKey", keyFmt(c)); E.ui.closeSheet(true); return accountSheet("signup"); }
+      err.textContent = ""; go.disabled = true; go.textContent = "Activation…";
+      try {
+        const r = await E.cloud.req("/eto/redeem", { method: "POST", body: { code: keyFmt(c) } });
+        if (r.status !== 200) throw new Error(r.json.detail || "Activation refusée (" + r.status + ").");
+        const claims = await P.refreshLicense(); E.ui.closeSheet(true);
+        const p = BY[(claims && claims.plan) || r.json.subscription.plan], end = r.json.subscription.period_end;
+        celebrate(p); E.ui.toast(`${p.name} ${p.tier} activé${end ? " jusqu'au " + new Date(end * 1000).toLocaleDateString("fr-FR") : " sans limite de durée"}.`, "ok");
+        E.emit && E.emit("plan", P.current());
+      } catch (e) { err.textContent = e.message || "Échec."; go.disabled = false; go.textContent = "Activer"; }
+    };
+  }
+  P.keySheet = keySheet;
   P.buy = buy; P.accountSheet = accountSheet;
   // retour du navigateur après un paiement : on relit la licence
   document.addEventListener("visibilitychange", () => { if (!document.hidden && E.settings.get("plan.await", 0) > Date.now() - 3600e3) { E.settings.set("plan.await", 0); setTimeout(() => P.refreshLicense().then((c) => c && E.ui.toast("Offre mise à jour : " + BY[c.plan].name + " " + BY[c.plan].tier, "ok")), 1500); } });
@@ -236,6 +281,7 @@
       if (acc) {
         const a = acc.dataset.acc;
         if (a === "signup" || a === "login") return accountSheet(a);
+        if (a === "key") return keySheet("");
         if (a === "logout") { E.cloud.logout(); E.store.del && E.store.del("eto.license"); apply(true); return repaint(); }
         if (a === "refresh") return P.refreshLicense().then((c) => { E.ui.toast(c ? "Licence à jour." : "Licence indisponible pour l'instant.", c ? "ok" : "warn"); repaint(); });
         if (a === "portal") return E.cloud.req("/eto/billing/portal", { method: "POST" }).then((r) => { if (r.status === 200 && r.json.url) E.native.openCheckout(r.json.url); else E.ui.toast(r.json.detail || "Aucun abonnement payé en ligne.", "warn"); });
@@ -260,12 +306,99 @@
             <p>Les versions d'E.N.O.S. réservées à ton entourage. Elles n'apparaissent jamais dans les offres publiques.</p></div>
           ${testBar(true)}
           <div class="pl-list">${PRIVATE.map((p, i) => card(p, i, false)).join("")}</div>
-          <div class="card pl-pub"><h3>Offres publiques<span class="sp">aperçu</span></h3>${PUBLIC.map((p) => `<div class="pl-row" style="--c:${p.color}">${ic(p.icon)}<b>${esc(p.name)} ${esc(p.tier)}</b><span>${p.month ? eur(p.month) + " € / mois" : "Gratuit"}</span>${P.current() === p.id ? '<i class="pl-act sm"><i></i>Actif</i>' : ""}</div>`).join("")}</div>`;
+          <div class="card pl-pub"><h3>Offres publiques<span class="sp">aperçu</span></h3>${PUBLIC.map((p) => `<div class="pl-row" style="--c:${p.color}">${ic(p.icon)}<b>${esc(p.name)} ${esc(p.tier)}</b><span>${p.month ? eur(p.month) + " € / mois" : "Gratuit"}</span>${P.current() === p.id ? '<i class="pl-act sm"><i></i>Actif</i>' : ""}</div>`).join("")}</div>
+          <div id="ceo-admin"></div>`;
         wire(el, () => paint());
+        admin(el.querySelector("#ceo-admin"), paint);
       };
       this._paint = paint; paint();
     },
   });
+
+  // ------------------------------------------------------------------ Espace CEO › générateur de clés + révocateur (compte CEO du serveur requis : c'est lui qui signe)
+  const PLAB = (id) => { const p = BY[id] || BY.eto_free; return `<i class="pl-tag" style="--c:${p.color}">${esc(p.tier)}</i>`; };
+  const dfr = (t) => (t ? new Date(t * 1000).toLocaleDateString("fr-FR") : "");
+  const KST = { active: ["Disponible", "ok"], used: ["Utilisée", ""], expired: ["Expirée", "warn"], revoked: ["Révoquée", "bad"] };
+  const SRC = (s) => (s.startsWith("key:") ? "clé n°" + s.slice(4) : ({ stripe: "Stripe", play: "Google Play", manual: "accordée", free: "", "": "" })[s] || s);
+  function admin(box, repaint) {
+    if (!box) return;
+    const u = E.cloud && E.cloud.loggedIn() ? E.cloud.user() : null;
+    if (!u || u.role !== "ceo") {
+      box.innerHTML = `<div class="card pl-adm"><h3>${KEYIC}Clés et abonnements<span class="sp">serveur ETO</span></h3><p class="muted">Le générateur de clés et le révocateur parlent au serveur ETO, seul à signer les licences. Connecte ton compte CEO pour les utiliser${u ? ` (connecté en ${esc(u.email)}, rôle ${esc(u.role)})` : ""}.</p>
+        <button class="btn pri wide" data-adm="login">Connecter le compte CEO</button></div>`;
+      box.querySelector("[data-adm=login]").onclick = () => { if (u) E.cloud.logout(true); accountSheet("login"); const t = setInterval(() => { if (!document.querySelector("#sheet:not([hidden]) #pa-go")) { clearInterval(t); admin(box, repaint); } }, 600); };
+      return;
+    }
+    box.innerHTML = `<div class="card pl-adm pl-gen"><h3>${KEYIC}Générateur de clés<span class="sp">licences légitimes</span></h3>
+        <p class="muted">Clés signées par le serveur : seule leur empreinte y est gardée, la clé en clair n'est montrée qu'ici, une seule fois.</p>
+        <div class="pl-form pl-g2">
+          <label>Offre<select id="kg-plan">${PUBLIC.filter((p) => p.month).map((p) => `<option value="${p.id}"${p.id === "eto_max" ? " selected" : ""}>${esc(p.name + " " + p.tier)}</option>`).join("")}</select></label>
+          <label>Durée<select id="kg-days"><option value="7">7 jours</option><option value="30" selected>1 mois</option><option value="90">3 mois</option><option value="365">1 an</option><option value="0">Sans limite</option></select></label>
+          <label>Nombre de clés<input id="kg-count" type="number" min="1" max="200" value="1"></label>
+          <label>Utilisations par clé<input id="kg-uses" type="number" min="1" max="1000" value="1"></label>
+          <label>Valable (jours)<input id="kg-exp" type="number" min="0" max="3660" value="0" title="0 = pas de date limite d'activation"></label>
+          <label>Note<input id="kg-note" type="text" maxlength="120" placeholder="presse, partenaire…"></label>
+        </div>
+        <p class="pl-err" id="kg-err"></p><button class="btn pri wide" id="kg-go">Générer</button>
+        <div id="kg-out"></div>
+        <h4 class="pl-h4">Clés créées<button class="pl-mini" id="kg-ref">Actualiser</button></h4><div id="kg-list" class="pl-klist"><p class="muted">Chargement…</p></div></div>
+      <div class="card pl-adm pl-rev"><h3><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>Révocateur d'abonnement</h3>
+        <p class="muted">Coupe l'offre d'un compte ETO (fraude, remboursement, fin de partenariat). L'application redescend en ETO Free dès qu'elle relit sa licence (au plus tard 7 jours hors ligne).</p>
+        <div class="pl-form"><input id="rv-q" type="search" placeholder="Rechercher un e-mail…" autocomplete="off"></div>
+        <div id="rv-list" class="pl-klist"><p class="muted">Chargement…</p></div></div>`;
+    const $ = (q) => box.querySelector(q);
+    const keys = async () => {
+      const r = await E.cloud.req("/eto/admin/keys"); const L = $("#kg-list"); if (!L) return;
+      if (r.status !== 200) { L.innerHTML = `<p class="pl-err">${esc(r.json.detail || "Serveur injoignable.")}</p>`; return; }
+      L.innerHTML = r.json.keys.length ? r.json.keys.map((k) => `<div class="pl-krow" data-k="${k.id}">${PLAB(k.plan)}<span class="pl-kcode">••••-${esc(k.hint)}</span>
+          <span class="pl-kmeta">${k.days ? k.days + " j" : "à vie"} · ${k.uses}/${k.max_uses}${k.note ? " · " + esc(k.note) : ""}${k.expires ? " · avant le " + dfr(k.expires) : ""}</span>
+          <i class="pl-kst ${KST[k.status][1]}">${KST[k.status][0]}</i>${k.status === "revoked" ? "" : `<button class="pl-mini bad" data-krev="${k.id}">Révoquer</button>`}</div>`).join("") : `<p class="muted">Aucune clé pour l'instant.</p>`;
+    };
+    let qT = 0;
+    const subs = async () => {
+      const r = await E.cloud.req("/eto/admin/subs?q=" + encodeURIComponent(($("#rv-q") || {}).value || "")); const L = $("#rv-list"); if (!L) return;
+      if (r.status !== 200) { L.innerHTML = `<p class="pl-err">${esc(r.json.detail || "Serveur injoignable.")}</p>`; return; }
+      L.innerHTML = r.json.subscribers.length ? r.json.subscribers.map((x) => `<div class="pl-krow">${PLAB(x.plan)}<span class="pl-kcode">${esc(x.email)}</span>
+          <span class="pl-kmeta">${x.plan === "eto_free" ? (x.status === "revoked" ? "révoqué" : "gratuit") : [SRC(x.source), x.period_end ? "jusqu'au " + dfr(x.period_end) : "sans limite"].filter(Boolean).join(" · ")}</span>
+          ${x.plan !== "eto_free" ? `<button class="pl-mini bad" data-srev="${esc(x.email)}" data-src="${esc(x.source)}">Révoquer</button>` : ""}</div>`).join("") : `<p class="muted">Aucun compte ETO trouvé.</p>`;
+    };
+    $("#rv-q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(subs, 300); });
+    $("#kg-ref").onclick = () => { keys(); subs(); };
+    $("#kg-go").onclick = async () => {
+      const b = $("#kg-go"), err = $("#kg-err"); err.textContent = ""; b.disabled = true; b.textContent = "Génération…";
+      try {
+        const body = { plan: $("#kg-plan").value, days: +$("#kg-days").value, count: Math.max(1, Math.min(200, +$("#kg-count").value || 1)), max_uses: Math.max(1, Math.min(1000, +$("#kg-uses").value || 1)), expires_days: Math.max(0, +$("#kg-exp").value || 0), note: $("#kg-note").value };
+        const r = await E.cloud.req("/eto/admin/keys", { method: "POST", body }); if (r.status !== 200) throw new Error(r.json.detail || "Refusé (" + r.status + ").");
+        const p = BY[r.json.plan];
+        $("#kg-out").innerHTML = `<div class="pl-kout" style="--c:${p.color}"><div class="pl-kohead">${PLAB(p.id)}<b>${r.json.codes.length} clé${r.json.codes.length > 1 ? "s" : ""} · ${r.json.days ? r.json.days + " jours" : "sans limite"}</b><button class="pl-mini" id="kg-all">Tout copier</button></div>
+            ${r.json.codes.map((c, i) => `<button class="pl-kcodebig" data-copy="${esc(c)}" style="--i:${i}">${esc(c)}<small>copier</small></button>`).join("")}
+            <p class="muted" style="font-size:12px">Note-les maintenant : elles ne seront plus affichées en clair.</p></div>`;
+        $("#kg-all").onclick = () => copyText(r.json.codes.join("\n"));
+        E.vibrate && E.vibrate(14); keys();
+      } catch (e) { err.textContent = e.message; } finally { b.disabled = false; b.textContent = "Générer"; }
+    };
+    box.addEventListener("click", (e) => {
+      const cp = e.target.closest("[data-copy]"); if (cp) return copyText(cp.dataset.copy);
+      const kr = e.target.closest("[data-krev]");
+      if (kr) {
+        const s = E.ui.sheet({ title: "Révoquer la clé", html: `<p class="muted" style="line-height:1.5">Plus personne ne pourra l'activer.</p><label class="pl-chk"><input type="checkbox" id="kr-subs"> Couper aussi les abonnements ouverts avec cette clé</label>`,
+          options: [{ label: "Révoquer", cls: "bad", fn: async () => { const r = await E.cloud.req("/eto/admin/keys/revoke", { method: "POST", body: { id: +kr.dataset.krev, revoke_subs: !!(s.querySelector("#kr-subs") || {}).checked } });
+            E.ui.toast(r.status === 200 ? `Clé révoquée${r.json.subscriptions_stopped ? ` · ${r.json.subscriptions_stopped} abonnement(s) coupé(s)` : ""}.` : r.json.detail || "Échec.", r.status === 200 ? "ok" : "warn"); keys(); subs(); } }, { label: "Annuler" }] });
+        return;
+      }
+      const sr = e.target.closest("[data-srev]");
+      if (sr) {
+        const stripe = sr.dataset.src === "stripe";
+        const s = E.ui.sheet({ title: "Révoquer l'abonnement", html: `<p class="muted" style="line-height:1.5"><b>${esc(sr.dataset.srev)}</b> repasse en ETO Free.</p>
+            <div class="pl-form"><label>Motif (journal interne)<input id="rv-why" type="text" maxlength="200" placeholder="remboursement, fraude…"></label></div>
+            ${stripe ? `<label class="pl-chk"><input type="checkbox" id="rv-bill" checked> Annuler aussi le prélèvement Stripe</label>` : ""}`,
+          options: [{ label: "Révoquer", cls: "bad", fn: async () => { const r = await E.cloud.req("/eto/admin/revoke", { method: "POST", body: { email: sr.dataset.srev, reason: (s.querySelector("#rv-why") || {}).value || "", cancel_billing: !!(s.querySelector("#rv-bill") || {}).checked } });
+            E.ui.toast(r.status === 200 ? `Abonnement ${BY[r.json.previous].tier} révoqué${r.json.billing === "cancelled" ? " · prélèvement Stripe annulé" : ""}.` : r.json.detail || "Échec.", r.status === 200 ? "ok" : "warn"); subs(); } }, { label: "Annuler" }] });
+      }
+    });
+    keys(); subs();
+  }
+  P._admin = admin;
 
   // démarrage : la marque et la couleur de la version active
   const start = () => { try { apply(false); } catch (e) { /* en-tête pas encore prêt */ } };

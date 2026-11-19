@@ -21,3 +21,14 @@ Les échecs sont **entièrement gratuits** (ETO Free). Les offres payantes se ve
 ## Tester
 
 Dans l'app « Eto TEST » : Modules › Paramètres › Abonnement (offres publiques) ou Espace CEO (les 7 versions), bandeau « Mode test ». Code : `android/assets/mobile/js/plans.js`, `css/plans.css`. Test : `android/tests/t_plans.py`.
+
+## Clés d'activation et révocation (serveur `app/launcher/eto.py`)
+
+| Route (préfixe `/launcher/v1/eto`) | Qui | Rôle |
+|---|---|---|
+| `POST /admin/keys` `{plan, days, count, max_uses, expires_days, note}` | CEO | génère des clés `ETO-XXXX-XXXX-XXXX-XXXX` (75 bits aléatoires + 1 caractère de contrôle à poids impairs) ; seule l'empreinte SHA-256 est stockée |
+| `GET /admin/keys` · `POST /admin/keys/revoke` `{id, revoke_subs}` | CEO | liste (statut, utilisations) · révocation, avec arrêt optionnel des abonnements ouverts par la clé |
+| `POST /redeem` `{code}` | compte ETO | active la clé : même offre → durée ajoutée ; offre supérieure active → refus sans consommer ; 8 essais / heure / compte, 20 / heure / IP |
+| `GET /admin/subs?q=` · `POST /admin/revoke` `{email, reason, cancel_billing}` | CEO | recherche des abonnés · coupe l'offre (journal `eto_events`), annule l'abonnement Stripe si demandé |
+
+Limite connue : sans `cancel_billing`, un renouvellement Stripe ultérieur (webhook) peut rouvrir l'abonnement ; cocher l'annulation du prélèvement pour un arrêt définitif. Une révocation prend effet dans l'application à la relecture de la licence (au plus tard 7 jours hors ligne).

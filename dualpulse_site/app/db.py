@@ -61,6 +61,10 @@ def conn():
               CREATE TABLE IF NOT EXISTS eto_subs(user_id INTEGER PRIMARY KEY, plan TEXT NOT NULL, period TEXT NOT NULL DEFAULT 'month', status TEXT NOT NULL, period_end REAL NOT NULL DEFAULT 0,
                 source TEXT NOT NULL DEFAULT 'manual', ext_customer TEXT NOT NULL DEFAULT '', ext_sub TEXT NOT NULL DEFAULT '', seats INTEGER NOT NULL DEFAULT 1, updated REAL NOT NULL);
               CREATE TABLE IF NOT EXISTS eto_events(id INTEGER PRIMARY KEY AUTOINCREMENT, t REAL NOT NULL, user_id INTEGER, kind TEXT NOT NULL, data TEXT NOT NULL DEFAULT '{}');
+              CREATE TABLE IF NOT EXISTS eto_keys(id INTEGER PRIMARY KEY AUTOINCREMENT, code_hash TEXT NOT NULL UNIQUE, hint TEXT NOT NULL, plan TEXT NOT NULL, days INTEGER NOT NULL,
+                max_uses INTEGER NOT NULL DEFAULT 1, uses INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', batch TEXT NOT NULL DEFAULT '', created_by INTEGER, created REAL NOT NULL,
+                expires REAL NOT NULL DEFAULT 0, revoked REAL NOT NULL DEFAULT 0);
+              CREATE TABLE IF NOT EXISTS eto_key_uses(key_id INTEGER NOT NULL, user_id INTEGER NOT NULL, t REAL NOT NULL, PRIMARY KEY(key_id, user_id));
             """)
             _conn.commit()
             migrate(_conn)

@@ -283,6 +283,21 @@ final class LocalBridge {
         }
     }
 
+    /** Support : ouvre l'application de messagerie vers l'adresse de DualPulse (adresse FIXE, seuls l'objet et le texte viennent de l'interface). */
+    @JavascriptInterface
+    public boolean openSupportMail(String subject, String body) {
+        if (!ok()) return false;
+        try {
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:dualpulse.co@gmail.com"));
+            i.putExtra(android.content.Intent.EXTRA_SUBJECT, subject == null ? "" : subject.substring(0, Math.min(200, subject.length())));
+            i.putExtra(android.content.Intent.EXTRA_TEXT, body == null ? "" : body.substring(0, Math.min(20000, body.length())));
+            act.startActivity(i);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Application de TEST (« Eto TEST », identifiant com.nasko.app.test) : l'interface y propose de simuler chaque version / abonnement. */
     @JavascriptInterface
     public boolean isTestBuild() {

@@ -6,7 +6,10 @@ licence signée Ed25519 vérifiable HORS LIGNE par l'application, paiement.
                  DP_STRIPE_PRICE_<OFFRE>_<PERIODE> (ex. DP_STRIPE_PRICE_ETO_PRO_MONTH), DP_PUBLIC_URL (retour après paiement).
   Google Play  : vérification d'un achat d'abonnement (purchases.subscriptionsv2) avec un compte de service : DP_PLAY_PACKAGE, DP_PLAY_SA (JSON).
   Sans ces variables, les routes de paiement répondent 503 « paiement non configuré » : rien n'est simulé.
+  Clés d'activation : un CEO génère des clés (offre + durée + nombre d'utilisations), seule leur empreinte SHA-256 est gardée ; un compte ETO l'active dans l'application.
+  Révocation : d'une clé (et, au choix, des abonnements qu'elle a ouverts) ou de l'abonnement d'un compte ; la licence suivante redescend en ETO Free.
 Le serveur est la seule autorité : l'application ne fait que lire la licence signée."""
+import secrets
 import base64
 import hashlib
 import hmac
@@ -110,6 +113,154 @@ def license_token(u):
     s = subscription(u)
     return tokens.issue(service.signing_key(), sub=u["id"], role=u["role"], typ="license", tv=u["token_version"],
                         extra={"plan": s["plan"], "status": s["status"], "seats": s["seats"], "features": features_of(s["plan"]), "period_end": int(s["period_end"]), "email": u["email"]})
+
+
+# ---------------------------------------------------------------- clés d'activation
+#   Format : ETO-XXXX-XXXX-XXXX-XXXX (alphabet de Crockford, sans I L O U) : 15 caractères aléatoires (75 bits) + 1 caractère de contrôle.
+#   Seule l'empreinte SHA-256 est stockée : une fuite de la base ne donne aucune clé utilisable. La clé en clair n'est montrée qu'une fois, à sa création.
+ALPHA = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+RANK = {p: i for i, p in enumerate(PLANS)}
+
+
+def _check_char(body):
+    return ALPHA[sum((2 * i + 1) * ALPHA.index(ch) for i, ch in enumerate(body)) % 32]       # poids impairs : toute faute sur UN caractère change le contrôle
+
+
+def norm_code(code):
+    """« eto-abcd efgh… » -> « ABCDEFGH… » (16 caractères) ; les confusions courantes (O/0, I/L/1) sont corrigées."""
+    c = "".join(ch for ch in str(code or "").upper() if ch.isalnum())
+    if c.startswith("ETO") and len(c) == 19:
+        c = c[3:]
+    return c.translate(str.maketrans({"O": "0", "I": "1", "L": "1", "U": "V"}))
+
+
+def valid_code(c):
+    return len(c) == 16 and all(ch in ALPHA for ch in c) and _check_char(c[:15]) == c[15]
+
+
+def fmt_code(c):
+    return "ETO-" + "-".join(c[i:i + 4] for i in range(0, 16, 4))
+
+
+def new_code():
+    body = "".join(secrets.choice(ALPHA) for _ in range(15))
+    return body + _check_char(body)
+
+
+def _hash_code(c):
+    return hashlib.sha256(("eto-key:" + c).encode()).hexdigest()
+
+
+def create_keys(by_uid, plan, days, count=1, max_uses=1, expires_days=0, note=""):
+    if plan not in PLANS or plan == "eto_free":
+        raise service.AuthError(400, "Offre inconnue (Pro, MAX ou Ultra).")
+    batch, out, t = secrets.token_hex(4), [], now()
+    with db._lock:
+        c = _c()
+        for _ in range(count):
+            code = new_code()
+            c.execute("INSERT INTO eto_keys(code_hash,hint,plan,days,max_uses,note,batch,created_by,created,expires) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                      (_hash_code(code), code[-4:], plan, days, max_uses, (note or "").strip()[:120], batch, by_uid, t, t + expires_days * 86400 if expires_days else 0))
+            out.append(fmt_code(code))
+        c.commit()
+    log(by_uid, "keys_created", {"plan": plan, "days": days, "count": count, "max_uses": max_uses, "batch": batch})
+    return {"batch": batch, "plan": plan, "days": days, "max_uses": max_uses, "codes": out}
+
+
+def _key_row(k):
+    st = "revoked" if k["revoked"] else "expired" if k["expires"] and k["expires"] < now() else "used" if k["uses"] >= k["max_uses"] else "active"
+    return {"id": k["id"], "hint": k["hint"], "plan": k["plan"], "days": k["days"], "max_uses": k["max_uses"], "uses": k["uses"], "note": k["note"], "batch": k["batch"],
+            "created": int(k["created"]), "expires": int(k["expires"]), "revoked": int(k["revoked"]), "status": st}
+
+
+def list_keys(limit=200):
+    with db._lock:
+        rows = _c().execute("SELECT * FROM eto_keys ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [_key_row(k) for k in rows]
+
+
+def revoke_key(by_uid, key_id, revoke_subs=False):
+    """Révoque une clé : plus personne ne peut l'activer ; avec revoke_subs, les abonnements qu'elle a ouverts (et pas renouvelés autrement) s'arrêtent."""
+    with db._lock:
+        c = _c()
+        k = c.execute("SELECT * FROM eto_keys WHERE id=?", (key_id,)).fetchone()
+        if not k:
+            raise service.AuthError(404, "Clé introuvable.")
+        c.execute("UPDATE eto_keys SET revoked=? WHERE id=? AND revoked=0", (now(), key_id))
+        n = 0
+        if revoke_subs:
+            n = c.execute("UPDATE eto_subs SET status='revoked', updated=? WHERE source=? AND status<>'revoked'", (now(), "key:%d" % key_id)).rowcount
+        c.commit()
+    log(by_uid, "key_revoked", {"key": key_id, "subs": n})
+    return {"revoked": True, "subscriptions_stopped": n}
+
+
+def redeem(u, code):
+    """Active une clé sur un compte ETO. Même offre déjà active : la durée s'ajoute. Offre supérieure déjà active : refus (la clé n'est pas consommée)."""
+    if u["role"] != "public":
+        raise service.AuthError(403, "Les comptes du personnel ont déjà toutes les fonctions : active la clé avec un compte ETO.")
+    c = norm_code(code)
+    if not valid_code(c):
+        raise service.AuthError(400, "Clé invalide : vérifie les caractères (format ETO-XXXX-XXXX-XXXX-XXXX).")
+    cur = subscription(u)
+    with db._lock:
+        con = _c()
+        k = con.execute("SELECT * FROM eto_keys WHERE code_hash=?", (_hash_code(c),)).fetchone()
+        if not k:
+            raise service.AuthError(404, "Clé inconnue.")
+        if k["revoked"]:
+            raise service.AuthError(410, "Cette clé a été révoquée.")
+        if k["expires"] and k["expires"] < now():
+            raise service.AuthError(410, "Cette clé a expiré.")
+        if con.execute("SELECT 1 FROM eto_key_uses WHERE key_id=? AND user_id=?", (k["id"], u["id"])).fetchone():
+            raise service.AuthError(409, "Tu as déjà activé cette clé.")
+        if cur["source"] != "free" and RANK[cur["plan"]] > RANK[k["plan"]]:
+            raise service.AuthError(409, "Ton offre actuelle est déjà supérieure : la clé n'a pas été utilisée, garde-la ou offre-la.")
+        if cur["source"] != "free" and cur["plan"] == k["plan"] and cur["period_end"] == 0:
+            raise service.AuthError(409, "Cette offre est déjà active sans limite de durée sur ton compte.")
+        if con.execute("UPDATE eto_keys SET uses=uses+1 WHERE id=? AND uses<max_uses", (k["id"],)).rowcount != 1:
+            raise service.AuthError(410, "Cette clé a déjà été utilisée.")
+        con.execute("INSERT INTO eto_key_uses(key_id,user_id,t) VALUES(?,?,?)", (k["id"], u["id"], now()))
+        con.commit()
+    base = cur["period_end"] if cur["plan"] == k["plan"] and cur["period_end"] > now() else now()
+    set_subscription(u["id"], k["plan"], "active", base + k["days"] * 86400 if k["days"] else 0, "key:%d" % k["id"], "key")
+    log(u["id"], "key_redeemed", {"key": k["id"], "plan": k["plan"], "days": k["days"]})
+    return subscription(service.get_user(u["id"]))
+
+
+def revoke_subscription(by_uid, email, reason="", cancel_billing=False):
+    """Coupe l'abonnement d'un compte ETO (fraude, remboursement, fin de partenariat). Avec cancel_billing, l'abonnement Stripe est aussi annulé tout de suite."""
+    t = service.user_by_email(email)
+    if not t or t["role"] != "public":
+        raise service.AuthError(404, "Compte ETO introuvable.")
+    with db._lock:
+        r = _c().execute("SELECT * FROM eto_subs WHERE user_id=?", (t["id"],)).fetchone()
+    if not r or r["status"] == "revoked":
+        raise service.AuthError(409, "Aucun abonnement actif sur ce compte.")
+    billing = "none"
+    if cancel_billing and r["ext_sub"].startswith("sub_"):
+        try:
+            _stripe("DELETE", "/subscriptions/" + r["ext_sub"]); billing = "cancelled"
+        except service.AuthError as e:
+            billing = "error: " + str(getattr(e, "detail", e))[:120]
+    with db._lock:
+        _c().execute("UPDATE eto_subs SET status='revoked', updated=? WHERE user_id=?", (now(), t["id"]))
+        _c().commit()
+    log(t["id"], "subscription_revoked", {"by": by_uid, "reason": (reason or "")[:200], "plan": r["plan"], "billing": billing})
+    return {"email": t["email"], "previous": r["plan"], "billing": billing, "subscription": subscription(service.get_user(t["id"]))}
+
+
+def list_subscribers(q="", limit=100):
+    like = "%" + (q or "").strip().lower() + "%"
+    with db._lock:
+        rows = _c().execute("""SELECT u.email, u.name, u.created_at, s.plan, s.status, s.period_end, s.source, s.period FROM users u LEFT JOIN eto_subs s ON s.user_id=u.id
+                               WHERE u.role='public' AND lower(u.email) LIKE ? ORDER BY COALESCE(s.updated, u.created_at) DESC LIMIT ?""", (like, limit)).fetchall()
+    out = []
+    for r in rows:
+        live = r["plan"] and r["status"] in ACTIVE and (not r["period_end"] or r["period_end"] > now())
+        out.append({"email": r["email"], "name": r["name"], "plan": r["plan"] if live else "eto_free", "status": r["status"] or "free", "period_end": int(r["period_end"] or 0),
+                    "source": r["source"] or "", "since": int(r["created_at"] or 0)})
+    return out
 
 
 # ---------------------------------------------------------------- Stripe (API REST, sans SDK)
@@ -244,6 +395,30 @@ class PlayIn(BaseModel):
     purchase_token: str = Field(max_length=4000)
 
 
+class KeysIn(BaseModel):
+    plan: str = Field(max_length=20)
+    days: int = Field(default=30, ge=0, le=3660)
+    count: int = Field(default=1, ge=1, le=200)
+    max_uses: int = Field(default=1, ge=1, le=1000)
+    expires_days: int = Field(default=0, ge=0, le=3660)
+    note: str = Field(default="", max_length=120)
+
+
+class RedeemIn(BaseModel):
+    code: str = Field(max_length=40)
+
+
+class KeyRevokeIn(BaseModel):
+    id: int
+    revoke_subs: bool = False
+
+
+class RevokeIn(BaseModel):
+    email: str = Field(max_length=254)
+    reason: str = Field(default="", max_length=200)
+    cancel_billing: bool = False
+
+
 class GrantIn(BaseModel):
     email: str = Field(max_length=254)
     plan: str = Field(max_length=20)
@@ -322,3 +497,29 @@ h1{margin:0 0 8px;font-size:26px}b{color:%s}p{color:#a8a6af}</style></head><body
             raise service.AuthError(404, "Compte ETO introuvable.")
         set_subscription(t["id"], b.plan, "active", now() + b.days * 86400 if b.days else 0, "manual")
         return subscription(service.get_user(t["id"]))
+
+    @r.post(V1 + "/redeem")
+    def redeem_route(b: RedeemIn, request: Request, u=Depends(current_user)):
+        if not limits.ok("etokey", u["id"], 8, per=3600) or not limits.ok("etokeyip", ip_of(request), 20, per=3600):
+            raise service.AuthError(429, "Trop d'essais de clés : réessaie dans une heure.")
+        return {"subscription": redeem(u, b.code), "license": license_token(service.get_user(u["id"]))}
+
+    @r.post(V1 + "/admin/keys")
+    def keys_create(b: KeysIn, u=Depends(require("ceo"))):
+        return create_keys(u["id"], b.plan, b.days, b.count, b.max_uses, b.expires_days, b.note)
+
+    @r.get(V1 + "/admin/keys")
+    def keys_list(u=Depends(require("ceo"))):
+        return {"keys": list_keys()}
+
+    @r.post(V1 + "/admin/keys/revoke")
+    def keys_revoke(b: KeyRevokeIn, u=Depends(require("ceo"))):
+        return revoke_key(u["id"], b.id, b.revoke_subs)
+
+    @r.get(V1 + "/admin/subs")
+    def subs_list(q: str = "", u=Depends(require("ceo"))):
+        return {"subscribers": list_subscribers(q[:254])}
+
+    @r.post(V1 + "/admin/revoke")
+    def revoke_route(b: RevokeIn, u=Depends(require("ceo"))):
+        return revoke_subscription(u["id"], b.email, b.reason, b.cancel_billing)

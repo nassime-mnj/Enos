@@ -18,11 +18,11 @@
       { n: "Profil", items: [["@prof:stats", "Statistiques", "cc:user"], ["@prof:prizes", "Prix", "cc:medal"]] },
     ] },
     { id: "cloud", n: "CLOUD", t: "Cloud", img: "cat_cloud", sections: [
-      { n: "Mon compte", items: [["plans", "Abonnement"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
+      { n: "Mon compte", items: [["plans", "Abonnement"], ["support", "Assistant ETO"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
     ] },
     { id: "parametres", n: "PARAMÈTRES", t: "Paramètres", img: "cat_parametres", sections: [
-      { n: "Application", items: [["plans", "Abonnement"], ["ceo", "Espace CEO"], ["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
+      { n: "Application", items: [["support", "Assistant ETO"], ["plans", "Abonnement"], ["ceo", "Espace CEO"], ["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
       { n: "Mon PC", items: [["s-qr", "Appairer le PC"], ["b-rg", "Réglages du PC"]] },
     ] },
     { id: "codage", n: "CODAGE", t: "Codage", img: "cat_codage", sections: [

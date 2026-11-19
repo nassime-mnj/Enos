@@ -120,6 +120,7 @@
   N.deviceId = () => (N.available ? B.deviceId() : "dev-browser");
   N.version = () => (N.available ? B.version() : "dev");
   N.openCheckout = (url) => (N.available ? !!(B.openCheckout && B.openCheckout(String(url || ""))) : (/^https:\/\/(checkout|billing)\.stripe\.com\//.test(url) ? !!window.open(url, "_blank") : false));
+  N.openSupportMail = (subject, body) => (N.available && B.openSupportMail ? !!B.openSupportMail(String(subject || ""), String(body || "")) : (location.href = "mailto:dualpulse.co@gmail.com?subject=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(body || ""), true));
   N.isTestBuild = () => (N.available ? !!(B.isTestBuild && B.isTestBuild()) : true);          // navigateur de développement = environnement de test
   // Mise à jour instantanée du web de l'application depuis GitHub (sans réinstaller l'APK) : {state: uptodate|applied|ready|needs_apk|error, n, msg}
   N.webUpdate = (apply) => oneShot("webupd", (id) => B.webUpdate(id, !!apply));

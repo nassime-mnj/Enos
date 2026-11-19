@@ -89,6 +89,77 @@ def test_old_database_is_migrated():
     assert service.user_by_email("x@example.com")["role"] == "dev"
 
 
+def _ceo(c):
+    A = {"X-Admin-Token": "jeton-test-123456"}
+    c.post("/admin-dp/api/launcher/ceo", headers=A, json={"email": "ceo@example.com", "password": PW})
+    return {"Authorization": "Bearer " + c.post(V + "/auth/login", json={"email": "ceo@example.com", "password": PW}).json()["access_token"]}
+
+
+def _public(c, mail):
+    return {"Authorization": "Bearer " + c.post(E + "/signup", json={"email": mail, "password": PW}).json()["access_token"]}
+
+
+def test_key_format_and_checksum():
+    for _ in range(200):
+        k = eto.new_code(); assert eto.valid_code(k) and eto.norm_code(eto.fmt_code(k).lower()) == k
+    k = eto.new_code()
+    for i in range(16):                                                            # TOUTE faute sur un caractère est détectée avant même d'interroger la base
+        for ch in eto.ALPHA:
+            if ch != k[i]:
+                assert not eto.valid_code(k[:i] + ch + k[i + 1:]), (k, i, ch)
+    assert eto.norm_code("0O1Il") == "00111" and eto.norm_code(" eto-" + k[:4] + " " + k[4:]) == k
+
+
+def test_activation_keys_lifecycle():
+    c = fresh(); hc = _ceo(c); h1 = _public(c, "k1@example.com"); h2 = _public(c, "k2@example.com"); h3 = _public(c, "k3@example.com")
+    assert c.post(E + "/admin/keys", headers=h1, json={"plan": "eto_max", "days": 30}).status_code == 403          # réservé aux CEO
+    r = c.post(E + "/admin/keys", headers=hc, json={"plan": "eto_max", "days": 30, "count": 3, "max_uses": 1, "note": "presse"}); assert r.status_code == 200, r.text
+    codes = r.json()["codes"]; assert len(codes) == 3 and all(x.startswith("ETO-") and len(x) == 23 for x in codes)
+    with db._lock:
+        stored = [x["code_hash"] for x in db.conn().execute("SELECT code_hash FROM eto_keys").fetchall()]
+    assert not any(x.replace("-", "")[3:] in "".join(stored) for x in codes)     # seule l'empreinte est gardée
+    r = c.post(E + "/redeem", headers=h1, json={"code": codes[0].lower().replace("-", " ")}); assert r.status_code == 200, r.text
+    lic = tokens.verify(r.json()["license"], service.signing_key().public_key(), typ="license"); assert lic["plan"] == "eto_max" and "pc_control" in lic["features"]
+    end1 = r.json()["subscription"]["period_end"]; assert 29 * 86400 < end1 - time.time() <= 30 * 86400 + 5
+    assert c.post(E + "/redeem", headers=h2, json={"code": codes[0]}).status_code == 410                        # une seule utilisation
+    assert c.post(E + "/redeem", headers=h1, json={"code": codes[0]}).status_code == 409                        # déjà activée par ce compte
+    r = c.post(E + "/redeem", headers=h1, json={"code": codes[1]}); assert r.status_code == 200                 # même offre : la durée s'ajoute
+    assert r.json()["subscription"]["period_end"] - end1 > 29 * 86400
+    assert c.post(E + "/redeem", headers=hc, json={"code": codes[2]}).status_code == 403                        # compte du personnel
+    assert c.post(E + "/redeem", headers=h2, json={"code": "ETO-AAAA-BBBB-CCCC-DDDD"}).status_code in (400, 404)
+    ks = c.get(E + "/admin/keys", headers=hc).json()["keys"]; assert [k["status"] for k in ks].count("used") == 2 and ks[0]["note"] == "presse"
+    # offre supérieure déjà active : la clé n'est pas consommée
+    pro = c.post(E + "/admin/keys", headers=hc, json={"plan": "eto_pro", "days": 30}).json()["codes"][0]
+    assert c.post(E + "/redeem", headers=h1, json={"code": pro}).status_code == 409
+    assert c.post(E + "/redeem", headers=h2, json={"code": pro}).status_code == 200
+    # révocation d'une clé et des abonnements qu'elle a ouverts
+    kid = [k for k in c.get(E + "/admin/keys", headers=hc).json()["keys"] if k["plan"] == "eto_pro"][0]["id"]
+    assert c.post(E + "/admin/keys/revoke", headers=hc, json={"id": kid, "revoke_subs": True}).json()["subscriptions_stopped"] == 1
+    assert c.get(E + "/me", headers=h2).json()["subscription"]["plan"] == "eto_free"
+    assert c.post(E + "/redeem", headers=h3, json={"code": codes[2]}).status_code == 200
+    fresh_key = c.post(E + "/admin/keys", headers=hc, json={"plan": "eto_ultra", "days": 7}).json()["codes"][0]
+    kid = c.get(E + "/admin/keys", headers=hc).json()["keys"][0]["id"]
+    c.post(E + "/admin/keys/revoke", headers=hc, json={"id": kid})
+    r = c.post(E + "/redeem", headers=h2, json={"code": fresh_key}); assert r.status_code == 410 and "révoquée" in r.json()["detail"]
+    # limite d'essais
+    for _ in range(10):
+        r = c.post(E + "/redeem", headers=h3, json={"code": "ETO-ZZZZ-ZZZZ-ZZZZ-ZZZZ"})
+    assert r.status_code == 429
+
+
+def test_ceo_revokes_subscription():
+    c = fresh(); hc = _ceo(c); h = _public(c, "rv@example.com"); _public(c, "other@example.com")
+    c.post(E + "/admin/grant", headers=hc, json={"email": "rv@example.com", "plan": "eto_ultra", "days": 90})
+    subs = c.get(E + "/admin/subs?q=rv", headers=hc).json()["subscribers"]; assert len(subs) == 1 and subs[0]["plan"] == "eto_ultra"
+    assert c.post(E + "/admin/revoke", headers=h, json={"email": "rv@example.com"}).status_code == 403
+    r = c.post(E + "/admin/revoke", headers=hc, json={"email": "rv@example.com", "reason": "test"}); assert r.status_code == 200, r.text
+    assert r.json()["previous"] == "eto_ultra" and r.json()["subscription"]["plan"] == "eto_free"
+    lic = tokens.verify(c.post(E + "/license", headers=h).json()["license"], service.signing_key().public_key(), typ="license"); assert lic["plan"] == "eto_free"
+    assert c.post(E + "/admin/revoke", headers=hc, json={"email": "rv@example.com"}).status_code == 409
+    assert c.post(E + "/admin/revoke", headers=hc, json={"email": "ceo@example.com"}).status_code == 404       # le personnel ne se révoque pas ici
+    assert len(c.get(E + "/admin/subs", headers=hc).json()["subscribers"]) == 2
+
+
 if __name__ == "__main__":
     bad = 0
     for n, f in list(globals().items()):
