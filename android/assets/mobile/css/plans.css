@@ -204,3 +204,23 @@ body.no-pc #pc-locked,body.no-pc #pc-live{display:none!important}
 .im-bars i{width:100%;max-width:46px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#60a5fa,#1d4ed8);box-shadow:0 0 16px rgba(59,130,246,.35);animation:imGrow .7s cubic-bezier(.2,.9,.3,1) both}
 .im-bars b{font:700 11px var(--ui);color:#e9e6ea}.im-bars small{font:500 10.5px var(--ui);color:var(--muted)}
 @keyframes imGrow{from{transform:scaleY(0);transform-origin:bottom}to{transform:scaleY(1);transform-origin:bottom}}
+
+/* ---------- ETO Fleet ---------- */
+.fl-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.fl-kpi>div{padding:14px 12px;border-radius:18px;border:1px solid #23242c;background:linear-gradient(165deg,#15161c,#0d0e12);text-align:center}
+.fl-kpi b{display:block;font:800 26px var(--ui);color:#fff;letter-spacing:-.02em}.fl-kpi b small{font:600 14px var(--ui);color:var(--muted)}
+.fl-kpi span{font:600 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fl-kpi .warn b{color:#fbbf24}
+.fl-devs{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.fl-dev{position:relative;padding:12px 14px;border-radius:16px;border:1px solid #1f2028;background:#0f1015}
+.fl-dev.on{border-color:rgba(167,139,250,.35)}
+.fl-dh{display:flex;align-items:center;gap:8px;padding-right:80px}.fl-dh b{font:700 14.5px var(--ui);color:#fff}.fl-dh span{font:500 12px var(--ui);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-dot{width:8px;height:8px;border-radius:50%;background:#4b4b55;flex:none}.fl-dev.on .fl-dot{background:#34d399;box-shadow:0 0 10px #34d399}
+.fl-stats{display:flex;gap:12px;margin-top:6px;font:500 12px var(--ui);color:#c9c7cf}
+.fl-sto{height:6px;border-radius:999px;background:#1a1b22;overflow:hidden;margin-top:9px}.fl-sto i{display:block;height:100%;background:linear-gradient(90deg,#a78bfa,#7c3aed)}.fl-sto i.bad{background:linear-gradient(90deg,#fb7185,#e11d48)}
+.fl-stol{display:block;margin-top:4px;font:500 11px var(--ui);color:var(--muted)}
+.fl-al{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fl-a{font:600 11px var(--ui);font-style:normal;padding:3px 8px;border-radius:999px;background:rgba(251,191,36,.12);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}
+.fl-a.storage,.fl-a.crash{background:rgba(251,113,133,.12);color:#fda4af;border-color:rgba(251,113,133,.3)}
+.fl-dev [data-act]{position:absolute;top:10px;right:10px}
+.fl-danger{margin-top:14px;color:#fda4af!important;border-color:rgba(251,113,133,.3)!important}

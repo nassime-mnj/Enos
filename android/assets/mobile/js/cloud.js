@@ -100,9 +100,39 @@
     return true;
   };
 
+  // ------------------------------------------------------------------ ETO Fleet : pouls de l'appareil (santé) + commandes à distance de la liste fermée
+  const health = async () => {
+    const h = { device_id: N.deviceId(), name: E.settings.get("deviceName", "Téléphone"), platform: "android", app_version: N.version(), net: (navigator.connection && navigator.connection.type) || "", model: (navigator.userAgent.match(/;\s*([^;)]+)\s+Build\//) || [])[1] || "" };
+    try { if (navigator.getBattery) { const b = await navigator.getBattery(); h.battery = Math.round(b.level * 100) / 100; h.charging = !!b.charging; } } catch (e) { /* indisponible */ }
+    try { const st = JSON.parse(N.available && window.Enos.storage ? window.Enos.storage() : "null"); if (st && st.total) { h.storage_total = st.total; h.storage_free = st.free; } } catch (e) { /* indisponible */ }
+    try { const u = window.EnosCrash && EnosCrash.unseen ? EnosCrash.unseen() : 0; h.crashes_24h = typeof u === "number" ? u : (u && u.length) || 0; } catch (e) { h.crashes_24h = 0; }
+    try { const im = N.improver && N.improver.available() ? N.improver.state() : null; if (im && im.history) h.improver_saved = im.history.reduce((a, x) => a + (+x.saved || 0), 0); } catch (e) { /* rien */ }
+    return h;
+  };
+  const RUN = {
+    ping: async () => "ok",
+    sync_license: async () => { const c = E.plans && (await E.plans.refreshLicense()); return c ? c.plan : "indisponible"; },
+    message: async (a) => { const t = String((a && a.text) || "").slice(0, 280); if (t && E.ui) E.ui.sheet({ title: "Message de ton équipe", html: `<p style="line-height:1.55">${E.esc(t)}</p>`, options: [{ label: "OK", cls: "pri" }] }); return "affiché"; },
+    update_check: async () => { await C.checkUpdate(true); return "vérifiée"; },
+    improver_run: async () => { if (!(N.improver && N.improver.available())) return "indisponible"; N.improver.run(() => false); return "lancée"; },
+  };
+  C.fleetBeat = async () => {
+    if (!C.loggedIn()) return null;
+    const r = await C.req("/eto/fleet/beat", { method: "POST", body: await health() });
+    if (r.status !== 200) return null;
+    for (const c of r.json.commands || []) {
+      let ok = true, res = "";
+      try { res = RUN[c.cmd] ? await RUN[c.cmd](c.args || {}) : (ok = false, "inconnue"); } catch (e) { ok = false; res = e.message; }
+      await C.req("/eto/fleet/cmd/" + (+c.id) + "/done", { method: "POST", body: { ok, result: String(res).slice(0, 300) } });
+    }
+    return r.json;
+  };
+  C._health = health;
+
   C.start = () => {
-    setTimeout(() => { C.autoUpdate(); C.beat().catch(() => {}); }, 4000);
+    setTimeout(() => { C.autoUpdate(); C.beat().catch(() => {}); C.fleetBeat().catch(() => {}); }, 4000);
+    setInterval(() => { if (!document.hidden) C.fleetBeat().catch(() => {}); }, 10 * 60 * 1000);
     setInterval(() => { if (!document.hidden) { C.beat().catch(() => {}); C.syncAgenda().catch(() => {}); } }, 60 * 1000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) { C.autoUpdate(); C.beat().catch(() => {}); } });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) { C.autoUpdate(); C.beat().catch(() => {}); C.fleetBeat().catch(() => {}); } });
   };
 })();

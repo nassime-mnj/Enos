@@ -76,7 +76,7 @@
   P.isPrivate = (id) => PRIVATE.some((p) => p.id === (id || P.current()));
   P.can = (f) => P.features(P.current()).includes(f);
   // modules soumis à une offre ; tout le reste (échecs compris) est libre
-  const MOD = { pc: "pc_control", "b-sy": "pc_control", "b-rg": "pc_control", colis: "pc_control", codelab: "codelab", cinepulse: "studio", audiolab: "studio", "b-hb": "team", fleet: "fleet", improver: "tools", gateway: "gateway", improver_auto_gate: "improver_auto" };
+  const MOD = { pc: "pc_control", "b-sy": "pc_control", "b-rg": "pc_control", colis: "pc_control", codelab: "codelab", cinepulse: "studio", audiolab: "studio", "b-hb": "team", improver: "tools", gateway: "gateway", improver_auto_gate: "improver_auto" };
   P.featureOf = (id) => MOD[id] || "";
   /** true si le module est ouvert pour l'offre active ; sinon feuille « Disponible avec ETO … » et false */
   P.gate = (id) => {
