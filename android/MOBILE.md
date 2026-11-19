@@ -553,3 +553,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - **Statistiques anonymes** : désactivées par défaut, activables dans Informations légales › Confidentialité. Nombre d'ouvertures par module, au plus un rapport par jour, identifiant d'installation aléatoire haché par le serveur, jamais lié au compte (`js/metrics.js`, serveur `app/launcher/metrics.py`).
 - **Espace CEO › Tableau de bord** : comptes ETO, revenu mensuel estimé (abonnements Stripe / Google Play), inscriptions et installations actives sur 30 jours (courbe), répartition par offre, clés activées, équipes, clés IA, modules les plus ouverts.
 - Tests : `dualpulse_site/tests/test_metrics.py`, `t_legal_metrics.py`.
+
+## 1.106 — Game Clips : mode Simultanée
+
+- **Game Clips** propose trois modes : **Duel** (1 contre 1, comme avant), **Simultanée · 1 héros, 4 antagonistes** (le héros joue les Blancs sur les quatre plateaux et fait le tour de table) et **Simultanée · 4 héros, 1 antagoniste** (l'antagoniste joue les Blancs partout, chaque héros a son plateau et reçoit ses « cadeaux »). Choix des quatre personnages par mode, suivi du tournage plateau par plateau.
+- Chaque plateau est une vraie scène mise en scène (`E.clips.run`) ; les coups sont ensuite entrelacés comme dans une simultanée réelle (coup du joueur central, réponse du plateau, plateau suivant). L'enregistrement suit le format de la Simultanée : Chess Edit en fait directement son montage « plateau à plateau » (`E.clips.runSimul`, `js/clips.js`).
+- Chess Edit : le résumé de la Simultanée nomme le joueur central (et non plus toujours ETO).
+- Test : `t_clips_simul.py` (deux modes, coups légaux, tour de table, montage Chess Edit, écran) ; `t_clips.py` inchangé et vert.
