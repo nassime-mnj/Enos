@@ -34,11 +34,11 @@
     if (mode === "coach" || mode === "speedrun") return "Bot " + ($("cs-elo") ? $("cs-elo").value : "") + " Elo";
     if (mode === "boss") return "Stockfish";
     if (mode === "titans") return "ETO";
-    return opp === "eto" ? "ETO" : opp === "eto_brillant" ? "ETO" : (window.enosPersona ? window.enosPersona.name() : "E.N.O.S.");
+    return opp === "eto" || opp === "eto_brillant" ? "ETO" : (window.enosPersona ? window.enosPersona.name() : "E.N.O.S.");
   }
   function rating(name, mode) {
     if (/stockfish/i.test(name)) return "MAX";
-    if (/brillant/i.test(name)) return "3200";
+    if (/^eto$/i.test(name.trim())) return "3650";
     const num = (name.match(/(\d{3,4})/) || [])[1];
     if (/^bot\b/i.test(name)) return num || "—";
     if ((mode === "coach" || mode === "speedrun") && !/e\.?n\.?o\.?s|eto/i.test(name)) return ($("cs-elo") && $("cs-elo").value) || "—";

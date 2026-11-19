@@ -47,7 +47,7 @@ with sync_playwright() as pw:
     r = pg.evaluate("(() => { const b = document.getElementById('cs-board').getBoundingClientRect(); return [b.width, b.height, document.querySelectorAll('#cs-board .cs-sq').length, getComputedStyle(document.querySelector('#cs-board .cs-p')).backgroundImage] })()")
     check(r[2] == 64 and abs(r[0] - r[1]) < 1 and r[0] >= 600, "plateau 8×8 carré : %dx%d" % (r[0], r[1]))
     check("wk.png" in r[3] or "br.png" in r[3] or ".png" in r[3], "pièces illustrées (%s)" % r[3][:60])
-    check(pg.inner_text("#cs-oname") == "E.N.O.S." and pg.inner_text("#cs-orate").startswith("3200") and pg.inner_text("#cs-mcol") == "BLANCS", "bandeaux : E.N.O.S. 3200, vous avec les Blancs")
+    check(pg.inner_text("#cs-oname") == "E.N.O.S." and pg.inner_text("#cs-orate").startswith("3650") and pg.inner_text("#cs-mcol") == "BLANCS", "bandeaux : E.N.O.S. 3650, vous avec les Blancs")
     check(pg.inner_text("#cs-evtxt") == "Léger avantage pour les Blancs", "phrase d'évaluation : %s" % pg.inner_text("#cs-evtxt"))
     check(pg.locator("#cs-moves .cs-mv").count() == 3 and "EXCELLENT" in pg.inner_text("#cs-judge"), "coups + analyse du coup affichés")
     pg.screenshot(path=os.environ.get("SHOTS", "/tmp") + "/ui_chess.png")

@@ -17,7 +17,7 @@ with sync_playwright() as pw:
     host.wait_for_timeout(500)
     pg = host.frame_locator("#f"); fr = host.frames[1]
     fr.wait_for_selector("#hub .mc", timeout=30000); fr.wait_for_timeout(2500)
-    check(fr.locator("#hub .mc").count() == 16, "hub : 16 cartes de modes (%d)" % fr.locator("#hub .mc").count())
+    check(fr.locator("#hub .mc").count() == 17, "hub : 17 cartes de modes (Simultanée comprise) (%d)" % fr.locator("#hub .mc").count())
     check(fr.evaluate("document.body.dataset.view") == "hub" and not fr.is_hidden("#hub"), "l'accueil est le hub")
     n0 = fr.evaluate("document.querySelectorAll('#lb .pc').length"); fr.wait_for_timeout(3200)
     san = fr.inner_text("#lb-san")
@@ -25,7 +25,7 @@ with sync_playwright() as pw:
     check(fr.evaluate("[...document.querySelectorAll('#tabs .hi')].length") >= 18, "barre latérale : icônes posées")
     check(fr.evaluate("document.querySelectorAll('.mq-b').length") > 100, "défilé : plus de cent adversaires")
     stats = fr.evaluate("[...document.querySelectorAll('.hero-stats b[data-count]')].map(b => +b.dataset.count)")
-    check(stats[0] >= 130 and stats[1] == 16, "statistiques réelles (bots, modes) : %s" % stats)
+    check(stats[0] >= 130 and stats[1] == 17, "statistiques réelles (bots, modes) : %s" % stats)
     host.screenshot(path=S + "pc_hub.png")
     # palette Ctrl+K
     fr.click("#top-search"); fr.wait_for_selector("#pal:not([hidden]) #pal-q")

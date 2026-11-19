@@ -8,7 +8,8 @@
   const need = { advisor: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_tools.js", "chess_course.js", "board_scan.js", "m_advisor.js"], game: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_tools.js", "chess_viewer.js"], course: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_tools.js", "chess_course.js"], arena: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "data/style_bots.js", "m_defis.js", "arena.js"], royale: ["chess4.js", "chess4_ai.js", "m_royale.js"], variants: ["variants.js", "m_variants.js"], prime: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "levy_data.js", "fahh_data.js", "edit_sfx_data.js", "edit_fonts_data.js", "chess_edit_audio.js", "chess_edit_map.js", "chess_edit_fx.js", "chess_edit_sfx.js", "mp4-muxer.js", "render_assets.js", "chess_edit_render.js", "chess_edit_scenes.js", "chess_edit_simul.js", "chess_edit_gl.js", "chess_edit_export.js", "m_chessedit.js", "prime.js", "m_prime.js"],
     chessedit: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_review.js", "levy_data.js", "fahh_data.js", "edit_sfx_data.js", "edit_fonts_data.js", "chess_edit_audio.js", "chess_edit_map.js", "chess_edit_fx.js", "chess_edit_sfx.js", "mp4-muxer.js", "render_assets.js", "chess_edit_render.js", "chess_edit_scenes.js", "chess_edit_simul.js", "chess_edit_gl.js", "chess_edit_export.js", "m_chessedit.js"],
     clips: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "levy_data.js", "fahh_data.js", "edit_sfx_data.js", "edit_fonts_data.js", "chess_edit_audio.js", "chess_edit_map.js", "chess_edit_fx.js", "chess_edit_sfx.js", "mp4-muxer.js", "render_assets.js", "chess_edit_render.js", "chess_edit_scenes.js", "chess_edit_simul.js", "chess_edit_gl.js", "chess_edit_export.js", "m_chessedit.js", "prime.js", "clips.js", "m_clips.js"],
-    backup: ["backup.js", "m_backup.js"] };
+    backup: ["backup.js", "m_backup.js"],
+    simul: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "data/style_bots.js", "m_simul.js"] };
 
   async function show(t) {
     document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
@@ -58,7 +59,7 @@
   document.querySelectorAll("[data-i]").forEach((b) => b.insertAdjacentHTML("afterbegin", E.hubIcon(b.dataset.i)));          // icônes de la barre latérale
   const ti = $("#top-search .ts-i"), tp = $("#top-play .tp-i"); if (ti) ti.outerHTML = E.hubIcon("search"); if (tp) tp.outerHTML = E.hubIcon("play");
   if (E.hub) E.hub.init();
-  const H = location.hash.slice(1), TABS = ["advisor", "course", "game", "arena", "royale", "variants", "chessedit", "clips", "backup", "learn", "prime"];
+  const H = location.hash.slice(1), TABS = ["advisor", "course", "game", "arena", "simul", "royale", "variants", "chessedit", "clips", "backup", "learn", "prime"];
   show(TABS.includes(H) ? H : "hub");
   if (window.parent !== window) {
     const b = $("#close");

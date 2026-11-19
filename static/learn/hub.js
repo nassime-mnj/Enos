@@ -14,9 +14,10 @@
     creer: ["03", "Analyser & créer", "Revois tes parties, monte des edits viraux, garde tout en sécurité."],
   };
   const MODES = [
-    { id: "play", act: "play", g: "jouer", icon: "eye", title: "Jouer contre E.N.O.S.", desc: "Stockfish jusqu'à 3200 Elo, chaque coup jugé en direct, trash talk et voix. Choisis ton défi.", art: "img/ui/eyeking.webp", size: "xl", tags: ["Stockfish", "Jugement des coups", "Voix"],
+    { id: "play", act: "play", g: "jouer", icon: "eye", title: "Jouer contre E.N.O.S.", desc: "Stockfish jusqu'à 3650 Elo, chaque coup jugé en direct, trash talk et voix. Choisis ton défi.", art: "img/ui/eyeking.webp", size: "xl", tags: ["Stockfish", "Jugement des coups", "Voix"],
       subs: [["enos", "Défi E.N.O.S.", "eye"], ["coach", "Cours avec ETO", "grad"], ["speedrun", "Speedrun", "zap"], ["titans", "Choc des titans", "swords"], ["boss", "Boss final", "skull"]] },
     { id: "arena", t: "arena", g: "jouer", icon: "swords", title: "Arène des bots", desc: "Bots E.N.O.S., légendes, joueurs pro, streamers : affronte-les ou fais-les combattre entre eux.", size: "wide", art: "@bots", tags: ["Chat", "Titres GM/IM", "Combats"] },
+    { id: "simul", t: "simul", g: "jouer", icon: "grid4", title: "Simultanée", desc: "Un adversaire contre 2 à 6 plateaux. N'importe quel bot de la plateforme, ou toi.", tags: ["1v2 à 1v6", "Tous les bots"] },
     { id: "royale", t: "royale", g: "jouer", icon: "crown", title: "Royale ×4", desc: "Le plateau à quatre joueurs : chacun pour soi ou 2v2, tempête, alliances et trahisons.", size: "wide", art: "img/ui/arena.webp", tags: ["4 joueurs", "Tempête"] },
     { id: "variants", t: "variants", g: "jouer", icon: "flask", title: "Variantes", desc: "Élixir façon Clash Royale, Deux Rois, Protège la Dame : des règles inventées.", art: "img/clash_arena.png", tags: ["Contre un bot", "À deux"] },
     { id: "prime", t: "prime", g: "jouer", icon: "bot", title: "ChatGPT Prime", desc: "Il triche avec aplomb : coups aberrants annoncés, pièces ressuscitées, edits goofy.", art: "img/bots/prime.png", tags: ["Goofy", "Edits"] },
@@ -26,7 +27,7 @@
     { id: "study", act: "study", g: "apprendre", icon: "book", title: "Ouvertures avec ETO", desc: "ETO enseigne les ouvertures : flèches, retour en arrière, pratique guidée.", tags: ["Répertoire"] },
     { id: "advisor", t: "advisor", g: "apprendre", icon: "bulb", title: "Conseiller brillants", desc: "Colle une capture d'écran : les pièces sont reconnues, ETO cherche les « !! ».", tags: ["Vision", "Sacrifices"] },
     { id: "chessedit", t: "chessedit", g: "creer", icon: "clapper", title: "Chess Edit Studio", desc: "Partie + musique → edit viral : intro VS, ralentis, effets, voix. Export MP4.", size: "wide", art: "@film", tags: ["Vidéo", "Effets", "Export"] },
-    { id: "clips", t: "clips", g: "creer", icon: "drama", title: "Game Clips", desc: "Scènes de théâtre : un héros, un antagoniste qui lui offre les plus beaux coups.", tags: ["Scénarios"] },
+    { id: "clips", t: "clips", g: "creer", icon: "drama", title: "Game Clips", desc: "Scènes mises en scène : duel ou simultanée de 1v2 à 1v6, avec tous les bots.", tags: ["Duel", "Simultanée"] },
     { id: "game", t: "game", g: "creer", icon: "scan", title: "Revue de partie", desc: "Ta dernière partie coup par coup : meilleur coup, brillants, erreurs.", tags: ["Analyse"] },
     { id: "hist", act: "hist", g: "creer", icon: "history", title: "Historique & bilan", desc: "Tes dix dernières parties contre E.N.O.S., rejouables, PGN copiable.", tags: ["PGN"] },
     { id: "train", act: "train", g: "creer", icon: "brain", title: "Super ENOS", desc: "E.N.O.S. s'entraîne en arrière-plan contre Stockfish et ETO et tire des leçons.", tags: ["Arrière-plan"] },

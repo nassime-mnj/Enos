@@ -13,7 +13,7 @@
     { id: "naskolit", name: "Naskolit", elo: 3200, title: "GM", text: "Il dort, mais il est GM à 3200 Elo. Il perd 100 Elo à chaque imprécision et chaque fois que tu trouves le meilleur coup. Il ne dit pas un mot." },
     { id: "jester", name: "Le Jester", elo: 1600, eloText: "roue 1-3200", text: "Une roue tire son Elo au hasard (1 à 3200) avant son 1er coup puis tous les 10 coups. Bouffon élégant : il commente avec esprit." },
     { id: "brillant", fighter: "eto", name: "ETO", elo: 3650, text: "3650 Elo, le niveau de Stockfish 19. Traque le sacrifice gagnant. Essaie de faire aussi bien : un « !! » ne se refuse pas." },
-    { id: "enos", fighter: "enos", name: "E.N.O.S.", elo: 3200, text: "Stockfish pleine puissance, froid et précis. Cherche lui aussi le coup brillant, ne répète jamais." },
+    { id: "enos", fighter: "enos", name: "E.N.O.S.", elo: 3650, text: "Niveau de Stockfish 19. Cherche le coup brillant, ne répète jamais." },
   ];
   const FIGHTERS = { nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO", enos: "E.N.O.S.", stockfish: "Stockfish" };
   const PRESETS = [["nasko", "penoire", "Nasko vs Pénoire"], ["lelex", "eto", "Lelex vs ETO"], ["penoire", "eto", "Pénoire vs ETO"], ["lelex", "penoire", "Lelex vs Pénoire"], ["nasko", "lelex", "Nasko vs Lelex"],

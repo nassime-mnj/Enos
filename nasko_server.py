@@ -3664,7 +3664,7 @@ class ChessNew(BaseModel):
     power: int = 100                 # jauge de puissance 1–100 % (→ Elo, voir nasko_chess.power_to_elo)
     elo: int | None = None           # Elo exact du bot (mode cours)
     challenger: str = "eto"          # mode « boss » : eto · enos · duo (les deux en équipe) contre Stockfish
-    opponent: str = ""               # duel (mode « enos ») : enos · eto · eto_brillant (3200 Elo, cherche le sacrifice brillant)
+    opponent: str = ""               # duel (mode « enos ») : enos · eto (3650 Elo, cherche le sacrifice brillant ; « eto_brillant » = eto)
     mode: str = "enos"               # « enos » : défi contre E.N.O.S. · « coach » : cours, bot virtuel à l'Elo choisi commenté par ETO
     fen: str | None = None           # MISE EN CONDITION : position de départ libre (validée côté serveur)
 
