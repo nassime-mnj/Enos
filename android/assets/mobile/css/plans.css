@@ -224,3 +224,19 @@ body.no-pc #pc-locked,body.no-pc #pc-live{display:none!important}
 .fl-a.storage,.fl-a.crash{background:rgba(251,113,133,.12);color:#fda4af;border-color:rgba(251,113,133,.3)}
 .fl-dev [data-act]{position:absolute;top:10px;right:10px}
 .fl-danger{margin-top:14px;color:#fda4af!important;border-color:rgba(251,113,133,.3)!important}
+
+/* ---------- Informations légales ---------- */
+.lg-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}.lg-tabs::-webkit-scrollbar{display:none}
+.lg-tabs button{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid #262732;background:#0d0e13;color:#c9c7cf;font:600 13px var(--ui)}
+.lg-tabs button.on{border-color:var(--red2,#ff3d63);color:#fff;background:color-mix(in srgb,var(--red,#ef1748) 18%,#0d0e13)}
+.lg-doc h4{margin:18px 0 6px;font:700 14.5px var(--ui);color:#fff;letter-spacing:0;text-transform:none}
+.lg-doc p,.lg-doc li{font:400 13.5px/1.6 var(--ui);color:#c9c7cf;margin:0 0 8px}.lg-doc ul{padding-left:18px;margin:0 0 8px}
+.lg-doc table{width:100%;border-collapse:collapse;margin:8px 0 12px;font:500 12px/1.45 var(--ui)}
+.lg-doc th,.lg-doc td{border-bottom:1px solid #22232b;padding:7px 6px;text-align:left;vertical-align:top;color:#c9c7cf}.lg-doc th{color:#fff;font-weight:700}
+.pl-legal a,.pl-form a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+/* ---------- tableau de bord CEO ---------- */
+.db-kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.db-kpi>div{padding:12px;border-radius:16px;border:1px solid #23242c;background:#0f1015}.db-kpi b{display:block;font:800 22px var(--ui);color:#fff}.db-kpi span{font:600 11px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.db-spark{width:100%;height:70px;margin-top:12px}
+.db-bars{display:flex;flex-direction:column;gap:7px;margin-top:10px}.db-bars div{display:grid;grid-template-columns:70px 1fr 36px;align-items:center;gap:8px;font:600 12px var(--ui);color:#c9c7cf}
+.db-bars i{display:block;height:8px;border-radius:999px;background:var(--c)}.db-bars em{font-style:normal;text-align:right}

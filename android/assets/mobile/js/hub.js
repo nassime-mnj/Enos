@@ -22,7 +22,7 @@
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
     ] },
     { id: "parametres", n: "PARAMÈTRES", t: "Paramètres", img: "cat_parametres", sections: [
-      { n: "Application", items: [["support", "Assistant ETO"], ["plans", "Abonnement"], ["ceo", "Espace CEO"], ["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
+      { n: "Application", items: [["support", "Assistant ETO"], ["plans", "Abonnement"], ["ceo", "Espace CEO"], ["legal", "Informations légales"], ["s-set", "Réglages"], ["theme", "Thèmes"], ["api", "Contrôle API"], ["crashlog", "Journal de plantages"]] },
       { n: "Mon PC", items: [["s-qr", "Appairer le PC"], ["b-rg", "Réglages du PC"]] },
     ] },
     { id: "codage", n: "CODAGE", t: "Codage", img: "cat_codage", sections: [

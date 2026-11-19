@@ -155,7 +155,7 @@
         ${signup ? `<label>Prénom<input id="pa-name" type="text" autocomplete="given-name" maxlength="60"></label>` : ""}
         <label>E-mail<input id="pa-mail" type="email" autocomplete="email" maxlength="254"></label>
         <label>Mot de passe<input id="pa-pw" type="password" autocomplete="${signup ? "new-password" : "current-password"}" maxlength="200"></label>
-        ${signup ? `<p class="muted" style="font-size:12px">10 caractères minimum. En créant un compte, tu acceptes les conditions d'utilisation.</p>` : ""}
+        ${signup ? `<p class="muted" style="font-size:12px">10 caractères minimum. En créant un compte, tu acceptes les <a href="#" data-legal="cgu">conditions d'utilisation</a> et la <a href="#" data-legal="privacy">politique de confidentialité</a>.</p>` : ""}
         <p class="pl-err" id="pa-err"></p><button class="btn pri wide" id="pa-go">${signup ? "Créer mon compte" : "Me connecter"}</button>
         <button class="pl-link" id="pa-sw" type="button">${signup ? "J'ai déjà un compte" : "Créer un compte"}</button></div>` });
     s.querySelector("#pa-sw").onclick = () => { E.ui.closeSheet(true); setTimeout(() => accountSheet(signup ? "login" : "signup"), 60); };
@@ -251,7 +251,7 @@
           <div class="card pl-cmp"><h3>Comparer</h3><table><thead><tr><th></th>${PUBLIC.map((p) => `<th style="--c:${p.color}">${esc(p.tier)}</th>`).join("")}</tr></thead><tbody>
             ${[["Tous les échecs", "✓", "✓", "✓", "✓"], ["Nettoyage manuel", "✓", "✓", "✓", "✓"], ["Mobile Improver automatique", "—", "✓", "✓", "✓"], ["Pilotage du PC", "—", "—", "✓", "✓"], ["Auto-Clipper IA, copilote", "—", "—", "✓", "✓"], ["Passerelle d\x27API", "—", "—", "✓", "✓"], ["Personnes / appareils", "1", "1", "1 + PC", "10 / 25"], ["Flotte, édition à ta marque", "—", "—", "—", "✓"]]
               .map((r) => `<tr><td>${r[0]}</td>${r.slice(1).map((v) => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-          <p class="pl-legal">Prix TTC. Résiliable à tout moment. Tes photos et tes fichiers restent sur tes appareils.</p>`;
+          <p class="pl-legal">Prix TTC. Résiliable à tout moment. <a href="#" data-legal="cgv">Conditions de vente</a> · <a href="#" data-legal="privacy">Confidentialité</a></p>`;
         el.querySelectorAll(".pl-period button").forEach((b) => (b.onclick = () => { annual = b.dataset.a === "1"; E.settings.set("plan.annual", annual); roll(); el.querySelectorAll(".pl-period button").forEach((x) => x.classList.toggle("on", x === b)); el.querySelector(".pl-period").dataset.a = annual ? "1" : "0"; }));
         el.querySelector(".pl-period").dataset.a = annual ? "1" : "0";
         wire(el, () => paint());
@@ -329,7 +329,8 @@
       box.querySelector("[data-adm=login]").onclick = () => { if (u) E.cloud.logout(true); accountSheet("login"); const t = setInterval(() => { if (!document.querySelector("#sheet:not([hidden]) #pa-go")) { clearInterval(t); admin(box, repaint); } }, 600); };
       return;
     }
-    box.innerHTML = `<div class="card pl-adm pl-gen"><h3>${KEYIC}Générateur de clés<span class="sp">licences légitimes</span></h3>
+    box.innerHTML = `<div class="card pl-adm db-card"><h3>Tableau de bord<span class="sp">30 jours</span></h3><div id="db-body"><div class="gw-skel"></div></div></div>
+      <div class="card pl-adm pl-gen"><h3>${KEYIC}Générateur de clés<span class="sp">licences légitimes</span></h3>
         <p class="muted">Chaque clé n'est affichée qu'une fois.</p>
         <div class="pl-form pl-g2">
           <label>Offre<select id="kg-plan">${PUBLIC.filter((p) => p.month).map((p) => `<option value="${p.id}"${p.id === "eto_max" ? " selected" : ""}>${esc(p.name + " " + p.tier)}</option>`).join("")}</select></label>
@@ -396,9 +397,22 @@
             E.ui.toast(r.status === 200 ? `Abonnement ${BY[r.json.previous].tier} révoqué${r.json.billing === "cancelled" ? " · prélèvement Stripe annulé" : ""}.` : r.json.detail || "Échec.", r.status === 200 ? "ok" : "warn"); subs(); } }, { label: "Annuler" }] });
       }
     });
-    keys(); subs();
+    keys(); subs(); dash(box.querySelector("#db-body"));
   }
   P._admin = admin;
+  async function dash(el) {
+    const r = await E.cloud.req("/eto/admin/stats"); if (!el) return;
+    if (r.status !== 200) { el.innerHTML = `<p class="pl-err">${esc(r.json.detail || "Serveur indisponible.")}</p>`; return; }
+    const s = r.json, pub = PUBLIC.reduce((a, p) => a + (s.plans[p.id] || 0), 0), maxP = Math.max(1, ...PUBLIC.map((p) => s.plans[p.id] || 0));
+    const pts = s.active_installs, mx = Math.max(1, ...pts), W = 300, H = 60;
+    const line = pts.map((v, i) => `${(i / (pts.length - 1)) * W},${H - (v / mx) * (H - 6) - 3}`).join(" ");
+    el.innerHTML = `<div class="db-kpi"><div><b>${pub}</b><span>Comptes ETO</span></div><div><b>${eur(s.mrr_eur)} €</b><span>Revenu mensuel</span></div>
+        <div><b>${s.signups_30d}</b><span>Inscriptions</span></div><div><b>${pts[pts.length - 1]}<small style="font-size:13px;color:var(--muted)"> / ${s.installs_30d}</small></b><span>Installations actives</span></div>
+        <div><b>${s.keys.redeemed}<small style="font-size:13px;color:var(--muted)"> / ${s.keys.created}</small></b><span>Clés activées</span></div><div><b>${s.teams} · ${s.ai_keys}</b><span>Équipes · clés IA</span></div></div>
+      <svg class="db-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline points="${line}" fill="none" stroke="#ef1748" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+      <div class="db-bars">${PUBLIC.map((p) => `<div style="--c:${p.color}"><span>${esc(p.tier)}</span><i style="width:${((s.plans[p.id] || 0) / maxP) * 100}%"></i><em>${s.plans[p.id] || 0}</em></div>`).join("")}</div>
+      ${s.top_modules.length ? `<h4 class="pl-h4">Modules les plus ouverts</h4>${s.top_modules.slice(0, 6).map(([k, v]) => `<div class="pl-krow"><span class="pl-kcode">${esc(((E.modules && E.modules.list ? E.modules.list() : []).find((m) => m.id === k) || { n: k }).n)}</span><span class="pl-kmeta">${v} ouverture${v > 1 ? "s" : ""}</span></div>`).join("")}` : ""}`;
+  }
 
   // démarrage : la marque et la couleur de la version active
   const start = () => { try { apply(false); } catch (e) { /* en-tête pas encore prêt */ } };

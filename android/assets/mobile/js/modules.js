@@ -80,7 +80,8 @@
   function open(id) {
     const m = ALL.find((x) => x.id === id);
     if (!m) return;
-    if (E.plans && !E.plans.gate(id)) return;                                    // module réservé à une offre ETO (plans.js) : feuille « Disponible avec … »
+    if (E.plans && !E.plans.gate(id)) return;
+    if (E.metrics) E.metrics.count(id);                                    // module réservé à une offre ETO (plans.js) : feuille « Disponible avec … »
     if (kindOf(m) === "locked") {
       return U.sheet({ title: m.n + " · réservé au PC", html: `<p class="muted" style="margin-bottom:14px;line-height:1.5">${esc(m.why)} Pour le piloter depuis ce téléphone (qui t'appartient comme le PC), donne-lui les <b>droits complets</b> : sur le PC, <b>Réglages du PC → Appareils de confiance → DROITS COMPLETS</b>. Ça ne se règle que depuis le PC, jamais depuis un téléphone.</p>`,
         options: m.alt ? [{ label: m.altn, fn: () => open(m.alt) }] : [] });

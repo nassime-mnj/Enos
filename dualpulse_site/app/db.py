@@ -73,6 +73,7 @@ def conn():
               CREATE TABLE IF NOT EXISTS eto_fleet_health(user_id INTEGER NOT NULL, device_id TEXT NOT NULL, t REAL NOT NULL, data TEXT NOT NULL DEFAULT '{}', PRIMARY KEY(user_id, device_id));
               CREATE TABLE IF NOT EXISTS eto_fleet_cmds(id INTEGER PRIMARY KEY AUTOINCREMENT, team_id INTEGER NOT NULL, target_user INTEGER NOT NULL, target_device TEXT NOT NULL, cmd TEXT NOT NULL,
                 args TEXT NOT NULL DEFAULT '{}', created_by INTEGER, created REAL NOT NULL, status TEXT NOT NULL, result TEXT NOT NULL DEFAULT '', done_t REAL);
+              CREATE TABLE IF NOT EXISTS eto_metrics(day TEXT NOT NULL, install TEXT NOT NULL, version TEXT NOT NULL DEFAULT '', plan TEXT NOT NULL DEFAULT '', data TEXT NOT NULL DEFAULT '{}', PRIMARY KEY(day, install));
               CREATE TABLE IF NOT EXISTS eto_key_uses(key_id INTEGER NOT NULL, user_id INTEGER NOT NULL, t REAL NOT NULL, PRIMARY KEY(key_id, user_id));
             """)
             _conn.commit()

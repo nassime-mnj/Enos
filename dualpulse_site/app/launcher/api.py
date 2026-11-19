@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from .. import whitelist
-from . import accounts, eto, fleet, gateway, limits, manifests, service, storage, tokens
+from . import accounts, eto, fleet, gateway, limits, metrics, manifests, service, storage, tokens
 
 V1 = "/launcher/v1"
 
@@ -418,6 +418,7 @@ def build(admin_guard, admin_path):
     eto.routes(r, current_user, require, _ip)                 # comptes ETO grand public : inscription, licence, paiement (eto.py)
     gateway.routes(r, current_user, require, _ip)
     fleet.routes(r, current_user, require, _ip)
+    metrics.routes(r, current_user, require, _ip)
     return r
 
 
