@@ -5,9 +5,9 @@ errs = []
 with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(60000)
     pg.evaluate("ENOS.ui.go('tools')"); pg.wait_for_selector(".hub-cat"); pg.wait_for_timeout(1500)
-    labs = pg.evaluate("[...document.querySelectorAll('.hub-cl')].map((x) => x.textContent)")
-    check(labs == ["ÉCHECS", "CLOUD", "PARAMÈTRES", "CODAGE", "OUTILS", "ORGANISATION", "ORDINATEUR"], "7 catégories dans l'ordre de ta maquette : %s" % labs)
-    check(pg.evaluate("[...document.querySelectorAll('.hub-cat img')].every((i) => i.complete && i.naturalWidth > 100)"), "icônes lumineuses chargées")
+    labs = pg.evaluate("[...document.querySelectorAll('.hub-cl')].map((x) => x.firstChild.textContent.trim())")
+    check(labs == ["Échecs", "Cloud", "Paramètres", "Codage", "Outils", "Organisation", "Ordinateur"], "7 catégories dans l'ordre de ta maquette : %s" % labs)
+    check(pg.evaluate("document.querySelectorAll('.hub-cat .hub-ci svg.hi').length") == 7 and pg.evaluate("(() => { const i = document.querySelector('.hub-cat.feat img.ob-art'); return !!i && i.complete && i.naturalWidth > 100; })()"), "icônes duotone + cavalier de la carte Échecs (thème Obsidian)")
     # tous les modules sont rangés quelque part
     miss = pg.evaluate("ENOS.modules.all().filter((id) => !ENOS.hub.has(id) && !['chess','learn'].includes(id) || false)")
     miss = [m for m in miss if m not in ("chess",)]
@@ -19,7 +19,8 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(1100)
     secs = pg.evaluate("[...document.querySelectorAll('.hub-sec h4')].map((h) => h.textContent)")
     check(fly_mid == 1 and pg.evaluate("document.querySelectorAll('.hub-fly').length") == 0, "l'icône voyage vers l'en-tête puis disparaît (pendant : %d)" % fly_mid)
-    check(secs == ["Jouer", "Affronter", "Apprendre", "Analyser", "Créer", "Profil"], "sections façon Chess.com : %s" % secs)
+    check(secs == ["Jouer", "Affronter", "Apprendre", "Analyser", "Créer", "Profil", "Les adversaires"], "sections façon Chess.com (+ défilé des adversaires) : %s" % secs)
+    check(pg.locator(".ch-hero .sc-board .pc").count() == 32 and pg.locator(".ch-mq .mq-b").count() > 40, "page Échecs : héros 3D (32 pièces) + défilé des adversaires")
     n = pg.evaluate("document.querySelectorAll('.hub-tile').length"); check(n >= 27, "%d tuiles dans Échecs" % n)
     check(pg.evaluate("document.querySelectorAll('.hub-tile small').length") == 0, "aucune description sur les tuiles")
     over = pg.evaluate("[...document.querySelectorAll('.hub-tile')].filter((t) => t.scrollWidth > t.clientWidth + 1 || [...t.querySelectorAll('b')].some((x) => x.scrollWidth > x.clientWidth + 1)).map((t) => t.dataset.id)")
@@ -36,7 +37,7 @@ with sync_playwright() as pw:
     pg.wait_for_function("document.querySelector('#tool-learn #lr-tabs .on').dataset.t === 'puzzles'", timeout=8000)
     check(True, "« Fourchettes » ouvre les puzzles")
     pg.evaluate("ENOS.tools.show('')"); pg.wait_for_selector("#hub-back")
-    pg.click("#hub-back"); pg.wait_for_selector(".hub-cat", state="visible"); pg.wait_for_timeout(700)
+    pg.click("#hub-back"); pg.wait_for_selector(".hub-cat", state="visible"); pg.wait_for_function("ENOS.hub.cur() === null", timeout=5000)
     check(pg.evaluate("ENOS.hub.cur()") is None and pg.locator(".hub-cat").count() == 7, "retour à l'accueil du hub")
     # récents + recherche
     rec = pg.evaluate("[...document.querySelectorAll('.hub-chip')].map((c) => c.dataset.id)"); check(len(rec) >= 1 and "defis" in rec or "learn" in rec or "chessprofile" in rec, "récents : %s" % rec)
@@ -60,7 +61,7 @@ with sync_playwright() as pw:
     pg.evaluate("ENOS.ui.closeSheet(true)")
     # accueil des Défis : sections, aucune description
     pg.evaluate("ENOS.modules.open('defis')"); pg.wait_for_selector("#df-home .hub-sec")
-    check(pg.evaluate("document.querySelectorAll('#df-home .df-mode small').length") == 0 and pg.locator("#df-home .df-mode").count() == 24, "Défis : 24 modes en tuiles sans description")
+    n_df = pg.locator("#df-home .df-mode").count(); n_sm = pg.evaluate("document.querySelectorAll('#df-home .df-mode small:not(.df-elo)').length"); check(n_df == 148 and n_sm == 0, "Défis : 148 modes en tuiles sans description (seul l'Elo est affiché) : %d / %d" % (n_df, n_sm))
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

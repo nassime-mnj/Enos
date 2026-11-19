@@ -20,6 +20,7 @@
     E.importer.check();
     E.importer.checkBundled();                                             // un fichier envoyé par le PC (enos://import) attend-il ?
     E.link.start();                                                 // recherche du PC en tâche de fond (Wi-Fi puis Tailscale)
+    setTimeout(() => { try { E.native._module && E.native._module(); } catch (e) { /* rien */ } }, 600);   // ouvert depuis une notification (Mobile Improver)
     setInterval(() => E.agenda.refresh(false), 5 * 60 * 1000);
     if (!E.ai.configured() && !E.store.get("welcomed", false)) {
       E.store.set("welcomed", true);

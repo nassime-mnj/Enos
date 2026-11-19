@@ -13,7 +13,7 @@
         const u = C.user();
         el.innerHTML = `<div class="card"><h3>Serveur Dual Pulse</h3>
           <input type="text" id="cl-url" placeholder="https://dualpulse.onrender.com" value="${esc(C.url())}" spellcheck="false" autocapitalize="off" aria-label="Adresse du serveur">
-          <p class="muted" style="font-size:12.5px">Le serveur héberge tes mises à jour et le presse-papiers universel. Aucun mot de passe n'est enregistré : seule une session révocable est gardée dans le coffre Android.</p></div>
+          <p class="muted" style="font-size:12.5px">Mises à jour et presse-papiers universel.</p></div>
           ${C.loggedIn() ? `<div class="card"><h3>Mon compte<span class="sp">${esc(({ ceo: "CEO", dev: "Dev", friends: "Friends" })[u.role] || u.role || "")}</span></h3>
             <p><b>${esc(u.name || u.email)}</b><br><span class="muted">${esc(u.email)}</span></p>
             <div class="row"><button class="btn pri" id="cl-update">VÉRIFIER LES MISES À JOUR</button><button class="btn" id="cl-out">SE DÉCONNECTER</button></div>
@@ -21,10 +21,10 @@
             <label class="chip2" style="margin-top:10px;display:inline-flex;gap:8px"><input type="checkbox" id="cl-agsync" ${E.settings.get("cloudAgenda", false) ? "checked" : ""}> Synchroniser mon agenda via le cloud (PC allumé ou non)</label>
             <p class="muted" style="font-size:12.5px;margin-top:8px">Version installée : ${esc(E.native.version())}. L'installation passe par le installateur d'Android (même signature exigée : une fausse application est refusée par le système).</p></div>
             <div class="card"><h3>Visible depuis le PC</h3>
-              <p class="muted" style="font-size:12.5px">Ton téléphone annonce son nom et ses adresses Wi-Fi à ton compte pour que le PC puisse afficher son écran (scrcpy, ADB sans fil).</p>
+              <p class="muted" style="font-size:12.5px">Permet au PC d'afficher l'écran du téléphone (scrcpy, ADB sans fil).</p>
               <div class="row"><input type="text" id="cl-dname" maxlength="40" placeholder="Nom du téléphone" value="${esc(E.settings.get("deviceName", ""))}" aria-label="Nom du téléphone"><input type="number" id="cl-adb" min="1" max="65535" value="${+E.settings.get("adbPort", 5555) || 5555}" aria-label="Port ADB"></div>
               <button class="btn wide" id="cl-beat" style="margin-top:8px">ANNONCER MAINTENANT</button>
-              <p class="muted" style="font-size:12.5px;margin-top:8px">Active « Débogage sans fil » dans Options pour développeurs (Android 11+), puis note le port affiché.</p></div>`
+              <p class="muted" style="font-size:12.5px;margin-top:8px">Options pour développeurs › Débogage sans fil, puis indique le port.</p></div>`
           : `<div class="card"><h3>Connexion</h3>
             <div class="tabs2" style="display:flex;gap:6px;margin-bottom:10px"><button class="btn ${mode === "login" ? "pri" : ""}" id="cl-tl" style="flex:1">CONNEXION</button><button class="btn ${mode === "reg" ? "pri" : ""}" id="cl-tr" style="flex:1">J'AI UNE INVITATION</button></div>
             ${mode === "reg" ? `<input type="text" id="cl-inv" placeholder="Code d'invitation DP-…" autocapitalize="characters" spellcheck="false" aria-label="Code d'invitation"><p class="muted" style="font-size:12.5px;margin:6px 0">L'inscription est réservée aux personnes invitées.</p>` : ""}

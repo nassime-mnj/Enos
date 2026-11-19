@@ -24,7 +24,7 @@
   };
 
   // ------------------------------------------------------------------ HTTP via Java (clés injectées côté Java, liste blanche de services)
-  // providers : groq | eleven_enos | eleven_eto | zeus | moodle | pc
+  // providers : groq | openrouter | eleven_enos | eleven_eto | zeus | moodle | pc
   // opts : {provider, path, method, headers, body, bin}. handlers : {head(status,ctype), chunk(text|Uint8Array), end(), error(msg)}
   N.request = (opts, h) => {
     const id = seq++;
@@ -112,6 +112,24 @@
     read: (id) => (N.available && B.backupRead ? B.backupRead(String(id)) : ""),
   };
 
+  // ------------------------------------------------------------------ Mobile Improver (Improver.java) — pont lu paresseusement (un faux pont peut être injecté dans les tests)
+  N.stream = (start, onEvt) => { const id = seq++; calls.set(id, (evt, p) => { let j = p; try { j = JSON.parse(p); } catch (e) { /* texte */ } if (onEvt(evt, j) === true) calls.delete(id); }); start(id); return id; };
+  const IB = () => { const b = window.Enos; return b && typeof b.improverState === "function" ? b : null; };
+  N.improver = {
+    available: () => !!IB(),
+    state: () => (IB() ? parse(IB().improverState(), {}) : {}),
+    config: (o) => { if (IB()) IB().improverConfig(JSON.stringify(o || {})); },
+    schedule: (on) => !!(IB() && IB().improverSchedule(!!on)),
+    run: (onEvt) => (IB() ? N.stream((id) => IB().improverRun(id), onEvt) : 0),
+    cancel: () => { if (IB()) IB().improverCancel(); },
+    apply: () => new Promise((res) => { if (!IB()) return res({ ok: false, error: "pont natif absent" }); N.stream((id) => IB().improverApply(id), (evt, p) => { if (evt === "applied") { res(p || {}); return true; } return false; }); }),
+    restore: (tid) => new Promise((res) => { if (!IB()) return res({ ok: false }); N.stream((id) => IB().improverRestore(id, String(tid)), (evt, p) => { if (evt === "restored") { res(p || {}); return true; } return false; }); }),
+    discard: () => { if (IB()) IB().improverDiscard(); },
+    emptyTrash: () => { if (IB()) IB().improverEmptyTrash(); },
+  };
+  // notification Android -> module à ouvrir (ex. « improver »)
+  N._module = () => { const b = window.Enos; const m = b && b.pendingModule ? String(b.pendingModule() || "") : ""; if (m && E.modules) { if (E.ui) E.ui.go("tools"); E.modules.open(m); } };
+
   // ------------------------------------------------------------------ import de la configuration du PC (fichier chiffré ; le code est vérifié par Java)
   N.pendingImport = () => (N.available ? B.pendingImport() : "");
   N.importApply = (blob, code) => oneShot("import", (id) => B.importApply(id, blob || "", code || ""));
@@ -119,6 +137,9 @@
   // ------------------------------------------------------------------ divers
   N.deviceId = () => (N.available ? B.deviceId() : "dev-browser");
   N.version = () => (N.available ? B.version() : "dev");
+  N.openCheckout = (url) => (N.available ? !!(B.openCheckout && B.openCheckout(String(url || ""))) : (/^https:\/\/(checkout|billing)\.stripe\.com\//.test(url) ? !!window.open(url, "_blank") : false));
+  N.openSupportMail = (subject, body) => (N.available && B.openSupportMail ? !!B.openSupportMail(String(subject || ""), String(body || "")) : (location.href = "mailto:dualpulse.co@gmail.com?subject=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(body || ""), true));
+  N.isTestBuild = () => (N.available ? !!(B.isTestBuild && B.isTestBuild()) : true);          // navigateur de développement = environnement de test
   // Mise à jour instantanée du web de l'application depuis GitHub (sans réinstaller l'APK) : {state: uptodate|applied|ready|needs_apk|error, n, msg}
   N.webUpdate = (apply) => oneShot("webupd", (id) => B.webUpdate(id, !!apply));
   N.webUpdateInfo = () => (N.available && B.webUpdateInfo ? parse(B.webUpdateInfo(), {}) : { label: "", branch: "main", auto: true });
@@ -134,12 +155,12 @@
 
   // ------------------------------------------------------------------ repli navigateur de bureau (développement) : fetch direct, coffre factice
   function devRequest(o, h) {
-    const bases = { groq: "https://api.groq.com", eleven_enos: "https://api.elevenlabs.io", eleven_eto: "https://api.elevenlabs.io" };
+    const bases = { groq: "https://api.groq.com", openrouter: "https://openrouter.ai", eleven_enos: "https://api.elevenlabs.io", eleven_eto: "https://api.elevenlabs.io" };
     const key = (n) => devVault()[n] || "";
     if (o.provider === "cloud" || o.provider === "cloud_refresh" || o.provider === "cloud_logout") return devCloud(o, h);
     if (!bases[o.provider]) { setTimeout(() => { if (h.error) h.error("service indisponible hors de l'application"); }, 0); return; }
     const headers = Object.assign({ "Content-Type": "application/json" }, o.headers || {});
-    if (o.provider === "groq") headers.Authorization = "Bearer " + key("groq");
+    if (o.provider === "groq" || o.provider === "openrouter") headers.Authorization = "Bearer " + key(o.provider);
     else headers["xi-api-key"] = key(o.provider);
     fetch(bases[o.provider] + o.path, { method: o.method || "GET", headers, body: o.body || undefined }).then(async (r) => {
       if (h.head) h.head(r.status, r.headers.get("content-type") || "");

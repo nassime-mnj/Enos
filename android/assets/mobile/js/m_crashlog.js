@@ -9,7 +9,7 @@
     build(el, A) {
       const $ = (s) => el.querySelector(s), C = window.EnosCrash;
       el.innerHTML = `<div class="card"><h3>🛠 Journal de plantages</h3>
-          <p class="muted">Quand l'application se ferme toute seule ou rencontre une erreur, elle l'écrit ici (cause Android, mémoire, pile d'erreur, derniers boutons touchés). <b>Rien n'est envoyé</b> : le journal reste sur ce téléphone. Envoie-le moi par « Copier » ou « Enregistrer ».</p>
+          <p class="muted">Plantages et erreurs de l'application. <b>Rien n'est envoyé</b> : le journal reste sur ce téléphone. Envoie-le moi par « Copier » ou « Enregistrer ».</p>
           <div id="cl-st" class="bk-st"></div>
           <div class="row"><button class="btn pri" id="cl-copy">📋 COPIER</button><button class="btn" id="cl-save">📁 ENREGISTRER</button><button class="btn" id="cl-clr">🗑 EFFACER</button></div></div>
         <div class="card"><h3>Contenu</h3><pre id="cl-log" style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;line-height:1.35;max-height:52vh;overflow:auto;margin:0"></pre></div>`;

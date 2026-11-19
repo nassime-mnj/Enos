@@ -596,7 +596,7 @@
     id: "codelab", group: "dev", title: "CodeLab", sub: "Code, compile, apprends avec ETO",
     icon: ICON.code,
     build(el) {
-      el.innerHTML = `<div class="card cl-launch"><h3>CodeLab</h3><p class="muted">Éditeur de code tactile, terminal, et quêtes guidées par ETO. HTML, CSS et JavaScript tournent sur ton téléphone ; Python, C, C++, Java, SQL et Shell s'exécutent sur le serveur Dual Pulse (compte cloud requis).</p><button class="btn" id="cl-go">OUVRIR CODELAB</button></div>`;
+      el.innerHTML = `<div class="card cl-launch"><h3>CodeLab</h3><p class="muted">Éditeur, terminal et exercices guidés. Python, C, C++, Java, SQL et Shell nécessitent un compte.</p><button class="btn" id="cl-go">OUVRIR CODELAB</button></div>`;
       el.querySelector("#cl-go").onclick = () => CL.open();
     },
     onShow() { CL.open(); },

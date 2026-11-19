@@ -71,7 +71,7 @@
     const box = $("#api-cards");
     box.innerHTML = '<div class="card"><div class="muted">Lecture des quotas…</div></div>';
     const t = E.usage.today(), w = E.usage.week();
-    const groq = `<div class="card"><h3>Groq · ${esc(A.model())}</h3>${N.vault.has("groq") ? `<div class="grid2" style="gap:10px"><div class="mstat"><small>AUJOURD'HUI</small><b>${t.req}</b><span>requêtes</span></div><div class="mstat"><small>TOKENS</small><b>${t.tokens.toLocaleString("fr-FR")}</b><span>aujourd'hui</span></div></div><div class="muted" style="margin-top:10px;font-size:13.5px">7 jours : ${w.req} requêtes · ${w.tokens.toLocaleString("fr-FR")} tokens (compteurs de CE téléphone ; Groq ne publie pas de quota consultable).</div>` : '<div class="empty">Clé absente : Réglages › Clés d\'API.</div>'}</div>`;
+    const groq = `<div class="card"><h3>Groq · ${esc(A.model())}</h3>${N.vault.has("groq") ? `<div class="grid2" style="gap:10px"><div class="mstat"><small>AUJOURD'HUI</small><b>${t.req}</b><span>requêtes</span></div><div class="mstat"><small>TOKENS</small><b>${t.tokens.toLocaleString("fr-FR")}</b><span>aujourd'hui</span></div></div><div class="muted" style="margin-top:10px;font-size:13.5px">7 jours : ${w.req} requêtes · ${w.tokens.toLocaleString("fr-FR")} tokens (ce téléphone).</div>` : '<div class="empty">Clé absente : Réglages › Clés d\'API.</div>'}</div>`;
     const [a, b] = await Promise.all([elevenCard("eleven_enos", "ElevenLabs · E.N.O.S."), elevenCard("eleven_eto", "ElevenLabs · ETO")]);
     box.innerHTML = groq + a + b;
   }
@@ -82,7 +82,7 @@
   const CL = { files: [], tree: null, total: 0 };
   function cleanInit() {
     mk("clean", `${back}<div class="card"><h3>Stockage du téléphone</h3><div id="cl-store"></div></div>
-      <div class="card"><h3>Analyse d'un dossier<button class="mini" id="cl-pick">CHOISIR</button></h3><div class="muted" id="cl-info" style="font-size:14px">Choisis un dossier (Téléchargements, DCIM, Documents…) : les plus gros fichiers et les doublons probables apparaissent.</div><div id="cl-cats"></div></div>
+      <div class="card"><h3>Analyse d'un dossier<button class="mini" id="cl-pick">CHOISIR</button></h3><div class="muted" id="cl-info" style="font-size:14px">Choisis un dossier pour afficher les fichiers volumineux et les doublons.</div><div id="cl-cats"></div></div>
       <div class="card" id="cl-res" hidden><h3>Plus gros fichiers<span class="sp" id="cl-sel"></span></h3><div class="list" id="cl-list"></div><div class="row"><button class="btn warn" id="cl-del" disabled>SUPPRIMER LA SÉLECTION</button></div></div>
       <div class="card" id="cl-dup" hidden><h3>Doublons probables</h3><div class="list" id="cl-duplist"></div></div>`);
     $("#cl-pick").onclick = async () => { const r = await N.files.pickTree(); if (r && r.uri) scan(r); else if (r && r.error) U.toast(r.error, "warn"); };

@@ -38,7 +38,7 @@
 
       el.innerHTML = `
         <div id="va-setup">
-          <div class="card"><h3>🧪 Variantes d'échecs</h3><p class="muted">Des règles inventées. Choisis une variante, ton adversaire, et c'est parti. Les bots ont une <b>stratégie</b> et le moteur <b>analyse chaque coup en direct</b>.</p>
+          <div class="card"><h3>Variantes d'échecs</h3><p class="muted">Choisis une variante et ton adversaire.</p>
             <div class="va-modes" id="va-modes">${Object.values(V.MODES).map((m) => `<button data-m="${m.id}"><span class="va-ic">${ICON[m.id]}</span><b>${esc(m.name)}</b><small>${esc(m.tag)}</small></button>`).join("")}</div>
             <ul class="va-rules" id="va-rules"></ul></div>
           <div class="card va-opts">
@@ -424,7 +424,7 @@
         if (!G || G.acts.length < 4) return null;
         const nm = D() ? ["Équipe blanche", "Équipe noire"] : [nameOf("w"), nameOf("b")], flip = G.me === "b" && !SPEC();
         const acts = G.acts.map((a) => Object.assign({}, a)), brill = acts.filter((a) => a.key === "brilliant");
-        const rec = { variant: true, mode: cfg.mode, t: Date.now(), title: "🧪 " + V.MODES[cfg.mode].name + " · " + nm[0] + " – " + nm[1], result: title + " · " + why, plies: acts.length, brill: brill.length, acc: null, pgn: "", id: "variant:" + cfg.mode,
+        const rec = { variant: true, mode: cfg.mode, t: Date.now(), title: V.MODES[cfg.mode].name + " · " + nm[0] + " – " + nm[1], result: title + " · " + why, plies: acts.length, brill: brill.length, acc: null, pgn: "", id: "variant:" + cfg.mode,
           pw: nm[0], pb: nm[1], pk: ["variant", "variant"], bw: brill.filter((a) => a.side === "w").length, bb: brill.filter((a) => a.side === "b").length, me: flip ? "b" : "w", accW: null, accB: null, ch: [],
           mv: acts.map((a) => [a.uci || (a.to ? "@" + a.to : ""), a.san, a.key || "good", a.loss || 0, a.ev, ""]), v: { mode: cfg.mode, acts, start: V.fen(V.newGame(cfg.mode)), duo: D(), over: st.why || "", winner: st.result || "" } };
         const list = E.settings.get("variants.hist", []); list.push(rec); E.settings.set("variants.hist", list.slice(-40));

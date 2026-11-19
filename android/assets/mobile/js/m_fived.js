@@ -336,7 +336,7 @@
             <div class="fd-row"><span>Niveau d'ETO</span><div class="seg" data-k="level"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div></div>
             <div class="fd-row"><span>Tu joues</span><div class="seg" data-k="side"><button data-v="w">Blancs</button><button data-v="b">Noirs</button><button data-v="r">Au hasard</button></div></div>
             <div class="fd-row"><span>Effets</span><div class="seg" data-k="fx"><button data-v="max">Maximum</button><button data-v="low">Réduits</button></div></div>
-            <p class="muted">Règles simplifiées : ni roque, ni prise en passant, ni double pas. « Roi capturable » = partie rapide.</p></div></div>`;
+            <p class="muted">Règles simplifiées : sans roque, prise en passant ni double pas.</p></div></div>`;
       const paint = () => el.querySelectorAll(".seg[data-k]").forEach((s) => s.querySelectorAll("button").forEach((b) => b.classList.toggle("on", String(prefs[s.dataset.k]) === b.dataset.v)));
       el.querySelectorAll(".seg[data-k]").forEach((s) => (s.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; prefs[s.dataset.k] = s.dataset.k === "level" ? +b.dataset.v : b.dataset.v; E.settings.set(PREF, prefs); E.settings.set("fived.fx", prefs.fx); paint(); }));
       paint(); this._el = el;

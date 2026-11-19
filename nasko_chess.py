@@ -83,7 +83,7 @@ def spoken_for(text):
 _lock = threading.RLock()
 _dl = {"busy": False, "pct": 0.0}
 G = {"board": None, "engine": None, "play": None, "path": "", "me": chess.WHITE, "base": None, "moves": [], "over": "",
-     "power": 100, "elo": 3200, "blunder_p": 0.0, "last_taunt": "", "seq": 0, "extra": {}, "opening": "", "issued": set(), "saved": True, "resigned": False,
+     "power": 100, "elo": 3650, "blunder_p": 0.0, "last_taunt": "", "seq": 0, "extra": {}, "opening": "", "issued": set(), "saved": True, "resigned": False,
      "pending": None, "takebacks": 0, "trash_n": 0,
      "mode": "enos", "challenger": "eto", "bot": "", "coach_ply": 0, "coach_last": 0, "base_pv": [], "_pv": [], "mate_said": 0}
 LISTENERS = []        # fonctions (kind, payload) : le pont Godot s'y abonne pour animer chaque coup
@@ -152,9 +152,9 @@ def _engine():
 
 
 def power_to_elo(power):
-    """Jauge 1–100 % → Elo : 1 % = 250, 50 % = 1500, 100 % = 3200 (interpolation linéaire par segments)."""
+    """Jauge 1–100 % → Elo : 1 % = 250, 50 % = 1500, 100 % = 3650, le niveau de Stockfish 19 à pleine puissance (interpolation linéaire par segments)."""
     p = max(1, min(100, int(power)))
-    return round(250 + (p - 1) / 49 * 1250) if p <= 50 else round(1500 + (p - 50) / 50 * 1700)
+    return round(250 + (p - 1) / 49 * 1250) if p <= 50 else round(1500 + (p - 50) / 50 * 2150)
 
 
 def _player():
@@ -403,7 +403,7 @@ def _result():
 
 
 def _bot_move(b):
-    """Coup de l'adversaire : (coup, info_brillant | None). Le bot « ETO Brillant » (3200 Elo, choisi dans la liste des bots) cherche le sacrifice brillant comme ETO."""
+    """Coup de l'adversaire : (coup, info_brillant | None). ETO (3650 Elo, choisi dans la liste des bots) cherche le sacrifice brillant."""
     if G.get("bot_brilliant"):
         return _eto_choose(b)
     return _choose(b), None
@@ -420,7 +420,7 @@ def _engine_turn():
         mv, brill = _eto_choose(b)
     elif G["power"] >= 100 and G["mode"] == "enos":
         # E.N.O.S. (ou ETO choisi comme adversaire) à pleine puissance : les coups brillants trouvés par Stockfish passent avant tout, sans nulle par répétition
-        mv, brill = _eto_choose(b, taste=G.get("opponent") == "eto", secs=1.2)
+        mv, brill = _eto_choose(b, taste=G.get("opponent") == "eto", secs=2.5)       # même temps de réflexion qu'ETO
     else:
         mv = _choose(b)
     snap = b.copy(stack=False)
@@ -640,8 +640,8 @@ def new_game(color="w", power=100, mode="enos", elo=None, fen=None, challenger="
         b0 = G["board"]
         if b0 is not None and not G["saved"] and len(b0.move_stack) >= 4 and not b0.is_game_over():
             _save_game("abandon")
-        opponent = opponent if opponent in ("enos", "eto", "eto_brillant") else ""      # duel : E.N.O.S., ETO ou ETO Brillant (3200 Elo, traque le sacrifice)
-        power = 100 if mode == "titans" or opponent == "eto_brillant" else BOSS_CHALLENGER_POWER if mode == "boss" else max(1, min(100, int(power)))   # Titans : 3200 Elo chacun · Boss : les challengers sont un cran sous Stockfish
+        opponent = "eto" if opponent == "eto_brillant" else opponent if opponent in ("enos", "eto") else ""      # duel : E.N.O.S. ou ETO (« ETO Brillant » n'existe plus : ETO chasse toujours le sacrifice)
+        power = 100 if mode == "titans" or (opponent == "eto" and mode == "enos") else BOSS_CHALLENGER_POWER if mode == "boss" else max(1, min(100, int(power)))   # Titans : 3200 Elo chacun · Boss : les challengers sont un cran sous Stockfish
         board = chess.Board()
         custom = bool(fen)
         if custom:
@@ -651,14 +651,14 @@ def new_game(color="w", power=100, mode="enos", elo=None, fen=None, challenger="
             mode = "enos"
         G.update(board=board, me=chess.BLACK if color == "b" else chess.WHITE, moves=[], over="", power=power, setup=custom,
                  elo=power_to_elo(power), last_taunt="", opening="", issued=set(), saved=custom, resigned=False, pending=None, takebacks=0, trash_n=0,
-                 mode=mode if mode in ("coach", "speedrun", "titans", "boss") else "enos", challenger=challenger if challenger in ("eto", "enos", "duo") else "eto", ti_last=None, ti_log=[], ti_ply=0, bot_brilliant=bool(elo and int(elo) >= 3200 and mode in ("coach", "speedrun")) or (opponent == "eto_brillant" and mode == "enos"), opponent=opponent if mode == "enos" else "", coach_ply=0, coach_last=0, base_pv=[], mate_said=0, sr_last_bot=None, sr_last_eto=None)
+                 mode=mode if mode in ("coach", "speedrun", "titans", "boss") else "enos", challenger=challenger if challenger in ("eto", "enos", "duo") else "eto", ti_last=None, ti_log=[], ti_ply=0, bot_brilliant=bool(elo and int(elo) >= 3200 and mode in ("coach", "speedrun")) or (opponent == "eto" and mode == "enos"), opponent=opponent if mode == "enos" else "", coach_ply=0, coach_last=0, base_pv=[], mate_said=0, sr_last_bot=None, sr_last_eto=None)
         if elo:                                                     # Elo exact demandé (cours) : le bot affiche et joue ce niveau, pas l'arrondi de la jauge
             G["elo"] = max(250, min(3190, int(elo)))
         G["bot"] = f"Bot {G['elo']} Elo" if G["mode"] in ("coach", "speedrun") else "STOCKFISH" if G["mode"] == "boss" else "ETO" if G["opponent"] == "eto" else "E.N.O.S."
         if G["mode"] == "boss":
             _boss_tune()
         if G["bot_brilliant"]:
-            G["elo"], G["bot"] = 3200, "ETO Brillant"                    # bot sélectionnable : 3200 Elo, traque le sacrifice brillant (!!)
+            G["elo"], G["bot"] = 3650, "ETO"                             # ETO : niveau de Stockfish 19 (3650 Elo), traque le sacrifice brillant (!!)
         _player()                                                   # applique la difficulté avant le 1er coup
         G["base"] = _analyse(G["board"])
         G["base_pv"] = list(G.get("_pv") or [])

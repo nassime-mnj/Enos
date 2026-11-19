@@ -312,3 +312,14 @@ html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-event
 #df-home .hub-grid.dense .hub-tile b{font-size:9.4px;letter-spacing:.6px;line-height:1.15}
 #df-home .df-elo{position:relative;font:700 9.5px var(--ui);color:#ffd666;letter-spacing:.4px}
 #df-home .hub-sec h4 .df-cnt{margin-left:6px;font:700 10px var(--ui);color:var(--muted)}
+/* sélecteur de bots commun (Game Clips, Simultanée) */
+.bp-q{width:100%;height:44px;margin:0 0 6px;padding:0 14px;border-radius:12px;border:1px solid #2a2b33;background:#0d0e13;color:#fff;font:500 15px var(--ui)}
+.ro-bot.on{border-color:var(--red2,#ff3d63)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--red,#ef1748) 35%,transparent)}
+.bp-ph{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#1c1d24;font:800 13px var(--ui);color:#c9c7cf}
+.ro-bot[hidden],.ro-grid[hidden],.ro-cat[hidden]{display:none!important}
+.bp-chip{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
+.bp-chip img,.bp-chip .bp-ph{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;background:#14151b}
+.bp-chip>span{display:flex;flex-direction:column;min-width:0;flex:1;text-align:left}.bp-chip small{font:600 10.5px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bp-chip b{font:700 14px var(--ui);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-chip i{font:700 12px var(--ui);font-style:normal;color:var(--muted);flex:none}
+.bp-slot{display:flex;width:100%;padding:8px 12px;border-radius:14px;border:1px solid #262732;background:#0d0e13;color:inherit;transition:border-color .2s,transform .15s}
+.bp-slot:active{transform:scale(.98)}.bp-slot:hover{border-color:#3a3b46}

@@ -20,7 +20,7 @@
   const OPP = () => (MODE() === "coach" || MODE() === "speedrun" ? "Le bot" : AI());                                  // l'adversaire : le bot virtuel (cours) ou E.N.O.S./ETO (défi)
   const powerOfElo = (e) => Math.max(1, Math.min(100, Math.round(e <= 1500 ? 1 + (e - 250) / 1250 * 49 : 50 + (e - 1500) / 1700 * 50)));
 
-  const eloOf = (p) => (p <= 50 ? Math.round(250 + (p - 1) / 49 * 1250) : Math.round(1500 + (p - 50) / 50 * 1700));
+  const eloOf = (p) => (p <= 50 ? Math.round(250 + (p - 1) / 49 * 1250) : Math.round(1500 + (p - 50) / 50 * 2150));      // 100 % = 3650, le niveau de Stockfish 19
   const power = () => Math.max(1, Math.min(100, parseInt($("cs-pow").value, 10) || 100));
   function paintPower() { const p = power(); $("cs-powtxt").textContent = `Puissance : ${p} % (Équivalent : ${eloOf(p)}${p === 100 ? "+" : ""} Elo)`; }
   try { const v = parseInt(localStorage.getItem("enos_chess_power"), 10); if (v >= 1 && v <= 100) $("cs-pow").value = v; } catch (e) {}
@@ -46,7 +46,7 @@
       d.dataset.sq = name;
       if (col === 0) d.insertAdjacentHTML("beforeend", `<span class="co r">${r + 1}</span>`);
       if (row === 7) d.insertAdjacentHTML("beforeend", `<span class="co f">${"abcdefgh"[c]}</span>`);
-      if (p) d.insertAdjacentHTML("beforeend", `<span class="cs-p ${p === p.toUpperCase() ? "w" : "b"}">${GLYPH[p.toLowerCase()]}</span>`);
+      if (p) d.insertAdjacentHTML("beforeend", `<span class="cs-p ${p === p.toUpperCase() ? "w" : "b"}" data-k="${p === p.toUpperCase() ? "w" : "b"}${p.toLowerCase()}">${GLYPH[p.toLowerCase()]}</span>`);
       el.appendChild(d);
     }
   }
@@ -161,10 +161,10 @@
     $("cs-coach").hidden = !(st && st.active) || !!(st && st.active && st.mode === "enos" && etoFoe());       // ETO adversaire : pas de panneau coach
     $("cs").dataset.mode = st && st.active ? st.mode : "";
     $("cc-onwrap").hidden = !!(coach || sr || ti || etoFoe());
-    if (st && st.active && st.mode === "enos" && etoFoe()) { $("cc-title").textContent = st.opponent === "eto_brillant" ? "ETO BRILLANT" : "ETO"; }
+    if (st && st.active && st.mode === "enos" && etoFoe()) { $("cc-title").textContent = "ETO"; }
     $("cs-sr-pause").hidden = !(sr || ti);
     $("cc-title").textContent = bo ? "BOSS FINAL · STOCKFISH" : ti ? "LE CHOC DES TITANS" : "COACH ETO";
-    $("cc-sub").textContent = bo ? `${st.players[st.me]} contre STOCKFISH (pleine puissance, muet : il annonce son coup) · tu regardes !` : ti ? "E.N.O.S. vs ETO · 3200 Elo chacun · tu regardes !" : sr ? `ETO joue contre ${st.bot} : tu regardes !` : coach ? `ETO commente votre partie contre ${st.bot}` : "ETO vous aide pendant le duel contre E.N.O.S.";
+    $("cc-sub").textContent = bo ? `${st.players[st.me]} contre STOCKFISH (pleine puissance, muet : il annonce son coup) · tu regardes !` : ti ? "E.N.O.S. vs ETO · 3650 Elo chacun · tu regardes !" : sr ? `ETO joue contre ${st.bot} : tu regardes !` : coach ? `ETO commente votre partie contre ${st.bot}` : "ETO vous aide pendant le duel contre E.N.O.S.";
     $("cs-mode").value = st && st.active ? st.mode : $("cs-mode").value;
     paintMode();
     if (st && st.active) { const sm = document.querySelector("#cs .tm-top h2 small"); if (sm) sm.textContent = bo ? `BOSS FINAL · ${st.players[st.me].toUpperCase()} VS STOCKFISH` : ti ? "LE CHOC DES TITANS · E.N.O.S. VS ETO" : sr ? `SPEEDRUN · ETO VS ${st.bot.toUpperCase()}` : coach ? `COURS AVEC ETO · ${st.bot.toUpperCase()}` : `VOUS CONTRE ${AI()} · ${st.setup ? "POSITION LIBRE" : "STOCKFISH"}`; ccFace(); }
@@ -173,9 +173,9 @@
     const coach = $("cs-mode").value !== "enos", titans = isTi($("cs-mode").value);
     $("cs-elo").hidden = !coach || titans;
     $("cs-opp").hidden = coach;                                              // choix de l'adversaire : seulement en duel
-    const brill = !coach && $("cs-opp").value === "eto_brillant";
+    const brill = !coach && $("cs-opp").value === "eto";
     $("cs-boss").hidden = $("cs-mode").value !== "boss";
-    document.querySelector(".cs-power").style.display = coach || brill ? "none" : "";        // ETO Brillant : toujours pleine puissance (3200 Elo)
+    document.querySelector(".cs-power").style.display = coach || brill ? "none" : "";        // ETO : toujours pleine puissance (3650 Elo, chasse le sacrifice brillant)
     try { localStorage.setItem("enos_chess_mode", $("cs-mode").value); localStorage.setItem("enos_chess_opp", $("cs-opp").value); localStorage.setItem("enos_chess_elo", $("cs-elo").value); localStorage.setItem("enos_chess_boss", $("cs-boss").value); } catch (e) {}
   }
   try { const m = localStorage.getItem("enos_chess_mode"), e = localStorage.getItem("enos_chess_elo"); if (m === "coach" || m === "enos" || m === "speedrun" || m === "titans" || m === "boss") $("cs-mode").value = m; const bo = localStorage.getItem("enos_chess_boss"); if (bo && [...$("cs-boss").options].some((o) => o.value === bo)) $("cs-boss").value = bo; if (e && [...$("cs-elo").options].some((o) => o.value === e)) $("cs-elo").value = e; } catch (e) {}
@@ -234,7 +234,7 @@
     if (wait) start({ duration: 3 });                                        // sécurité : si la voix n'a jamais démarré, le coup retenu est libéré quand même
   }
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  // ---- SPEEDRUN : ETO (3200 Elo) joue contre le bot, tu regardes. Chaque demi-coup : le serveur joue, ETO commente (voix prête), le plateau s'anime, on attend la fin de sa phrase.
+  // ---- SPEEDRUN : ETO (3650 Elo) joue contre le bot, tu regardes. Chaque demi-coup : le serveur joue, ETO commente (voix prête), le plateau s'anime, on attend la fin de sa phrase.
   const SR = { on: false, paused: false, running: false };
   async function srLoop() {
     if (SR.running) return;
@@ -271,7 +271,7 @@
     }
   };
 
-  // ---- LE CHOC DES TITANS : E.N.O.S. (3200) contre ETO (3200), spectateur. Chaque réplique bascule INSTANTANÉMENT la personnalité (œil rouge 3D + voix grave ↔ visage ETO + voix rapide).
+  // ---- LE CHOC DES TITANS : E.N.O.S. (3650) contre ETO (3650), spectateur. Chaque réplique bascule INSTANTANÉMENT la personnalité (œil rouge 3D + voix grave ↔ visage ETO + voix rapide).
   const TI = { on: false, paused: false, running: false, orig: null };
   function isTi(m) { return m === "titans" || m === "boss"; }                          // les deux modes « spectateur à deux voix » partagent la même boucle
   function tiApi(m) { return "/api/chess/" + (m === "boss" ? "boss" : "titans"); }
@@ -369,7 +369,7 @@
   }
   function askPromo(uci) {
     const box = $("cs-promo"), w = S.st.me === "w";
-    box.innerHTML = ["q", "r", "b", "n"].map((p) => `<button data-p="${p}" class="cs-p ${w ? "w" : "b"}">${GLYPH[p]}</button>`).join("");
+    box.innerHTML = ["q", "r", "b", "n"].map((p) => `<button data-p="${p}" class="cs-p ${w ? "w" : "b"}" data-k="${w ? "w" : "b"}${p}">${GLYPH[p]}</button>`).join("");
     box.hidden = false;
     box.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; box.hidden = true; request(() => post("/api/chess/move", { uci, promotion: b.dataset.p })); };
   }
@@ -378,9 +378,9 @@
   const EM = { on: false, ro: null, tick: null, last: "" };
   const EMB_RATIO = 1080 / 1264;
   function fitEmbed() {
-    const wrap = document.querySelector(".cs-wrap"), box = $("cs-embed");
-    const side = window.innerWidth > 900 ? 360 : 0;                  // colonne de droite (jugement, évaluation, coups)
-    const aw = wrap.clientWidth - side - 36, ah = wrap.clientHeight - 28;
+    const wrap = document.querySelector(".cs-center") || document.querySelector(".cs-wrap"), box = $("cs-embed");
+    const bans = [...wrap.querySelectorAll(".cs-ban")].reduce((a, b) => a + b.offsetHeight + 12, 0);   // bandeaux adversaire / joueur au-dessus et au-dessous du plateau
+    const aw = wrap.clientWidth - 24, ah = wrap.clientHeight - bans - 16;
     const h = Math.max(240, Math.min(ah, aw / EMB_RATIO));
     box.style.height = Math.floor(h) + "px"; box.style.width = Math.floor(h * EMB_RATIO) + "px";
   }
@@ -531,11 +531,11 @@
   async function loadBoards() {
     try {
       const r = await api("/api/chess/boards");
-      $("cs-board").innerHTML = '<option value="">Plateau : celui du thème</option>' +
+      $("cs-boardsel").innerHTML = '<option value="">Plateau : celui du thème</option>' +
         r.boards.map((b) => `<option value="${esc(b.id)}" ${b.id === r.current ? "selected" : ""}>${esc(b.label)}</option>`).join("");
     } catch (e) {}
   }
-  $("cs-board").onchange = () => post("/api/chess/board", { name: $("cs-board").value }).catch((e) => ($("cs-status").textContent = "✕ " + e.message));
+  $("cs-boardsel").onchange = () => post("/api/chess/board", { name: $("cs-boardsel").value }).catch((e) => ($("cs-status").textContent = "✕ " + e.message));
 
   // ---- style visuel du plateau (matériaux, néon, yeux des cavaliers) : préréglages, ou E.N.O.S. compose le sien via le LLM
   async function loadVisual() {
@@ -644,7 +644,7 @@
       const row = Math.floor(i / 8), col = i % 8, r = flip ? row : 7 - row, c = flip ? 7 - col : col, name = sqName(c, r), pc = p.board[name];
       const d = document.createElement("div");
       d.className = "cs-sq" + ((r + c) % 2 ? " l" : "") + (last.includes(name) ? " last" : "");
-      if (pc) d.insertAdjacentHTML("beforeend", `<span class="cs-p ${pc === pc.toUpperCase() ? "w" : "b"}">${GLYPH[pc.toLowerCase()]}</span>`);
+      if (pc) d.insertAdjacentHTML("beforeend", `<span class="cs-p ${pc === pc.toUpperCase() ? "w" : "b"}" data-k="${pc === pc.toUpperCase() ? "w" : "b"}${pc.toLowerCase()}">${GLYPH[pc.toLowerCase()]}</span>`);
       el.appendChild(d);
     }
     $("cs-hply").textContent = `${H.ply} / ${H.total}`;
@@ -705,7 +705,7 @@
       d.dataset.sq = name;
       if (col === 0) d.insertAdjacentHTML("beforeend", `<span class="co r">${r + 1}</span>`);
       if (row === 7) d.insertAdjacentHTML("beforeend", `<span class="co f">${"abcdefgh"[c]}</span>`);
-      if (p) d.insertAdjacentHTML("beforeend", `<span class="cs-p ${p === p.toUpperCase() ? "w" : "b"}">${GLYPH[p.toLowerCase()]}</span>`);
+      if (p) d.insertAdjacentHTML("beforeend", `<span class="cs-p ${p === p.toUpperCase() ? "w" : "b"}" data-k="${p === p.toUpperCase() ? "w" : "b"}${p.toLowerCase()}">${GLYPH[p.toLowerCase()]}</span>`);
       el.appendChild(d);
     }
     $("cd-turn").value = CD.turn;

@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 ISS = "dualpulse"
-TTL = {"access": 15 * 60, "attest": 14 * 86400}
+TTL = {"access": 15 * 60, "attest": 14 * 86400, "license": 7 * 86400}        # license : droits de l'abonnement ETO, vérifiés hors ligne par l'application
 
 
 class TokenError(Exception):

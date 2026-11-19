@@ -41,6 +41,7 @@ with sync_playwright() as pw:
     check(d["GhorGhor"][1] == "1400" and d["GhorGhor"][2] == "", "GhorGhor : 1400 Elo, pas de titre")
     check(d["Nasko"][1] == "1300" and d["Nasko"][2] == "", "Nasko : 1300 Elo, pas de titre")
     check(ev(A + ".minorNeed(1)") == 3, "GhorGhor face à des bots normaux : 3 pièces mineures pour se transformer")
+    check(d["ETO"][1] == "3650" and d["ETO"][2] == "GM", "ETO : 3650, GM")
     pg.wait_for_function(A + ".g.st.ply >= 24", timeout=90000)
     q = ev("(" + A + ".g.q).map(x => Object.entries(x).filter(e => e[1]).map(e => e[0] + ':' + e[1]).join(' '))")
     print(q)

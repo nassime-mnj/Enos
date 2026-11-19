@@ -235,13 +235,13 @@
       function render() {
         renderBar();
         if (!B()) {
-          root.innerHTML = `<h3>Nettoyeur de stockage</h3><p class="muted" id="cln-na">Disponible dans l'application Android.</p><p class="muted">Il analyse la galerie du téléphone pour retrouver les photos floues, les doublons, les vieilles captures d'écran et les grosses vidéos. Tout reste sur l'appareil.</p>`;
+          root.innerHTML = `<h3>Nettoyeur de stockage</h3><p class="muted" id="cln-na">Disponible dans l'application Android.</p><p class="muted">Photos floues, doublons, anciennes captures et vidéos volumineuses.</p>`;
           return;
         }
         if (S.view === "cat") return renderCat();
         const c = cats(), has = S.scanned || S.items.length;
         root.innerHTML = `<h3>Nettoyeur de stockage</h3>
-          <p class="muted">Analyse locale de ta galerie. Rien n'est supprimé sans ta confirmation dans la fenêtre du système.</p>
+          <p class="muted">Aucune suppression sans ta confirmation.</p>
           ${S.perm === false ? '<p class="err" id="cln-perm" role="alert">Accès aux photos refusé. Autorise-le dans Réglages Android → Applications → E.N.O.S. → Autorisations → Photos et vidéos, puis relance l\'analyse.</p>' : ""}
           ${S.err ? `<p class="err" id="cln-err" role="alert">${esc(S.err)}</p>` : ""}${S.msg ? `<p class="ok" id="cln-msg" role="status">${esc(S.msg)}</p>` : ""}
           ${S.scanning ? `<div class="cln-pw"><div class="cln-pbar"><i id="cln-pbar" style="width:3%"></i></div><p class="muted" id="cln-prog">Analyse…</p><button class="btn wide" id="cln-cancel">ANNULER L'ANALYSE</button></div>`

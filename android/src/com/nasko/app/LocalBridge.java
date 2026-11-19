@@ -250,6 +250,86 @@ final class LocalBridge {
         return ok() ? act.gallery().thumb(uri) : "";
     }
 
+    // ------------------------------------------------------------------ Mobile Improver (Improver : préparation, remplacement avec autorisation système, corbeille 30 jours)
+    @JavascriptInterface
+    public String improverState() {
+        return ok() ? Improver.summary(act) : "{}";
+    }
+
+    @JavascriptInterface
+    public void improverConfig(String json) {
+        if (ok()) Improver.configure(act, json == null ? "{}" : json);
+    }
+
+    @JavascriptInterface
+    public boolean improverSchedule(boolean on) {
+        return ok() && Improver.schedule(act, on);
+    }
+
+    /** Prépare maintenant (fil d'arrière-plan) : événements « progress » {done,total,saved} puis « done » {staged}. */
+    @JavascriptInterface
+    public void improverRun(final long id) {
+        if (!ok()) return;
+        if (!act.gallery().hasPermission()) {
+            act.emit(id, "error", "Accès aux photos refusé.");
+            return;
+        }
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int n = Improver.analyze(act, 20 * 60 * 1000L, 2000, new Improver.Progress() {
+                    @Override
+                    public void on(int done, int total, long saved) {
+                        act.emit(id, "progress", "{\"done\":" + done + ",\"total\":" + total + ",\"saved\":" + saved + "}");
+                    }
+                });
+                act.emit(id, n < 0 ? "error" : "done", n < 0 ? "Une préparation est déjà en cours." : "{\"staged\":" + n + "}");
+            }
+        }, "improver-run");
+        t.setPriority(Thread.MIN_PRIORITY + 1);
+        t.start();
+    }
+
+    @JavascriptInterface
+    public void improverCancel() {
+        if (ok()) Improver.CANCEL.set(true);
+    }
+
+    @JavascriptInterface
+    public void improverApply(final long id) {
+        if (ok()) act.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                act.improver().apply(id);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void improverRestore(final long id, final String tid) {
+        if (ok() && tid != null && tid.matches("[0-9]{1,18}_[0-9]{1,12}")) act.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                act.improver().restore(id, tid);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void improverDiscard() {
+        if (ok()) Improver.discard(act);
+    }
+
+    @JavascriptInterface
+    public void improverEmptyTrash() {
+        if (ok()) Improver.emptyTrash(act);
+    }
+
+    @JavascriptInterface
+    public String pendingModule() {
+        return ok() ? act.pendingModule() : "";
+    }
+
     // ------------------------------------------------------------------ divers
     /** Stockage interne : {total, free} en octets (pour le Nettoyeur). */
     @JavascriptInterface
@@ -266,6 +346,42 @@ final class LocalBridge {
     @JavascriptInterface
     public String version() {
         return act.versionName();
+    }
+
+    /** Paiement ETO : ouvre la page Stripe (Checkout / portail client) dans le navigateur du téléphone. Seules les adresses https de Stripe sont acceptées. */
+    @JavascriptInterface
+    public boolean openCheckout(String url) {
+        if (!ok()) return false;
+        try {
+            android.net.Uri u = android.net.Uri.parse(url == null ? "" : url);
+            String h = u.getHost() == null ? "" : u.getHost();
+            if (!"https".equals(u.getScheme()) || !(h.equals("checkout.stripe.com") || h.equals("billing.stripe.com"))) return false;
+            act.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, u));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Support : ouvre l'application de messagerie vers l'adresse de DualPulse (adresse FIXE, seuls l'objet et le texte viennent de l'interface). */
+    @JavascriptInterface
+    public boolean openSupportMail(String subject, String body) {
+        if (!ok()) return false;
+        try {
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:dualpulse.co@gmail.com"));
+            i.putExtra(android.content.Intent.EXTRA_SUBJECT, subject == null ? "" : subject.substring(0, Math.min(200, subject.length())));
+            i.putExtra(android.content.Intent.EXTRA_TEXT, body == null ? "" : body.substring(0, Math.min(20000, body.length())));
+            act.startActivity(i);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Application de TEST (« Eto TEST », identifiant com.nasko.app.test) : l'interface y propose de simuler chaque version / abonnement. */
+    @JavascriptInterface
+    public boolean isTestBuild() {
+        return act.getPackageName().endsWith(".test");
     }
 
     @JavascriptInterface

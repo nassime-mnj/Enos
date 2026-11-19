@@ -185,7 +185,7 @@
       }
       function summary() {
         const el2 = $("#ce-sum");
-        if (S.tl && S.tl.simul) { const q = S.tl.simul; return (el2.innerHTML = `Simultanée : <b>${q.nB}</b> plateaux, <b>${q.vis.length}</b> passages d'ETO d'un plateau à l'autre (il sort de l'écran, la caméra le suit), flèches + mini-plateaux des coéquipiers.<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons calés.`); }
+        if (S.tl && S.tl.simul) { const q = S.tl.simul; return (el2.innerHTML = `Simultanée · <b>${q.nB}</b> plateaux · <b>${q.vis.length}</b> passages de ${esc((S.rec.simul && S.rec.simul.boss && S.rec.simul.boss.name) || "ETO")}<br>Durée <b>${S.tl.duration.toFixed(1)} s</b> · ${S.tl.sfx.length} sons`); }
         if (S.pace === "viral" && S.tl) {
           const st = S.tl.stats, v = S.tl.sfx.filter((x) => x.bus === "voice").length;
           if (S.tl.sync) return (el2.innerHTML = `<b>${S.plies.length}</b> coups : <b>${S.plies.length - S.tl.stats.skipped}</b> joués sur les temps de la musique, <b>${S.tl.stats.skipped}</b> sautés · coup clé calé sur le drop (${S.tl.stats.drop.toFixed(1)} s) · intro VS de 3,8 s · <b>${S.tl.key.length}</b> moments forts.`);

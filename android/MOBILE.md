@@ -478,3 +478,94 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Plus de tuile « Bots » à part : l'accueil des Défis est rangé par **familles** : **Bots E.N.O.S.** (les personnages inventés : ETO Brillant, E.N.O.S., Nasko, Lelex, Pénoire, Naskurieux, GhorGhor, Naskolit, le Jester), **Légendes** (Stockfish 19, Obsidian, PlentyChess, Caissa, Viridithas, Lc0, Berserk, Ethereal, Koivisto, Mittens, PAL 9000, Skyweb, ChessGPT), puis Joueurs pro, Streamers, Célébrités, IA, Débutants, Intermédiaires, Avancés, Maîtres, Chats & spéciaux, Coachs, Adaptatifs, Odyssée, En équipe, Spectacle. Familles nombreuses en grille serrée (4 par ligne, Elo sous le nom), compteur par famille. 148 tuiles.
 - `el._api.families()` / `fighters()` exposent ces familles : l'**Arène PC** (`static/learn/arena.js`, propre au PC) affiche les mêmes familles sous ses grandes cartes « Bots E.N.O.S. » (grille d'avatars, clic = fiche du bot) et son combat de bots propose tous les bots (138).
 - Tests : `t_roster.py` (familles), `t_defis.py` (148 tuiles), `t_pc_arena.py` (Arène PC, serveur statique sur static/learn).
+
+## 1.97 — Chess Edit : case « Effets pro » remise à sa place (+ refonte Échecs du PC)
+
+- Chess Edit Studio : la case « ✨ Effets pro » partageait la classe `ce-fxl` du calque d'effets (positionné en absolu) et s'affichait collée en haut à gauche de l'écran. `label.ce-fxl` reste maintenant dans le formulaire (`css/chessedit.css`).
+- Côté PC (aucun autre changement sur le téléphone) : refonte « Obsidian Crimson » de tout ce qui touche aux échecs — hub Échecs unifié, écran de partie, Défi, Arène, lanceur Applications. Voir `docs/INTERFACE_ECHECS_PC.md`.
+
+## 1.98 — Thème « Obsidian Crimson » : le téléphone au même design que le PC
+
+- **Thème global** (`css/obsidian.css`, chargé en dernier ; `js/obsidian.js` pour la présentation) : police **Inter** embarquée (`fonts/`), noir obsidienne, cartes vitrées, boutons à dégradé cramoisi, feuilles et toasts arrondis, en-tête avec l'œil d'E.N.O.S. qui cligne, barre d'onglets vitrée à **icônes duotone** (`js/hub_icons.js`, tracés Lucide, partagé avec le PC). La couleur d'accent suit toujours le réglage « Thèmes ».
+- **Accueil** : bandeau illustré (œil du kit), salutation, horloge, « Ton centre de commande personnel ».
+- **Modules** : catégories en cartes (icône duotone + nombre de modules) ; carte **Échecs** mise en avant avec le cavalier.
+- **Page Échecs** : héros animé « Joue. Apprends. Domine. » — un plateau 3D rejoue en boucle la partie de l'Opéra (Morphy, 1858) : pièces debout qui glissent, vague de lumière, étincelles sur les prises, mat qui pulse ; l'œil d'E.N.O.S. et son faisceau, le cavalier en parallaxe au doigt. Boutons « Défier E.N.O.S. » / « Bots & défis », vrais chiffres (142 bots, Stockfish 19). Les grands modes (Bots & défis, Contre E.N.O.S., Battle Royale, Variantes, ChatGPT Prime) en cartes illustrées, toutes les tuiles en icônes duotone (sans description), défilé des adversaires (clic = fiche du bot). La partie de démonstration s'arrête quand la page n'est plus visible.
+- **Échiquier Obsidian** (crème / graphite, dernier coup et sélection en cramoisi) sur tous les plateaux du téléphone ; même plateau dans la version PC.
+- **Défis / partie** : tuiles vitrées, bandeaux des joueurs, bulle du bot, plateau encadré. Correctif : dans la fiche d'un bot, le choix **Blancs / Noirs / Au hasard** n'allumait jamais le bon bouton (indicateur à 2 positions pour 3 boutons) : le bouton choisi s'allume maintenant.
+- Les polices et illustrations du kit vivent désormais dans l'application (`fonts/`, `img/ui/`) et sont copiées vers le PC par `build_learn_data.py --sync`.
+- Tests : `t_hub.py` (catégories duotone, héros 3D, défilé), `t_chess_cinepulse.py` (couleurs Obsidian).
+
+## 1.99 — Abonnements ETO et Espace CEO
+
+- **Abonnement** (Modules › Cloud › Mon compte, et Paramètres) : offres grand public **ETO Free** (vert, 0 €), **ETO Pro** (bleu, 9,99 €/mois ou 95,90 €/an), **ETO MAX** (jaune, 29,99 €/mois ou 287,90 €/an), **ETO Ultra** (violet, 119,99 €/mois ou 1 151,90 €/an). Cartes animées à la couleur de chaque offre (bordure lumineuse qui tourne, prix qui défilent au passage Mensuel ⇄ Annuel −20 %, reflet sur Ultra), badge **Actif**, tableau comparatif. Ce qui n'existe pas encore (messages ETO inclus, voix, ETO sur le PC, famille) est marqué « bientôt ». « Choisir » explique que le paiement arrive avec la publication sur le Play Store : rien n'est prélevé.
+- **Espace CEO** (Paramètres) : éditions privées **E.N.O.S. Standard Edition** (amis), **E.N.O.S. Dev** (employés), **E.N.O.S. CEO** (toi et ton associé) avec leur contenu (mêmes profils que le PC : friends / dev / ceo). Jamais visible ailleurs que chez le CEO et dans l'app de test ; les éditions privées n'apparaissent jamais dans l'Abonnement.
+- **Version active** (`js/plans.js`) : elle nomme l'application dans l'en-tête — **E.T.O. · AUTONOME** pour les offres ETO, **E.N.O.S. · AUTONOME** pour les éditions privées — avec un effet de bascule, teinte l'œil de l'en-tête et l'accent de l'application à sa couleur (Thèmes reste libre ensuite). Version réelle : E.N.O.S. CEO dans l'app de test ou après import du paquet CEO, sinon ETO Free.
+- **Mode test** (app « Eto TEST » seulement, détectée par `Enos.isTestBuild()` côté Java) : simuler une offre depuis l'Abonnement (offres publiques) ou n'importe laquelle des 7 versions depuis l'Espace CEO, rideau d'activation à la couleur de la version, « Revenir à ma vraie version ».
+- Test : `t_plans.py`.
+
+## 1.100 — Offres repensées : échecs gratuits, abonnements vendus sur leur rentabilité
+
+- **ETO Free** contient désormais **tous les échecs** (142 bots, moteurs natifs, Arène, Royale ×4, Variantes, 5D, Fog, Chess Edit, Game Clips, puzzles et revues illimités), sans publicité.
+- **ETO Pro** (2,99 €/mois · 28,70 €/an) : le **Mobile Improver** (recompression nocturne des photos et vidéos, doublons et flous chaque semaine, corbeille 30 jours, rapport mensuel), sauvegarde vers son propre PC. **ETO MAX** (9,99 €/mois) : pilotage du PC, Auto-Clipper IA, copilote de jeu, passerelle d'API. **ETO Ultra** (119,99 €/mois) : équipes et entreprises, 10 personnes / 25 appareils, flotte, dépôt intranet, journal de plantages, édition à la marque.
+- Chaque offre affiche **ce qu'elle rapporte** (bloc « rentabilité » : forfaits de stockage évités, outils remplacés, coût par personne). Comparatif refait. Ce qui est en préparation reste marqué « bientôt ».
+- Stratégie complète (marché, économie unitaire, idées pour développeurs / entreprises / investisseurs, plan à 90 jours) : `docs/STRATEGIE_OFFRES.md`.
+- Test : `t_plans.py` (nouveaux prix, échecs dans Free, blocs de rentabilité).
+
+## 1.101 — Comptes ETO, licences signées, clés d'activation, révocateur, Assistant ETO
+
+- **Compte ETO** (Modules › Abonnement) : inscription libre au serveur Dual Pulse (rôle `public`, cloisonné du personnel), connexion, « Actualiser », « Gérer le paiement », déconnexion ; bascule « J'ai déjà un compte / en créer un ».
+- **Licence signée Ed25519** (`/launcher/v1/eto/license`, 7 jours) vérifiée **hors ligne** par l'application (WebCrypto, clé publique épinglée), 7 jours de grâce sans réseau. L'offre réelle vient de cette licence (ETO Free sans compte) ; l'app de test reste en E.N.O.S. CEO avec son simulateur.
+- **Verrouillage réel par offre** : Pilotage PC, Colis, Synchro, Registre (MAX), Codelab (MAX), CinePulse / AudioLab (MAX, « studio »), Équipe (Ultra)… ouvrent la feuille « Avec ETO … » ; l'onglet PC montre « Ton PC, depuis ton téléphone ». Les échecs restent libres.
+- **Paiement** : « Choisir » ouvre Stripe Checkout dans le navigateur (hôtes Stripe seulement, côté Java) ; le droit arrive par le webhook signé ; la licence est relue au retour. Sans clés Stripe sur le serveur : réponse honnête, rien n'est prélevé. Google Play : vérification serveur prête (`/billing/play`).
+- **Clés d'activation** : « Activer une clé » (ou « J'ai une clé d'activation » sans compte) — format `ETO-XXXX-XXXX-XXXX-XXXX`, remise en forme pendant la saisie, **caractère de contrôle** (toute faute sur un caractère est détectée dans l'app avant l'envoi), connexion d'abord si besoin (la clé est gardée). Même offre déjà active : la durée s'ajoute ; offre supérieure : refus sans consommer la clé.
+- **Espace CEO › Générateur de clés** (compte CEO du serveur requis) : offre, durée (7 j → sans limite), nombre (1-200), utilisations par clé, date limite d'activation, note ; les clés sortent une seule fois en clair (copier / tout copier), le serveur ne garde que leur empreinte SHA-256 ; liste des clés (statut Disponible / Utilisée / Expirée / Révoquée, utilisations) avec **Révoquer** (option : couper aussi les abonnements ouverts par la clé).
+- **Espace CEO › Révocateur d'abonnement** : recherche par e-mail, origine (Stripe, Google Play, clé n°…, accordée), échéance ; « Révoquer » avec motif (journal interne) et, pour Stripe, annulation du prélèvement. L'application redescend en ETO Free à la relecture de sa licence (au plus tard 7 jours hors ligne).
+- **Assistant ETO** (Modules › Cloud › Mon compte, Paramètres) : chat de support **100 % hors ligne** — 63 intentions (offres, prix réels du catalogue, paiement, résiliation, remboursement, clés, compte, échecs, Mobile Improver, PC, plantages…), normalisation (accents, « c koi »), synonymes, correction des fautes (Damerau-Levenshtein), poids des mots (idf), plusieurs questions dans un message, questions sur n'importe quel module (bouton pour l'ouvrir), boutons d'action, suggestions ; sinon repli honnête vers **dualpulse.co@gmail.com** (bouton « Écrire au support » : messagerie du téléphone, adresse fixée côté Java).
+- Serveur : `app/launcher/eto.py` (+ tables `eto_subs`, `eto_events`, `eto_keys`, `eto_key_uses`), tests `dualpulse_site/tests/test_eto.py`.
+- Tests : `t_eto_account.py`, `t_eto_keys.py` (vrai serveur local : génération → activation → révocation), `t_support.py` (50 questions libres : 100 %), `t_plans.py`.
+
+## 1.102 — ETO Gateway : une clé d'IA par client, créée et recréée par le serveur
+
+- **Serveur** (`dualpulse_site/app/launcher/gateway.py`) : avec la **clé de gestion OpenRouter** de DualPulse (`DP_OPENROUTER_MGMT`, API officielle de gestion des clés), le serveur crée pour chaque client ETO MAX / Ultra une clé `sk-or-v1-…` **plafonnée en dollars par mois** (`limit_reset=monthly`) : 2 $ en MAX, 25 $ en Ultra, 10 $ pour les éditions privées (`DP_AI_LIMIT_<OFFRE>`). **Si une clé existe déjà, elle est supprimée chez OpenRouter puis recréée** (rotation). La clé en clair n'est renvoyée qu'une fois ; le serveur ne garde que son identifiant. Changement d'offre : plafond ajusté ; révocation / offre sans passerelle : clé désactivée ; retour en MAX : réactivée. Routes `GET /eto/ai`, `POST|DELETE /eto/ai/key`, `GET /eto/admin/ai`, `POST /eto/admin/ai/revoke`. Sans clé de gestion : 503 honnête.
+- **App** : module **ETO Gateway** (Cloud › Mon compte, Codage › Outils de développeur) — plafond de l'offre, « Obtenir ma clé » / « Recréer la clé » / « Supprimer », clé montrée une fois (copier, exemple compatible OpenAI pour ses projets), barre de consommation du mois lue chez OpenRouter, choix de la **source de l'IA** (ETO Gateway ou clé Groq).
+- **Coffre et pont natif** : nouvelle entrée `openrouter` (Android Keystore) et nouveau service `openrouter` dans `NativeHttp` (hôte `openrouter.ai`, chemins `/api/v1/` seulement, clé injectée côté Java). Tout ce qui utilise l'IA (chat, commentaires d'échecs, scanner, analyse, Codelab…) passe par `E.ai.endpoint()` : noms de modèles Groq convertis pour OpenRouter, `reasoning_effort` → `reasoning`. Messages d'erreur propres (clé désactivée, plafond du mois atteint).
+- Assistant ETO : sujet « ETO Gateway ».
+- Tests : `dualpulse_site/tests/test_gateway.py` (faux OpenRouter en mémoire), `t_eto_gateway.py` (vrai serveur local + faux OpenRouter local `fake_openrouter.py` : création, chat passant par la clé, rotation, désactivation à la révocation).
+
+## 1.103 — Mobile Improver : récupérer de l'espace sans perte visible
+
+- **Moteur natif** `Improver.java` : photos JPEG de plus de 1,5 Mo et de plus de 30 jours (jamais les récentes), décodées, ramenées au plus à **12 Mpx** (réglable : garder / 12 Mpx / 8 Mpx), réencodées (qualité Haute 88 / Équilibrée 82 / Compacte 76). Une version n'est gardée que si elle pèse **au moins 25 % de moins** ET si la **qualité mesurée reste haute** (PSNR de la luminance ≥ 36 dB sur une réduction commune). EXIF recopiés (date, orientation, lieu, appareil, réglages de prise de vue). Préparation dans le stockage privé de l'application : la galerie n'est pas touchée.
+- **Appliquer** : Android affiche sa propre demande d'autorisation (`MediaStore.createWriteRequest`, Android 11+) ; chaque photo encore identique à l'analyse (taille et date vérifiées) est copiée dans la **corbeille d'ETO** (copie vérifiée octet par octet en taille), puis remplacée sur place (même fichier, même place dans la galerie). Une photo modifiée entre-temps est laissée telle quelle.
+- **Corbeille 30 jours** : restauration photo par photo (nouvelle autorisation Android), vidage immédiat, purge automatique après 30 jours. **Rapport** : espace récupéré par mois.
+- **Automatique (ETO Pro)** : `ImproverJob` (JobScheduler) une fois par jour au plus, **téléphone en charge et batterie correcte**, 8 minutes et 300 photos au plus par passage, persistant après redémarrage ; notification « ETO a préparé N photos » qui ouvre le module. En Free : « Analyser maintenant » à la main.
+- **Écran** Modules › Fichiers › Nettoyage › Mobile Improver : héros avec l'espace à récupérer, progression mise à jour sur place (bouton Arrêter toujours touchable), photos prêtes (Appliquer / Oublier), interrupteur Automatique (feuille « Avec ETO Pro » en Free), réglages, corbeille, rapport en barres.
+- Pas encore : allègement des **vidéos** (HEVC) — annoncé « bientôt » partout (offre Pro, Assistant ETO).
+- Vérifications : le Java compile contre l'API Android 34 (`android-all` de Robolectric) ; `t_improver.py` teste l'écran avec un faux pont natif qui reproduit les événements d'`Improver.java`. Le traitement réel des photos n'a pas été exécuté sur un téléphone.
+
+## 1.104 — ETO Fleet, textes de l'application réécrits
+
+- **ETO Fleet** (Cloud › Mon compte, offre Ultra) : création d'une équipe, invitations par code (`ETO-TEAM-…`, une ou cinq utilisations, 7 jours), 10 places propriétaire compris ; les membres profitent d'ETO Ultra tant que le propriétaire est abonné. Console : places, appareils en ligne, alertes (stockage < 10 %, batterie faible hors charge, version en retard, plantages), membres (rôles admin / membre, retrait), actions à distance de la liste fermée (ping, relire la licence, message, chercher une mise à jour, lancer l'analyse du Mobile Improver) avec compte rendu. Chaque application connectée envoie son état à l'ouverture et toutes les 10 minutes, puis exécute les actions reçues. Serveur : `app/launcher/fleet.py`, tests `tests/test_fleet.py` ; app : `js/m_fleet.js`, `t_eto_fleet.py`.
+- **Textes** : offres, compte, clés, Espace CEO, ETO Gateway, Mobile Improver, Assistant ETO (63 réponses) et une trentaine d'écrans réécrits en phrases courtes et factuelles, sans jargon technique.
+
+## 1.105 — Informations légales, statistiques anonymes, tableau de bord CEO
+
+- **Informations légales** (Paramètres › Application) : conditions d'utilisation, conditions de vente, confidentialité, mentions légales. Textes sources dans `docs/legal/*.md` (projets à faire relire par un avocat ; les champs « à compléter » sont à remplir : forme juridique, SIREN, adresse, hébergeur, médiateur), convertis par `android/tools/gen_legal.py` en `js/legal_data.js`. Liens depuis la création de compte et le bas de l'Abonnement.
+- **Statistiques anonymes** : désactivées par défaut, activables dans Informations légales › Confidentialité. Nombre d'ouvertures par module, au plus un rapport par jour, identifiant d'installation aléatoire haché par le serveur, jamais lié au compte (`js/metrics.js`, serveur `app/launcher/metrics.py`).
+- **Espace CEO › Tableau de bord** : comptes ETO, revenu mensuel estimé (abonnements Stripe / Google Play), inscriptions et installations actives sur 30 jours (courbe), répartition par offre, clés activées, équipes, clés IA, modules les plus ouverts.
+- Tests : `dualpulse_site/tests/test_metrics.py`, `t_legal_metrics.py`.
+
+## 1.106 — Game Clips : mode Simultanée
+
+- **Game Clips** propose trois modes : **Duel** (1 contre 1, comme avant), **Simultanée · 1 héros, 4 antagonistes** (le héros joue les Blancs sur les quatre plateaux et fait le tour de table) et **Simultanée · 4 héros, 1 antagoniste** (l'antagoniste joue les Blancs partout, chaque héros a son plateau et reçoit ses « cadeaux »). Choix des quatre personnages par mode, suivi du tournage plateau par plateau.
+- Chaque plateau est une vraie scène mise en scène (`E.clips.run`) ; les coups sont ensuite entrelacés comme dans une simultanée réelle (coup du joueur central, réponse du plateau, plateau suivant). L'enregistrement suit le format de la Simultanée : Chess Edit en fait directement son montage « plateau à plateau » (`E.clips.runSimul`, `js/clips.js`).
+- Chess Edit : le résumé de la Simultanée nomme le joueur central (et non plus toujours ETO).
+- Test : `t_clips_simul.py` (deux modes, coups légaux, tour de table, montage Chess Edit, écran) ; `t_clips.py` inchangé et vert.
+
+## 1.107 — Tous les bots en Simultanée et dans Game Clips, 1v2 à 1v6, ETO et E.N.O.S. au niveau maximal
+
+- **Sélecteur de bots commun** (`js/bot_pick.js`) : les 138 bots de la plateforme (ETO, E.N.O.S., Stockfish 19, personnages, moteurs et IA, toute l'échelle des Défis), par catégories, avec avatar, Elo et recherche.
+- **Game Clips** : héros, antagoniste et chaque plateau se choisissent dans cette liste. Simultanée de **1v2 à 1v6** (ou 2v1 à 6v1).
+- **Simultanée** (mode de jeu) : adversaire et joueurs choisis dans la même liste (avec « Toi », « Joueur 2 »… pour les humains), de **1v2 à 1v6**.
+- **ETO** (anciennement « ETO Brillant ») et **E.N.O.S.** jouent au niveau du bot le plus fort de la plateforme, Stockfish 19 : 3650 Elo affichés (4550 en blitz, 5450 en bullet, comme Stockfish), même temps de réflexion. **Les deux chassent les coups brillants par défaut** (Défis, duels, Simultanée, Titans, Boss).
+- Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
+- Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.

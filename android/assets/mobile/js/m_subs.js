@@ -61,7 +61,7 @@
             <div style="font:800 20px var(--ui)">${money(s.price, s.cur)} <small class="muted" style="font:600 13px var(--ui)">${FREQ[s.freq] || ""}</small></div>
             <div class="muted" style="font-size:13.5px;margin:2px 0 8px">${s.status === "cancelled" ? "Résilié" : dd == null ? "Date de prélèvement inconnue" : dd === 0 ? "Prélèvement aujourd'hui" : dd === 1 ? "Prélèvement demain" : "Prélèvement dans " + dd + " j (" + d.toLocaleDateString("fr-FR") + ")"}${s.status === "trial" ? " · fin d'essai" : ""}</div>
             <div class="row">${/^https?:\/\//.test(s.url || "") ? `<a class="btn" href="${esc(s.url)}" target="_blank" rel="noopener">GÉRER / ANNULER</a>` : ""}<button class="btn" data-a="mail">MODÈLE D'E-MAIL</button><button class="btn" data-a="edit">MODIFIER</button></div></div>`;
-        }).join("") : '<div class="card"><p class="muted">Aucun abonnement ici. Touche AJOUTER, ou IMPORTER pour que l\'IA les trouve dans ton relevé.</p></div>';
+        }).join("") : '<div class="card"><p class="muted">Aucun abonnement. Ajoute-en un ou importe un relevé.</p></div>';
       }
       $("#sb-f").onclick = (e) => { const b = e.target.closest("[data-f]"); if (!b) return; filter = b.dataset.f; $("#sb-f").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); render(); };
       $("#sb-list").onclick = (e) => {

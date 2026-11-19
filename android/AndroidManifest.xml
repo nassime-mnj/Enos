@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Mobile Improver : la preparation automatique (telephone en charge) reste planifiee apres un redemarrage -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:label="Eto"
@@ -53,6 +55,11 @@
                 <data android:scheme="enos" android:host="import" />
             </intent-filter>
         </activity>
+        <!-- Mobile Improver : preparation des photos allegees en arriere-plan (JobScheduler : en charge, batterie correcte) ; aucun remplacement sans l'autorisation d'Android -->
+        <service
+            android:name=".ImproverJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
         <!-- CodeLab : aperçu web isolé (WebView sans pont JavaScript, réseau coupé) -->
         <activity
             android:name=".PreviewActivity"

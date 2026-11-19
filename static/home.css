@@ -200,3 +200,17 @@ html.os header .persona-slot{margin-left:auto;order:5}
 .hm-toast .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .hm-toast .acts button{height:30px;padding:0 13px;border-radius:9px;border:1px solid color-mix(in srgb,var(--ac) 22%,#0b0b0d);background:#220a10;color:var(--hm-text);font:700 12px var(--hm-ui);letter-spacing:.6px;cursor:pointer;transition:.15s}
 .hm-toast .acts button:hover:not(:disabled){background:var(--hm-red);border-color:var(--hm-red);color:#fff}.hm-toast .acts button:disabled{opacity:.5}
+/* Applications : bandeau « Échecs E.N.O.S. » (maquette Obsidian Crimson) */
+.lx-hero{grid-column:1/-1;position:relative;display:flex;align-items:center;min-height:250px;padding:30px 36px;border-radius:24px;overflow:hidden;isolation:isolate;border:1px solid rgba(255,255,255,.08);
+  background:radial-gradient(70% 120% at 80% 50%,rgba(130,10,40,.55),transparent 70%),linear-gradient(160deg,#16171c,#0b0c0f);animation:lxHero .6s cubic-bezier(.22,1,.36,1)}
+@keyframes lxHero{from{opacity:0;transform:translateY(16px)}}
+.lx-hero img{position:absolute;right:5%;bottom:-12%;height:128%;z-index:-1;filter:drop-shadow(0 30px 40px #000) drop-shadow(-8px 0 30px rgba(239,23,72,.25));transition:transform .9s cubic-bezier(.22,1,.36,1)}
+.lx-hero:hover img{transform:translateY(-6px) rotate(-2deg)}
+.lx-hc{display:flex;flex-direction:column;gap:10px;max-width:56%;text-align:left}
+.lx-hc small{font:700 13px var(--hm-ui);letter-spacing:.4em;color:#ff2d5c}
+.lx-hc h3{margin:0;font:800 40px/1.05 var(--hm-ui);letter-spacing:-.01em;color:#fff}
+.lx-hc p{margin:0;font-size:15px;line-height:1.55;color:#b6b3bd}
+.lx-hb{display:flex;gap:10px;margin-top:8px}
+.lx-hgo{height:46px;padding:0 22px;border-radius:13px;border:1px solid rgba(255,45,92,.8);background:linear-gradient(135deg,#f0154a,#a8082a);color:#fff;font:700 14px var(--hm-ui);letter-spacing:.06em;cursor:pointer;box-shadow:0 10px 26px -10px rgba(239,23,72,.9);transition:transform .2s,box-shadow .25s}
+.lx-hgo:hover{transform:translateY(-2px);box-shadow:0 14px 34px -10px rgba(239,23,72,1)}
+.lx-hgo.alt{background:rgba(26,27,34,.85);border-color:rgba(255,255,255,.14);box-shadow:none}

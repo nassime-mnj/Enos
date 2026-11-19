@@ -21,6 +21,7 @@ with sync_playwright() as pw:
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
     pg.goto("http://127.0.0.1:%s/index.html" % PORT)
     pg.wait_for_selector("#tabs")
+    pg.click('#tabs [data-t="learn"]')                                     # l'accueil est désormais le hub Échecs
     pg.wait_for_function("window.ENOS && ENOS.learnLib && ENOS.learnLib.puzzles", timeout=30000)
     check(pg.locator("#app-learn .card").count() >= 1, "onglet Apprendre monté")
     pg.click('#tabs [data-t="advisor"]')

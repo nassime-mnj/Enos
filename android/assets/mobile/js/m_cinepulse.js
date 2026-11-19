@@ -46,7 +46,7 @@
         <div class="card cp-exp"><h3>Exporter<span class="sp" id="cp-expinfo"></span></h3>
           <div class="row"><select id="cp-expres" class="sel"><option value="1280x720">720p · 1280×720</option><option value="854x480">480p · rapide</option><option value="1920x1080">1080p · lent</option></select><button class="btn pri" id="cp-export">⬆ EXPORTER LA VIDÉO</button></div>
           <div class="cp-prog" hidden><i></i></div>
-          <p class="muted" style="font-size:12.5px;margin-top:8px">La vidéo est montée sur le téléphone avec tous tes effets, vitesses et volumes, puis enregistrée (WebM). Garde l'écran allumé pendant l'export.</p></div>
+          <p class="muted" style="font-size:12.5px;margin-top:8px">Export WebM. Garde l'écran allumé pendant l'export.</p></div>
         <div class="card"><h3>Soundboard<span class="sp"><button class="cpb wide" id="cp-imp">+ Importer</button></span></h3>
           <div class="cp-pads"></div><p class="muted" style="font-size:13px;margin-top:8px">Maintiens ⠿ et glisse sur une piste, ou touche ＋ pour poser au curseur (piste active : touche son nom).</p></div>
         <div class="cp-dock"><div class="cp-dg"><button class="cpb" data-a="start" aria-label="Début">⏮</button><button class="cpb" data-a="back" aria-label="Image précédente">◀▏</button><button class="cpb play" data-a="play" aria-label="Lecture">▶</button><button class="cpb" data-a="fwd" aria-label="Image suivante">▕▶</button></div>
@@ -362,7 +362,7 @@
           ${slider("blur", "Flou gaussien", 0, 20, 0.5, f.blur, " px")}${slider("bright", "Luminosité", 40, 180, 1, f.bright, " %")}${slider("contrast", "Contraste", 40, 200, 1, f.contrast, " %")}
           ${slider("sat", "Saturation", 0, 300, 1, f.sat, " %")}${slider("hue", "Teinte", 0, 360, 1, f.hue, "°")}${slider("sepia", "Sépia", 0, 100, 1, f.sepia, " %")}
           ${slider("gray", "Noir & blanc", 0, 100, 1, f.gray, " %")}${slider("invert", "Négatif", 0, 100, 1, f.invert, " %")}${slider("vig", "Vignette", 0, 100, 1, f.vig, " %")}`;
-        $('.cp-panel[data-p="aud"]').innerHTML = `${slider("vol", "Volume du clip", 0, 200, 1, c.vol ?? 100, " %")}<p class="muted cp-note">La vitesse change aussi la hauteur du son (comme un disque qu'on accélère).</p>`;
+        $('.cp-panel[data-p="aud"]').innerHTML = `${slider("vol", "Volume du clip", 0, 200, 1, c.vol ?? 100, " %")}<p class="muted cp-note">La vitesse modifie aussi la hauteur du son.</p>`;
       }
       function setSpeed(c, v) {
         v = clamp(Math.round(v * 100) / 100, 0.25, 8);

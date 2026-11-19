@@ -13,7 +13,7 @@ with sync_playwright() as pw:
     sec = pg.evaluate("[...document.querySelectorAll('#ar-lobby .ar-sec h3')].map((h) => [h.firstChild.textContent.trim(), h.parentNode.querySelectorAll('.ar-card, .ar-bot').length])")
     print(sec)
     bad = pg.evaluate("[...document.querySelectorAll('#df-home img.hub-av')].slice(0, 40).filter((i) => i.complete && i.naturalWidth === 0).length")
-    check(any(t.startswith("BOTS E.N.O.S") for t, _ in sec) and any(t == "LÉGENDES" for t, _ in sec) and sum(n for _, n in sec) >= 130, "PC : Arène rangée par familles : %s" % sec)
+    check(any(t.startswith("BOTS E.N.O.S") or t.startswith("CHOISIR UN ADVERSAIRE") for t, _ in sec) and any(t == "LÉGENDES" for t, _ in sec) and sum(n for _, n in sec) >= 130, "PC : Arène rangée par familles : %s" % sec)
     bad = pg.evaluate("[...document.querySelectorAll('#ar-lobby .ar-bot img')].filter((i) => { const r = i.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0 && !(i.complete && i.naturalWidth > 0); }).length")
     check(pg.evaluate("!!(window.ENOS && ENOS.botRoster && ENOS.botRoster.list.length === 113)"), "PC : échelle des 113 bots chargée")
     pg.screenshot(path=S + "pc_arena.png")

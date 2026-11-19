@@ -18,12 +18,12 @@ with sync_playwright() as pw:
         shown[tc] = [pg.evaluate("%s.g.pl.b.elo" % API), pg.evaluate("document.querySelectorAll('.df-clk').length")]
         pg.evaluate("%s.g.token++; clearInterval(%s.g.clkI)" % (API, API))
     print(shown)
-    check(shown["rapid"][0] == 3200 and shown["blitz"][0] == 3900 and shown["bullet"][0] == 4800, "E.N.O.S. : rapide 3200, blitz 3900, bullet 4800 (étiquette) : %s" % {k: v[0] for k, v in shown.items()})
+    check(shown["rapid"][0] == 3650 and shown["blitz"][0] == 4550 and shown["bullet"][0] == 5450, "E.N.O.S. au niveau de Stockfish 19 : rapide 3650, blitz 4550, bullet 5450 (étiquette) : %s" % {k: v[0] for k, v in shown.items()})
     check(shown["rapid"][1] == 2 and shown["bullet"][1] == 2 and shown["daily"][1] == 0, "pendule affichée pour les 2 camps (rapide / bullet), aucune en différé")
     pg.evaluate("(() => { %s.launch('boss', { color: 'w', boss: 'eto', tc: 'bullet' }); })()" % API)
     pg.wait_for_selector("#df-board .cb-sq")
     pe = pg.evaluate("[%s.g.pl.w.elo, %s.g.pl.b.elo, %s.g.pl.w.eloReal]" % (API, API, API)); pg.evaluate("%s.g.token++; clearInterval(%s.g.clkI)" % (API, API))
-    check(pe[0] == 4900 and pe[1] == 5450 and pe[2] == 3200, "bullet : ETO 4900, Stockfish 19 5450 (étiquettes), force réelle d'ETO conservée : %s" % pe)
+    check(pe[0] == 5450 and pe[1] == 5450 and pe[2] == 3650, "bullet : ETO 5450 comme Stockfish 19 (étiquettes), force réelle d'ETO 3650 : %s" % pe)
     # pendule qui tourne + bot rapide + drapeau
     pg.evaluate("(() => { %s.launch('enos', { color: 'w', pow: 30, elo: 1200, tc: 'bullet' }); })()" % API)
     pg.wait_for_selector("#df-board .cb-sq")
@@ -54,9 +54,9 @@ with sync_playwright() as pw:
     open_tool(pg, "defis"); pg.wait_for_selector("#df-daily [data-dres]"); pg.click("#df-daily [data-dres]")
     pg.wait_for_function("%s.g.over" % API, timeout=8000); check("3 jours" in pg.evaluate("%s.g.over" % API), "échéance dépassée : %s" % pg.evaluate("%s.g.over" % API))
     # Chess Edit : étiquettes d'Elo selon la cadence
-    r = pg.evaluate("""() => { const M = ENOS.editMap, mk = (tc) => { const ch = new Chess(), mv = []; 'e4 e5'.split(' ').forEach((s) => { const m = ch.move(s); mv.push([m.from + m.to, m.san, 'good', 0, null, '']); }); return { t: 3, title: 'x', result: 'r', plies: 2, pw: 'E.N.O.S.', pb: 'ETO Brillant', mv, ch: [], tc }; };
+    r = pg.evaluate("""() => { const M = ENOS.editMap, mk = (tc) => { const ch = new Chess(), mv = []; 'e4 e5'.split(' ').forEach((s) => { const m = ch.move(s); mv.push([m.from + m.to, m.san, 'good', 0, null, '']); }); return { t: 3, title: 'x', result: 'r', plies: 2, pw: 'E.N.O.S.', pb: 'ETO', mv, ch: [], tc }; };
       const f = (tc) => { const rec = mk(tc), tl = M.buildViral(M.gamePlies(rec), rec, null, { intro: true, synth: true }); const i = tl.events.find((e) => e.kind === 'intro').intro; return [i.white.elo, i.black.elo]; }; return { rapid: f('rapid'), blitz: f('blitz'), bullet: f('bullet') }; }""")
-    check(r["rapid"] == [3200, 3200] and r["blitz"] == [3900, 4000] and r["bullet"] == [4800, 4900], "vidéo : Elo affichés par cadence %s" % r)
+    check(r["rapid"] == [3650, 3650] and r["blitz"] == [4550, 4550] and r["bullet"] == [5450, 5450], "vidéo : Elo affichés par cadence %s" % r)
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)
