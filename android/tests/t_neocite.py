@@ -27,6 +27,34 @@ with sync_playwright() as pw:
     pg.wait_for_function("(() => { const s = %s; return s.turn === 0 && !ENOS.jeux.cur.inst._busy() && s.round === 2 || s.over; })()" % S, timeout=120000)
     check(pg.evaluate(S + ".rolls") >= 4, "les bots ont joué leur tour (%d lancers)" % pg.evaluate(S + ".rolls"))
     pg.wait_for_timeout(400); pg.screenshot(path=SH + "neocite_3d_2.png")
+    # refuser d'acheter : on force 1+3 -> case 4 (Signal) ... on prend plutôt un lot libre
+    pg.wait_for_selector('#nc-acts [data-a="roll"]', timeout=60000)
+    free = pg.evaluate("(() => { const s = %s, N = ENOS.neocite; for (let d = 3; d <= 12; d++) { const sq = (s.pos[0] + d) %% N.SIZE; if (N.BOARD[sq].type === 'lot' && !s.own[sq]) return d; } return 0; })()" % S)
+    if free:
+        pg.evaluate("(() => { const N = ENOS.neocite, r = N.roll; N.roll = (st) => { N.roll = r; return r(st, 1, %d); }; })()" % (free - 1))
+        pg.click('#nc-acts [data-a="roll"]'); pg.wait_for_selector('#nc-acts [data-a="pass"]', timeout=30000)
+        sq = pg.evaluate(S + ".pending"); pg.click('#nc-acts [data-a="pass"]'); pg.wait_for_timeout(300)
+        check(not pg.evaluate(S + ".own[%d]" % sq) and pg.locator("#sheet:not([hidden])").count() == 0, "refuser d'acheter : le lot reste libre, aucune enchère")
+        pg.click('#nc-acts [data-a="end"]')
+        pg.wait_for_function("(() => { const s = %s; return s.turn === 0 && !ENOS.jeux.cur.inst._busy() && (s.phase === 'roll' || s.phase === 'jailed'); })()" % S, timeout=180000)
+    # case Enchères (coin en bas à droite) : on y amène le joueur
+    pg.evaluate("(() => { const s = %s; s.jail[0] = -1; s.phase = 'roll'; s.pos[0] = 21; const N = ENOS.neocite, r = N.roll; N.roll = (st) => { N.roll = r; return r(st, 1, 2); }; })()" % S)
+    pg.click('#nc-acts [data-a="roll"]'); pg.wait_for_selector("#sheet:not([hidden]) .nc-card", timeout=30000)
+    check("Enchères" in pg.inner_text("#sheet"), "case Enchères : feuille d'offre sous pli fermé")
+    pg.screenshot(path=SH + "neocite_auction.png")
+    pg.click("#sheet .opt >> nth=1"); pg.wait_for_selector('#nc-acts [data-a="end"]', timeout=30000)
+    check(True, "enchère résolue : " + pg.inner_text("#nc-log"))
+    # échange : on propose de l'argent contre un lot d'un bot
+    pg.evaluate("(() => { const s = %s; s.own[30] = { p: 1, lvl: 0, mort: false }; s.cash[0] = 3000; })()" % S)
+    pg.click('#nc-acts [data-a="manage"]'); pg.wait_for_selector('#sheet [data-a="trade"]'); pg.click('#sheet [data-a="trade"]')
+    pg.wait_for_selector("#sheet .nc-trade [data-to]"); pg.click('#sheet .nc-trade [data-to="1"]'); pg.click('#sheet .nc-trade [data-get="30"]')
+    for _ in range(9): pg.click('#sheet .nc-cash [data-c="100"]')
+    pg.screenshot(path=SH + "neocite_trade.png")
+    pg.click("#sheet [data-send]"); pg.wait_for_function("%s.own[30].p === 0 || document.querySelector('#nc-log').textContent.includes('refuse')" % S, timeout=20000)
+    check(pg.evaluate(S + ".own[30].p") == 0, "échange : ETO accepte 900 € pour son lot")
+    # découvert affiché en négatif
+    pg.evaluate("(() => { const s = %s; s.cash[0] = -400; })()" % S); pg.evaluate("ENOS.jeux.cur.inst._next()"); pg.wait_for_timeout(300)
+    check(pg.locator(".nc-pl.neg").count() >= 1 and "−400" in pg.inner_text(".nc-players").replace("\u00a0", " "), "découvert : solde négatif affiché en rouge")
     # gestion : on donne le quartier complet puis on construit
     pg.evaluate("(() => { const s = %s; [1,2,3].forEach((i) => s.own[i] = { p: 0, lvl: 0, mort: false }); })()" % S)
     if pg.locator('#nc-acts [data-a="manage"]').count():

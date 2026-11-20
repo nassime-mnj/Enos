@@ -570,6 +570,22 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.112 — Néo-Cité : règles complètes, plateau lisible, ville de nuit, échanges
+
+- **Règles** (`js/games/neocite_rules.js`) :
+  - on peut **refuser d'acheter** un lot : il reste libre, sans enchère automatique ;
+  - **valeur du quartier** : chaque lot possédé fait monter le loyer de tout le quartier (×1, ×1,75, ×2,5 avec les 3), puis antennes et tour ;
+  - **case Enchères** au coin en bas à droite : un lot libre tiré au hasard est mis aux enchères sous pli fermé, tous les joueurs enchérissent ;
+  - **Signal** : un événement tiré au hasard parmi 20 (gains, amendes, déplacements, Pare-feu, laissez-passer…) ; **Audit** déplacé sur le côté droit ;
+  - **découvert** autorisé jusqu'à −1 500 € ; au-delà : vente des bâtiments puis hypothèques, sinon faillite ;
+  - **échanges** entre joueurs (lots sans bâtiments + argent) ; les bots en proposent pour compléter leurs quartiers et jugent les offres reçues ; le « Rachat » forcé est retiré ;
+  - monnaie en euros.
+- **Plateau lisible** : cases plus grandes, noms en gros caractères, prix et nom du quartier visibles, icônes dessinées pour Départ, Pare-feu, Réserve, Enchères, Audit, Signal, Relais ; surbrillance de la case d'arrivée et puce en haut (case, quartier, propriétaire ou prix).
+- **Caméra** : suivi du joueur (le côté où il se trouve passe face à l'écran, zoom sur les cases), bouton « Vue plateau » / « Suivre », pincer pour zoomer, glisser pour se déplacer ; les dés roulent près du joueur.
+- **Décor** : ville de nuit autour de la table (gratte-ciel éclairés, sol miroir quadrillé de néon, projecteurs qui balaient le ciel, drones lumineux, ciel étoilé), grande table d'obsidienne cerclée d'or.
+- **Illustrations** : liste de prompts pour ChatGPT dans `docs/NEOCITE_GPT.md` (14 icônes, illustration de chacun des 24 lots, de chacune des 20 cartes événement, skyline). Le jeu les affiche automatiquement dès qu'elles sont ajoutées (`js/games/neocite_art.js` liste les images présentes).
+- Tests : `neocite_rules.test.js` (valeur du quartier, refus, case Enchères, découvert, échanges, offres des bots), `t_neocite.py` (refus, enchère, échange accepté par ETO, découvert affiché).
+
 ## 1.111 — Jeux : sons réels, Flick en décors 3D, effets de vitesse et de but, bots des jeux
 
 - **Sons des jeux** (`js/games/sfx.js`, banque `js/games/sfx_bank.js`, sons `js/games/sfx_data.js`, fichiers `audio/games/`) : 109 sons réels (packs CC0 de Kenney via OpenGameArt, bois/métal/impacts CC0, roulement de boule CC0, foule de stade CC-BY 4.0 de Gregor Quendel), coupés, normalisés et convertis en OGG. Un gestionnaire unique : bus sfx / interface / musique / ambiance, compresseur doux, variante différente à chaque lecture, hauteur légèrement aléatoire, volume selon la force du choc, panoramique selon la position, polyphonie limitée, ambiances en boucle. Branché dans Dames (bois), CHROMA (cartes + sons des cartes spéciales), Poker (cartes, jetons, toc sur la table, tapis), Flick (tir, palet/palet, balle, bande, poteau, but + foule), Néo-Cité (dés, pions, pièces, construction, Pare-feu, Réserve). Jingles de victoire et de défaite. Bouton son dans la barre du jeu. Crédits : `audio/games/CREDITS.md`.

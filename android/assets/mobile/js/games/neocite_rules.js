@@ -18,8 +18,8 @@
   ];
   N.DIST = DIST;
   // plateau : côté s (0..3) = coin s*8, puis 7 cases : quartier A (3 lots), case spéciale, quartier B (3 lots)
-  const SPECIAL = [{ type: "signal", name: "Signal" }, { type: "relay", name: "Relais Nord", price: 200 }, { type: "signal", name: "Signal" }, { type: "relay", name: "Relais Sud", price: 200 }];
-  const CORNER = [{ type: "start", name: "Départ" }, { type: "jail", name: "Pare-feu" }, { type: "reserve", name: "Réserve" }, { type: "audit", name: "Audit" }];
+  const SPECIAL = [{ type: "signal", name: "Signal" }, { type: "relay", name: "Relais Nord", price: 200 }, { type: "audit", name: "Audit" }, { type: "relay", name: "Relais Sud", price: 200 }];
+  const CORNER = [{ type: "start", name: "Départ" }, { type: "jail", name: "Pare-feu" }, { type: "reserve", name: "Réserve" }, { type: "auction", name: "Enchères" }];
   const BOARD = [];
   for (let s = 0; s < 4; s++) {
     BOARD.push(Object.assign({}, CORNER[s]));
@@ -30,7 +30,7 @@
     }
   }
   N.BOARD = BOARD; N.SIZE = BOARD.length;
-  N.JAIL = 8; N.RESERVE = 16; N.AUDIT = 24; N.SALARY = 200; N.JAIL_FEE = 50;
+  N.JAIL = 8; N.RESERVE = 16; N.AUDIT = 20; N.AUCTION = 24; N.SALARY = 200; N.JAIL_FEE = 50; N.OVERDRAFT = 1500;
   N.RELAYS = BOARD.map((b, i) => (b.type === "relay" ? i : -1)).filter((i) => i >= 0);
   N.lotsOf = (d) => BOARD.map((b, i) => (b.type === "lot" && b.d === d ? i : -1)).filter((i) => i >= 0);
 
@@ -50,6 +50,12 @@
     { id: "summit", text: "Invitation au Sommet : avance jusqu'à l'Esplanade.", go: -1 },
     { id: "rest", text: "Pause bien méritée : avance jusqu'à la Réserve.", go: 16 },
     { id: "round", text: "Tournée générale : verse 25 à chaque joueur.", payAll: 25 },
+    { id: "dividend", text: "Dividendes de tes actions : reçois 50.", gain: 50 },
+    { id: "drone", text: "Excès de vitesse en drone : verse 75 à la Réserve.", fine: 75 },
+    { id: "refund", text: "Remboursement d'impôts : reçois 20.", gain: 20 },
+    { id: "pixel", text: "Tournoi à la Salle des Records : avance jusqu'à la Rue Pixel.", go: -2 },
+    { id: "audit2", text: "Contrôle fiscal surprise : va à l'Audit.", go: 20 },
+    { id: "jackpot", text: "Concours d'architecture : reçois 200.", gain: 200 },
   ];
   N.CARDS = CARDS;
   const rng = (seed) => { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
@@ -68,17 +74,20 @@
     const o = s.own[sq], b = BOARD[sq]; if (!o || o.mort) return 0;
     if (b.type === "relay") return N.RELAYS.filter((i) => N.owner(s, i) === o.p).length === 2 ? 100 : 40;
     if (o.lvl > 0) return b.rent[o.lvl];
-    return b.rent[0] * (N.hasSet(s, o.p, b.d) ? 2 : 1); void roll;
+    return Math.round(b.rent[0] * N.SETMULT[N.lotsOf(b.d).filter((i) => N.owner(s, i) === o.p).length - 1]); void roll;
   };
+  /** le quartier prend de la valeur à chaque lot possédé : ×1, ×1,75, ×2,5 (quartier complet) */
+  N.SETMULT = [1, 1.75, 2.5];
   N.netWorth = (s, p) => s.cash[p] + Object.entries(s.own).filter(([, o]) => o.p === p).reduce((a, [sq, o]) => { const b = BOARD[sq]; return a + (o.mort ? b.price / 2 : b.price) + (o.lvl || 0) * (b.build || 0) / 2; }, 0);
   N.buildings = (s, p) => Object.entries(s.own).filter(([, o]) => o.p === p).reduce((a, [, o]) => { if (o.lvl === 4) a[1]++; else a[0] += o.lvl || 0; return a; }, [0, 0]);
 
   // ------------------------------------------------------------------ argent
-  /** paiement ; to = index joueur, "reserve" ou null (banque). Liquide automatiquement (ventes puis hypothèques) ; sinon faillite. */
+  /** paiement ; to = index joueur, "reserve" ou null (banque). Découvert permis jusqu'à −1 500 ; au-delà on vend et hypothèque, sinon faillite. */
+  N.canSpend = (s, p, amount) => s.cash[p] - amount >= -N.OVERDRAFT;
   function pay(s, from, to, amount, ev) {
     if (amount <= 0) return true;
-    if (s.cash[from] < amount) liquidate(s, from, amount, ev);
-    if (s.cash[from] < amount) { bankrupt(s, from, to, ev); return false; }
+    if (!N.canSpend(s, from, amount)) liquidate(s, from, amount, ev);
+    if (!N.canSpend(s, from, amount)) { bankrupt(s, from, to, ev); return false; }
     s.cash[from] -= amount;
     if (to === "reserve") s.reserve += amount; else if (to != null && to >= 0) s.cash[to] += amount;
     return true;
@@ -88,9 +97,9 @@
     const mine = () => Object.keys(s.own).map(Number).filter((i) => s.own[i].p === p);
     // 1) bâtiments (à moitié prix), les plus chers d'abord
     let guard = 0;
-    while (s.cash[p] < need && guard++ < 200) { const b = mine().filter((i) => s.own[i].lvl > 0).sort((a, c) => s.own[c].lvl - s.own[a].lvl || BOARD[c].build - BOARD[a].build)[0]; if (b == null) break; N.sell(s, p, b); ev && ev.push({ t: "sell", p, sq: b }); }
+    while (s.cash[p] - need < -N.OVERDRAFT && guard++ < 200) { const b = mine().filter((i) => s.own[i].lvl > 0).sort((a, c) => s.own[c].lvl - s.own[a].lvl || BOARD[c].build - BOARD[a].build)[0]; if (b == null) break; N.sell(s, p, b); ev && ev.push({ t: "sell", p, sq: b }); }
     // 2) hypothèques, les moins chères d'abord
-    while (s.cash[p] < need && guard++ < 400) { const m = mine().filter((i) => !s.own[i].mort && !(s.own[i].lvl > 0)).sort((a, c) => BOARD[a].price - BOARD[c].price)[0]; if (m == null) break; N.mortgage(s, p, m); ev && ev.push({ t: "mort", p, sq: m }); }
+    while (s.cash[p] - need < -N.OVERDRAFT && guard++ < 400) { const m = mine().filter((i) => !s.own[i].mort && !(s.own[i].lvl > 0)).sort((a, c) => BOARD[a].price - BOARD[c].price)[0]; if (m == null) break; N.mortgage(s, p, m); ev && ev.push({ t: "mort", p, sq: m }); }
   }
   function bankrupt(s, p, to, ev) {
     const heir = typeof to === "number" && to >= 0 ? to : -1;
@@ -117,18 +126,21 @@
       if (b.type === "relay" && !s.out[p]) { s.phase = "relay"; s.pending = sq; return; }
     } else if (b.type === "signal") { drawCard(s, p, ev, roll); return; }
     else if (b.type === "audit") toJail(s, p, ev);
+    else if (b.type === "auction") { const free = BOARD.map((x, i) => ((x.type === "lot" || x.type === "relay") && !s.own[i] ? i : -1)).filter((i) => i >= 0);
+      if (free.length) { s.phase = "auction"; s.pending = free[Math.floor(s.r() * free.length)]; ev.push({ t: "auction", p, sq: s.pending }); return; } }
     else if (b.type === "reserve") { if (s.reserve > 0) { ev.push({ t: "reserve", p, amount: s.reserve }); s.cash[p] += s.reserve; s.reserve = 0; } }
     after(s);
   }
   function after(s) { if (s.over) { s.phase = "over"; return; } const p = s.turn; s.phase = !s.out[p] && s.dice && s.dice[0] === s.dice[1] && s.jail[p] < 0 ? "roll" : "end"; s.pending = null; }
   function drawCard(s, p, ev, roll) {
-    const id = s.deck.shift(), c = CARDS.find((x) => x.id === id); if (!c.pass) s.deck.push(id);
+    // événement tiré au hasard (le laissez-passer reste chez son détenteur tant qu'il ne l'a pas utilisé)
+    const id = s.deck[Math.floor(s.r() * s.deck.length)], c = CARDS.find((x) => x.id === id); if (c.pass) s.deck.splice(s.deck.indexOf(id), 1);
     ev.push({ t: "card", p, card: c.id, text: c.text });
     if (c.gain) s.cash[p] += c.gain;
     else if (c.fine) pay(s, p, "reserve", c.fine, ev);
     else if (c.pass) s.passes[p]++;
     else if (c.jail) { toJail(s, p, ev); return after(s); }
-    else if (c.go != null) { const dest = c.go < 0 ? N.lotsOf(7)[0] : c.go; moveTo(s, p, dest, ev); if (dest !== 0) return land(s, p, ev, roll); }
+    else if (c.go != null) { const dest = c.go === -1 ? N.lotsOf(7)[0] : c.go === -2 ? N.lotsOf(2)[0] : c.go; moveTo(s, p, dest, ev); if (dest !== 0) return land(s, p, ev, roll); }
     else if (c.relay) { let i = s.pos[p]; do { i = (i + 1) % N.SIZE; } while (BOARD[i].type !== "relay"); moveTo(s, p, i, ev); return land(s, p, ev, roll); }
     else if (c.back) { const dest = (s.pos[p] - c.back + N.SIZE) % N.SIZE; moveTo(s, p, dest, ev, false); return land(s, p, ev, roll); }
     else if (c.collect) s.out.forEach((o, j) => { if (!o && j !== p) pay(s, j, p, c.collect, ev); });
@@ -152,13 +164,15 @@
     if (s.dice[1] % 1) s.dice = [d1, d2];
     return ev;
   };
-  N.jailPay = (s) => { const p = s.turn; if (s.jail[p] < 0 || s.cash[p] < N.JAIL_FEE) return false; pay(s, p, "reserve", N.JAIL_FEE); s.jail[p] = -1; s.phase = "roll"; return true; };
+  N.jailPay = (s) => { const p = s.turn; if (s.jail[p] < 0 || !N.canSpend(s, p, N.JAIL_FEE)) return false; pay(s, p, "reserve", N.JAIL_FEE); s.jail[p] = -1; s.phase = "roll"; return true; };
   N.jailPass = (s) => { const p = s.turn; if (s.jail[p] < 0 || !s.passes[p]) return false; s.passes[p]--; N.returnPass(s); s.jail[p] = -1; s.phase = "roll"; return true; };
-  N.buy = (s) => { const p = s.turn, sq = s.pending; if (s.phase !== "buy" || s.cash[p] < BOARD[sq].price) return false; s.cash[p] -= BOARD[sq].price; s.own[sq] = { p, lvl: 0, mort: false }; log(s, `achat:${p}:${sq}`); after(s); return true; };
-  /** enchère : bids[j] = offre du joueur j (0 = passe). Le plus offrant paie son offre. Renvoie le gagnant ou -1. */
+  N.buy = (s) => { const p = s.turn, sq = s.pending; if (s.phase !== "buy" || !N.canSpend(s, p, BOARD[sq].price)) return false; s.cash[p] -= BOARD[sq].price; s.own[sq] = { p, lvl: 0, mort: false }; log(s, `achat:${p}:${sq}`); after(s); return true; };
+  /** refuser d'acheter : le lot reste libre */
+  N.pass = (s) => { if (s.phase !== "buy") return false; log(s, `refus:${s.turn}:${s.pending}`); after(s); return true; };
+  /** case Enchères : bids[j] = offre sous pli fermé du joueur j (0 = passe). Le plus offrant paie son offre. Renvoie le gagnant ou -1. */
   N.auction = (s, bids) => {
-    const sq = s.pending; if (s.phase !== "buy") return -1;
-    let best = -1; bids.forEach((v, j) => { if (s.out[j] || !(v > 0) || v > s.cash[j]) return; if (best < 0 || v > bids[best] || (v === bids[best] && j === s.turn)) best = j; });
+    const sq = s.pending; if (s.phase !== "auction") return -1;
+    let best = -1; bids.forEach((v, j) => { if (s.out[j] || !(v > 0) || v > Math.max(0, s.cash[j])) return; if (best < 0 || v > bids[best] || (v === bids[best] && j === s.turn)) best = j; });
     if (best >= 0) { s.cash[best] -= bids[best]; s.own[sq] = { p: best, lvl: 0, mort: false }; log(s, `enchère:${best}:${sq}:${bids[best]}`); }
     after(s); return best;
   };
@@ -176,7 +190,7 @@
     s.phase = s.jail[s.turn] >= 0 ? "jailed" : "roll";
   };
   // construction : quartier complet, rien d'hypothéqué, construction homogène (pas plus d'un niveau d'écart)
-  N.canBuild = (s, p, sq) => { const o = s.own[sq], b = BOARD[sq]; if (!o || o.p !== p || b.type !== "lot" || o.lvl >= 4 || s.cash[p] < b.build) return false;
+  N.canBuild = (s, p, sq) => { const o = s.own[sq], b = BOARD[sq]; if (!o || o.p !== p || b.type !== "lot" || o.lvl >= 4 || !N.canSpend(s, p, b.build)) return false;
     const lots = N.lotsOf(b.d); if (!N.hasSet(s, p, b.d) || lots.some((i) => s.own[i].mort)) return false; return o.lvl <= Math.min(...lots.map((i) => s.own[i].lvl)); };
   N.build = (s, p, sq) => { if (!N.canBuild(s, p, sq)) return false; s.cash[p] -= BOARD[sq].build; s.own[sq].lvl++; return true; };
   N.canSell = (s, p, sq) => { const o = s.own[sq]; if (!o || o.p !== p || !(o.lvl > 0)) return false; return o.lvl >= Math.max(...N.lotsOf(BOARD[sq].d).map((i) => s.own[i].lvl)); };
@@ -184,12 +198,13 @@
   N.mortgage = (s, p, sq) => { const o = s.own[sq], b = BOARD[sq]; if (!o || o.p !== p || o.mort) return false; if (b.type === "lot" && N.lotsOf(b.d).some((i) => s.own[i] && s.own[i].lvl > 0)) return false; o.mort = true; s.cash[p] += b.price / 2; return true; };
   N.unmortgage = (s, p, sq) => { const o = s.own[sq], cost = Math.ceil(BOARD[sq].price * 0.55); if (!o || o.p !== p || !o.mort || s.cash[p] < cost) return false; o.mort = false; s.cash[p] -= cost; return true; };
   N.unmortgageCost = (sq) => Math.ceil(BOARD[sq].price * 0.55);
-  // Rachat : avec 2 lots d'un quartier, on peut racheter le 3e (non bâti, non hypothéqué) à son propriétaire pour 2 fois son prix
-  N.takeoverCost = (sq) => BOARD[sq].price * 2;
-  N.canTakeover = (s, p, sq) => { const o = s.own[sq], b = BOARD[sq]; if (!o || o.p === p || b.type !== "lot" || o.mort || s.out[p]) return false;
-    const lots = N.lotsOf(b.d); if (lots.some((i) => s.own[i] && s.own[i].lvl > 0)) return false;
-    return lots.filter((i) => i !== sq).every((i) => N.owner(s, i) === p) && s.cash[p] >= N.takeoverCost(sq); };
-  N.takeover = (s, p, sq) => { if (!N.canTakeover(s, p, sq)) return false; const o = s.own[sq], cost = N.takeoverCost(sq); s.cash[p] -= cost; s.cash[o.p] += cost; log(s, `rachat:${p}:${sq}:${o.p}`); s.own[sq] = { p, lvl: 0, mort: false }; return true; };
+  // ------------------------------------------------------------------ échanges entre joueurs
+  /** lot échangeable : appartient au joueur et aucun bâtiment dans son quartier (on vend d'abord les bâtiments) */
+  N.tradable = (s, p, sq) => { const o = s.own[sq], b = BOARD[sq]; if (!o || o.p !== p) return false; return b.type !== "lot" || N.lotsOf(b.d).every((i) => !(s.own[i] && s.own[i].lvl > 0)); };
+  /** offre {from, to, give: [lots de from], get: [lots de to], cash: somme versée par from (négative = reçue)} */
+  N.tradeValid = (s, o) => o && o.from !== o.to && !s.out[o.from] && !s.out[o.to] && (o.give.length || o.get.length || o.cash) && o.give.every((sq) => N.tradable(s, o.from, sq)) && o.get.every((sq) => N.tradable(s, o.to, sq))
+    && (o.cash <= 0 || s.cash[o.from] >= o.cash) && (o.cash >= 0 || s.cash[o.to] >= -o.cash);
+  N.trade = (s, o) => { if (!N.tradeValid(s, o)) return false; o.give.forEach((sq) => (s.own[sq].p = o.to)); o.get.forEach((sq) => (s.own[sq].p = o.from)); s.cash[o.from] -= o.cash; s.cash[o.to] += o.cash; log(s, `échange:${o.from}:${o.to}`); return true; };
 
   // ------------------------------------------------------------------ IA
   const RES = { easy: 40, normal: 120, hard: 180, max: 220 };
@@ -204,11 +219,26 @@
     return Math.max(0, Math.min(Math.floor(v / 5) * 5, s.cash[p] - res)); };
   /** gestion de fin de tour : lever les hypothèques puis construire tant qu'il reste une marge */
   N.botManage = (s, p, level) => { const res = (RES[level] || 120) + 60, did = []; let guard = 0;
-    if (level !== "easy") for (const sq of Object.keys(s.own).map(Number)) if (N.canTakeover(s, p, sq) && s.cash[p] - N.takeoverCost(sq) >= res) { const from = s.own[sq].p; N.takeover(s, p, sq); did.push({ t: "takeover", sq, from }); }
     for (const sq of Object.keys(s.own).map(Number)) if (s.own[sq].p === p && s.own[sq].mort && s.cash[p] - N.unmortgageCost(sq) > res * 1.5) { N.unmortgage(s, p, sq); did.push({ t: "unmort", sq }); }
     if (level === "easy" && s.r() < 0.5) return did;
     for (;;) { if (guard++ > 40) break; const opts = Object.keys(s.own).map(Number).filter((sq) => N.canBuild(s, p, sq) && s.cash[p] - BOARD[sq].build >= res).sort((a, b) => BOARD[b].d - BOARD[a].d); if (!opts.length) break; N.build(s, p, opts[0]); did.push({ t: "build", sq: opts[0] }); }
     return did; };
+  /** valeur qu'un joueur perd en cédant un lot (plus s'il casse son quartier ou complète celui de l'autre) */
+  const keepValue = (s, p, sq, to) => { const b = BOARD[sq]; let v = b.price * (s.own[sq] && s.own[sq].mort ? 0.6 : 1);
+    if (b.type === "lot") { const lots = N.lotsOf(b.d), mine = lots.filter((i) => N.owner(s, i) === p).length, theirs = lots.filter((i) => N.owner(s, i) === to).length; v *= 1 + (mine - 1) * 0.45; if (theirs === 2) v *= 2.4; }
+    return v; };
+  /** un bot accepte-t-il l'offre ? (gain net selon sa valeur des lots, marge selon le niveau) */
+  N.botAccepts = (s, o, level) => { if (!N.tradeValid(s, o)) return false; const b = o.to;
+    const gain = o.give.reduce((a, sq) => a + N.value(s, b, sq), 0) + o.cash, loss = o.get.reduce((a, sq) => a + keepValue(s, b, sq, o.from), 0);
+    const margin = { easy: 0.95, normal: 1.08, hard: 1.18, max: 1.25 }[level] || 1.08; return gain >= loss * margin && s.cash[b] + o.cash >= 0; };
+  /** offre d'un bot : racheter le lot qui lui manque pour compléter un quartier (une fois tous les 4 tours par lot) */
+  N.botTradeOffer = (s, p, level) => { if (level === "easy") return null; const res = (RES[level] || 120) + 40; s.asked = s.asked || {};
+    for (let d = 7; d >= 0; d--) { const lots = N.lotsOf(d), mine = lots.filter((i) => N.owner(s, i) === p); if (mine.length !== 2) continue;
+      const sq = lots.find((i) => N.owner(s, i) !== p); const q = N.owner(s, sq); if (q < 0 || !N.tradable(s, q, sq) || !N.tradable(s, p, mine[0])) continue;
+      const key = p + ":" + sq; if (s.asked[key] && s.round - s.asked[key] < 4) continue;
+      const cash = Math.floor((BOARD[sq].price * ({ normal: 2.7, hard: 3.0, max: 3.3 }[level] || 2.7)) / 10) * 10; if (s.cash[p] - cash < res) continue;
+      s.asked[key] = s.round; return { from: p, to: q, give: [], get: [sq], cash }; }
+    return null; };
   N.botJail = (s, level) => { const p = s.turn; if (s.passes[p]) return "pass"; const built = Object.values(s.own).some((o) => o.p !== p && o.lvl > 0); return s.cash[p] >= 300 && !(built && level !== "easy") ? "pay" : "roll"; };
   N.botRelay = (s, level) => { const p = s.turn, other = N.RELAYS.find((i) => i !== s.pos[p]), o = s.own[other]; if (s.cash[p] < 200 || level === "easy") return false; return !o || o.p === p; };
   if (typeof module !== "undefined" && module.exports) module.exports = N; else (root.ENOS = root.ENOS || {}).neocite = N;
