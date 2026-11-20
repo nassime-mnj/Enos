@@ -6,19 +6,20 @@
 //   Amendes et taxes alimentent la Réserve, que remporte celui qui s'arrête sur la case Réserve.
 (function (root) {
   const N = {};
+  // 8 régions du monde, 3 villes chacune, de la moins chère à la plus chère (chaque ville est illustrée par son monument)
   const DIST = [
-    { name: "Vieux Port", color: "#e9dcc0", lots: ["Quai des Grues", "Rue des Docks", "Phare Noir"], price: 60, build: 50 },
-    { name: "Marché des Lanternes", color: "#e8b54a", lots: ["Allée des Lanternes", "Place du Troc", "Halle d'Or"], price: 90, build: 50 },
-    { name: "Quartier Arcade", color: "#1acfd6", lots: ["Rue Pixel", "Passage Néon", "Salle des Records"], price: 120, build: 100 },
-    { name: "Campus", color: "#8b5cf6", lots: ["Bibliothèque de Verre", "Labo Quantique", "Dôme Central"], price: 150, build: 100 },
-    { name: "Parc des Serveurs", color: "#14b8a6", lots: ["Baie 01", "Allée Froide", "Nœud Principal"], price: 180, build: 150 },
-    { name: "Boulevard Écarlate", color: "#ef1748", lots: ["Galerie Rubis", "Avenue Carmin", "Tour Écarlate"], price: 220, build: 150 },
-    { name: "Jardins Suspendus", color: "#22c55e", lots: ["Serre Flottante", "Pont des Lianes", "Belvédère"], price: 260, build: 200 },
-    { name: "Le Sommet", color: "#b3122f", lots: ["Esplanade", "La Spire", "L'Œil"], price: 320, build: 200 },
+    { name: "Maghreb", color: "#e9dcc0", lots: ["Tunis", "Alger", "Casablanca"], landmarks: ["Mosquée Zitouna", "Monument des Martyrs", "Mosquée Hassan II"], price: 60, build: 50 },
+    { name: "Afrique", color: "#e8b54a", lots: ["Dakar", "Abidjan", "Le Caire"], landmarks: ["Monument de la Renaissance africaine", "Cathédrale Saint-Paul", "Pyramides de Gizeh"], price: 90, build: 50 },
+    { name: "Amérique latine", color: "#1acfd6", lots: ["Mexico", "Buenos Aires", "Rio de Janeiro"], landmarks: ["Palais des Beaux-Arts", "Obélisque", "Christ Rédempteur"], price: 120, build: 100 },
+    { name: "Europe du Sud", color: "#8b5cf6", lots: ["Lisbonne", "Madrid", "Rome"], landmarks: ["Tour de Belém", "Puerta de Alcalá", "Colisée"], price: 150, build: 100 },
+    { name: "Asie", color: "#14b8a6", lots: ["Bangkok", "Séoul", "Singapour"], landmarks: ["Wat Arun", "Tour N Séoul", "Marina Bay"], price: 180, build: 150 },
+    { name: "Europe du Nord", color: "#ef1748", lots: ["Amsterdam", "Berlin", "Londres"], landmarks: ["Canaux et maisons étroites", "Porte de Brandebourg", "Tower Bridge"], price: 220, build: 150 },
+    { name: "Orient", color: "#22c55e", lots: ["Istanbul", "Doha", "Dubaï"], landmarks: ["Sainte-Sophie", "Musée d'art islamique", "Burj Khalifa"], price: 260, build: 200 },
+    { name: "Capitales mondiales", color: "#b3122f", lots: ["Tokyo", "New York", "Paris"], landmarks: ["Tokyo Tower", "Statue de la Liberté", "Tour Eiffel"], price: 320, build: 200 },
   ];
   N.DIST = DIST;
   // plateau : côté s (0..3) = coin s*8, puis 7 cases : quartier A (3 lots), case spéciale, quartier B (3 lots)
-  const SPECIAL = [{ type: "signal", name: "Signal" }, { type: "relay", name: "Relais Nord", price: 200 }, { type: "audit", name: "Audit" }, { type: "relay", name: "Relais Sud", price: 200 }];
+  const SPECIAL = [{ type: "signal", name: "Signal" }, { type: "relay", name: "Aéroport Nord", price: 200 }, { type: "audit", name: "Audit" }, { type: "relay", name: "Aéroport Sud", price: 200 }];
   const CORNER = [{ type: "start", name: "Départ" }, { type: "jail", name: "Pare-feu" }, { type: "reserve", name: "Réserve" }, { type: "auction", name: "Enchères" }];
   const BOARD = [];
   for (let s = 0; s < 4; s++) {
@@ -37,7 +38,7 @@
   // cartes Signal
   const CARDS = [
     { id: "start", text: "Mise à jour réussie : avance jusqu'au Départ.", go: 0 },
-    { id: "relay", text: "Correspondance express : avance jusqu'au prochain Relais.", relay: true },
+    { id: "relay", text: "Vol en correspondance : avance jusqu'au prochain Aéroport.", relay: true },
     { id: "hack", text: "Prix du hackathon : reçois 150.", gain: 150 },
     { id: "fine", text: "Amende réseau : verse 100 à la Réserve.", fine: 100 },
     { id: "jail", text: "Intrusion détectée : va directement au Pare-feu.", jail: true },
@@ -47,13 +48,13 @@
     { id: "maint", text: "Maintenance : paie 25 par antenne et 100 par tour.", repair: [25, 100] },
     { id: "bounty", text: "Bug bounty : reçois 100.", gain: 100 },
     { id: "cloud", text: "Facture cloud : verse 50 à la Réserve.", fine: 50 },
-    { id: "summit", text: "Invitation au Sommet : avance jusqu'à l'Esplanade.", go: -1 },
+    { id: "summit", text: "Billet d'avion offert : avance jusqu'à Tokyo.", go: -1 },
     { id: "rest", text: "Pause bien méritée : avance jusqu'à la Réserve.", go: 16 },
     { id: "round", text: "Tournée générale : verse 25 à chaque joueur.", payAll: 25 },
     { id: "dividend", text: "Dividendes de tes actions : reçois 50.", gain: 50 },
     { id: "drone", text: "Excès de vitesse en drone : verse 75 à la Réserve.", fine: 75 },
     { id: "refund", text: "Remboursement d'impôts : reçois 20.", gain: 20 },
-    { id: "pixel", text: "Tournoi à la Salle des Records : avance jusqu'à la Rue Pixel.", go: -2 },
+    { id: "pixel", text: "Carnaval : avance jusqu'à Mexico.", go: -2 },
     { id: "audit2", text: "Contrôle fiscal surprise : va à l'Audit.", go: 20 },
     { id: "jackpot", text: "Concours d'architecture : reçois 200.", gain: 200 },
   ];

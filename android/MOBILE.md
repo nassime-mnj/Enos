@@ -570,6 +570,19 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.113 — Néo-Cité : villes du monde, interface premium
+
+- **24 vraies villes** en 8 régions (Maghreb, Afrique, Amérique latine, Europe du Sud, Asie, Europe du Nord, Orient, Capitales mondiales), chacune avec son monument (Paris · Tour Eiffel, New York · Statue de la Liberté…). Les Relais deviennent des **Aéroports**. Liste pour ChatGPT (ville, monument, fichier) : `docs/NEOCITE_GPT.md`.
+- **Interface d'après la maquette** :
+  - barre du haut : logo, « NÉO-CITÉ », tour en cours ;
+  - joueurs : avatar cerclé à leur couleur, solde en or, étiquette « À TOI » sous le joueur au trait ;
+  - panneau du bas : Réserve, ton solde, gros bouton « Lancer les dés » avec icône, « Gérer » ;
+  - fiche de ville illustrée (illustration, région, monument, loyers).
+- **Enchères montantes** dans une fenêtre : valeur du lot, ton solde, mise actuelle, offre réglable (− / +), historique des offres, « Passer » / « Placer l'offre ». Les bots surenchérissent jusqu'à leur limite, le dernier en lice paie sa mise.
+- **Échange** dans une fenêtre : choix de l'adversaire par avatar, cartes illustrées « Tu demandes » / « Tu offres », carte d'argent (−100, −10, +10, +100), « Proposer » / « Annuler ». Les offres des bots s'affichent dans la même fenêtre (Accepter / Refuser).
+- **Carte Signal** : fenêtre animée avec l'événement.
+- Illustrations : celles de ChatGPT s'affichent dès qu'elles sont ajoutées ; en attendant, chaque ville a une skyline de nuit générée aux couleurs de sa région.
+
 ## 1.112 — Néo-Cité : règles complètes, plateau lisible, ville de nuit, échanges
 
 - **Règles** (`js/games/neocite_rules.js`) :

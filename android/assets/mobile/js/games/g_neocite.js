@@ -90,7 +90,7 @@
         return { x: pos[0], z: pos[1], rot, corner, s }; };
       const icons = {}; await Promise.all((art.icons || []).map(async (k) => (icons[k] = await loadImg(IMG + "icons/" + k + ".webp"))));
       const lotArt = {}; await Promise.all((art.lots || []).map(async (k) => (lotArt[k] = await loadImg(IMG + "lots/" + k + ".webp"))));
-      const LABEL = { start: "DÉPART", jail: "PARE-FEU", reserve: "RÉSERVE", auction: "ENCHÈRES", audit: "AUDIT", signal: "SIGNAL" };
+      const LABEL = { start: "DÉPART", jail: "PARE-FEU", reserve: "RÉSERVE", auction: "ENCHÈRES", audit: "AUDIT", signal: "SIGNAL" }; void 0;
       const SUB = { start: "+200 € à chaque passage", jail: "Simple visite", reserve: "Remporte la Réserve", auction: "Un lot aux enchères", audit: "Direction Pare-feu", signal: "Événement" };
       const tileTex = (i) => { const b = N.BOARD[i], corner = i % 8 === 0, cw = corner ? 512 : 360, ch = 548;
         return G3.canvasTex(T, cw, ch, (g, w, h) => {
@@ -105,7 +105,7 @@
             g.font = "900 54px Inter, Arial"; const lines = wrap(g, b.name.toUpperCase(), w - 40).slice(0, 3), y0 = 230 - (lines.length - 1) * 30;
             lines.forEach((l, k) => txt(l, y0 + k * 62, "900 54px Inter, Arial", "#ffffff"));
             txt(fmt(b.price), h - 42, "900 58px Inter, Arial", "#f3c766"); return; }
-          const ic = icons[b.type], sz = corner ? 300 : 210;
+          const ic = icons[b.type === "relay" ? "airport" : b.type], sz = corner ? 300 : 210;
           g.save(); g.translate(w / 2, corner ? 200 : 190); if (ic) g.drawImage(ic, -sz / 2, -sz / 2, sz, sz); else icon(g, b.type, sz); g.restore();
           const label = b.type === "relay" ? b.name.toUpperCase() : LABEL[b.type] || b.name.toUpperCase();
           g.font = `900 ${corner ? 64 : 46}px Inter, Arial`; const lines = wrap(g, label, w - 30);
@@ -202,41 +202,75 @@
         else for (let k = 0; k < (ow.lvl || 0); k++) { const a = new T.Mesh(antennaGeo, M.obsidian), x = (k - ((ow.lvl || 0) - 1) / 2) * 0.32; a.position.set(x, 0.4, -C / 2 + 0.42); a.castShadow = true; d.add(a); const l = new T.Mesh(lightGeo, M.neonRed); l.position.set(x, 0.68, -C / 2 + 0.42); d.add(l); }
       });
       // ---------------------------------------------------------------- HUD
+      // ---------------------------------------------------------------- illustrations (images de ChatGPT si présentes, sinon skyline de nuit générée)
+      const illCache = {};
+      const ill = (sq) => { const b = N.BOARD[sq]; if (b.type === "lot" && (art.lots || []).includes(slug(b.name))) return IMG + "lots/" + slug(b.name) + ".webp";
+        if (illCache[sq]) return illCache[sq];
+        const col = b.type === "lot" ? N.DIST[b.d].color : "#e8b54a", cv = document.createElement("canvas"); cv.width = 480; cv.height = 360; const g = cv.getContext("2d");
+        let seed = [...b.name].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+        const sky = g.createLinearGradient(0, 0, 0, 360); sky.addColorStop(0, "#05060c"); sky.addColorStop(0.65, "#140812"); sky.addColorStop(1, "#05060a"); g.fillStyle = sky; g.fillRect(0, 0, 480, 360);
+        const glow = g.createRadialGradient(240, 250, 10, 240, 250, 260); glow.addColorStop(0, col + "88"); glow.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = glow; g.fillRect(0, 0, 480, 360);
+        for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(255,255,255,${rnd() * 0.7})`; g.fillRect(rnd() * 480, rnd() * 160, 1.5, 1.5); }
+        for (let layer = 0; layer < 2; layer++) { let x = -10; while (x < 490) { const w = 18 + rnd() * 46, h = (layer ? 70 : 110) + rnd() * (layer ? 120 : 170), y = 360 - h;
+          g.fillStyle = layer ? "#0b0c12" : "#14151d"; g.fillRect(x, y, w, h); if (rnd() < 0.25) { g.fillRect(x + w / 2 - 2, y - 30, 4, 30); g.fillStyle = col; g.fillRect(x + w / 2 - 3, y - 34, 6, 6); }
+          for (let yy = y + 8; yy < 352; yy += 10) for (let xx = x + 4; xx < x + w - 5; xx += 8) if (rnd() < (layer ? 0.34 : 0.18)) { g.fillStyle = rnd() < 0.8 ? "rgba(255,210,160,.85)" : col; g.fillRect(xx, yy, 4, 5); }
+          x += w + 2 + rnd() * 8; } }
+        const ref = g.createLinearGradient(0, 300, 0, 360); ref.addColorStop(0, "rgba(0,0,0,0)"); ref.addColorStop(1, col + "55"); g.fillStyle = ref; g.fillRect(0, 300, 480, 60);
+        return (illCache[sq] = cv.toDataURL("image/jpeg", 0.82)); };
+      const regionOf = (sq) => { const b = N.BOARD[sq]; return b.type === "lot" ? N.DIST[b.d].name : b.type === "relay" ? "Aéroport" : ""; };
+      const colorOf = (sq) => { const b = N.BOARD[sq]; return b.type === "lot" ? N.DIST[b.d].color : "#e8b54a"; };
+      const SVG = { dice: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="12" height="12" rx="3"/><rect x="9" y="9" width="12" height="12" rx="3"/><circle cx="7" cy="7" r="1"/><circle cx="11" cy="11" r="1"/><circle cx="13" cy="13" r="1"/><circle cx="17" cy="17" r="1"/></svg>',
+        layers: '<svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>', gavel: '<svg viewBox="0 0 24 24"><path d="M14 4l6 6M11 7l6 6M12.5 5.5l-4 4M17.5 10.5l-4 4M10.5 11.5L4 18"/><path d="M3 21h9"/></svg>',
+        swap: '<svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>', wallet: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h2M3 9h15V6"/></svg>',
+        user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>', star: '<svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="3"/><path d="M12 6.5l1.6 3.9 4.1.3-3.2 2.6 1 4-3.5-2.2-3.5 2.2 1-4-3.2-2.6 4.1-.3z"/></svg>', x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>' };
+      const ICON = (k, fallback) => ((art.icons || []).includes(k) ? `<img class="nc-ico" src="${IMG}icons/${k}.webp" alt="">` : SVG[fallback || k] || "");
+      // ---------------------------------------------------------------- HUD : barre du haut, joueurs, panneau du bas
+      api.stage.classList.add("nc-on"); const tbar = api.stage.querySelector(".gm-top b"); if (tbar) tbar.outerHTML = `<div class="nc-brand"><span class="nc-logo">${ICON("logo", "star")}</span><b>NÉO-CITÉ</b><i></i><em id="nc-round"></em></div>`;
       const top = document.createElement("div"); top.className = "nc-players"; api.stage.appendChild(top);
       const land = document.createElement("div"); land.className = "nc-land"; land.hidden = true; api.stage.appendChild(land);
       const viewBtn = document.createElement("button"); viewBtn.className = "nc-view"; api.stage.appendChild(viewBtn);
       const paintView = () => { viewBtn.textContent = cam.follow ? "Vue plateau" : "Suivre"; };
       viewBtn.onclick = () => { cam.follow = !cam.follow; cam.user = 0; if (cam.follow) focus(st.pos[st.turn]); else overview(); paintView(); }; paintView();
-      api.hud.innerHTML = `<div class="nc-log" id="nc-log"></div><div class="nc-deed" id="nc-deed" hidden></div><div class="nc-acts" id="nc-acts"></div>`;
+      api.hud.innerHTML = `<div class="nc-log" id="nc-log"></div><div class="nc-deed" id="nc-deed" hidden></div><div class="nc-panel"><div class="nc-panel-h"><span>Réserve <b id="nc-res"></b></span><span id="nc-me"></span></div><div class="nc-acts" id="nc-acts"></div></div>`;
       const $ = (q) => api.hud.querySelector(q);
-      const drawPlayers = () => { top.innerHTML = P.map((p, i) => `<div class="nc-pl${st.turn === i ? " on" : ""}${st.out[i] ? " out" : ""}${st.cash[i] < 0 ? " neg" : ""}" style="--c:${PCOL[i]}">${p.img ? `<img src="${esc(p.img)}" alt="">` : `<span class="ph">${esc(p.name.slice(0, 2))}</span>`}<div><b>${esc(p.name)}</b><small>${st.out[i] ? "Faillite" : fmt(st.cash[i])}</small></div>${st.jail[i] >= 0 && !st.out[i] ? '<i title="Pare-feu">⛨</i>' : ""}</div>`).join("")
-        + `<div class="nc-res">Réserve <b>${fmt(st.reserve)}</b> · Tour ${st.round}${st.maxRounds ? "/" + st.maxRounds : ""}</div>`; };
-      const showLand = (sq) => { const b = N.BOARD[sq], ow = st.own[sq], col = b.type === "lot" ? N.DIST[b.d].color : "#e8b54a";
-        land.innerHTML = `<span style="--c:${col}"></span><div><small>${b.type === "lot" ? esc(N.DIST[b.d].name) : b.type === "relay" ? "Relais" : "Case"}</small><b>${esc(b.name)}</b></div>${ow ? `<em style="--c:${PCOL[ow.p]}">${esc(name(ow.p))}</em>` : b.price ? `<em>${fmt(b.price)}</em>` : ""}`;
+      const AV = (i) => (P[i].img ? `<img src="${esc(P[i].img)}" alt="">` : `<span class="ph">${SVG.user}</span>`);
+      const drawPlayers = () => {
+        top.innerHTML = P.map((p, i) => `<div class="nc-pl${st.turn === i ? " on" : ""}${st.out[i] ? " out" : ""}${st.cash[i] < 0 ? " neg" : ""}" style="--c:${PCOL[i]}"><span class="av">${AV(i)}</span><div><b>${esc(p.name)}</b><small>${st.out[i] ? "Faillite" : fmt(st.cash[i])}</small></div>${st.jail[i] >= 0 && !st.out[i] ? '<i class="jl" title="Pare-feu">⛨</i>' : ""}${st.turn === i && !st.out[i] ? `<em>${p.human ? "À toi" : "Joue"}</em>` : ""}</div>`).join("");
+        const r = api.stage.querySelector("#nc-round"); if (r) r.innerHTML = `TOUR <b>${st.round}</b>${st.maxRounds ? " / " + st.maxRounds : ""}`;
+        const rs = $("#nc-res"); if (rs) rs.textContent = fmt(st.reserve);
+        const me = $("#nc-me"), h = P.findIndex((x) => x.human); if (me && h >= 0) me.innerHTML = `${SVG.wallet}<b class="${st.cash[h] < 0 ? "neg" : ""}">${fmt(st.cash[h])}</b>`; };
+      const showLand = (sq) => { const b = N.BOARD[sq], ow = st.own[sq], col = colorOf(sq);
+        land.innerHTML = `<span style="--c:${col}"></span><div><small>${b.type === "lot" ? esc(N.DIST[b.d].name) : b.type === "relay" ? "Aéroport" : "Case"}</small><b>${esc(b.name)}</b></div>${ow ? `<em style="--c:${PCOL[ow.p]}">${esc(name(ow.p))}</em>` : b.price ? `<em>${fmt(b.price)}</em>` : ""}`;
         land.hidden = false; land.classList.remove("in"); void land.offsetWidth; land.classList.add("in"); highlight(sq, col); };
       const say = (txt) => { $("#nc-log").textContent = txt; };
       const name = (i) => P[i].name;
       const isMine = () => P[st.turn] && P[st.turn].human && !st.out[st.turn];
-      const rentRows = (b) => { const r0 = b.rent[0]; return [["1 lot", r0], ["2 lots du quartier", Math.round(r0 * N.SETMULT[1])], ["Quartier complet", Math.round(r0 * N.SETMULT[2])], ["1 antenne", b.rent[1]], ["2 antennes", b.rent[2]], ["3 antennes", b.rent[3]], ["Tour", b.rent[4]]]; };
+      const rentRows = (b) => { const r0 = b.rent[0]; return [["1 ville", r0], ["2 villes de la région", Math.round(r0 * N.SETMULT[1])], ["Région complète", Math.round(r0 * N.SETMULT[2])], ["1 antenne", b.rent[1]], ["2 antennes", b.rent[2]], ["3 antennes", b.rent[3]], ["Tour", b.rent[4]]]; };
+      /** en-tête illustré d'une ville (fiche, enchères) */
+      const headHTML = (sq, tag) => `<div class="nc-head" style="--c:${colorOf(sq)}"><img class="nc-ill" src="${ill(sq)}" alt=""><div><small>${esc(regionOf(sq))}</small><b>${esc(N.BOARD[sq].name)}</b>${N.BOARD[sq].type === "lot" ? `<span class="nc-lm">${esc(N.DIST[N.BOARD[sq].d].landmarks[N.BOARD[sq].k])}</span>` : ""}${tag ? `<span class="nc-tag">${tag}</span>` : ""}</div></div>`;
       const deedHTML = (sq) => { const b = N.BOARD[sq], ow = st.own[sq];
-        if (b.type === "relay") return `<div class="nc-card" style="--c:#e8b54a"><small>Relais</small><b>${esc(b.name)}</b><table><tr><td>1 relais</td><td>40 €</td></tr><tr><td>2 relais</td><td>100 €</td></tr><tr><td>Téléportation</td><td>50 €</td></tr></table><p>${ow ? "Propriétaire : " + esc(name(ow.p)) + (ow.mort ? " · hypothéqué" : "") : "Prix : " + fmt(b.price)}</p></div>`;
+        const owner = `<p>${ow ? "Propriétaire : <b>" + esc(name(ow.p)) + "</b>" + (ow.mort ? " · hypothéqué" : "") : "Prix : <b>" + fmt(b.price) + "</b>"}</p>`;
+        if (b.type === "relay") return `<div class="nc-card" style="--c:#e8b54a">${headHTML(sq)}<table><tr><td>1 aéroport</td><td>40 €</td></tr><tr><td>2 aéroports</td><td>100 €</td></tr><tr><td>Vol vers l'autre aéroport</td><td>50 €</td></tr></table>${owner}</div>`;
         if (b.type !== "lot") return `<div class="nc-card"><b>${esc(b.name)}</b></div>`;
-        const D = N.DIST[b.d], cnt = ow ? N.lotsOf(b.d).filter((i) => N.owner(st, i) === ow.p).length : 0, cur = ow ? (ow.lvl ? 2 + ow.lvl : cnt - 1) : -1, la = (art.lots || []).includes(slug(b.name));
-        return `<div class="nc-card" style="--c:${D.color}">${la ? `<img class="nc-art" src="${IMG}lots/${slug(b.name)}.webp" alt="">` : ""}<small>${esc(D.name)}</small><b>${esc(b.name)}</b><table>${rentRows(b).map(([l, v], k) => `<tr class="${k === cur ? "on" : ""}"><td>${l}</td><td>${fmt(v)}</td></tr>`).join("")}</table>
-          <p>Antenne ou tour : ${fmt(b.build)} · Hypothèque : ${fmt(b.price / 2)}</p><p>${ow ? "Propriétaire : " + esc(name(ow.p)) + (ow.mort ? " · hypothéqué" : "") : "Prix : " + fmt(b.price)}</p></div>`; };
+        const cnt = ow ? N.lotsOf(b.d).filter((i) => N.owner(st, i) === ow.p).length : 0, cur = ow ? (ow.lvl ? 2 + ow.lvl : cnt - 1) : -1;
+        return `<div class="nc-card" style="--c:${N.DIST[b.d].color}">${headHTML(sq)}<table>${rentRows(b).map(([l, v], k) => `<tr class="${k === cur ? "on" : ""}"><td>${l}</td><td>${fmt(v)}</td></tr>`).join("")}</table>
+          <p>Antenne ou tour : ${fmt(b.build)} · Hypothèque : ${fmt(b.price / 2)}</p>${owner}</div>`; };
       const renderActs = () => {
         drawPlayers(); const box = $("#nc-acts"), deed = $("#nc-deed"); deed.hidden = true;
-        if (busy || st.over || !isMine()) { box.innerHTML = ""; return; }
-        const p = st.turn, ph = st.phase, B = (a, l, cls, dis) => `<button class="btn${cls ? " " + cls : ""}" data-a="${a}"${dis ? " disabled" : ""}>${l}</button>`;
+        if (busy || st.over || !isMine()) { box.innerHTML = `<div class="nc-wait">${st.over ? "" : esc(P[st.turn] ? name(st.turn) + " joue…" : "")}</div>`; return; }
+        const p = st.turn, ph = st.phase, B = (a, l, cls, dis, ic) => `<button class="btn${cls ? " " + cls : ""}" data-a="${a}"${dis ? " disabled" : ""}>${ic ? `<span class="bi">${ic}</span>` : ""}<span>${l}</span></button>`;
         let h = "";
-        if (ph === "jailed") h = B("roll", "Tenter un double", "pri") + B("jpay", "Payer 50 €", "", !N.canSpend(st, p, N.JAIL_FEE)) + (st.passes[p] ? B("jpass", "Laissez-passer") : "");
-        else if (ph === "roll") h = B("roll", "Lancer les dés", "pri") + B("manage", "Gérer");
+        if (ph === "jailed") h = B("roll", "Tenter un double", "pri", false, ICON("dice")) + B("jpay", "Payer 50 €", "", !N.canSpend(st, p, N.JAIL_FEE)) + (st.passes[p] ? B("jpass", "Laissez-passer") : "");
+        else if (ph === "roll") h = B("roll", "Lancer les dés", "pri big", false, ICON("dice")) + B("manage", "Gérer", "", false, SVG.layers);
         else if (ph === "buy") { const b = N.BOARD[st.pending]; deed.hidden = false; deed.innerHTML = deedHTML(st.pending); h = B("buy", "Acheter " + fmt(b.price), "pri", !N.canSpend(st, p, b.price)) + B("pass", "Refuser"); }
-        else if (ph === "relay") h = B("relay1", "Téléportation · 50 €", "pri", !N.canSpend(st, p, 50)) + B("relay0", "Rester");
-        else if (ph === "end") h = B("end", "Fin du tour", "pri") + B("manage", "Gérer");
+        else if (ph === "relay") h = B("relay1", "Vol · 50 €", "pri", !N.canSpend(st, p, 50)) + B("relay0", "Rester");
+        else if (ph === "end") h = B("end", "Fin du tour", "pri big") + B("manage", "Gérer", "", false, SVG.layers);
         box.innerHTML = h;
         api.turn(setup.mode === "local" && P.filter((x) => x.human).length > 1 ? name(p) : "À toi", 0);
       };
+      // fenêtres (maquette) : apparition animée, fermeture en fondu
+      const modal = (cls, html) => { const m = document.createElement("div"); m.className = "nc-modal " + cls; m.innerHTML = `<div class="nc-mod">${html}</div>`; api.stage.appendChild(m); requestAnimationFrame(() => m.classList.add("in")); return m; };
+      const closeModal = (m) => { if (!m || !m.isConnected) return; m.classList.remove("in"); m.classList.add("out"); setTimeout(() => m.remove(), 260); };
       // ---------------------------------------------------------------- animations d'événements
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       const hop = (i, from, to) => { const m = pawns[i], a = m.position.clone(), b = pawnSpot(i, to); return G3.tween(0.17, (t) => { m.position.lerpVectors(a, b, t); m.position.y = 0.15 + Math.sin(t * Math.PI) * 0.45; }); };
@@ -249,9 +283,9 @@
       };
       const floatText = (sq, txt, col) => { const ti = tileInfo(sq), v = new T.Vector3(ti.x, 0.6, ti.z).project(S.camera), rc = S.renderer.domElement.getBoundingClientRect();
         const el = document.createElement("div"); el.className = "nc-float"; el.style.cssText = `left:${((v.x + 1) / 2) * rc.width}px;top:${((1 - v.y) / 2) * rc.height}px;color:${col || "#e8b54a"}`; el.textContent = txt; api.stage.appendChild(el); setTimeout(() => el.remove(), 1500); };
-      const showCard = (e) => new Promise((res) => { const el = document.createElement("div"); el.className = "nc-signal"; const ca = (art.cards || []).includes(e.card);
-        el.innerHTML = `<div>${ca ? `<img src="${IMG}cards/${e.card}.webp" alt="">` : `<span class="nc-sig-ic"></span>`}<small>Signal · événement</small><p>${esc(e.text)}</p></div>`; api.stage.appendChild(el); api.sfx("nc.card");
-        const done = () => { el.remove(); res(); }; const tm = setTimeout(done, P[st.turn] && P[st.turn].human ? 3000 : 2100); el.onclick = () => { clearTimeout(tm); done(); }; });
+      const showCard = (e) => new Promise((res) => { const ca = (art.cards || []).includes(e.card);
+        const m = modal("nc-sig", `<div class="nc-tabic">${ICON("signal", "star")}</div><h2>Signal</h2><p class="nc-sub">Événement</p>${ca ? `<img class="nc-cardimg" src="${IMG}cards/${e.card}.webp" alt="">` : `<div class="nc-sigorb"></div>`}<p class="nc-sigtxt">${esc(e.text)}</p><button class="btn pri wide" data-ok>Continuer</button>`);
+        api.sfx("nc.card"); const done = () => { clearTimeout(tm); closeModal(m); res(); }; const tm = setTimeout(done, P[st.turn] && P[st.turn].human ? 4000 : 2200); m.querySelector("[data-ok]").onclick = done; });
       const run = async (ev) => {
         for (const e of ev) {
           if (e.t === "dice") { await rollDice(e.dice, e.p); say(`${name(e.p)} fait ${e.dice[0]} + ${e.dice[1]}${e.dice[0] === e.dice[1] ? " · double" : ""}`); await wait(150); }
@@ -271,40 +305,68 @@
         refreshDeco(); drawPlayers();
       };
       // ---------------------------------------------------------------- case Enchères (tout le monde enchérit, sous pli fermé)
-      const askBid = (j) => new Promise((res) => { const sq = st.pending, b = N.BOARD[sq], cash = Math.max(0, st.cash[j]);
-        const opts = [...new Set([0.5, 0.75, 1, 1.25, 1.5].map((f) => Math.floor((b.price * f) / 5) * 5).filter((v) => v > 0 && v <= cash))];
-        E.ui.sheet({ title: `Enchères · ${b.name}` + (P.filter((p) => p.human).length > 1 ? ` · ${name(j)}` : ""), html: deedHTML(sq) + `<p class="muted" style="margin:10px 0">Offre sous pli fermé. Prix normal ${fmt(b.price)} · tu as ${fmt(st.cash[j])}.</p>`,
-          options: [{ label: "Passer", fn: () => res(0) }].concat(opts.map((v) => ({ label: "Offrir " + fmt(v), fn: () => res(v) }))), onClose: () => res(0) }); });
+      const botCeil = (j, sq) => { const lvl = P[j].level || setup.level || "normal", f = { easy: 0.75, normal: 0.95, hard: 1.05, max: 1.12 }[lvl] || 0.95;
+        return Math.max(0, Math.min(Math.floor((N.value(st, j, sq) * f * (0.9 + Math.random() * 0.2)) / 5) * 5, st.cash[j] - 60)); };
+      /** enchères montantes : chacun à son tour surenchérit ou passe ; le dernier en lice paie sa mise */
       const auction = async () => {
-        const sq = st.pending, bids = []; focus(sq, 0.7);
-        for (let j = 0; j < n; j++) { if (st.out[j]) { bids.push(0); continue; } bids.push(P[j].human ? await askBid(j) : N.botBid(st, j, P[j].level || setup.level || "normal")); }
-        const w = N.auction(st, bids);
-        say(w >= 0 ? `${name(w)} remporte ${N.BOARD[sq].name} pour ${fmt(bids[w])}` : `Personne ne prend ${N.BOARD[sq].name}`);
-        if (w >= 0) { floatText(sq, fmt(bids[w]), PCOL[w]); api.sfx("nc.buy", { delay: 0.1 }); highlight(sq, PCOL[w]); }
-        refreshDeco(); drawPlayers(); await wait(800);
+        const sq = st.pending, b = N.BOARD[sq]; focus(sq, 0.7); api.sfx("nc.auction");
+        const active = P.map((_, j) => j).filter((j) => !st.out[j]), ceil = {}, hist = []; let cur = 0, lead = -1, idx = 0, guard = 0;
+        active.forEach((j) => { if (!P[j].human) ceil[j] = botCeil(j, sq); });
+        const m = modal("nc-auc", `<div class="nc-tabic">${ICON("gavel")}</div><button class="nc-x" data-x>${SVG.x}</button><h2>Enchères</h2><p class="nc-sub">Propriété disponible</p>${headHTML(sq, "Mise libre")}
+          <div class="nc-info"><div><span>${SVG.layers}Valeur du lot</span><b>${fmt(b.price)}</b></div><div><span>${SVG.wallet}Ton solde</span><b data-solde></b></div><div><span>${SVG.gavel}Mise actuelle</span><b data-cur></b></div></div>
+          <div class="nc-lbl">Ton offre</div><div class="nc-step"><button data-d="-1">−</button><b data-offer></b><button data-d="1">+</button></div>
+          <div class="nc-lbl l">Historique des offres</div><div class="nc-hist" data-hist></div><p class="nc-stat" data-stat></p>
+          <div class="nc-btns"><button class="btn" data-pass>Passer</button><button class="btn pri" data-bid>Placer l'offre</button></div>`);
+        const me = P.findIndex((x) => x.human); let offer = 0, waiting = null;
+        const step = () => (cur < 100 ? 10 : cur < 400 ? 20 : 50);
+        const paint = (stat) => { m.querySelector("[data-solde]").textContent = me >= 0 ? fmt(st.cash[me]) : "—"; m.querySelector("[data-cur]").textContent = cur ? fmt(cur) + (lead >= 0 ? " · " + name(lead) : "") : "—";
+          m.querySelector("[data-offer]").textContent = fmt(offer); m.querySelector("[data-hist]").innerHTML = hist.slice(-4).map(([j, v], k, arr) => `<span class="${k === arr.length - 1 ? "on" : ""}" style="--c:${PCOL[j]}"><small>${esc(name(j))}</small>${fmt(v)}</span>`).join("") || `<em>Aucune offre pour l'instant</em>`;
+          if (stat != null) m.querySelector("[data-stat]").textContent = stat; const mine = waiting != null; m.querySelectorAll("[data-pass],[data-bid],[data-d]").forEach((x) => (x.disabled = !mine)); };
+        const humanTurn = (j) => new Promise((res) => { offer = Math.min(Math.max(0, st.cash[j]), cur + step()); if (offer <= cur) return res(0); waiting = j; paint(P.filter((x) => x.human).length > 1 ? `${name(j)}, à toi d'enchérir` : "À toi d'enchérir");
+          m.querySelectorAll("[data-d]").forEach((x) => (x.onclick = () => { offer = Math.max(cur + step(), Math.min(Math.max(0, st.cash[j]), offer + +x.dataset.d * step())); paint(); }));
+          m.querySelector("[data-bid]").onclick = () => { waiting = null; res(offer); }; m.querySelector("[data-pass]").onclick = m.querySelector("[data-x]").onclick = () => { waiting = null; res(0); }; });
+        paint("Les enchères commencent");
+        while (active.length && guard++ < 300) {
+          if (active.length === 1 && lead === active[0]) break;
+          const j = active[idx % active.length]; if (j === lead) { idx++; continue; }
+          let bid = 0;
+          if (P[j].human) bid = await humanTurn(j);
+          else { paint(`${name(j)} réfléchit…`); await wait(420 + Math.random() * 300); if (!alive) return; const nb = cur + step() * (Math.random() < 0.3 ? 2 : 1); bid = nb <= ceil[j] ? nb : cur + step() <= ceil[j] ? cur + step() : 0; }
+          if (bid > cur && bid <= Math.max(0, st.cash[j])) { cur = bid; lead = j; hist.push([j, bid]); api.sfx("chip.lay"); paint(`${name(j)} offre ${fmt(bid)}`); idx++; }
+          else { active.splice(active.indexOf(j), 1); paint(`${name(j)} passe`); if (!active.length) break; }
+        }
+        const bids = P.map((_, j) => (j === lead ? cur : 0)), w = N.auction(st, bids);
+        paint(w >= 0 ? `Adjugé à ${name(w)} pour ${fmt(cur)}` : "Personne ne remporte la ville"); m.classList.add("done"); await wait(1100); closeModal(m);
+        say(w >= 0 ? `${name(w)} remporte ${b.name} pour ${fmt(cur)}` : `Personne ne prend ${b.name}`);
+        if (w >= 0) { floatText(sq, fmt(cur), PCOL[w]); api.sfx("nc.buy", { delay: 0.1 }); highlight(sq, PCOL[w]); }
+        refreshDeco(); drawPlayers(); await wait(400);
       };
-      // ---------------------------------------------------------------- échanges
-      const lotName = (sq) => `<i style="--c:${N.BOARD[sq].type === "lot" ? N.DIST[N.BOARD[sq].d].color : "#e8b54a"}"></i>${esc(N.BOARD[sq].name)}`;
-      const offerText = (o) => `${o.give.length ? o.give.map((sq) => N.BOARD[sq].name).join(", ") : ""}${o.give.length && o.cash > 0 ? " + " : ""}${o.cash > 0 ? fmt(o.cash) : ""} contre ${o.get.length ? o.get.map((sq) => N.BOARD[sq].name).join(", ") : ""}${o.get.length && o.cash < 0 ? " + " : ""}${o.cash < 0 ? fmt(-o.cash) : ""}`;
+      const lotCard = (sq, on, attr) => `<button class="nc-lot${on ? " on" : ""}" ${attr} style="--c:${colorOf(sq)}"><img src="${ill(sq)}" alt=""><span>${esc(N.BOARD[sq].name)}</span></button>`;
       const tradeEditor = (from) => new Promise((res) => {
         const others = P.map((p, i) => i).filter((i) => i !== from && !st.out[i]); let to = others[0], give = new Set(), get = new Set(), cash = 0;
-        const draw = (s) => { const mine = Object.keys(st.own).map(Number).filter((i) => N.tradable(st, from, i)), theirs = Object.keys(st.own).map(Number).filter((i) => N.tradable(st, to, i));
-          s.querySelector(".nc-trade").innerHTML = `<div class="nc-who">${others.map((i) => `<button data-to="${i}" class="${i === to ? "on" : ""}" style="--c:${PCOL[i]}">${esc(name(i))}</button>`).join("")}</div>
-            <h4 class="pl-h4">Tu demandes</h4><div class="nc-chips">${theirs.length ? theirs.map((sq) => `<button data-get="${sq}" class="${get.has(sq) ? "on" : ""}">${lotName(sq)}</button>`).join("") : `<p class="muted">Aucun lot échangeable.</p>`}</div>
-            <h4 class="pl-h4">Tu donnes</h4><div class="nc-chips">${mine.length ? mine.map((sq) => `<button data-give="${sq}" class="${give.has(sq) ? "on" : ""}">${lotName(sq)}</button>`).join("") : `<p class="muted">Aucun lot échangeable.</p>`}</div>
-            <h4 class="pl-h4">Argent</h4><div class="nc-cash"><button data-c="-100">−100</button><button data-c="-10">−10</button><b>${cash === 0 ? "0 €" : cash > 0 ? "Tu verses " + fmt(cash) : "Tu reçois " + fmt(-cash)}</b><button data-c="10">+10</button><button data-c="100">+100</button></div>
-            <button class="btn pri wide" data-send>Proposer l'échange</button>`;
-          s.querySelectorAll("[data-to]").forEach((b) => (b.onclick = () => { to = +b.dataset.to; get = new Set(); draw(s); }));
-          s.querySelectorAll("[data-get]").forEach((b) => (b.onclick = () => { const k = +b.dataset.get; get.has(k) ? get.delete(k) : get.add(k); draw(s); }));
-          s.querySelectorAll("[data-give]").forEach((b) => (b.onclick = () => { const k = +b.dataset.give; give.has(k) ? give.delete(k) : give.add(k); draw(s); }));
-          s.querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => { cash += +b.dataset.c; draw(s); }));
-          s.querySelector("[data-send]").onclick = () => { const o = { from, to, give: [...give], get: [...get], cash }; if (!N.tradeValid(st, o)) { api.toast("Offre incomplète ou impossible.", "warn"); return; } E.ui.closeSheet(true); res(o); }; };
-        E.ui.sheet({ title: "Proposer un échange", html: `<div class="nc-trade"></div>`, onOpen: draw, onClose: () => res(null) }); });
-      /** la cible répond : bot (évaluation) ou humain (feuille Accepter / Refuser) */
+        const m = modal("nc-trd", `<div class="nc-tabic">${ICON("trade", "swap")}</div><button class="nc-x" data-x>${SVG.x}</button><h2>Proposer un échange</h2><p class="nc-sub">Négocie avec un adversaire</p><div data-body></div>
+          <div class="nc-btns col"><button class="btn pri wide" data-send>Proposer l'échange</button><button class="btn wide" data-x2>Annuler</button></div>`);
+        const draw = () => { const mine = Object.keys(st.own).map(Number).filter((i) => N.tradable(st, from, i)), theirs = Object.keys(st.own).map(Number).filter((i) => N.tradable(st, to, i));
+          m.querySelector("[data-body]").innerHTML = `<div class="nc-who">${others.map((i) => `<button data-to="${i}" class="${i === to ? "on" : ""}" style="--c:${PCOL[i]}"><span class="av">${AV(i)}</span>${esc(name(i))}</button>`).join("")}</div>
+            <section class="nc-sec ask"><header><b>Tu demandes</b><small>Tu recevras de ${esc(name(to))}</small></header><div class="nc-lots">${theirs.length ? theirs.map((sq) => lotCard(sq, get.has(sq), `data-get="${sq}"`)).join("") : `<p class="muted">Aucune ville échangeable.</p>`}</div></section>
+            <div class="nc-swapsep">${SVG.swap}</div>
+            <section class="nc-sec give"><header><b>Tu offres</b><small>Tu donnes à ${esc(name(to))}</small></header><div class="nc-lots">${mine.map((sq) => lotCard(sq, give.has(sq), `data-give="${sq}"`)).join("")}
+              <div class="nc-money"><div>${ICON("coins", "wallet")}<b>${cash >= 0 ? fmt(cash) : "Tu reçois " + fmt(-cash)}</b></div><div class="nc-cash"><button data-c="-100">−100</button><button data-c="-10">−10</button><button data-c="10">+10</button><button data-c="100">+100</button></div></div></div></section>`;
+          m.querySelectorAll("[data-to]").forEach((b) => (b.onclick = () => { to = +b.dataset.to; get = new Set(); draw(); }));
+          m.querySelectorAll("[data-get]").forEach((b) => (b.onclick = () => { const k = +b.dataset.get; get.has(k) ? get.delete(k) : get.add(k); draw(); }));
+          m.querySelectorAll("[data-give]").forEach((b) => (b.onclick = () => { const k = +b.dataset.give; give.has(k) ? give.delete(k) : give.add(k); draw(); }));
+          m.querySelectorAll("[data-c]").forEach((b) => (b.onclick = () => { cash += +b.dataset.c; draw(); })); };
+        draw();
+        const quit = () => { closeModal(m); res(null); }; m.querySelector("[data-x]").onclick = quit; m.querySelector("[data-x2]").onclick = quit;
+        m.querySelector("[data-send]").onclick = () => { const o = { from, to, give: [...give], get: [...get], cash }; if (!N.tradeValid(st, o)) { api.toast("Offre incomplète ou impossible.", "warn"); return; } closeModal(m); res(o); }; });
+      /** la cible répond : bot (évaluation) ou humain (fenêtre Accepter / Refuser) */
       const answer = (o) => new Promise((res) => {
         if (!P[o.to].human) return res(N.botAccepts(st, o, P[o.to].level || "normal"));
-        E.ui.sheet({ title: `${name(o.from)} te propose un échange` + (P.filter((p) => p.human).length > 1 ? ` · ${name(o.to)}` : ""), html: `<p style="margin-bottom:12px">${esc(name(o.from))} offre <b>${esc(offerText({ ...o, get: [] }).replace(/ contre.*/, "") || "rien")}</b> et demande <b>${esc(o.get.map((sq) => N.BOARD[sq].name).join(", ") + (o.cash < 0 ? (o.get.length ? " + " : "") + fmt(-o.cash) : "") || "rien")}</b>.</p>`,
-          options: [{ label: "Accepter", cls: "pri", fn: () => res(true) }, { label: "Refuser", fn: () => res(false) }], onClose: () => res(false) }); });
+        const side = (lots, money, title, sub) => `<section class="nc-sec"><header><b>${title}</b><small>${sub}</small></header><div class="nc-lots">${lots.map((sq) => lotCard(sq, true, "disabled")).join("")}${money > 0 ? `<div class="nc-money"><div>${ICON("coins", "wallet")}<b>${fmt(money)}</b></div></div>` : ""}${!lots.length && !(money > 0) ? `<p class="muted">Rien</p>` : ""}</div></section>`;
+        const m = modal("nc-trd", `<div class="nc-tabic">${ICON("trade", "swap")}</div><h2>${esc(name(o.from))} te propose un échange</h2><p class="nc-sub">${P.filter((p) => p.human).length > 1 ? esc(name(o.to)) : "Accepte ou refuse"}</p>
+          ${side(o.give, o.cash, "Tu reçois", "de " + esc(name(o.from)))}<div class="nc-swapsep">${SVG.swap}</div>${side(o.get, -o.cash, "Tu donnes", "à " + esc(name(o.from)))}
+          <div class="nc-btns"><button class="btn" data-no>Refuser</button><button class="btn pri" data-yes>Accepter</button></div>`);
+        m.querySelector("[data-yes]").onclick = () => { closeModal(m); res(true); }; m.querySelector("[data-no]").onclick = () => { closeModal(m); res(false); }; });
       const doTrade = async (o) => { const ok = await answer(o);
         if (ok && N.trade(st, o)) { say(`Échange conclu : ${name(o.from)} ↔ ${name(o.to)}`); api.sfx("nc.buy"); [...o.give, ...o.get].forEach((sq) => highlight(sq, "#ffffff")); refreshDeco(); drawPlayers(); api.toast("Échange accepté", "ok"); }
         else { say(`${name(o.to)} refuse l'échange`); api.toast(`${name(o.to)} refuse`, ""); } return ok; };
