@@ -26,23 +26,23 @@
   F.shoot = (s, idx, dx, dz, power) => { const b = s.bodies[idx]; if (!b || b.t !== s.turn) return false; const l = Math.hypot(dx, dz) || 1, v = Math.max(0, Math.min(1, power)) * s.m.max; b.vx = (dx / l) * v; b.vz = (dz / l) * v; s.shots++; return true; };
   /** un pas de simulation ; renvoie {goal: équipe qui marque | null, hits: [...]} */
   F.step = (s, dt) => {
-    const m = s.m, bs = all(s), hw = m.W / 2, hl = m.L / 2, gh = m.goal / 2, hits = [];
+    const m = s.m, bs = all(s), hw = m.W / 2, hl = m.L / 2, gh = m.goal / 2, hits = [], impacts = [];
     for (const b of bs) {
       b.x += b.vx * dt; b.z += b.vz * dt;
       const sp = Math.hypot(b.vx, b.vz); if (sp > 0) { const ns = Math.max(0, sp - m.fric * dt * (b === s.ball ? 0.8 : 1) - sp * 0.15 * dt); b.vx *= ns / sp; b.vz *= ns / sp; }
       // murs latéraux
-      if (b.x - b.r < -hw) { b.x = -hw + b.r; b.vx = Math.abs(b.vx) * m.rest; hits.push("wall"); } else if (b.x + b.r > hw) { b.x = hw - b.r; b.vx = -Math.abs(b.vx) * m.rest; hits.push("wall"); }
+      if (b.x - b.r < -hw) { impacts.push({ k: "wall", v: Math.abs(b.vx), x: b.x }); b.x = -hw + b.r; b.vx = Math.abs(b.vx) * m.rest; hits.push("wall"); } else if (b.x + b.r > hw) { impacts.push({ k: "wall", v: Math.abs(b.vx), x: b.x }); b.x = hw - b.r; b.vx = -Math.abs(b.vx) * m.rest; hits.push("wall"); }
       // lignes de fond (ouverture du but pour la balle uniquement ; les palets restent sur le terrain)
       const inMouth = Math.abs(b.x) < gh - (b === s.ball ? b.r * 0.2 : 0);
       if (b === s.ball && inMouth) {
-        if (b.z < -hl - b.r) return { goal: 0, hits };
-        if (b.z > hl + b.r) return { goal: 1, hits };
+        if (b.z < -hl - b.r) return { goal: 0, hits, impacts };
+        if (b.z > hl + b.r) return { goal: 1, hits, impacts };
         // poteaux
-        for (const px of [-gh, gh]) for (const pz of [-hl, hl]) { const dx = b.x - px, dz = b.z - pz, d = Math.hypot(dx, dz); if (d < b.r && d > 0) { const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz; if (vn < 0) { b.vx -= 1.8 * vn * nx; b.vz -= 1.8 * vn * nz; b.x = px + nx * b.r; b.z = pz + nz * b.r; hits.push("post"); } } }
+        for (const px of [-gh, gh]) for (const pz of [-hl, hl]) { const dx = b.x - px, dz = b.z - pz, d = Math.hypot(dx, dz); if (d < b.r && d > 0) { const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz; if (vn < 0) { impacts.push({ k: "post", v: -vn, x: b.x }); b.vx -= 1.8 * vn * nx; b.vz -= 1.8 * vn * nz; b.x = px + nx * b.r; b.z = pz + nz * b.r; hits.push("post"); } } }
         // fond des filets : on garde la balle dans la cage
         if (b.z < -hl - 0.6) { b.z = -hl - 0.6; b.vz = Math.abs(b.vz) * 0.3; } if (b.z > hl + 0.6) { b.z = hl + 0.6; b.vz = -Math.abs(b.vz) * 0.3; }
       } else {
-        if (b.z - b.r < -hl) { b.z = -hl + b.r; b.vz = Math.abs(b.vz) * m.rest; hits.push("wall"); } else if (b.z + b.r > hl) { b.z = hl - b.r; b.vz = -Math.abs(b.vz) * m.rest; hits.push("wall"); }
+        if (b.z - b.r < -hl) { impacts.push({ k: "wall", v: Math.abs(b.vz), x: b.x }); b.z = -hl + b.r; b.vz = Math.abs(b.vz) * m.rest; hits.push("wall"); } else if (b.z + b.r > hl) { impacts.push({ k: "wall", v: Math.abs(b.vz), x: b.x }); b.z = hl - b.r; b.vz = -Math.abs(b.vz) * m.rest; hits.push("wall"); }
       }
     }
     // collisions entre corps (élastiques, masses)
@@ -54,10 +54,10 @@
       const rv = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz; if (rv > 0) continue;
       const e = 0.9, jimp = (-(1 + e) * rv) / (1 / a.mass + 1 / b.mass);
       a.vx -= (jimp / a.mass) * nx; a.vz -= (jimp / a.mass) * nz; b.vx += (jimp / b.mass) * nx; b.vz += (jimp / b.mass) * nz;
-      hits.push(a === s.ball || b === s.ball ? "ball" : "disc");
+      hits.push(a === s.ball || b === s.ball ? "ball" : "disc"); impacts.push({ k: a === s.ball || b === s.ball ? "ball" : "disc", v: -rv, x: (a.x + b.x) / 2 });
     }
     for (const b of bs) if (Math.hypot(b.vx, b.vz) < 0.02) { b.vx = 0; b.vz = 0; }
-    return { goal: null, hits };
+    return { goal: null, hits, impacts };
   };
   /** simule jusqu'à l'arrêt (ou but) ; renvoie {goal} */
   F.settle = (s, maxT) => { let t = 0; const dt = 1 / 120; while (t < (maxT || 8)) { const r = F.step(s, dt); if (r.goal != null) return r; if (!F.moving(s)) break; t += dt; } return { goal: null }; };

@@ -1,0 +1,598 @@
+{
+ "bank": {
+  "ui.click": {
+   "bus": "ui",
+   "vol": 0.5,
+   "rate": [
+    0.96,
+    1.04
+   ],
+   "files": [
+    "audio/games/ui/click_1.ogg",
+    "audio/games/ui/click_2.ogg",
+    "audio/games/ui/click_3.ogg"
+   ]
+  },
+  "ui.confirm": {
+   "bus": "ui",
+   "vol": 0.55,
+   "files": [
+    "audio/games/ui/confirm_1.ogg",
+    "audio/games/ui/confirm_2.ogg"
+   ]
+  },
+  "ui.back": {
+   "bus": "ui",
+   "vol": 0.5,
+   "files": [
+    "audio/games/ui/back_1.ogg"
+   ]
+  },
+  "ui.error": {
+   "bus": "ui",
+   "vol": 0.45,
+   "files": [
+    "audio/games/ui/error_1.ogg"
+   ]
+  },
+  "ui.open": {
+   "bus": "ui",
+   "vol": 0.4,
+   "files": [
+    "audio/games/ui/open_1.ogg"
+   ]
+  },
+  "end.win": {
+   "bus": "music",
+   "vol": 0.7,
+   "files": [
+    "audio/games/end/win_1.ogg",
+    "audio/games/end/win_2.ogg"
+   ]
+  },
+  "end.lose": {
+   "bus": "music",
+   "vol": 0.6,
+   "files": [
+    "audio/games/end/lose_1.ogg",
+    "audio/games/end/lose_2.ogg"
+   ]
+  },
+  "end.draw": {
+   "bus": "music",
+   "vol": 0.6,
+   "files": [
+    "audio/games/end/draw_1.ogg"
+   ]
+  },
+  "fx.stinger": {
+   "bus": "sfx",
+   "vol": 0.55,
+   "files": [
+    "audio/games/fx/stinger_1.ogg",
+    "audio/games/fx/stinger_2.ogg"
+   ]
+  },
+  "card.slide": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "rate": [
+    0.94,
+    1.08
+   ],
+   "poly": 4,
+   "files": [
+    "audio/games/card/slide_1.ogg",
+    "audio/games/card/slide_2.ogg",
+    "audio/games/card/slide_3.ogg",
+    "audio/games/card/slide_4.ogg",
+    "audio/games/card/slide_5.ogg",
+    "audio/games/card/slide_6.ogg"
+   ]
+  },
+  "card.place": {
+   "bus": "sfx",
+   "vol": 0.8,
+   "rate": [
+    0.95,
+    1.06
+   ],
+   "files": [
+    "audio/games/card/place_1.ogg",
+    "audio/games/card/place_2.ogg",
+    "audio/games/card/place_3.ogg",
+    "audio/games/card/place_4.ogg"
+   ]
+  },
+  "card.shuffle": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "files": [
+    "audio/games/card/shuffle_1.ogg"
+   ]
+  },
+  "card.fan": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "files": [
+    "audio/games/card/fan_1.ogg",
+    "audio/games/card/fan_2.ogg"
+   ]
+  },
+  "card.shove": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "rate": [
+    0.95,
+    1.05
+   ],
+   "files": [
+    "audio/games/card/shove_1.ogg",
+    "audio/games/card/shove_2.ogg",
+    "audio/games/card/shove_3.ogg",
+    "audio/games/card/shove_4.ogg"
+   ]
+  },
+  "chroma.skip": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/chroma/skip_1.ogg"
+   ]
+  },
+  "chroma.rev": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/chroma/rev_1.ogg"
+   ]
+  },
+  "chroma.wild": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/chroma/wild_1.ogg"
+   ]
+  },
+  "chroma.plus": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/chroma/plus_1.ogg"
+   ]
+  },
+  "chroma.swap": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/chroma/swap_1.ogg"
+   ]
+  },
+  "chroma.call": {
+   "bus": "sfx",
+   "vol": 0.5,
+   "files": [
+    "audio/games/chroma/call_1.ogg"
+   ]
+  },
+  "chroma.penalty": {
+   "bus": "sfx",
+   "vol": 0.5,
+   "files": [
+    "audio/games/chroma/penalty_1.ogg"
+   ]
+  },
+  "chip.bet": {
+   "bus": "sfx",
+   "vol": 0.75,
+   "rate": [
+    0.95,
+    1.06
+   ],
+   "files": [
+    "audio/games/chip/bet_1.ogg",
+    "audio/games/chip/bet_2.ogg",
+    "audio/games/chip/bet_3.ogg",
+    "audio/games/chip/bet_4.ogg",
+    "audio/games/chip/bet_5.ogg",
+    "audio/games/chip/bet_6.ogg"
+   ]
+  },
+  "chip.lay": {
+   "bus": "sfx",
+   "vol": 0.75,
+   "rate": [
+    0.95,
+    1.06
+   ],
+   "files": [
+    "audio/games/chip/lay_1.ogg",
+    "audio/games/chip/lay_2.ogg",
+    "audio/games/chip/lay_3.ogg"
+   ]
+  },
+  "chip.collect": {
+   "bus": "sfx",
+   "vol": 0.75,
+   "files": [
+    "audio/games/chip/collect_1.ogg",
+    "audio/games/chip/collect_2.ogg",
+    "audio/games/chip/collect_3.ogg",
+    "audio/games/chip/collect_4.ogg"
+   ]
+  },
+  "chip.allin": {
+   "bus": "sfx",
+   "vol": 0.85,
+   "files": [
+    "audio/games/chip/allin_1.ogg",
+    "audio/games/chip/allin_2.ogg",
+    "audio/games/chip/allin_3.ogg",
+    "audio/games/chip/allin_4.ogg"
+   ]
+  },
+  "table.knock": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "rate": [
+    0.95,
+    1.05
+   ],
+   "files": [
+    "audio/games/table/knock_1.ogg",
+    "audio/games/table/knock_2.ogg"
+   ]
+  },
+  "dice.throw": {
+   "bus": "sfx",
+   "vol": 0.8,
+   "files": [
+    "audio/games/dice/throw_1.ogg",
+    "audio/games/dice/throw_2.ogg",
+    "audio/games/dice/throw_3.ogg"
+   ]
+  },
+  "dice.shake": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "files": [
+    "audio/games/dice/shake_1.ogg",
+    "audio/games/dice/shake_2.ogg"
+   ]
+  },
+  "dames.move": {
+   "bus": "sfx",
+   "vol": 0.75,
+   "rate": [
+    0.94,
+    1.06
+   ],
+   "files": [
+    "audio/games/dames/move_1.ogg",
+    "audio/games/dames/move_2.ogg",
+    "audio/games/dames/move_3.ogg",
+    "audio/games/dames/move_4.ogg"
+   ]
+  },
+  "dames.capture": {
+   "bus": "sfx",
+   "vol": 0.85,
+   "rate": [
+    0.95,
+    1.05
+   ],
+   "files": [
+    "audio/games/dames/capture_1.ogg",
+    "audio/games/dames/capture_2.ogg",
+    "audio/games/dames/capture_3.ogg"
+   ]
+  },
+  "dames.king": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "files": [
+    "audio/games/dames/king_1.ogg"
+   ]
+  },
+  "flick.shot": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "rate": [
+    0.92,
+    1.08
+   ],
+   "files": [
+    "audio/games/flick/shot_1.ogg",
+    "audio/games/flick/shot_2.ogg",
+    "audio/games/flick/shot_3.ogg"
+   ]
+  },
+  "flick.disc": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "rate": [
+    0.9,
+    1.1
+   ],
+   "poly": 5,
+   "files": [
+    "audio/games/flick/disc_1.ogg",
+    "audio/games/flick/disc_2.ogg",
+    "audio/games/flick/disc_3.ogg"
+   ]
+  },
+  "flick.ball": {
+   "bus": "sfx",
+   "vol": 0.75,
+   "rate": [
+    0.92,
+    1.08
+   ],
+   "poly": 4,
+   "files": [
+    "audio/games/flick/ball_1.ogg",
+    "audio/games/flick/ball_2.ogg",
+    "audio/games/flick/ball_3.ogg"
+   ]
+  },
+  "flick.wall": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "rate": [
+    0.92,
+    1.08
+   ],
+   "poly": 4,
+   "files": [
+    "audio/games/flick/wall_1.ogg",
+    "audio/games/flick/wall_2.ogg",
+    "audio/games/flick/wall_3.ogg"
+   ]
+  },
+  "flick.post": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "files": [
+    "audio/games/flick/post_1.ogg",
+    "audio/games/flick/post_2.ogg"
+   ]
+  },
+  "flick.goal": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "files": [
+    "audio/games/flick/goal_1.ogg"
+   ]
+  },
+  "flick.amb": {
+   "bus": "amb",
+   "loop": 20,
+   "files": [
+    "audio/games/flick/amb_1.ogg"
+   ]
+  },
+  "bowl.roll": {
+   "bus": "sfx",
+   "vol": 0.8,
+   "files": [
+    "audio/games/bowl/roll_1.ogg"
+   ]
+  },
+  "bowl.pin": {
+   "bus": "sfx",
+   "vol": 0.8,
+   "rate": [
+    0.92,
+    1.08
+   ],
+   "poly": 4,
+   "files": [
+    "audio/games/bowl/pin_1.ogg",
+    "audio/games/bowl/pin_2.ogg",
+    "audio/games/bowl/pin_3.ogg",
+    "audio/games/bowl/pin_4.ogg"
+   ]
+  },
+  "bowl.strike": {
+   "bus": "sfx",
+   "vol": 0.9,
+   "files": [
+    "audio/games/bowl/strike_1.ogg",
+    "audio/games/bowl/strike_2.ogg"
+   ]
+  },
+  "bowl.gutter": {
+   "bus": "sfx",
+   "vol": 0.6,
+   "files": [
+    "audio/games/bowl/gutter_1.ogg"
+   ]
+  },
+  "bowl.amb": {
+   "bus": "amb",
+   "loop": 20,
+   "files": [
+    "audio/games/bowl/amb_1.ogg"
+   ]
+  },
+  "nc.hop": {
+   "bus": "sfx",
+   "vol": 0.35,
+   "rate": [
+    0.95,
+    1.1
+   ],
+   "poly": 3,
+   "files": [
+    "audio/games/nc/hop_1.ogg",
+    "audio/games/nc/hop_2.ogg"
+   ]
+  },
+  "nc.buy": {
+   "bus": "sfx",
+   "vol": 0.75,
+   "files": [
+    "audio/games/nc/buy_1.ogg",
+    "audio/games/nc/buy_2.ogg"
+   ]
+  },
+  "nc.pay": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "files": [
+    "audio/games/nc/pay_1.ogg",
+    "audio/games/nc/pay_2.ogg"
+   ]
+  },
+  "nc.build": {
+   "bus": "sfx",
+   "vol": 0.7,
+   "files": [
+    "audio/games/nc/build_1.ogg",
+    "audio/games/nc/build_2.ogg"
+   ]
+  },
+  "nc.card": {
+   "bus": "sfx",
+   "vol": 0.4,
+   "files": [
+    "audio/games/nc/card_1.ogg"
+   ]
+  },
+  "nc.jail": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/nc/jail_1.ogg"
+   ]
+  },
+  "nc.reserve": {
+   "bus": "sfx",
+   "vol": 0.45,
+   "files": [
+    "audio/games/nc/reserve_1.ogg"
+   ]
+  },
+  "nc.bankrupt": {
+   "bus": "sfx",
+   "vol": 0.5,
+   "files": [
+    "audio/games/nc/bankrupt_1.ogg"
+   ]
+  },
+  "nc.auction": {
+   "bus": "sfx",
+   "vol": 0.5,
+   "files": [
+    "audio/games/nc/auction_1.ogg"
+   ]
+  }
+ },
+ "sources": {
+  "click_001.ogg": "kenney_interfaceSounds/Audio/click_001.ogg",
+  "click_002.ogg": "kenney_interfaceSounds/Audio/click_002.ogg",
+  "click_003.ogg": "kenney_interfaceSounds/Audio/click_003.ogg",
+  "confirmation_001.ogg": "kenney_interfaceSounds/Audio/confirmation_001.ogg",
+  "confirmation_002.ogg": "kenney_interfaceSounds/Audio/confirmation_002.ogg",
+  "back_002.ogg": "kenney_interfaceSounds/Audio/back_002.ogg",
+  "error_004.ogg": "kenney_interfaceSounds/Audio/error_004.ogg",
+  "maximize_003.ogg": "kenney_interfaceSounds/Audio/maximize_003.ogg",
+  "jingles_SAX02.ogg": "jingleSounds_Kenney/OGG/jingles_SAX/jingles_SAX02.ogg",
+  "jingles_SAX10.ogg": "jingleSounds_Kenney/OGG/jingles_SAX/jingles_SAX10.ogg",
+  "jingles_SAX01.ogg": "jingleSounds_Kenney/OGG/jingles_SAX/jingles_SAX01.ogg",
+  "jingles_SAX14.ogg": "jingleSounds_Kenney/OGG/jingles_SAX/jingles_SAX14.ogg",
+  "jingles_STEEL00.ogg": "jingleSounds_Kenney/OGG/jingles_STEEL/jingles_STEEL00.ogg",
+  "jingles_HIT11.ogg": "jingleSounds_Kenney/OGG/jingles_HIT/jingles_HIT11.ogg",
+  "jingles_HIT10.ogg": "jingleSounds_Kenney/OGG/jingles_HIT/jingles_HIT10.ogg",
+  "card-slide-1.ogg": "kenney_casino-audio/Audio/card-slide-1.ogg",
+  "card-slide-2.ogg": "kenney_casino-audio/Audio/card-slide-2.ogg",
+  "card-slide-3.ogg": "kenney_casino-audio/Audio/card-slide-3.ogg",
+  "card-slide-4.ogg": "kenney_casino-audio/Audio/card-slide-4.ogg",
+  "card-slide-5.ogg": "kenney_casino-audio/Audio/card-slide-5.ogg",
+  "card-slide-6.ogg": "kenney_casino-audio/Audio/card-slide-6.ogg",
+  "card-place-1.ogg": "kenney_casino-audio/Audio/card-place-1.ogg",
+  "card-place-2.ogg": "kenney_casino-audio/Audio/card-place-2.ogg",
+  "card-place-3.ogg": "kenney_casino-audio/Audio/card-place-3.ogg",
+  "card-place-4.ogg": "kenney_casino-audio/Audio/card-place-4.ogg",
+  "card-shuffle.ogg": "kenney_casino-audio/Audio/card-shuffle.ogg",
+  "card-fan-1.ogg": "kenney_casino-audio/Audio/card-fan-1.ogg",
+  "card-fan-2.ogg": "kenney_casino-audio/Audio/card-fan-2.ogg",
+  "card-shove-1.ogg": "kenney_casino-audio/Audio/card-shove-1.ogg",
+  "card-shove-2.ogg": "kenney_casino-audio/Audio/card-shove-2.ogg",
+  "card-shove-3.ogg": "kenney_casino-audio/Audio/card-shove-3.ogg",
+  "card-shove-4.ogg": "kenney_casino-audio/Audio/card-shove-4.ogg",
+  "phaserDown1.mp3": "Digital_SFX_Set/phaserDown1.mp3",
+  "phaseJump1.mp3": "Digital_SFX_Set/phaseJump1.mp3",
+  "powerUp2.mp3": "Digital_SFX_Set/powerUp2.mp3",
+  "zapTwoTone.mp3": "Digital_SFX_Set/zapTwoTone.mp3",
+  "twoTone1.mp3": "Digital_SFX_Set/twoTone1.mp3",
+  "threeTone1.mp3": "Digital_SFX_Set/threeTone1.mp3",
+  "error_003.ogg": "kenney_interfaceSounds/Audio/error_003.ogg",
+  "chips-stack-1.ogg": "kenney_casino-audio/Audio/chips-stack-1.ogg",
+  "chips-stack-2.ogg": "kenney_casino-audio/Audio/chips-stack-2.ogg",
+  "chips-stack-3.ogg": "kenney_casino-audio/Audio/chips-stack-3.ogg",
+  "chips-stack-4.ogg": "kenney_casino-audio/Audio/chips-stack-4.ogg",
+  "chips-stack-5.ogg": "kenney_casino-audio/Audio/chips-stack-5.ogg",
+  "chips-stack-6.ogg": "kenney_casino-audio/Audio/chips-stack-6.ogg",
+  "chip-lay-1.ogg": "kenney_casino-audio/Audio/chip-lay-1.ogg",
+  "chip-lay-2.ogg": "kenney_casino-audio/Audio/chip-lay-2.ogg",
+  "chip-lay-3.ogg": "kenney_casino-audio/Audio/chip-lay-3.ogg",
+  "chips-handle-1.ogg": "kenney_casino-audio/Audio/chips-handle-1.ogg",
+  "chips-handle-2.ogg": "kenney_casino-audio/Audio/chips-handle-2.ogg",
+  "chips-handle-3.ogg": "kenney_casino-audio/Audio/chips-handle-3.ogg",
+  "chips-handle-4.ogg": "kenney_casino-audio/Audio/chips-handle-4.ogg",
+  "chips-collide-1.ogg": "kenney_casino-audio/Audio/chips-collide-1.ogg",
+  "chips-collide-2.ogg": "kenney_casino-audio/Audio/chips-collide-2.ogg",
+  "chips-collide-3.ogg": "kenney_casino-audio/Audio/chips-collide-3.ogg",
+  "chips-collide-4.ogg": "kenney_casino-audio/Audio/chips-collide-4.ogg",
+  "wood_hit_05.ogg": "100-CC0-wood-metal-SFX/wood_hit_05.ogg",
+  "wood_hit_07.ogg": "100-CC0-wood-metal-SFX/wood_hit_07.ogg",
+  "dice-throw-1.ogg": "kenney_casino-audio/Audio/dice-throw-1.ogg",
+  "dice-throw-2.ogg": "kenney_casino-audio/Audio/dice-throw-2.ogg",
+  "dice-throw-3.ogg": "kenney_casino-audio/Audio/dice-throw-3.ogg",
+  "dice-shake-1.ogg": "kenney_casino-audio/Audio/dice-shake-1.ogg",
+  "dice-shake-2.ogg": "kenney_casino-audio/Audio/dice-shake-2.ogg",
+  "wooden_01.ogg": "100-CC0-SFX_0/wooden_01.ogg",
+  "wooden_03.ogg": "100-CC0-SFX_0/wooden_03.ogg",
+  "wood_hit_09.ogg": "100-CC0-wood-metal-SFX/wood_hit_09.ogg",
+  "hit_03.ogg": "100-CC0-SFX_0/hit_03.ogg",
+  "wooden_02.ogg": "100-CC0-SFX_0/wooden_02.ogg",
+  "wood_hit_03.ogg": "100-CC0-wood-metal-SFX/wood_hit_03.ogg",
+  "wood_hit_08.ogg": "100-CC0-wood-metal-SFX/wood_hit_08.ogg",
+  "bong_001.ogg": "kenney_interfaceSounds/Audio/bong_001.ogg",
+  "hit_01.ogg": "100-CC0-SFX_0/hit_01.ogg",
+  "hit_02.ogg": "100-CC0-SFX_0/hit_02.ogg",
+  "sfx100v2_hit_03.ogg": "sfx_100_v2/sfx100v2_hit_03.ogg",
+  "bfh1_hit_05.ogg": "sfx_breaking_and_falling/bfh1_hit_05.ogg",
+  "bfh1_hit_09.ogg": "sfx_breaking_and_falling/bfh1_hit_09.ogg",
+  "bfh1_hit_11.ogg": "sfx_breaking_and_falling/bfh1_hit_11.ogg",
+  "sfx100v2_hit_02.ogg": "sfx_100_v2/sfx100v2_hit_02.ogg",
+  "bfh1_hit_03.ogg": "sfx_breaking_and_falling/bfh1_hit_03.ogg",
+  "plop_02.ogg": "100-CC0-SFX_0/plop_02.ogg",
+  "wood_hit_02.ogg": "100-CC0-wood-metal-SFX/wood_hit_02.ogg",
+  "wood_hit_06.ogg": "100-CC0-wood-metal-SFX/wood_hit_06.ogg",
+  "wood_hit_01.ogg": "100-CC0-wood-metal-SFX/wood_hit_01.ogg",
+  "metal_hit_05.ogg": "100-CC0-wood-metal-SFX/metal_hit_05.ogg",
+  "metal_hit_04.ogg": "100-CC0-wood-metal-SFX/metal_hit_04.ogg",
+  "Gregor Quendel - Crowd Cheering Sounds - 04 - Strong cheering - II - Short.mp3": "gregor_quendel_-_free_crowd_cheering_sounds_-_mp3/Gregor Quendel - Free Crowd Cheering Sounds - MP3/Gregor Quendel - Crowd Cheering Sounds - 04 - Strong cheering - II - Short.mp3",
+  "Gregor Quendel - Crowd Cheering Sounds - 10 - Ambience.mp3": "gregor_quendel_-_free_crowd_cheering_sounds_-_mp3/Gregor Quendel - Free Crowd Cheering Sounds - MP3/Gregor Quendel - Crowd Cheering Sounds - 10 - Ambience.mp3",
+  "qubodup-bowling_roll-nofadeout.ogg": "qubodup-bowling-roll/qubodup-bowling-roll/qubodup-bowling_roll-nofadeout.ogg",
+  "wood_falling_01.ogg": "100-CC0-wood-metal-SFX/wood_falling_01.ogg",
+  "wood_falling_03.ogg": "100-CC0-wood-metal-SFX/wood_falling_03.ogg",
+  "wood_falling_06.ogg": "100-CC0-wood-metal-SFX/wood_falling_06.ogg",
+  "bfh1_falling_03.ogg": "sfx_breaking_and_falling/bfh1_falling_03.ogg",
+  "bfh1_falling_01.ogg": "sfx_breaking_and_falling/bfh1_falling_01.ogg",
+  "bfh1_falling_04.ogg": "sfx_breaking_and_falling/bfh1_falling_04.ogg",
+  "Gregor Quendel - Crowd Cheering Sounds - 07 - Soft cheering and chatter.mp3": "gregor_quendel_-_free_crowd_cheering_sounds_-_mp3/Gregor Quendel - Free Crowd Cheering Sounds - MP3/Gregor Quendel - Crowd Cheering Sounds - 07 - Soft cheering and chatter.mp3",
+  "wood_hit_04.ogg": "100-CC0-wood-metal-SFX/wood_hit_04.ogg",
+  "handleCoins.ogg": "RPGsounds_Kenney/OGG/handleCoins.ogg",
+  "handleCoins2.ogg": "RPGsounds_Kenney/OGG/handleCoins2.ogg",
+  "metalLatch.ogg": "RPGsounds_Kenney/OGG/metalLatch.ogg",
+  "metalClick.ogg": "RPGsounds_Kenney/OGG/metalClick.ogg",
+  "pepSound1.mp3": "Digital_SFX_Set/pepSound1.mp3",
+  "lowDown.mp3": "Digital_SFX_Set/lowDown.mp3",
+  "powerUp7.mp3": "Digital_SFX_Set/powerUp7.mp3",
+  "lowThreeTone.mp3": "Digital_SFX_Set/lowThreeTone.mp3",
+  "bell_01.ogg": "100-CC0-SFX_0/bell_01.ogg"
+ }
+}

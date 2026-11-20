@@ -81,15 +81,15 @@
         for (let k = 1; k < m.path.length; k++) {
           const [x0, z0] = pos(m.path[k - 1]), [x1, z1] = pos(m.path[k]), jump = m.caps.length > 0;
           await G3.tween(jump ? 0.34 : 0.26, (e) => { g.position.set(x0 + (x1 - x0) * e, jump ? Math.sin(e * Math.PI) * 0.7 : Math.sin(e * Math.PI) * 0.12, z0 + (z1 - z0) * e); });
-          if (jump) { api.vibrate(12); api.sound("capture"); }
+          if (jump) { api.vibrate(12); api.sfx("dames.capture"); }
         }
         m.caps.forEach((c) => { const v = pieces.get(c); if (!v) return; pieces.delete(c); G3.tween(0.5, (e) => { v.position.y = -e * 0.5; v.scale.setScalar(1 - e * 0.6); }).then(() => S.scene.remove(v)); });
-        if (!m.caps.length) api.sound("move");
+        if (!m.caps.length) api.sfx("dames.move");
       };
       const commit = async (m) => {
         busy = true; clearMarks(); sel = -1;
         const before = st; await animate(m); st = D.play(st, m);
-        if (Math.abs(before.b[m.from]) === 1 && Math.abs(st.b[m.to]) === 2) { api.vibrate([10, 30, 10]); api.sound("brilliant"); }
+        if (Math.abs(before.b[m.from]) === 1 && Math.abs(st.b[m.to]) === 2) { api.vibrate([10, 30, 10]); api.sfx("dames.king"); }
         await new Promise((r) => setTimeout(r, 120)); sync(); hud();
         if (st.over) { busy = false; return api.end(st.over.winner === 0 ? null : st.over.winner === 1 ? 0 : 1, st.over.winner === 0 ? "Partie nulle : " + st.over.why + "." : ""); }
         if (!bot) await faceSide(st.turn);

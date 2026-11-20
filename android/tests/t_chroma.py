@@ -23,7 +23,7 @@ with sync_playwright() as pw:
         ok = pg.locator("#ch-hand .ch-card.ok")
         if ok.count():
             before = pg.evaluate("ENOS.jeux.cur.inst._st().discard.length")
-            ok.first.click(); pg.wait_for_timeout(300)
+            ok.first.click(position={"x": 10, "y": 50}); pg.wait_for_timeout(300)
             if pg.locator("#sheet:not([hidden]) .ch-colors").count(): pg.click("#sheet .ch-colors [data-c='y']")
             if pg.locator("#sheet:not([hidden]) .opt").count() and not pg.locator("#sheet .ch-colors").count(): pg.click("#sheet .opt >> nth=0")
             pg.wait_for_function("ENOS.jeux.cur.inst._st().discard.length > %d || ENOS.jeux.cur.inst._st().turn !== 0" % before, timeout=10000)

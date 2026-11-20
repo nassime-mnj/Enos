@@ -98,7 +98,7 @@
         const real = lastT ? Math.min(0.25, t - lastT) : 1 / 60; lastT = t;           // physique au temps réel, quel que soit le nombre d'images par seconde
         if (!running) return;
         const dt = real, sub = Math.max(4, Math.ceil(dt / (1 / 240))); let res = null;
-        for (let k = 0; k < sub; k++) { res = F.step(st, dt / sub); if (res.goal != null) break; if (res.hits.length && performance.now() - lastHits > 90) { lastHits = performance.now(); api.sound(res.hits.includes("ball") ? "capture" : "move"); } }
+        for (let k = 0; k < sub; k++) { res = F.step(st, dt / sub); if (res.goal != null) break; for (const im of res.impacts || []) if (im.v > 0.25) api.sfx("flick." + im.k, { intensity: Math.min(1, im.v / (m.max * 0.7)), pan: im.x / (m.W / 2), rate: ice ? 1.12 : 1 }); }
         if (!ice) { const sp = Math.hypot(st.ball.vx, st.ball.vz); if (sp > 0) { roll.set(st.ball.vz, 0, -st.ball.vx).normalize(); ballM.rotateOnWorldAxis(roll, (sp * dt) / m.ball); } }
         sync();
         if (res.goal != null) { running = false; return goal(res.goal); }
@@ -106,7 +106,7 @@
       });
       const banner = (txt, cls) => { const d = document.createElement("div"); d.className = "fl-banner " + (cls || ""); d.textContent = txt; api.stage.appendChild(d); setTimeout(() => d.remove(), 1500); };
       const goal = async (team) => {
-        api.vibrate([30, 60, 30]); api.sound("brilliant"); banner("BUT !", team === 0 ? "t0" : "t1");
+        api.vibrate([30, 60, 30]); api.sfx("flick.goal"); api.sfx("fx.stinger", { vol: 0.7 }); banner("BUT !", team === 0 ? "t0" : "t1");
         F.endShot(st, team); score();
         await new Promise((r) => setTimeout(r, 1500)); if (!alive) return;
         if (st.over) return api.end(st.over.winner, st.score.join(" – "));
@@ -119,7 +119,7 @@
           await new Promise((r) => setTimeout(r, 500)); if (!alive) return;
           const sh = F.bestShot(st, P[1].level || "normal"); const b = st.bodies[sh.idx]; selRing.visible = true; selRing.position.set(b.x, 0, b.z);
           await G3.tween(0.6, (k) => showAim(b, sh.dx, sh.dz, sh.power * k)); await new Promise((r) => setTimeout(r, 150));
-          aimG.visible = false; selRing.visible = false; F.shoot(st, sh.idx, sh.dx, sh.dz, sh.power); api.sound("move"); running = true;
+          aimG.visible = false; selRing.visible = false; F.shoot(st, sh.idx, sh.dx, sh.dz, sh.power); api.sfx("flick.shot", { intensity: sh.power }); running = true;
         }
       };
       // ---- fronde au doigt
@@ -133,9 +133,10 @@
         drag = { i: best, x0: p.x, z0: p.z }; selRing.visible = true; selRing.position.set(st.bodies[best].x, 0, st.bodies[best].z); cv.setPointerCapture && cv.setPointerCapture(e.pointerId); api.vibrate(6);
       });
       cv.addEventListener("pointermove", (e) => { if (!drag) return; const p = S.ground(e.clientX, e.clientY, 0.1); if (!p) return; const b = st.bodies[drag.i], dx = b.x - p.x, dz = b.z - p.z, d = Math.hypot(dx, dz); drag.dx = dx; drag.dz = dz; drag.p = Math.min(1, d / 2.4); if (d > 0.15) showAim(b, dx, dz, drag.p); });
-      const release = () => { if (!drag) return; const d = drag; drag = null; aimG.visible = false; selRing.visible = false; if (!d.p || d.p < 0.06) return; F.shoot(st, d.i, d.dx, d.dz, d.p); api.vibrate(10); api.sound("move"); running = true; };
+      const release = () => { if (!drag) return; const d = drag; drag = null; aimG.visible = false; selRing.visible = false; if (!d.p || d.p < 0.06) return; F.shoot(st, d.i, d.dx, d.dz, d.p); api.vibrate(10); api.sfx("flick.shot", { intensity: d.p }); running = true; };
       cv.addEventListener("pointerup", release); cv.addEventListener("pointercancel", () => { drag = null; aimG.visible = false; selRing.visible = false; });
       turn();
+      api.loop("flick.amb", { vol: ice ? 0.7 : 1 });
       return { destroy: () => { alive = false; S.dispose(); }, _st: () => st, _shoot: (i, dx, dz, p) => { if (running) return false; const ok = F.shoot(st, i, dx, dz, p); if (ok) running = true; return ok; } };
     },
   });

@@ -121,3 +121,5 @@ body.gm-on #scrim{z-index:1000}body.gm-on .sheet{z-index:1010}body.gm-on #toasts
 .nc-manage .nc-row{display:flex;align-items:center;gap:6px;padding:8px 10px;margin-bottom:6px;border-radius:12px;background:#121318;border-left:4px solid var(--c)}
 .nc-row span{flex:1;min-width:0}.nc-row b{display:block;font:700 13px var(--ui);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nc-row small{font:600 11px var(--ui);color:var(--muted)}
 .nc-row button{flex:none;padding:7px 9px;border-radius:9px;border:1px solid #33343d;background:#1a1b22;color:#eee;font:700 11.5px var(--ui)}.nc-row button[disabled]{opacity:.35}
+.gm-snd{flex:none;width:38px;height:38px;border-radius:12px;border:1px solid #2a2b33;background:rgba(16,17,22,.8);display:grid;place-items:center;margin-left:6px}
+.gm-snd svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.gm-snd.off svg{stroke:#77737a}

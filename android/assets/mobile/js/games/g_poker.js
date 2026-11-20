@@ -163,7 +163,7 @@
       const rebuildBets = (arr) => P.forEach((p, i) => { const g = bets[i]; g.clear(); const v = (arr || st.bets || [])[i] || 0; if (v > 0) { const pl = pile(v); pl.position.copy(betAt(i)); g.add(pl); } });
       const rebuildPot = (amount) => { S.scene.remove(potG); potG = pile(amount); potG.position.copy(POT); S.add(potG); };
       const flyGroup = (g, to, dur) => { const from = g.position.clone(); return G3.tween(dur || 0.35, (k) => { g.position.lerpVectors(from, to, k); g.position.y = from.y + Math.sin(k * Math.PI) * 0.5; }); };
-      const sweep = async () => { const any = bets.some((g) => g.children.length); if (!any) return; api.sound("move"); await Promise.all(bets.map((g) => (g.children.length ? flyGroup(g, POT.clone().sub(betAt(bets.indexOf(g))).setY(0.02), 0.32) : null)));
+      const sweep = async () => { const any = bets.some((g) => g.children.length); if (!any) return; api.sfx("chip.collect"); await Promise.all(bets.map((g) => (g.children.length ? flyGroup(g, POT.clone().sub(betAt(bets.indexOf(g))).setY(0.02), 0.32) : null)));
         bets.forEach((g) => { g.clear(); g.position.set(0, 0, 0); }); };
       const dealHoles = async () => {
         holes.forEach((g) => g.clear()); boardG.clear();
@@ -173,7 +173,7 @@
           const m = cardMesh(st.hole[i][r]); m.rotation.z = Math.PI; m.position.copy(DECK); m.position.y = 0.2; S.add(m);
           const side = new T.Vector3(-Math.sin(ang(i)), 0, Math.cos(ang(i))), to = holeAt(i).add(side.multiplyScalar((r - 0.5) * 0.5)); to.y = 0.02 + r * 0.014;
           G3.tween(0.28, (k) => { m.position.lerpVectors(DECK, to, k); m.position.y = 0.2 + (to.y - 0.2) * k + Math.sin(k * Math.PI) * 0.4; m.rotation.y = (r - 0.5) * 0.22 * k; }).then(() => { S.scene.remove(m); holes[i].add(m); });
-          api.sound("move"); await wait(70);
+          api.sfx("card.slide", { vol: 0.8 }); await wait(70);
         }
         await wait(260);
       };
@@ -181,7 +181,7 @@
         for (let k = boardG.children.length; k < st.board.length; k++) {
           const m = cardMesh(st.board[k]); m.rotation.z = Math.PI; m.position.copy(DECK); boardG.add(m); const to = slot(k);
           await G3.tween(0.34, (t) => { m.position.lerpVectors(DECK, to, t); m.position.y = 0.05 + Math.sin(t * Math.PI) * 0.6; m.rotation.z = Math.PI * (1 - t); });
-          m.position.copy(to); m.rotation.z = 0; api.sound("move"); await wait(90);
+          m.position.copy(to); m.rotation.z = 0; api.sfx("card.place"); await wait(90);
         }
       };
       const reveal = async (seats) => {
@@ -195,8 +195,9 @@
         busy = true; const street = st.street, hand = st.hand, before = st.toCall, betsBefore = st.bets.slice(), totBefore = st.total.slice();
         if (!PK.act(st, a)) { busy = false; return; }
         lastAct[i] = label(i, a, before);
-        if (a.type === "fold") foldCards(i);
-        else if (a.type !== "check") { api.sound(a.type === "call" ? "move" : "capture"); if (a.type === "allin") api.vibrate([10, 30, 10]); }
+        if (a.type === "fold") { foldCards(i); api.sfx("card.shove"); }
+        else if (a.type === "check") api.sfx("table.knock");
+        else { api.sfx(a.type === "allin" || st.allin[i] ? "chip.allin" : a.type === "call" ? "chip.lay" : "chip.bet"); if (a.type === "allin") api.vibrate([10, 30, 10]); }
         if (st.street === street && !st.result) { rebuildBets(st.bets); paint(); await wait(260); busy = false; return next(); }
         // fin de manche : le moteur a remis les mises à zéro ; on montre les mises finales puis on les balaie vers le pot
         const fin = betsBefore.slice(); fin[i] += st.total[i] - totBefore[i]; void hand;
@@ -212,7 +213,7 @@
         const winners = res.won.map((w, j) => [w, j]).filter(([w]) => w > 0);
         const txt = winners.map(([w, j]) => `${P[j].name} remporte ${fmt(w)}`).join(" · "), hname = res.showdown && winners.length ? res.hands[winners[0][1]] : "";
         // le pot part chez le(s) gagnant(s)
-        if (winners.length) { const w = winners[0][1]; await flyGroup(potG, at(w, w === viewer() ? 0.62 : 0.8, 0.02), 0.5); }
+        if (winners.length) { const w = winners[0][1]; api.sfx("chip.collect", { force: true }); await flyGroup(potG, at(w, w === viewer() ? 0.62 : 0.8, 0.02), 0.5); }
         S.scene.remove(potG); potG = new T.Group(); S.add(potG);
         P.forEach((_, j) => (lastAct[j] = ""));
         const ban = document.createElement("div"); ban.className = "pk-res"; ban.innerHTML = `<b>${esc(txt)}</b>${hname ? `<small>${esc(hname)}</small>` : ""}<button class="btn">Main suivante</button>`; api.stage.appendChild(ban);

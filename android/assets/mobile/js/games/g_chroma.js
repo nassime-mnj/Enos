@@ -138,7 +138,7 @@
       // un tour
       let busy = false, curtain = false, alive = true;
       const after = async (res, who, card) => {
-        if (card) { api.sound(card.k === "n" ? "move" : "capture"); if (card.k !== "n") api.vibrate(14); if (res.penalty) api.toast(P[who].name + " n'a pas dit CHROMA : +2", "warn"); }
+        if (card) { api.sfx("card.place"); const sp = { skip: "chroma.skip", rev: "chroma.rev", wild: "chroma.wild", p2: "chroma.plus", p4: "chroma.plus", swap: "chroma.swap" }[card.k]; if (sp) api.sfx(sp, { delay: 0.08 }); if (card.k !== "n") api.vibrate(14); if (res.penalty) { api.sfx("chroma.penalty"); } if (res.penalty) api.toast(P[who].name + " n'a pas dit CHROMA : +2", "warn"); }
         drawPile(); layoutFans(); renderHand(); status();
         if (st.over) { busy = false; return api.end(st.over.winner); }
         await new Promise((r) => setTimeout(r, 160));
@@ -153,7 +153,7 @@
         return after(res, who, card);
       };
       const drawAct = async (who) => {
-        busy = true; const res = C.act(st, { type: "draw" }); api.sound("move");
+        busy = true; const res = C.act(st, { type: "draw" }); api.sfx("card.slide");
         const m = cardMesh(null); m.position.copy(DRAW); m.position.y = 0.3; S.add(m); const to = who === viewer() ? handPos() : (fans[who].userData.pos || new T.Vector3(0, 0.4, -4));
         await G3.tween(0.32, (k) => { m.position.lerpVectors(new T.Vector3(DRAW.x, 0.3, DRAW.z), to, k); m.position.y += Math.sin(k * Math.PI) * 0.8; }); S.scene.remove(m);
         return after(res, who, null);
@@ -183,11 +183,11 @@
         if (card.k === "swap") a.target = await askTarget();
         play(i, a);
       });
-      $("#ch-say").onclick = () => { C.act(st, { type: "say" }); api.toast("CHROMA !", "ok"); api.vibrate([10, 20, 10]); renderHand(); };
+      $("#ch-say").onclick = () => { C.act(st, { type: "say" }); api.sfx("chroma.call"); api.toast("CHROMA !", "ok"); api.vibrate([10, 20, 10]); renderHand(); };
       $("#ch-pass").onclick = () => { if (busy) return; C.act(st, { type: "pass" }); after({ ok: true }, st.turn, null); };
       S.renderer.domElement.addEventListener("click", (e) => { if (busy || curtain || st.over || !P[st.turn].human || st.drawn) return; const hit = S.ground(e.clientX, e.clientY, 0.05); if (hit && hit.distanceTo(DRAW) < 1.2) drawAct(st.turn); });
       window.addEventListener("resize", seatsHud);
-      drawPile(); layoutFans(); renderHand(); status(); setTimeout(seatsHud, 60); next();
+      drawPile(); layoutFans(); renderHand(); status(); setTimeout(seatsHud, 60); setTimeout(() => api.sfx("card.shuffle", { vol: 0.6 }), 300); next();
       return { destroy: () => { alive = false; window.removeEventListener("resize", seatsHud); S.dispose(); }, _st: () => st, _draw: () => drawAct(st.turn), _play: (id, color, target) => play(st.turn, { type: "play", id, color, target }) };
     },
   });

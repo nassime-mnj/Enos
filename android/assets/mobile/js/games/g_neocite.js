@@ -115,7 +115,7 @@
       const dice = [0, 1].map(() => { const m = new T.Mesh(new T.BoxGeometry(0.5, 0.5, 0.5), dieMats); m.castShadow = true; m.position.set(0, -2, 0); S.add(m); return m; });
       const faceQ = (v) => { const e = { 1: [0, 0, 0], 6: [Math.PI, 0, 0], 2: [-Math.PI / 2, 0, 0], 5: [Math.PI / 2, 0, 0], 3: [0, 0, Math.PI / 2], 4: [0, 0, -Math.PI / 2] }[v]; return new T.Quaternion().setFromEuler(new T.Euler(e[0], e[1], e[2])); };
       const rollDice = async (vals) => {
-        api.sound("move");
+        api.sfx("dice.throw");
         await Promise.all(dice.map((m, k) => { const to = new T.Vector3(k ? 0.42 : -0.42, 0.25, 1.75), from = new T.Vector3(to.x + (Math.random() - 0.5) * 2, 2.4, 3.6);
           const qEnd = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), (Math.random() - 0.5) * 1.2).multiply(faceQ(vals[k])), spin = new T.Vector3(Math.random() * 14 + 8, Math.random() * 10, Math.random() * 14 + 6);
           return G3.tween(0.75 + k * 0.08, (t) => { m.position.lerpVectors(from, to, t); m.position.y = to.y + Math.abs(Math.cos(t * Math.PI * 2.2)) * (1 - t) * 1.6;
@@ -166,24 +166,24 @@
         if (direct) { const m = pawns[i], a = m.position.clone(), b = pawnSpot(i, to); await G3.tween(0.6, (t) => { m.position.lerpVectors(a, b, t); m.position.y = 0.15 + Math.sin(t * Math.PI) * 2.2; }); return; }
         const fwd = (to - from + N.SIZE) % N.SIZE, back = (from - to + N.SIZE) % N.SIZE, dir = fwd <= 12 || back > 6 ? 1 : -1, steps = dir > 0 ? fwd : back;
         if (steps > 14) return movePawn(i, from, to, true);
-        let cur = from; for (let k = 0; k < steps; k++) { const nx = (cur + dir + N.SIZE) % N.SIZE; await hop(i, cur, nx); cur = nx; if (k % 2 === 0) api.sound("move"); }
+        let cur = from; for (let k = 0; k < steps; k++) { const nx = (cur + dir + N.SIZE) % N.SIZE; await hop(i, cur, nx); cur = nx; api.sfx("nc.hop", { intensity: 0.6 }); }
       };
       const floatText = (sq, txt, col) => { const ti = tileInfo(sq), v = new T.Vector3(ti.x, 0.6, ti.z).project(S.camera), rc = S.renderer.domElement.getBoundingClientRect();
         const el = document.createElement("div"); el.className = "nc-float"; el.style.cssText = `left:${((v.x + 1) / 2) * rc.width}px;top:${((1 - v.y) / 2) * rc.height}px;color:${col || "#e8b54a"}`; el.textContent = txt; api.stage.appendChild(el); setTimeout(() => el.remove(), 1500); };
-      const showCard = (text) => new Promise((res) => { const el = document.createElement("div"); el.className = "nc-signal"; el.innerHTML = `<div><small>Signal</small><p>${esc(text)}</p></div>`; api.stage.appendChild(el); api.sound("move");
+      const showCard = (text) => new Promise((res) => { const el = document.createElement("div"); el.className = "nc-signal"; el.innerHTML = `<div><small>Signal</small><p>${esc(text)}</p></div>`; api.stage.appendChild(el); api.sfx("nc.card");
         const done = () => { el.remove(); res(); }; const tm = setTimeout(done, P[st.turn] && P[st.turn].human ? 2600 : 1900); el.onclick = () => { clearTimeout(tm); done(); }; });
       const run = async (ev) => {
         for (const e of ev) {
           if (e.t === "dice") { await rollDice(e.dice); say(`${name(e.p)} fait ${e.dice[0]} + ${e.dice[1]}${e.dice[0] === e.dice[1] ? " · double" : ""}`); await wait(150); }
           else if (e.t === "move") { await movePawn(e.p, e.from, e.to, Math.abs(e.to - e.from) > 12 && (e.to === N.RELAYS[0] || e.to === N.RELAYS[1]) && N.BOARD[e.from].type === "relay"); }
           else if (e.t === "salary") { floatText(0, "+200", "#22c55e"); }
-          else if (e.t === "rent") { say(`${name(e.p)} paie ${fmt(e.amount)} de loyer à ${name(e.to)}`); floatText(e.sq, "−" + fmt(e.amount), "#ff3d63"); api.sound("capture"); await wait(500); }
+          else if (e.t === "rent") { say(`${name(e.p)} paie ${fmt(e.amount)} de loyer à ${name(e.to)}`); floatText(e.sq, "−" + fmt(e.amount), "#ff3d63"); api.sfx("nc.pay"); await wait(500); }
           else if (e.t === "card") { await showCard(e.text); }
-          else if (e.t === "jail") { say(`${name(e.p)} part au Pare-feu`); await movePawn(e.p, st.pos[e.p], N.JAIL, true); api.vibrate(20); }
+          else if (e.t === "jail") { say(`${name(e.p)} part au Pare-feu`); api.sfx("nc.jail"); await movePawn(e.p, st.pos[e.p], N.JAIL, true); api.vibrate(20); }
           else if (e.t === "free") say(`${name(e.p)} sort du Pare-feu${e.paid ? " (50 cr)" : ""}`);
-          else if (e.t === "reserve") { say(`${name(e.p)} remporte la Réserve : ${fmt(e.amount)}`); floatText(N.RESERVE, "+" + fmt(e.amount), "#22c55e"); api.sound("brilliant"); await wait(500); }
+          else if (e.t === "reserve") { say(`${name(e.p)} remporte la Réserve : ${fmt(e.amount)}`); floatText(N.RESERVE, "+" + fmt(e.amount), "#22c55e"); api.sfx("nc.reserve"); await wait(500); }
           else if (e.t === "mort") say(`${name(e.p)} hypothèque ${N.BOARD[e.sq].name}`);
-          else if (e.t === "bankrupt") { say(`${name(e.p)} fait faillite`); api.toast(`${name(e.p)} fait faillite`, "warn"); pawns[e.p].visible = false; await wait(700); }
+          else if (e.t === "bankrupt") { say(`${name(e.p)} fait faillite`); api.toast(`${name(e.p)} fait faillite`, "warn"); api.sfx("nc.bankrupt"); pawns[e.p].visible = false; await wait(700); }
           refreshDeco(); drawPlayers();
         }
         refreshDeco(); drawPlayers();
@@ -198,7 +198,7 @@
         for (let j = 0; j < n; j++) { if (st.out[j] || j === st.turn) { bids.push(0); continue; } bids.push(P[j].human ? await askBid(j) : N.botBid(st, j, P[j].level || setup.level || "normal")); }
         const w = N.auction(st, bids);
         say(w >= 0 ? `${name(w)} remporte ${N.BOARD[sq].name} pour ${fmt(bids[w])}` : `Personne ne prend ${N.BOARD[sq].name}`);
-        if (w >= 0) { floatText(sq, fmt(bids[w]), PCOL[w]); api.sound("capture"); }
+        if (w >= 0) { floatText(sq, fmt(bids[w]), PCOL[w]); api.sfx("nc.auction"); api.sfx("nc.buy", { delay: 0.25 }); }
         refreshDeco(); drawPlayers(); await wait(700);
       };
       // ---------------------------------------------------------------- gestion (construire, vendre, hypothéquer, racheter)
@@ -215,7 +215,7 @@
           const i = +b.dataset.i, a = b.dataset.a; let ok = false;
           if (a === "build") ok = N.build(st, p, i); else if (a === "sell") ok = N.sell(st, p, i); else if (a === "mort") ok = N.mortgage(st, p, i); else if (a === "unmort") ok = N.unmortgage(st, p, i);
           else if (a === "take") { const from = st.own[i].p; ok = N.takeover(st, p, i); if (ok) say(`${name(p)} rachète ${N.BOARD[i].name} à ${name(from)}`); }
-          if (ok) { api.sound(a === "build" ? "capture" : "move"); refreshDeco(); drawPlayers(); manage(); } })) });
+          if (ok) { api.sfx(a === "build" ? "nc.build" : a === "take" ? "nc.buy" : "nc.pay"); refreshDeco(); drawPlayers(); manage(); } })) });
       };
       // ---------------------------------------------------------------- déroulement
       let busy = false, alive = true;
@@ -232,9 +232,9 @@
         await wait(st.phase === "roll" || st.phase === "jailed" ? 650 : 500); if (!alive) return;
         if (st.phase === "jailed") { const d = N.botJail(st, lvl); if (d === "pass") { N.jailPass(st); say(`${name(p)} utilise un laissez-passer`); } else if (d === "pay") { N.jailPay(st); say(`${name(p)} paie 50 cr pour sortir`); } else await run(N.roll(st)); }
         else if (st.phase === "roll") await run(N.roll(st));
-        else if (st.phase === "buy") { if (N.botWantsBuy(st, lvl)) { const sq = st.pending; N.buy(st); say(`${name(p)} achète ${N.BOARD[sq].name}`); floatText(sq, fmt(N.BOARD[sq].price), PCOL[p]); api.sound("capture"); refreshDeco(); await wait(450); } else await auction(); }
+        else if (st.phase === "buy") { if (N.botWantsBuy(st, lvl)) { const sq = st.pending; N.buy(st); say(`${name(p)} achète ${N.BOARD[sq].name}`); floatText(sq, fmt(N.BOARD[sq].price), PCOL[p]); api.sfx("nc.buy"); refreshDeco(); await wait(450); } else await auction(); }
         else if (st.phase === "relay") { const go = N.botRelay(st, lvl); if (go) say(`${name(p)} se téléporte`); await run(N.relay(st, go)); }
-        else if (st.phase === "end") { const did = N.botManage(st, p, lvl); if (did.length) { const b = did.filter((x) => x.t === "build").length, tk = did.find((x) => x.t === "takeover"); say(tk ? `${name(p)} rachète ${N.BOARD[tk.sq].name} à ${name(tk.from)}` : b ? `${name(p)} construit (${b})` : `${name(p)} lève une hypothèque`); refreshDeco(); drawPlayers(); api.sound("capture"); await wait(700); } N.endTurn(st); }
+        else if (st.phase === "end") { const did = N.botManage(st, p, lvl); if (did.length) { const b = did.filter((x) => x.t === "build").length, tk = did.find((x) => x.t === "takeover"); say(tk ? `${name(p)} rachète ${N.BOARD[tk.sq].name} à ${name(tk.from)}` : b ? `${name(p)} construit (${b})` : `${name(p)} lève une hypothèque`); refreshDeco(); drawPlayers(); api.sfx(tk ? "nc.buy" : "nc.build"); await wait(700); } N.endTurn(st); }
         busy = false; if (!alive) return; placePawns(); next();
       };
       $("#nc-acts").addEventListener("click", (e) => {
@@ -242,7 +242,7 @@
         if (a === "roll") return act(async () => run(N.roll(st)));
         if (a === "jpay") { N.jailPay(st); say(`${name(st.turn)} paie 50 cr pour sortir`); return next(); }
         if (a === "jpass") { N.jailPass(st); return next(); }
-        if (a === "buy") { const sq = st.pending; if (N.buy(st)) { say(`${name(st.turn)} achète ${N.BOARD[sq].name}`); floatText(sq, fmt(N.BOARD[sq].price), PCOL[st.turn]); api.sound("capture"); refreshDeco(); } return next(); }
+        if (a === "buy") { const sq = st.pending; if (N.buy(st)) { say(`${name(st.turn)} achète ${N.BOARD[sq].name}`); floatText(sq, fmt(N.BOARD[sq].price), PCOL[st.turn]); api.sfx("nc.buy"); refreshDeco(); } return next(); }
         if (a === "auction") return act(auction);
         if (a === "relay1" || a === "relay0") return act(async () => run(N.relay(st, a === "relay1")));
         if (a === "end") { N.endTurn(st); say(""); return next(); }

@@ -65,11 +65,13 @@
     });
   };
 
+  // familles de sons préchargées par jeu (js/games/sfx_bank.js)
+  const SFX = { dames: ["dames"], chroma: ["card", "chroma"], poker: ["card", "chip", "table"], flick: ["flick"], neocite: ["nc", "dice", "chip"], bowling: ["bowl"] };
   /** écran de jeu plein écran */
   G.play = (g, setup) => {
     G.close();
     const st = document.createElement("div"); st.id = "gm-stage"; st.className = "gm-stage";
-    st.innerHTML = `<div class="gm-top"><button class="gm-x" aria-label="Quitter"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><b>${esc(g.title)}</b><span class="gm-turn" id="gm-turn"></span></div>
+    st.innerHTML = `<div class="gm-top"><button class="gm-x" aria-label="Quitter"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><b>${esc(g.title)}</b><span class="gm-turn" id="gm-turn"></span><button class="gm-snd" aria-label="Son"></button></div>
       <div class="gm-host" id="gm-host"></div><div class="gm-hud" id="gm-hud"></div><div class="gm-end" id="gm-end" hidden></div>`;
     (document.getElementById("app") || document.body).appendChild(st); document.body.classList.add("gm-on");
     const host = st.querySelector("#gm-host"); let inst = null, over = false;
@@ -79,6 +81,9 @@
       toast: (m, k) => E.ui && E.ui.toast(m, k || ""),
       vibrate: (p) => E.vibrate && E.vibrate(p),
       sound: (k) => { try { E.chessSound && E.chessSound.play(k); } catch (e) { /* son facultatif */ } },
+      /** son du jeu (js/games/sfx.js) : api.sfx("card.place", {intensity, pan, rate, vol}) */
+      sfx: (ev, o) => { try { return E.gsfx ? E.gsfx.play(ev, o) : false; } catch (e) { return false; } },
+      loop: (ev, o) => { try { E.gsfx && E.gsfx.loop(ev, o); } catch (e) { /* ambiance facultative */ } },
       /** fin de partie : winner = index du joueur gagnant (null = égalité) ; detail = texte */
       end: (winner, detail) => {
         if (over) return; over = true;
@@ -89,19 +94,26 @@
         end.innerHTML = `<div class="gm-end-c ${won || setup.mode !== "bots" ? "win" : "lose"}"><img src="${img}" alt=""><h2>${winner == null ? "Égalité" : setup.mode === "bots" ? (won ? "Victoire" : "Défaite") : esc(name) + " gagne"}</h2>
           <p>${esc(detail || (winner == null ? "" : setup.mode === "bots" && !won ? esc(name) + " remporte la partie." : ""))}</p>
           <div class="row"><button class="btn pri" data-a="again">Rejouer</button><button class="btn" data-a="quit">Quitter</button></div></div>`;
-        if (won || setup.mode !== "bots") { api.vibrate([20, 40, 60]); api.sound("brilliant"); }
+        if (E.gsfx) E.gsfx.stopAll();
+        if (won || setup.mode !== "bots") { api.vibrate([20, 40, 60]); api.sfx(winner == null ? "end.draw" : "end.win"); } else api.sfx("end.lose");
         end.querySelector('[data-a="again"]').onclick = () => G.play(g, setup);
         end.querySelector('[data-a="quit"]').onclick = () => G.close();
         void me;
       },
     };
     st.querySelector(".gm-x").onclick = async () => { if (over || !E.ui.confirm || (await E.ui.confirm("Quitter la partie ?", "La partie en cours sera perdue.", "QUITTER", true))) G.close(); };
+    // sons : préchargés à l'ouverture (familles communes + celles du jeu)
+    if (E.gsfx) E.gsfx.preload(["ui", "end", "fx"].concat(SFX[g.id] || [g.id]));
+    const snd = st.querySelector(".gm-snd"), paintSnd = () => { const on = !E.gsfx || E.gsfx.enabled(); snd.classList.toggle("off", !on); snd.innerHTML = on ? '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>'; };
+    snd.onclick = () => { const on = !(E.gsfx && E.gsfx.enabled()); E.settings.set("games.sound", on); if (!on && E.gsfx) E.gsfx.stopAll(); paintSnd(); if (on) api.sfx("ui.click", { force: true }); };
+    paintSnd();
     G.cur = { g, inst: null, st };
     Promise.resolve(g.start(host, setup, api)).then((x) => { inst = x; if (G.cur) G.cur.inst = x; }).catch((e) => { host.innerHTML = `<div class="card" style="margin:20px"><p class="pl-err">${esc(e.message || String(e))}</p></div>`; });
     return api;
   };
   G.close = () => {
     const c = G.cur; G.cur = null;
+    if (E.gsfx) E.gsfx.stopAll();
     if (c) { try { c.inst && c.inst.destroy && c.inst.destroy(); } catch (e) { /* rien */ } c.st.remove(); }
     document.body.classList.remove("gm-on");
   };
