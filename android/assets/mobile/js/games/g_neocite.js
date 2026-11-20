@@ -99,9 +99,11 @@
           g.textAlign = "center"; g.textBaseline = "alphabetic";
           const txt = (s, y, font, col) => { g.font = font; g.lineWidth = 8; g.strokeStyle = "rgba(0,0,0,.55)"; g.strokeText(s, w / 2, y); g.fillStyle = col; g.fillText(s, w / 2, y); };
           if (b.type === "lot") { const D = N.DIST[b.d], col = D.color, la = lotArt[slug(b.name)];
-            if (la) { g.save(); g.globalAlpha = 0.45; g.drawImage(la, 8, 120, w - 16, h - 220); g.restore(); }
-            const band = g.createLinearGradient(0, 0, 0, 112); band.addColorStop(0, col); band.addColorStop(1, col + "cc"); g.fillStyle = band; g.fillRect(9, 9, w - 18, 104); g.fillStyle = "rgba(255,255,255,.22)"; g.fillRect(9, 9, w - 18, 14);
-            g.fillStyle = "rgba(0,0,0,.55)"; g.font = "800 26px Inter, Arial"; g.fillText(D.name.toUpperCase(), w / 2, 76);
+            const band = g.createLinearGradient(0, 0, 0, 92); band.addColorStop(0, col); band.addColorStop(1, col + "cc"); g.fillStyle = band; g.fillRect(9, 9, w - 18, 84); g.fillStyle = "rgba(255,255,255,.22)"; g.fillRect(9, 9, w - 18, 12);
+            g.fillStyle = "rgba(0,0,0,.6)"; g.font = "800 24px Inter, Arial"; g.fillText(D.name.toUpperCase(), w / 2, 64);
+            if (la) { const gl = g.createRadialGradient(w / 2, 250, 10, w / 2, 250, 170); gl.addColorStop(0, col + "55"); gl.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gl; g.fillRect(0, 90, w, 320); const sz = 250; g.drawImage(la, (w - sz) / 2, 100, sz, sz);
+              g.font = "900 46px Inter, Arial"; const ln = wrap(g, b.name.toUpperCase(), w - 30).slice(0, 2); ln.forEach((l, k) => txt(l, 392 + k * 46 - (ln.length - 1) * 20, "900 46px Inter, Arial", "#ffffff"));
+              txt(fmt(b.price), h - 30, "900 50px Inter, Arial", "#f3c766"); return; }
             g.font = "900 54px Inter, Arial"; const lines = wrap(g, b.name.toUpperCase(), w - 40).slice(0, 3), y0 = 230 - (lines.length - 1) * 30;
             lines.forEach((l, k) => txt(l, y0 + k * 62, "900 54px Inter, Arial", "#ffffff"));
             txt(fmt(b.price), h - 42, "900 58px Inter, Arial", "#f3c766"); return; }
@@ -194,8 +196,13 @@
       cv.addEventListener("wheel", (e) => { cam.zoomT = Math.max(0.38, Math.min(1.1, cam.zoomT * (e.deltaY > 0 ? 1.1 : 0.9))); cam.user = 6; e.preventDefault(); }, { passive: false });
       // ---------------------------------------------------------------- bâtiments et propriétaires
       const antennaGeo = new T.CylinderGeometry(0.04, 0.08, 0.5, 10), lightGeo = new T.SphereGeometry(0.06, 12, 8), towerGeo = G3.roundedBox(T, 0.42, 0.95, 0.42, 0.05, 2);
+      const spriteTex = {};
+      const monument = (sq) => { const b = N.BOARD[sq], k = slug(b.name), im = lotArt[k]; if (!im) return null;
+        if (!spriteTex[k]) { const t = new T.Texture(im); t.colorSpace = T.SRGBColorSpace; t.needsUpdate = true; spriteTex[k] = new T.SpriteMaterial({ map: t, transparent: true, depthWrite: false }); }
+        const sp = new T.Sprite(spriteTex[k]); sp.scale.set(1.35, 1.35, 1); sp.center.set(0.5, 0.12); return sp; };
       const refreshDeco = () => tileGroups.forEach((g, i) => {
         const d = g.userData.deco; d.clear(); const ow = st.own[i]; if (!ow) return; const ti = tileInfo(i), w = ti.corner ? C : W1;
+        if (N.BOARD[i].type === "lot" && !ow.mort) { const sp = monument(i); if (sp) { sp.position.set(0, 0.16, 0.05); d.add(sp); if (!g.userData.rose) { g.userData.rose = true; sp.scale.set(0.01, 0.01, 1); G3.tween(0.6, (k) => sp.scale.set(1.35 * k, 1.35 * k, 1), (k) => 1 - Math.pow(1 - k, 3) * Math.cos(k * 5) * (1 - k)); } } }
         const strip = new T.Mesh(new T.BoxGeometry(w * 0.86, 0.05, 0.13), new T.MeshBasicMaterial({ color: PCOL[ow.p], toneMapped: false, transparent: true, opacity: ow.mort ? 0.3 : 1 })); strip.position.set(0, 0.16, C / 2 - 0.13); d.add(strip);
         if (ow.mort) { const x = new T.Mesh(new T.BoxGeometry(w * 0.7, 0.01, 0.06), new T.MeshBasicMaterial({ color: 0x888888 })); x.position.set(0, 0.16, 0); x.rotation.y = 0.9; d.add(x); }
         if (ow.lvl === 4) { const t = new T.Mesh(towerGeo, winM); t.position.set(0, 0.62, -C / 2 + 0.45); t.castShadow = true; d.add(t); const cap = new T.Mesh(new T.ConeGeometry(0.24, 0.26, 4), M.gold); cap.position.set(0, 1.22, -C / 2 + 0.45); cap.rotation.y = Math.PI / 4; d.add(cap); }
@@ -204,7 +211,7 @@
       // ---------------------------------------------------------------- HUD
       // ---------------------------------------------------------------- illustrations (images de ChatGPT si présentes, sinon skyline de nuit générée)
       const illCache = {};
-      const ill = (sq) => { const b = N.BOARD[sq]; if (b.type === "lot" && (art.lots || []).includes(slug(b.name))) return IMG + "lots/" + slug(b.name) + ".webp";
+      const ill = (sq) => { const b = N.BOARD[sq]; if (b.type === "lot" && (art.lots || []).includes(slug(b.name))) return IMG + "lots/" + slug(b.name) + ".webp"; if (b.type === "relay" && (art.icons || []).includes("airport")) return IMG + "icons/airport.webp";
         if (illCache[sq]) return illCache[sq];
         const col = b.type === "lot" ? N.DIST[b.d].color : "#e8b54a", cv = document.createElement("canvas"); cv.width = 480; cv.height = 360; const g = cv.getContext("2d");
         let seed = [...b.name].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);

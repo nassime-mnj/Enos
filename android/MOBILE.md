@@ -570,6 +570,12 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.114 — Néo-Cité : monuments des 24 villes, icônes et cartes illustrées
+
+- **Pack d'illustrations** (ChatGPT) intégré : 24 monuments (Paris · Tour Eiffel, New York · Statue de la Liberté, Rome · Colisée…), 15 icônes (logo, dés, pièces, marteau, échange, avion…), 20 cartes événement. Nettoyées (fragments parasites retirés), recadrées, converties en WebP légers (`img/games/capital/lots|icons|cards`, 3,4 Mo). Manifeste : `js/games/neocite_art.js`.
+- **Plateau** : chaque case de ville montre son monument entre le bandeau de région et le nom. Quand une ville est achetée, son **monument se dresse en 3D** sur la case (apparition animée).
+- **Fenêtres** : monument sur halo de la couleur de la région (fiche, enchères, échange), icônes dorées (dés sur le bouton, marteau, échange, pièces), illustration de chaque carte Signal. Les Aéroports utilisent l'icône avion.
+
 ## 1.113 — Néo-Cité : villes du monde, interface premium
 
 - **24 vraies villes** en 8 régions (Maghreb, Afrique, Amérique latine, Europe du Sud, Asie, Europe du Nord, Orient, Capitales mondiales), chacune avec son monument (Paris · Tour Eiffel, New York · Statue de la Liberté…). Les Relais deviennent des **Aéroports**. Liste pour ChatGPT (ville, monument, fichier) : `docs/NEOCITE_GPT.md`.

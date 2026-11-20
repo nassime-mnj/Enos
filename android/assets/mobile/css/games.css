@@ -286,3 +286,13 @@ body.gm-on #scrim{z-index:1000}body.gm-on .sheet{z-index:1010}body.gm-on #toasts
 .nc-money b{font:900 26px var(--ui);color:#f3c766}.nc-money .nc-cash{margin:0;justify-content:center}
 .nc-on .gm-turn{display:none}.nc-on .gm-top{gap:8px}.nc-on .gm-snd{margin-left:auto}
 .nc-trd .nc-lots{max-height:210px}.nc-trd .nc-mod{padding-top:40px}.nc-trd .nc-sub{margin-bottom:10px}
+/* Néo-Cité : monuments (images à fond transparent) */
+.nc-ill{object-fit:contain;background:radial-gradient(70% 70% at 50% 60%,color-mix(in srgb,var(--c) 35%,transparent),transparent 70%),linear-gradient(170deg,#1a1b22,#0d0e12);padding:4px}
+.nc-lot img{object-fit:contain;background:radial-gradient(70% 70% at 50% 60%,color-mix(in srgb,var(--c) 32%,transparent),transparent 72%),#101116;padding:6px}
+.nc-tabic .nc-ico{width:60px;height:60px;margin-top:-8px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.nc-cardimg{aspect-ratio:1/1;object-fit:cover;max-height:260px}
+.nc-card .nc-head{margin:0;padding:12px;gap:12px;text-align:left}
+.nc-card .nc-head small{background:none;padding:0;color:#d8d4cc;font:800 11px var(--ui);letter-spacing:.08em}
+.nc-card .nc-head b{background:none;padding:0;color:#fff;font:900 22px/1.1 var(--ui);overflow-wrap:anywhere}
+.nc-card .nc-head .nc-ill{width:40%}
+.nc-acts .btn.big{flex:2.3}.nc-acts .btn{font-size:13px;letter-spacing:.02em;white-space:nowrap}
