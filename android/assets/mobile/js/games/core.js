@@ -8,7 +8,19 @@
   const E = window.ENOS, esc = E.esc;
   const G = (E.jeux = { list: [] });
   const LEVELS = [["easy", "Facile"], ["normal", "Normal"], ["hard", "Difficile"], ["max", "ETO"]];
-  const BOTS = ["eto", "enos", "nasko", "lelex", "penoire", "ghorghor", "jester", "naskurieux"];
+  // bots des jeux : uniquement les nôtres (ETO, E.N.O.S. et nos personnages), chacun avec sa classe de difficulté fixe ; pas d'Elo hors échecs
+  const CLS = { easy: "Facile", normal: "Normal", hard: "Difficile", max: "Expert" };
+  const ROSTER = [["eto", "max"], ["enos", "max"], ["naskolit", "max"], ["penoire", "hard"], ["ghorghor", "normal"], ["nasko", "normal"], ["jester", "normal"], ["lelex", "easy"], ["naskurieux", "easy"]];
+  const roster = () => ROSTER.filter(([id]) => ["eto", "enos"].includes(id) || (E.botChat && E.botChat.bots && E.botChat.bots[id]));
+  const clsOf = (id) => (ROSTER.find((r) => r[0] === id) || [id, "normal"])[1];
+  const BOTS = ["eto", "enos", "penoire", "nasko", "ghorghor", "lelex", "jester", "naskurieux"];
+  G.ROSTER = ROSTER; G.clsOf = clsOf;
+  const chip = (id, label) => `<span class="bp-chip">${botImg(id) ? `<img src="${esc(botImg(id))}" alt="">` : `<span class="bp-ph">${esc(botName(id).slice(0, 2))}</span>`}<span><small>${esc(label)}</small><b>${esc(botName(id))}</b></span><i class="gm-cls ${clsOf(id)}">${CLS[clsOf(id)]}</i></span>`;
+  /** choix d'un adversaire parmi nos bots, classés par difficulté */
+  const pickBot = (title, current) => new Promise((res) => { let done = false;
+    const list = roster(), html = ["max", "hard", "normal", "easy"].map((c) => { const it = list.filter((r) => r[1] === c); return it.length ? `<h4 class="ro-cat">${CLS[c]}</h4><div class="ro-grid gm-roster">${it.map(([id]) => `<button class="ro-bot${id === current ? " on" : ""}" data-b="${id}">${botImg(id) ? `<img src="${esc(botImg(id))}" alt="">` : `<span class="bp-ph">${esc(botName(id).slice(0, 2))}</span>`}<b>${esc(botName(id))}</b><small class="gm-cls ${c}">${CLS[c]}</small></button>`).join("")}</div>` : ""; }).join("");
+    const s = E.ui.sheet({ title, html: `<div class="ro-pick">${html}</div>`, options: [{ label: "Fermer" }], onClose: () => { if (!done) res(null); } });
+    s.querySelectorAll("[data-b]").forEach((b) => (b.onclick = () => { done = true; E.vibrate && E.vibrate(8); E.ui.closeSheet(true); res(b.dataset.b); })); });
   const botName = (id) => (E.botPick ? E.botPick.name(id) : id), botImg = (id) => (E.botPick ? E.botPick.img(id) : "");
   const stats = () => E.settings.get("games.stats", {});
   G.record = (id, won) => { const s = stats(), x = (s[id] = s[id] || { n: 0, w: 0 }); x.n++; if (won) x.w++; E.settings.set("games.stats", s); };
@@ -22,6 +34,7 @@
       build(el) {
         let cfg = Object.assign({ mode: g.modes.includes("bots") ? "bots" : "local", n: g.min, level: "normal", bots: BOTS.slice(0, 6), names: ["Toi", "Joueur 2", "Joueur 3", "Joueur 4", "Joueur 5", "Joueur 6", "Joueur 7", "Joueur 8"] }, E.settings.get("games.cfg." + g.id, {}));
         cfg.n = Math.max(g.min, Math.min(g.max, cfg.n));
+        const okIds = roster().map((r) => r[0]); cfg.bots = (cfg.bots || []).map((id, i) => (okIds.includes(id) ? id : BOTS[i % BOTS.length]));
         const save = () => E.settings.set("games.cfg." + g.id, cfg);
         cfg.opts = cfg.opts || {};
         const optv = (o) => (cfg.opts[o.key] != null ? cfg.opts[o.key] : o.def);
@@ -41,8 +54,8 @@
           const n = cfg.n, rng = g.max > g.min ? `<h4 class="pl-h4">Joueurs</h4><div class="gm-count">${Array.from({ length: g.max - g.min + 1 }, (_, i) => g.min + i).map((k) => `<button data-n="${k}" class="${k === n ? "on" : ""}">${k}</button>`).join("")}</div>` : "";
           const opts = (g.options || []).map((o) => `<h4 class="pl-h4">${esc(o.label)}</h4><div class="gm-count gm-opt${o.img ? " gm-imgs" : ""}" data-k="${o.key}">${o.choices.map(([v, l]) => `<button data-v="${v}" title="${esc(l)}" class="${String(optv(o)) === String(v) ? "on" : ""}">${o.img ? `<img src="${o.img(v)}" alt="">` : ""}<span>${esc(l)}</span></button>`).join("")}</div>`).join("");
           if (cfg.mode === "local") return `<h3>Local</h3>${opts}${rng}<div class="gm-pl">${Array.from({ length: n }, (_, i) => `<label><span>Joueur ${i + 1}</span><input data-name="${i}" maxlength="16" value="${esc(cfg.names[i] || "Joueur " + (i + 1))}"></label>`).join("")}</div>`;
-          return `<h3>Contre les bots</h3>${opts}${rng}${g.levels ? `<h4 class="pl-h4">Niveau</h4><div class="gm-count gm-lvl">${LEVELS.map(([v, l]) => `<button data-l="${v}" class="${cfg.level === v ? "on" : ""}">${l}</button>`).join("")}</div>` : ""}
-            <h4 class="pl-h4">Adversaires</h4><div class="gm-bots">${Array.from({ length: n - 1 }, (_, i) => `<button class="bp-slot" data-b="${i}">${E.botPick ? E.botPick.chip(cfg.bots[i] || BOTS[i % BOTS.length], "Adversaire " + (i + 1)) : esc(botName(cfg.bots[i]))}</button>`).join("")}</div>`;
+          return `<h3>Contre les bots</h3>${opts}${rng}
+            <h4 class="pl-h4">Adversaires</h4><div class="gm-bots">${Array.from({ length: n - 1 }, (_, i) => `<button class="bp-slot" data-b="${i}">${chip(cfg.bots[i] || BOTS[i % BOTS.length], "Adversaire " + (i + 1))}</button>`).join("")}</div>`;
         };
         const wire = () => {
           el.querySelectorAll(".gm-mode").forEach((b) => (b.onclick = () => { if (b.classList.contains("soon") && b.dataset.m === "online") { cfg.mode = "online"; save(); return paint(); } cfg.mode = b.dataset.m; save(); paint(); }));
@@ -50,15 +63,15 @@
           el.querySelectorAll(".gm-opt button").forEach((b) => (b.onclick = () => { const o = g.options.find((x) => x.key === b.parentNode.dataset.k); cfg.opts[o.key] = typeof o.def === "number" ? +b.dataset.v : b.dataset.v; save(); paint(); }));
           el.querySelectorAll(".gm-lvl button").forEach((b) => (b.onclick = () => { cfg.level = b.dataset.l; save(); paint(); }));
           el.querySelectorAll("[data-name]").forEach((x) => (x.oninput = () => { cfg.names[+x.dataset.name] = x.value.trim().slice(0, 16); save(); }));
-          el.querySelectorAll(".gm-bots [data-b]").forEach((b) => (b.onclick = async () => { const i = +b.dataset.b; const id = E.botPick && (await E.botPick.open({ title: "Adversaire " + (i + 1), current: cfg.bots[i], noPrime: true })); if (id) { cfg.bots[i] = id; save(); paint(); } }));
+          el.querySelectorAll(".gm-bots [data-b]").forEach((b) => (b.onclick = async () => { const i = +b.dataset.b; const id = await pickBot("Adversaire " + (i + 1), cfg.bots[i]); if (id) { cfg.bots[i] = id; save(); paint(); } }));
           const go = el.querySelector("#gm-go"); go.disabled = cfg.mode === "online"; go.textContent = cfg.mode === "online" ? "Bientôt disponible" : "Jouer";
           go.onclick = () => launch();
         };
         const launch = () => {
           const players = cfg.mode === "local" ? Array.from({ length: cfg.n }, (_, i) => ({ name: cfg.names[i] || "Joueur " + (i + 1), human: true, seat: i }))
-            : [{ name: "Toi", human: true, seat: 0 }].concat(Array.from({ length: cfg.n - 1 }, (_, i) => { const id = cfg.bots[i] || BOTS[i % BOTS.length]; return { name: botName(id), bot: id, img: botImg(id), human: false, seat: i + 1, level: cfg.level }; }));
+            : [{ name: "Toi", human: true, seat: 0 }].concat(Array.from({ length: cfg.n - 1 }, (_, i) => { const id = cfg.bots[i] || BOTS[i % BOTS.length]; return { name: botName(id), bot: id, img: botImg(id), human: false, seat: i + 1, level: clsOf(id) }; }));
           const opts = {}; (g.options || []).forEach((o) => (opts[o.key] = optv(o)));
-          G.play(g, { mode: cfg.mode, level: cfg.level, players, opts });
+          G.play(g, { mode: cfg.mode, level: players.filter((p) => !p.human).map((p) => p.level)[0] || "normal", players, opts });
         };
         this._paint = paint; paint();
       },
@@ -91,7 +104,7 @@
         G.record(g.id, setup.mode === "bots" ? !!won : true);
         const name = winner == null ? "" : setup.players[winner].name, img = winner == null ? "img/games/common/eto_sport.webp" : setup.mode === "bots" && !won ? "img/games/common/eto_lose.webp" : "img/games/common/eto_win.webp";
         const end = st.querySelector("#gm-end"); end.hidden = false;
-        end.innerHTML = `<div class="gm-end-c ${won || setup.mode !== "bots" ? "win" : "lose"}"><img src="${img}" alt=""><h2>${winner == null ? "Égalité" : setup.mode === "bots" ? (won ? "Victoire" : "Défaite") : esc(name) + " gagne"}</h2>
+        end.innerHTML = `<div class="gm-end-fx ${won || setup.mode !== "bots" ? "win" : "lose"}">${won || setup.mode !== "bots" ? Array.from({ length: 36 }, (_, i) => `<i style="--x:${Math.round(Math.random() * 100)};--d:${(Math.random() * 1.2).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--c:${["#e8b54a", "#ff3d63", "#45d8ff", "#fff"][i % 4]}"></i>`).join("") : ""}</div><div class="gm-end-c ${won || setup.mode !== "bots" ? "win" : "lose"}"><img src="${img}" alt=""><h2>${winner == null ? "Égalité" : setup.mode === "bots" ? (won ? "Victoire" : "Défaite") : esc(name) + " gagne"}</h2>
           <p>${esc(detail || (winner == null ? "" : setup.mode === "bots" && !won ? esc(name) + " remporte la partie." : ""))}</p>
           <div class="row"><button class="btn pri" data-a="again">Rejouer</button><button class="btn" data-a="quit">Quitter</button></div></div>`;
         if (E.gsfx) E.gsfx.stopAll();
@@ -107,6 +120,14 @@
     const snd = st.querySelector(".gm-snd"), paintSnd = () => { const on = !E.gsfx || E.gsfx.enabled(); snd.classList.toggle("off", !on); snd.innerHTML = on ? '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>'; };
     snd.onclick = () => { const on = !(E.gsfx && E.gsfx.enabled()); E.settings.set("games.sound", on); if (!on && E.gsfx) E.gsfx.stopAll(); paintSnd(); if (on) api.sfx("ui.click", { force: true }); };
     paintSnd();
+    // ouverture : les joueurs entrent de chaque côté, « VS » claque au centre (ne bloque pas le toucher)
+    { const pl = setup.players, av = (p) => p.img ? `<img src="${esc(p.img)}" alt="">` : `<span class="ph">${esc((p.name || "?").slice(0, 2))}</span>`;
+      const it = document.createElement("div"); it.className = "gm-intro" + (pl.length > 2 ? " multi" : "");
+      it.innerHTML = `<div class="gm-rays"></div><small>${esc(g.title)}</small>` + (pl.length === 2 ? `<div class="gm-vs"><div class="a">${av(pl[0])}<b>${esc(pl[0].name)}</b></div><i>VS</i><div class="b">${av(pl[1])}<b>${esc(pl[1].name)}</b></div></div>`
+        : `<div class="gm-vs">${pl.map((p, i) => `<div style="--i:${i}">${av(p)}<b>${esc(p.name)}</b></div>`).join("")}</div>`);
+      st.appendChild(it); setTimeout(() => it.classList.add("out"), 1500); setTimeout(() => it.remove(), 2100); }
+    // indicateur de tour : petit rebond à chaque changement
+    { const tn = st.querySelector("#gm-turn"); let prev = ""; new MutationObserver(() => { if (tn.textContent !== prev) { prev = tn.textContent; tn.classList.remove("pop"); void tn.offsetWidth; tn.classList.add("pop"); } }).observe(tn, { childList: true, characterData: true, subtree: true }); }
     G.cur = { g, inst: null, st };
     Promise.resolve(g.start(host, setup, api)).then((x) => { inst = x; if (G.cur) G.cur.inst = x; }).catch((e) => { host.innerHTML = `<div class="card" style="margin:20px"><p class="pl-err">${esc(e.message || String(e))}</p></div>`; });
     return api;

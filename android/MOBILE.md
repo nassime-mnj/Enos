@@ -570,6 +570,20 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.111 — Jeux : sons réels, Flick en décors 3D, effets de vitesse et de but, bots des jeux
+
+- **Sons des jeux** (`js/games/sfx.js`, banque `js/games/sfx_bank.js`, sons `js/games/sfx_data.js`, fichiers `audio/games/`) : 109 sons réels (packs CC0 de Kenney via OpenGameArt, bois/métal/impacts CC0, roulement de boule CC0, foule de stade CC-BY 4.0 de Gregor Quendel), coupés, normalisés et convertis en OGG. Un gestionnaire unique : bus sfx / interface / musique / ambiance, compresseur doux, variante différente à chaque lecture, hauteur légèrement aléatoire, volume selon la force du choc, panoramique selon la position, polyphonie limitée, ambiances en boucle. Branché dans Dames (bois), CHROMA (cartes + sons des cartes spéciales), Poker (cartes, jetons, toc sur la table, tapis), Flick (tir, palet/palet, balle, bande, poteau, but + foule), Néo-Cité (dés, pions, pièces, construction, Pare-feu, Réserve). Jingles de victoire et de défaite. Bouton son dans la barre du jeu. Crédits : `audio/games/CREDITS.md`.
+- **Bots des jeux** : seuls nos bots sont proposés hors échecs (ETO, E.N.O.S., Naskolit, Pénoire, Ghorghor, Nasko, Le Jester, Lelex, Naskurieux), chacun avec une classe fixe (Expert, Difficile, Normal, Facile). ETO et E.N.O.S. en Expert. Pas d'Elo hors échecs ; le sélecteur de niveau global disparaît.
+- **Flick : 4 décors** (`js/games/flick_decor.js`), seul l'environnement change, la physique est identique :
+  - **Sakura** : le jardin japonais fourni en 3D (GLB optimisé : 490 000 → 147 000 triangles, compressé meshopt, 5,3 Mo, embarqué dans `js/games/glb_sakura.js` et chargé seulement pour ce décor), gazon du modèle aligné sur le terrain physique, coucher de soleil, pétales au vent, lanternes.
+  - **Océan** : plateforme flottante chromée sur un lagon animé (vagues, reflets du soleil, caustiques près de la coque), îles, voilier, jardinières.
+  - **Automne** : terrain en lévitation au-dessus d'une mer de nuages blancs, îles flottantes au gazon vert et aux érables, feuilles qui tombent et se posent.
+  - **Arène ETO** : obsidienne, néons, braises.
+- **Flick : mise en scène** : travelling d'ouverture, palets à dôme brillant cerclés d'or avec halo de l'équipe au trait, **traînées de vitesse** (balle et palets, plus larges et lumineuses quand ça va vite), étincelles aux chocs forts, rafale de vent au tir. **But ressenti** : ralenti jusqu'au fond du filet, filet qui se tend, double onde de choc, éclats et confettis aux couleurs de l'équipe, secousse de caméra, coup de zoom et halo lumineux proportionnels à la frappe, bannière « BUT ! » avec la vitesse en km/h et « Puissant » / « Frappe monstrueuse ».
+- **Socle 3D** (`js/games/g3d.js`, `vendor/three_extras.js`) : bloom (halo des néons et des effets, demi-résolution), secousse de caméra, travelling d'ouverture générique, particules au vent, traînées, chargement GLB (textures par `<img>` : la politique de sécurité de l'app bloque fetch). Activés aussi dans Dames, CHROMA, Poker et Néo-Cité.
+- **Interface des jeux** : ouverture « VS » avant chaque partie (joueurs qui entrent de chaque côté), salon animé (visuel en mouvement, titre qui brille, bouton Jouer lumineux), indicateur de tour qui rebondit, fin de partie avec rayons tournants, confettis à la victoire, secousse à la défaite.
+- Tests : `t_gsfx.py` (109 fichiers décodés, aucun silencieux, chaque événement se joue, bouton son), `t_gbots.py` (nos bots seulement, classes, pas d'Elo), `t_flick.py` (décors, ouverture VS, Sakura chargé, bannière de but avec vitesse).
+
 ## 1.110 — Néo-Cité : le jeu de plateau immobilier d'ETO
 
 - **Néo-Cité** (`js/games/neocite_rules.js` + `g_neocite.js`), jeu original de 2 à 6 joueurs (nom, plateau et règles propres, aucune reprise d'un jeu existant) : 32 cases, 8 quartiers de 3 lots, 2 Relais, 2 cases Signal, coins Départ / Pare-feu / Réserve / Audit.

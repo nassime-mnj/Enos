@@ -65,7 +65,7 @@
       const P = setup.players, n = P.length, bots = setup.mode === "bots";
       let st = C.newGame(n, (Date.now() ^ (Math.random() * 1e9)) >>> 0);
       const TW = 16.2, EL = 62 * Math.PI / 180;                 // la table entière (sièges compris) tient à l'écran, vue plongeante
-      const S = await G3.stage(host, { fov: 42, exposure: 1.0, fog: 0.012, cam: [0, 14, 8], look: [0, 0, 0],
+      const S = await G3.stage(host, { intro: { yaw: 0.7 }, bloom: { strength: 0.45, threshold: 0.9 }, fov: 42, exposure: 1.0, fog: 0.012, cam: [0, 14, 8], look: [0, 0, 0],
         fit: (cam, ar) => { const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * ar);
           const d = Math.max((TW / 2) / Math.tan(hf / 2), (TW * Math.sin(EL) * 0.62) / Math.tan(vf / 2)) + 1.5;
           cam.position.set(0, d * Math.sin(EL), d * Math.cos(EL)); cam.lookAt(0, 0, 1.6); } });
@@ -187,6 +187,7 @@
       $("#ch-pass").onclick = () => { if (busy) return; C.act(st, { type: "pass" }); after({ ok: true }, st.turn, null); };
       S.renderer.domElement.addEventListener("click", (e) => { if (busy || curtain || st.over || !P[st.turn].human || st.drawn) return; const hit = S.ground(e.clientX, e.clientY, 0.05); if (hit && hit.distanceTo(DRAW) < 1.2) drawAct(st.turn); });
       window.addEventListener("resize", seatsHud);
+      { let was = true; S.onFrame(() => { const on = S.introActive(); if (on || was) seatsHud(); was = on; }); }
       drawPile(); layoutFans(); renderHand(); status(); setTimeout(seatsHud, 60); setTimeout(() => api.sfx("card.shuffle", { vol: 0.6 }), 300); next();
       return { destroy: () => { alive = false; window.removeEventListener("resize", seatsHud); S.dispose(); }, _st: () => st, _draw: () => drawAct(st.turn), _play: (id, color, target) => play(st.turn, { type: "play", id, color, target }) };
     },

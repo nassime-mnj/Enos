@@ -15,3 +15,6 @@ MOTEURS NATIFS ARM64 (lib/arm64-v8a/libeng_*.so de l'APK, compilés par android/
   Caissa (commit 0ec0737, réseau eval-ml-14) — MIT — https://github.com/Witek902/Caissa
   Viridithas (commit 4609ff2, dernier réseau viridithas-networks) — MIT — https://github.com/cosmobobak/viridithas
   Les sources exactes sont celles des dépôts ci-dessus aux versions indiquées (la GPL impose de les fournir avec l'application).
+
+three_extras.js — GLTFLoader, EffectComposer, RenderPass, UnrealBloomPass, OutputPass (three.js r159 examples, MIT, © three.js authors)
+et MeshoptDecoder (meshoptimizer, MIT, © Arseny Kapoulkine), regroupés avec esbuild sur le THREE global.

@@ -16,7 +16,7 @@
       const n = st.n, P = setup.players, bot = setup.mode === "bots", humanSide = 1;     // Blancs = joueur 1 (en bas)
       // cadrage : tout le plateau (cadre compris) tient à l'écran, vue plongeante à ~58°, quel que soit le format
       const W = n + 1.8, EL = 58 * Math.PI / 180;
-      const S = await G3.stage(host, { fov: 42, exposure: 0.95, fog: 0.02, cam: [0, 12, 8], look: [0, 0, 0],
+      const S = await G3.stage(host, { intro: { yaw: 0.8 }, bloom: { strength: 0.5, threshold: 0.9 }, fov: 42, exposure: 0.95, fog: 0.02, cam: [0, 12, 8], look: [0, 0, 0],
         fit: (cam, ar) => { const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * ar);
           const dW = (W / 2) / Math.tan(hf / 2) + W * 0.12, dD = (W * Math.sin(EL) / 2) / Math.tan(vf / 2) + W * 0.35, d = Math.max(dW, dD);
           cam.userData.d = d; const sgn = cam.userData.side === -1 ? -1 : 1; cam.position.set(0, d * Math.sin(EL), sgn * d * Math.cos(EL)); cam.lookAt(0, -0.2, sgn * 0.5); } });

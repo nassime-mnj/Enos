@@ -65,7 +65,7 @@
       const P = setup.players, n = P.length, bots = setup.mode === "bots", o = setup.opts || {};
       const st = PK.newGame(n, { stack: +o.stack || 1000, sb: 10, bb: 20, hands: +o.hands || 0, seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
       const RX = 3.25, RZ = 4.7, EL = 64 * Math.PI / 180, TW = (RX + 1.1) * 2, TD = (RZ + 1.1) * 2;
-      const S = await G3.stage(host, { fov: 40, exposure: 1.0, fog: 0.01, cam: [0, 14, 7], look: [0, 0, 0],
+      const S = await G3.stage(host, { intro: { yaw: -0.8 }, bloom: { strength: 0.45, threshold: 0.9 }, fov: 40, exposure: 1.0, fog: 0.01, cam: [0, 14, 7], look: [0, 0, 0],
         fit: (cam, ar) => { const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * ar);
           const d = Math.max((TW / 2) / Math.tan(hf / 2), (TD * Math.sin(EL) * 0.6) / Math.tan(vf / 2)) + 1.2;
           cam.position.set(0, d * Math.sin(EL), d * Math.cos(EL) + 1.4); cam.lookAt(0, 0, 1.4); } });
@@ -267,6 +267,7 @@
       });
       $("#pk-ok").onclick = () => { const v = +$("#pk-rng").value, op = PK.options(st); if (!op) return; human(v >= op.maxTo ? { type: "allin" } : { type: "raise", to: v }); };
       const onResize = () => drawLayer(); window.addEventListener("resize", onResize);
+      { let was = true; S.onFrame(() => { const on = S.introActive(); if (on || was) drawLayer(); was = on; }); }
       setTimeout(drawLayer, 80);
       startHand();
       return { destroy: () => { alive = false; window.removeEventListener("resize", onResize); S.dispose(); }, _st: () => st, _act: (a) => human(a), _busy: () => busy };

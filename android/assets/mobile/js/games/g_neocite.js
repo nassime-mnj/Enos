@@ -26,7 +26,7 @@
       const P = setup.players, n = P.length, o = setup.opts || {};
       const st = N.newGame(n, { cash: +o.cash || 1500, rounds: o.rounds == null ? 40 : +o.rounds, seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
       const C = 1.6, W1 = 1.0, SIDE = 2 * C + 7 * W1, HALF = SIDE / 2, EL = 66 * Math.PI / 180;
-      const S = await G3.stage(host, { fov: 40, exposure: 1.0, fog: 0.008, cam: [0, 14, 9], look: [0, 0, 0],
+      const S = await G3.stage(host, { intro: { yaw: 0.9, d: 2.6 }, bloom: { strength: 0.5, threshold: 0.88 }, fov: 40, exposure: 1.0, fog: 0.008, cam: [0, 14, 9], look: [0, 0, 0],
         fit: (cam, ar) => { const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * ar), span = SIDE + 0.9;
           const d = Math.max((span / 2) / Math.tan(hf / 2), (span * Math.sin(EL) * 0.62) / Math.tan(vf / 2)) + 1.0;
           cam.position.set(0, d * Math.sin(EL), d * Math.cos(EL) + 0.9); cam.lookAt(0, 0, 0.9); } });
