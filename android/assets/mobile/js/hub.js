@@ -17,6 +17,10 @@
       { n: "Créer", items: [["chessedit", "Chess Edit", "cc:medal"], ["clips", "Game Clips", "cc:pawn_w"]] },
       { n: "Profil", items: [["@prof:stats", "Statistiques", "cc:user"], ["@prof:prizes", "Prix", "cc:medal"]] },
     ] },
+    { id: "jeux", n: "JEUX", t: "Jeux", img: "cat_jeux", sections: [
+      { n: "Plateau", items: [["dames", "Dames"]] },
+      { n: "Arcade", items: [["g2048"], ["snake"], ["mines"]] },
+    ] },
     { id: "cloud", n: "CLOUD", t: "Cloud", img: "cat_cloud", sections: [
       { n: "Mon compte", items: [["plans", "Abonnement"], ["gateway", "ETO Gateway"], ["fleet", "ETO Fleet"], ["support", "Assistant ETO"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
@@ -49,7 +53,7 @@
   H.CATS = CATS;
   // THÈME OBSIDIAN : icônes duotone (js/hub_icons.js) pour les catégories et la page Échecs
   const HI = (n, c) => (E.hubIcon ? E.hubIcon(n, c) : "");
-  const CAT_IC = { echecs: "knight", cloud: "cloud", parametres: "settings", codage: "code", outils: "wrench", organisation: "folder", ordinateur: "monitor" };
+  const CAT_IC = { echecs: "knight", jeux: "trophy", cloud: "cloud", parametres: "settings", codage: "code", outils: "wrench", organisation: "folder", ordinateur: "monitor" };
   const CH_IC = { "@tc:bullet": "zap", "@tc:blitz": "flame", "@tc:rapid": "timer", "@tc:daily": "calendar", defis: "swords", chess: "eye", "@resume": "play", "@team": "users", "@combat": "shield", royale: "crown", simul: "grid4", fived: "layers",
     fog: "fog", variants: "flask", prime: "bot", "@learn:lessons": "grad", "@puz:": "puzzle", "@learn:openings": "book", "@puz:mateIn1": "target", "@puz:fork": "fork", "@puz:pin": "pin", "@puz:skewer": "spear", "@learn:advice": "bulb", train: "brain",
     advisor: "scan", "@prof:games": "history", "@import": "import", chessedit: "clapper", clips: "drama", "@prof:stats": "chart", "@prof:prizes": "trophy" };
@@ -83,7 +87,7 @@
         <label class="hub-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="hub-q" type="search" placeholder="Rechercher" autocomplete="off" enterkeyhint="search"><button type="button" class="hub-x" id="hub-qx" hidden aria-label="Effacer">✕</button></label></div>
       <div class="hub-main">
         ${rec.length ? `<div class="hub-rec"><span>RÉCENTS</span><div class="hub-recs">${rec.map((x, i) => `<button class="hub-chip" data-id="${esc(x.id)}" style="--i:${i}"><span>${iconHtml(x.m, "")}</span>${esc(x.m.n)}</button>`).join("")}</div></div>` : ""}
-        <div class="hub-cats ob">${CATS.map((c, i) => `<button class="hub-cat${c.id === "echecs" ? " feat" : ""}" data-c="${c.id}" style="--i:${i}">${c.id === "echecs" ? '<img class="ob-art" src="img/ui/knight.webp" alt="" draggable="false">' : ""}<span class="hub-ci">${HI(CAT_IC[c.id] || "grid")}</span><span class="hub-cl">${esc(c.t)}<small>${c.id === "echecs" ? "Jouer, apprendre, analyser, créer : tous les modes d'échecs" : catCount(c) + " modules"}</small></span></button>`).join("")}</div>
+        <div class="hub-cats ob">${CATS.map((c, i) => `<button class="hub-cat${c.id === "echecs" || c.id === "jeux" ? " feat" : ""}" data-c="${c.id}" style="--i:${i}">${c.id === "echecs" ? '<img class="ob-art" src="img/ui/knight.webp" alt="" draggable="false">' : c.id === "jeux" ? '<img class="ob-art" src="img/games/common/eto_sport.webp" alt="" draggable="false">' : ""}<span class="hub-ci">${HI(CAT_IC[c.id] || "grid")}</span><span class="hub-cl">${esc(c.t)}<small>${c.id === "echecs" ? "Jouer, apprendre, analyser, créer : tous les modes d'échecs" : c.id === "jeux" ? "Plateau, cartes, sport : en local ou contre les bots" : catCount(c) + " modules"}</small></span></button>`).join("")}</div>
         <div class="hub-res" id="hub-res" hidden></div>
       </div>
       <div class="hub-page" id="hub-page" hidden></div>`;
