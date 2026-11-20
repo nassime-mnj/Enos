@@ -1,0 +1,25 @@
+const B = require(__dirname + "/../../assets/mobile/js/games/bowling_rules.js");
+let bad = 0; const check = (c, m) => { console.log((c ? "OK  " : "FAIL") + " " + m); if (!c) bad++; };
+check(B.score(Array(12).fill(10)).total === 300, "partie parfaite = 300");
+check(B.score(Array(21).fill(5)).total === 150, "que des spares 5/5 = 150");
+check(B.score(Array(20).fill(0)).total === 0, "que des zéros = 0");
+check(B.score([10, 7, 3, 9, 0, 10, 0, 8, 8, 2, 0, 6, 10, 10, 10, 8, 1]).total === 167, "partie type = 167 (" + B.score([10, 7, 3, 9, 0, 10, 0, 8, 8, 2, 0, 6, 10, 10, 10, 8, 1]).total + ")");
+check(B.score([10, 3]).frames[0].score === null, "strike en attente de ses 2 bonus");
+check(B.label([7, 3]).join("") === "7/" && B.label([10]).join("") === "X" && B.label([0, 0]).join("") === "--", "symboles X / -");
+check(B.label([10, 10, 10]).join("") === "XXX" && B.label([10, 7, 3]).join("") === "X7/" && B.label([9, 1, 10]).join("") === "9/X", "10e frame : XXX, X7/, 9/X");
+let c = B.cursor([]); check(c.frame === 0 && c.ball === 0 && c.standing === 10, "début : frame 1, 10 quilles");
+c = B.cursor([7]); check(c.frame === 0 && c.ball === 1 && c.standing === 3, "après 7 : 3 quilles debout");
+c = B.cursor(Array(9).fill(10).concat([10])); check(c.frame === 9 && c.ball === 1 && c.fresh && c.standing === 10, "10e frame après strike : rack relevé");
+c = B.cursor(Array(9).fill(10).concat([10, 4])); check(c.frame === 9 && c.ball === 2 && !c.fresh && c.standing === 6, "10e frame X puis 4 : 6 debout");
+c = B.cursor(Array(9).fill(10).concat([3, 4])); check(c.done, "10e frame ouverte : partie finie");
+c = B.cursor(Array(9).fill(10).concat([3, 7])); check(!c.done && c.fresh && c.ball === 2, "10e frame spare : 3e lancer");
+// physique
+let r = B.simulate(null, 0.08, Math.atan2(0.06 - 0.08 - 0.5 * 0.9, B.LANE.len), 8.5, 0.5);
+check(r.knocked.length >= 7, "lancer en poche : " + r.knocked.length + " quilles");
+r = B.simulate(null, 0, Math.atan2(0.9, B.LANE.len), 8, 0);
+check(r.ball.gutter && r.knocked.length === 0, "gouttière : 0 quille");
+r = B.simulate([6], 0, Math.atan2(B.PINS[6][0], B.LANE.len), 8, 0);
+check(r.knocked.length === 1, "quille 7 seule visée et touchée");
+const lvl = (L) => { let n = 0, sum = 0; for (let k = 0; k < 12; k++) { const t = B.botThrow([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], L); sum += B.simulate(null, t.x0, t.angle, t.speed, t.hook).knocked.length; n++; } return sum / n; };
+const e = lvl("easy"), m = lvl("max"); check(m >= 7 && m >= e - 0.5, "bots : facile " + e.toFixed(1) + " quilles/lancer, ETO " + m.toFixed(1));
+console.log(bad ? bad + " ÉCHEC(S)" : "TOUT OK"); process.exit(bad ? 1 : 0);
