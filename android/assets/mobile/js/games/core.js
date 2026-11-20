@@ -39,7 +39,7 @@
         const setupHtml = () => {
           if (cfg.mode === "online") return `<h3>En ligne</h3><p class="muted">Parties avec tes amis à distance : salons privés et invitations par code. Ouverture prochaine, après l'activation des comptes joueurs.</p>`;
           const n = cfg.n, rng = g.max > g.min ? `<h4 class="pl-h4">Joueurs</h4><div class="gm-count">${Array.from({ length: g.max - g.min + 1 }, (_, i) => g.min + i).map((k) => `<button data-n="${k}" class="${k === n ? "on" : ""}">${k}</button>`).join("")}</div>` : "";
-          const opts = (g.options || []).map((o) => `<h4 class="pl-h4">${esc(o.label)}</h4><div class="gm-count gm-opt" data-k="${o.key}">${o.choices.map(([v, l]) => `<button data-v="${v}" class="${String(optv(o)) === String(v) ? "on" : ""}">${esc(l)}</button>`).join("")}</div>`).join("");
+          const opts = (g.options || []).map((o) => `<h4 class="pl-h4">${esc(o.label)}</h4><div class="gm-count gm-opt${o.img ? " gm-imgs" : ""}" data-k="${o.key}">${o.choices.map(([v, l]) => `<button data-v="${v}" title="${esc(l)}" class="${String(optv(o)) === String(v) ? "on" : ""}">${o.img ? `<img src="${o.img(v)}" alt="">` : ""}<span>${esc(l)}</span></button>`).join("")}</div>`).join("");
           if (cfg.mode === "local") return `<h3>Local</h3>${opts}${rng}<div class="gm-pl">${Array.from({ length: n }, (_, i) => `<label><span>Joueur ${i + 1}</span><input data-name="${i}" maxlength="16" value="${esc(cfg.names[i] || "Joueur " + (i + 1))}"></label>`).join("")}</div>`;
           return `<h3>Contre les bots</h3>${opts}${rng}${g.levels ? `<h4 class="pl-h4">Niveau</h4><div class="gm-count gm-lvl">${LEVELS.map(([v, l]) => `<button data-l="${v}" class="${cfg.level === v ? "on" : ""}">${l}</button>`).join("")}</div>` : ""}
             <h4 class="pl-h4">Adversaires</h4><div class="gm-bots">${Array.from({ length: n - 1 }, (_, i) => `<button class="bp-slot" data-b="${i}">${E.botPick ? E.botPick.chip(cfg.bots[i] || BOTS[i % BOTS.length], "Adversaire " + (i + 1)) : esc(botName(cfg.bots[i]))}</button>`).join("")}</div>`;
@@ -71,7 +71,7 @@
     const st = document.createElement("div"); st.id = "gm-stage"; st.className = "gm-stage";
     st.innerHTML = `<div class="gm-top"><button class="gm-x" aria-label="Quitter"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><b>${esc(g.title)}</b><span class="gm-turn" id="gm-turn"></span></div>
       <div class="gm-host" id="gm-host"></div><div class="gm-hud" id="gm-hud"></div><div class="gm-end" id="gm-end" hidden></div>`;
-    document.body.appendChild(st); document.body.classList.add("gm-on");
+    (document.getElementById("app") || document.body).appendChild(st); document.body.classList.add("gm-on");
     const host = st.querySelector("#gm-host"); let inst = null, over = false;
     const api = {
       setup, stage: st, host, hud: st.querySelector("#gm-hud"),

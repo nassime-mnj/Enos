@@ -19,6 +19,8 @@
     ] },
     { id: "jeux", n: "JEUX", t: "Jeux", img: "cat_jeux", sections: [
       { n: "Plateau", items: [["dames", "Dames"]] },
+      { n: "Cartes", items: [["chroma", "CHROMA"], ["poker", "Poker"]] },
+      { n: "Sport", items: [["flick", "Flick Foot"]] },
       { n: "Arcade", items: [["g2048"], ["snake"], ["mines"]] },
     ] },
     { id: "cloud", n: "CLOUD", t: "Cloud", img: "cat_cloud", sections: [

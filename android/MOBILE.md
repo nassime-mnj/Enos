@@ -570,6 +570,14 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.109 — Jeux ETO : CHROMA, Flick Foot / Hockey, Poker
+
+- **CHROMA** (`js/games/chroma_rules.js` + `g_chroma.js`) : jeu de cartes original de 2 à 6 joueurs (110 cartes, 4 couleurs, Gel, Retour, +2, Prisme, +4 Œil, Échange ; annonce CHROMA obligatoire sinon +2). Table ronde 3D en feutre, pioche et défausse en 3D, éventails des adversaires, anneau à la couleur demandée, main en éventail en bas, choix de couleur et d'échange, rideau « passe le téléphone » en local.
+- **Flick Foot / Flick Hockey** (`js/games/flick_rules.js` + `g_flick.js`) : 5 palets par équipe, tir à la fronde (glisser, relâcher), physique en temps réel (frottement, rebonds, poteaux), terrain gazon ou glace, cages chromées avec filets, palets aux drapeaux des équipes choisies, buts animés. IA par simulation de tirs.
+- **Poker** (`js/games/poker_rules.js` + `g_poker.js`) : Texas Hold'em No Limit de 2 à 6 joueurs. Blindes (doublées toutes les 10 mains), relance minimale, tapis et pots annexes, évaluation de la meilleure main sur 7 cartes, abattage. Table ovale 3D (feutre, boudin obsidienne, liseré or), cartes et jetons en 3D, bouton de donneur, pot au centre, cartes retournées à l'abattage. Barre d'actions : se coucher, parole/suivre, relancer (mini, ½ pot, pot, ×3, curseur), tapis. Bots : équité par simulation + cotes du pot, bluff selon le niveau. Options : jetons de départ, durée.
+- Corrections communes : l'écran de jeu est monté dans `#app`, donc les feuilles (choix de couleur, confirmation « Quitter ») et les toasts passent au-dessus du jeu (avant, elles restaient dessous et ne se touchaient pas toujours) ; un bot ne joue plus si le tour a changé pendant sa réflexion.
+- Tests : `tests/node/chroma_rules.test.js`, `flick_rules.test.js`, `poker_rules.test.js` ; `t_chroma.py`, `t_flick.py`, `t_poker.py`.
+
 ## 1.108 — Jeux ETO : catégorie Jeux, salon commun, Dames 3D
 
 - **Catégorie Jeux** dans le hub (mise en avant, ETO en tenue de sport) : Plateau (Dames), Arcade (2048, Serpent, Démineur). Les autres jeux arrivent par vagues.
