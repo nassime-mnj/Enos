@@ -1,4 +1,4 @@
-"""ChatGPT Prime : joue normalement puis triche (coups illégaux), s'en sort toujours ; partie enregistrée -> Chess Edit."""
+"""ChatGPT Prime : joue normalement puis triche (coups illégaux) ; parties gagnées / perdues, roi téléporté quand il est maté, Prime contre nos bots ; partie enregistrée -> Chess Edit."""
 from mobile_common import *
 
 errs = []
@@ -17,7 +17,7 @@ with sync_playwright() as pw:
         if ev(A + ".g.over"): break
         ev("""() => { const a = %s, ch = new Chess(a.g.st.fen), ms = ch.moves({ verbose: true }); if (!ms.length) return; const m = ms[Math.floor(Math.random() * ms.length)]; a.onTap(m.from); a.onTap(m.to); }""" % A)
         n += 1
-    r = ev("""() => { const g = %s.g, acts = g.acts, firstCheat = acts.findIndex((a) => a.cheat), ill = acts.filter((a) => a.cheat && a.cheat !== 'double' && a.cheat !== 'revive');
+    r = ev("""() => { const g = %s.g, acts = g.acts, firstCheat = acts.findIndex((a) => a.cheat && a.cheat !== 'kingdash'), ill = acts.filter((a) => a.cheat && a.cheat !== 'double' && a.cheat !== 'revive');
       const P = ENOS.prime; const bad = ill.filter((a) => { if (!a.from) return false; const S = P.parse(acts[acts.indexOf(a) - 1] ? acts[acts.indexOf(a) - 1].fen : P.START); return P.pseudo(S.b, P.idx(a.from), P.idx(a.to)); });
       return { n: acts.length, firstCheat, cheats: g.st.cheats, types: [...new Set(acts.filter((a) => a.cheat).map((a) => a.cheat))], over: g.over, say: acts.filter((a) => a.say).length, bad: bad.length }; }""" % A)
     txt = ev(A + ".g.acts.map((a) => a.san + ' ' + (a.say || '')).join(' ')") + pg.inner_text("#pr-moves") + pg.inner_text("#pr-top") + pg.inner_text("#pr-bot")
@@ -44,10 +44,10 @@ with sync_playwright() as pw:
       await new Promise((r) => setTimeout(r, 400)); st.destroy(); host.remove(); return out; }""")
     check(fx["vanish"] == 0 and not fx["stamp"] and not fx["rift"] and not fx["appear"] and fx["moved"], "Chess Edit : un coup illégal est monté comme un coup normal (aucun tampon, aucun glitch) : %s" % fx)
     check(fx["streak"], "flare anamorphique sur un gros coup")
-    # --- PLOT TWIST : partie « battable », on le mate -> « de quoi tu parles ? » + plateau à 180° + il gagne
-    pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 1; " + A + ".cfg().color = 'b'"); pg.click("#pr-go")
+    # --- PLOT TWIST : partie qu'il doit gagner, on le mate -> « de quoi tu parles ? » + plateau à 180° + il gagne
+    pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 0; " + A + ".cfg().color = 'b'; ENOS.prime.forceMated = 'twist'"); pg.click("#pr-go")
     pg.wait_for_function(A + ".g && " + A + ".g.acts.length >= 1", timeout=20000); pg.wait_for_function("!" + A + ".g.busy", timeout=20000)
-    check(ev(A + ".g.st.beatable") is True, "partie battable")
+    check(ev(A + ".g.st.beatable") is False, "partie gagnante pour Prime")
     ev("() => { const g = %s.g; g.st.fen = 'r5k1/8/8/8/8/8/5PPP/6K1 b - - 0 1'; g.acts.length = 0; g.last = null; %s.onTap('a8'); }" % (A, A)); pg.wait_for_timeout(100)
     ev("() => { %s.onTap('a1'); }" % A)
     pg.wait_for_selector("#pr-bw.pr-spin", timeout=8000)
@@ -64,6 +64,30 @@ with sync_playwright() as pw:
       s.setFen('6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1'); const f0 = s.flip, e = { cheat: 'twist', fen: '6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1', to: 'g1', n: 9, lvl: 3 }; s.move(e); await new Promise((r) => setTimeout(r, 1700));
       const o = { flipped: s.flip !== f0, stamp: (host.querySelector('.ce-stampfx') || {}).textContent, king: Object.keys(s.pieces).some((k) => s.pieces[k]._p === 'K') }; s.destroy(); host.remove(); return o; }""")
     check(st["flipped"] and "CHECKMATE" in (st["stamp"] or ""), "Chess Edit : plateau à 180° puis « CHATGPT A GAGNÉ PAR CHECKMATE » : %s" % st)
+    # --- partie PERDUE : maté -> son roi se téléporte ailleurs, la partie continue ; maté une 2e fois -> il perd pour de bon
+    MATE = "() => { const g = %s.g; g.st.fen = 'r5k1/8/8/8/8/8/5PPP/6K1 b - - 0 1'; g.last = null; g.busy = false; %s.onTap('a8'); %s.onTap('a1'); }" % (A, A, A)
+    pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 1; " + A + ".cfg().color = 'b'; ENOS.prime.forceMated = 'tp'"); pg.click("#pr-go")
+    pg.wait_for_function(A + ".g && " + A + ".g.acts.length >= 1", timeout=20000); pg.wait_for_function("!" + A + ".g.busy", timeout=20000)
+    check(ev(A + ".g.st.beatable") is True, "partie perdante pour Prime")
+    ev(MATE)
+    pg.wait_for_function("(() => { const g = %s.g; const l = g.acts[g.acts.length - 1]; return l && l.cheat === 'kingdash' && !g.busy; })()" % A, timeout=15000)
+    k = ev("() => { const g = %s.g, l = g.acts[g.acts.length - 1], b = ENOS.prime.parse(g.st.fen).b; return { from: l.from, to: l.to, over: !!g.over, safe: ENOS.prime.safe(b, true), say: l.say, moves: new Chess(g.st.fen).moves().length }; }" % A)
+    check(k["from"] == "g1" and k["to"] != "g1" and not k["over"] and k["safe"] and k["moves"] > 0, "maté : le roi se téléporte de g1 en %s et la partie continue (« %s »)" % (k["to"], k["say"]))
+    ev("ENOS.prime.forceMated = 'lose'"); ev(MATE)
+    pg.wait_for_selector("#pr-edit", timeout=10000)
+    rec = ev("ENOS.settings.get('variants.hist', []).pop()")
+    check(rec["result"].startswith("Tu gagnes") and rec["v"]["beaten"] and not rec["v"]["primeWon"] and "MAT" in pg.inner_text("#pr-stamp"), "maté pour de bon : %s" % rec["result"])
+    lose = ev("""(rec) => { const M = ENOS.editMap, pl = M.gamePlies(rec), tl = M.buildViral(pl, rec, null, { voices: true }); return { mate: pl[pl.length - 1].mate, tp: pl.some((p) => p.cheat === 'kingdash') }; }""", rec)
+    check(lose["mate"] and lose["tp"], "Chess Edit : défaite de Prime montée (mat final) avec le roi téléporté (%s)" % lose)
+    ev("ENOS.prime.forceMated = null")
+    # --- PRIME CONTRE UN DE NOS BOTS (Lelex joue les Blancs)
+    pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); pg.click('#pr-mode [data-m="bot"]')
+    check(ev("!document.querySelector('#pr-opps').hidden") and ev("document.querySelectorAll('#pr-opps [data-o]').length") == 10, "liste des adversaires : nos 9 bots + Stockfish")
+    pg.click('#pr-opps [data-o="lelex"]'); pg.click('#pr-col [data-c="w"]'); pg.screenshot(path="/tmp/claude-0/-home-user-Enos/30c76a9a-45de-515d-a61d-f48c0131e373/scratchpad/prime_bots.png"); pg.click("#pr-go")
+    pg.wait_for_function(A + ".g && " + A + ".g.acts.length >= 4", timeout=60000)
+    o = ev("() => { const g = %s.g; return { side: g.primeSide, first: g.acts[0].side, top: document.querySelector('#pr-top').innerText + document.querySelector('#pr-bot').innerText, mode: g.mode }; }" % A)
+    check(o["side"] == "b" and o["first"] == "w" and "Lelex" in o["top"] and o["mode"] == "bot", "Lelex (Blancs) contre Prime : %s" % o)
+    pg.click("#pr-back")
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

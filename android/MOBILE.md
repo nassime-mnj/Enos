@@ -570,6 +570,13 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.115 — ChatGPT Prime : contre nos bots, 60 % de victoires, roi téléporté
+- **Bot contre Prime** : au lieu de Stockfish seul, on choisit l'adversaire de Prime parmi nos bots (ETO, E.N.O.S., Naskolit, Pénoire, Le Jester, GhorGhor, Nasko, Lelex, Naskurieux) ou Stockfish 19. Même force qu'en Défis (Elo → puissance, ETO à pleine puissance avec son goût tactique, le Jester tire son Elo à la roue). Les anciens réglages « Stockfish contre Prime » sont repris.
+- **60 % de victoires** (`P.WINRATE`) : le sort de la partie est tiré au début (`P.rollBeatable`). Partie gagnante : il triche comme avant et finit par gagner. Partie perdante : il triche à peine, joue des **coups bêtes** de plus en plus souvent (`P.stupidMove` laisse en prise la plus grosse pièce possible), finit **maté pour de bon** ; s'il traîne au-delà de 90 coups, il « plante » (erreur serveur) et perd.
+- **Roi téléporté** (`P.kingEscape`, coup `kingdash`) : quand il est maté, son roi réapparaît sur une case sûre loin des pièces adverses et la partie continue. Partie gagnante : 78 % téléportation, sinon le plot twist « tu t'es fait checkmate ». Partie perdante : une seule téléportation possible (60 %), le mat suivant est réel.
+- Nulle dans une partie perdante = vraie nulle ; résultat « Tu gagnes » quand c'est toi qui le mates. Le Chess Edit reçoit `v.beaten` pour toutes les défaites.
+- Tests : `tests/node/prime_winrate.test.js` (simulation : 58–63 % de victoires sur 300–400 parties, vraies défaites, téléportations) ; `t_prime.py` étendu (twist, roi téléporté puis vraie défaite, Lelex contre Prime).
+
 ## 1.114 — Néo-Cité : monuments des 24 villes, icônes et cartes illustrées
 
 - **Pack d'illustrations** (ChatGPT) intégré : 24 monuments (Paris · Tour Eiffel, New York · Statue de la Liberté, Rome · Colisée…), 15 icônes (logo, dés, pièces, marteau, échange, avion…), 20 cartes événement. Nettoyées (fragments parasites retirés), recadrées, converties en WebP légers (`img/games/capital/lots|icons|cards`, 3,4 Mo). Manifeste : `js/games/neocite_art.js`.

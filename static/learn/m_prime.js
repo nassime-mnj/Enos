@@ -8,16 +8,26 @@
     id: "prime", group: "chess", title: "ChatGPT Prime", sub: "9999 Elo · GM · coups… légaux ?", icon: ICON,
     build(el, A) {
       const $ = (s) => el.querySelector(s), L = E.chessLocal, B = E.board;
-      let cfg = Object.assign({ color: "w", mode: "human" }, E.settings.get("prime.cfg", {}));
+      let cfg = Object.assign({ color: "w", mode: "human", opp: "stockfish" }, E.settings.get("prime.cfg", {}));
+      if (cfg.mode === "sf") { cfg.mode = "bot"; cfg.opp = "stockfish"; }
+      const powerOfElo = (e) => Math.max(1, Math.min(100, Math.round(e <= 1500 ? 1 + (e - 250) / 1250 * 49 : 50 + (e - 1500) / 1700 * 50)));
+      // adversaires de Prime : nos bots (les mêmes niveaux qu'en Défis) + Stockfish 19
+      const OPP = { eto: { name: "ETO", elo: 3650, power: 100, taste: true }, enos: { name: "E.N.O.S.", elo: 3650, power: 100 }, stockfish: { name: "Stockfish 19", short: "Stockfish", elo: 3650, power: 100, pure: true },
+        naskolit: { name: "Naskolit", elo: 3200 }, penoire: { name: "Nasko (pénoire)", short: "Pénoire", elo: 2500 }, jester: { name: "Le Jester", elo: 1600, wheel: true }, ghorghor: { name: "GhorGhor", elo: 1400 },
+        nasko: { name: "Nasko", elo: 1300 }, lelex: { name: "Lelex", elo: 1150 }, naskurieux: { name: "Naskurieux", elo: 1 } };
+      if (!OPP[cfg.opp]) cfg.opp = "stockfish";
+      const av = (id) => (E.assetBase || "") + "img/bots/" + id + ".png";
       let G = null;
       const badge = () => (E.botChat ? E.botChat.badge("GM") : "");
       el.innerHTML = `
         <div id="pr-home">
           <div class="card pr-hero"><img class="pr-av" src="${E.assetBase || ""}img/bots/prime.png" alt="ChatGPT Prime">
             <div><h3>${badge()}ChatGPT Prime <small>9999 Elo</small></h3>
-              <p class="muted">Il joue normalement au début… puis il <b>triche</b> : pièces qui se téléportent, qui apparaissent de nulle part, qui sautent par-dessus les autres, le roi qui mange son fou puis le ressuscite. Il explique chaque coup avec un aplomb <b>qui ne veut rien dire</b>, et il s'en sort <b>à chaque fois</b>. Aucune IA n'est interrogée (zéro token).</p></div></div>
-          <div class="card"><div class="seg" id="pr-mode"><button data-m="human">TOI CONTRE PRIME</button><button data-m="sf">STOCKFISH CONTRE PRIME</button><i class="seg-ind"></i></div>
-            <div class="seg" id="pr-col" style="margin-top:10px"><button data-c="w">BLANCS</button><button data-c="b">NOIRS</button><button data-c="r">AU HASARD</button><i class="seg-ind"></i></div>
+              <p class="muted">Il joue normalement au début… puis il <b>triche</b> : pièces qui se téléportent, qui apparaissent de nulle part, qui sautent par-dessus les autres, le roi qui mange son fou puis le ressuscite. Il explique chaque coup avec un aplomb <b>qui ne veut rien dire</b>. Il gagne environ <b>6 parties sur 10</b> : le reste du temps il joue n'importe quoi et finit maté. Et quand il est maté, il arrive que son roi <b>se téléporte</b> ailleurs. Aucune IA n'est interrogée (zéro token).</p></div></div>
+          <div class="card"><div class="seg" id="pr-mode"><button data-m="human">TOI CONTRE PRIME</button><button data-m="bot">BOT CONTRE PRIME</button><i class="seg-ind"></i></div>
+            <div class="pr-opps" id="pr-opps" hidden>${Object.keys(OPP).map((id) => `<button data-o="${id}"><img src="${av(id)}" alt=""><b>${esc(OPP[id].short || OPP[id].name)}</b><small>${OPP[id].wheel ? "?" : OPP[id].elo}</small></button>`).join("")}</div>
+            <p class="muted pr-cap" id="pr-cap"></p>
+            <div class="seg" id="pr-col"><button data-c="w">BLANCS</button><button data-c="b">NOIRS</button><button data-c="r">AU HASARD</button><i class="seg-ind"></i></div>
             <div class="row" style="margin-top:12px"><button class="btn pri" id="pr-go">♟ JOUER</button></div></div>
           <div class="card"><h3>Parties de Prime<span class="sp" id="pr-hn"></span></h3><div id="pr-hist" class="list"></div></div>
         </div>
@@ -34,7 +44,10 @@
           </div>
         </div>`;
       const seg = (id, key, get, set) => { const s = $(id); const sync = () => { s.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset[key] === get())); const i = s.querySelector(".seg-ind"), on = s.querySelector("button.on"); if (i && on) { i.style.width = on.offsetWidth + "px"; i.style.transform = `translateX(${on.offsetLeft}px)`; } }; s.querySelectorAll("button").forEach((b) => (b.onclick = () => { set(b.dataset[key]); sync(); })); sync(); return sync; };
-      const syncA = seg("#pr-mode", "m", () => cfg.mode, (v) => (cfg.mode = v)), syncB = seg("#pr-col", "c", () => cfg.color, (v) => (cfg.color = v));
+      const syncOpp = () => { $("#pr-opps").hidden = cfg.mode !== "bot"; $("#pr-opps").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.o === cfg.opp)); $("#pr-cap").textContent = cfg.mode === "bot" ? "Camp de " + OPP[cfg.opp].name : "Ton camp"; };
+      $("#pr-opps").onclick = (e) => { const b = e.target.closest("[data-o]"); if (b) { cfg.opp = b.dataset.o; syncOpp(); } };
+      const syncA = seg("#pr-mode", "m", () => cfg.mode, (v) => { cfg.mode = v; syncOpp(); }), syncB = seg("#pr-col", "c", () => cfg.color, (v) => (cfg.color = v));
+      syncOpp();
       const hist = () => E.settings.get("variants.hist", []).filter((x) => x.mode === "prime");
       function paintHist() {
         const h = hist().slice().reverse(); $("#pr-hn").textContent = h.length ? h.length + " partie" + (h.length > 1 ? "s" : "") : "";
@@ -44,10 +57,10 @@
       A.onShow = A.onShow || null; paintHist();
 
       // ------------------------------------------------------------------ partie
-      const nameOf = (side) => (side === G.primeSide ? "ChatGPT Prime" : G.mode === "sf" ? "Stockfish 19" : "Toi");
+      const nameOf = (side) => (side === G.primeSide ? "ChatGPT Prime" : G.mode === "bot" ? G.opp.name : "Toi");
       function strip(side) {
         const prime = side === G.primeSide;
-        return prime ? `<span class="df-dot ${side}"></span>${badge()}<b>ChatGPT Prime</b><small>9999 Elo</small>` : `<span class="df-dot ${side}"></span><b>${nameOf(side)}</b>`;
+        return prime ? `<span class="df-dot ${side}"></span>${badge()}<b>ChatGPT Prime</b><small>9999 Elo</small>` : `<span class="df-dot ${side}"></span>${G.mode === "bot" ? `<img class="pr-oav" src="${av(G.oppId)}" alt="">` : ""}<b>${esc(nameOf(side))}</b>${G.mode === "bot" ? `<small>${G.opp.elo} Elo</small>` : ""}`;
       }
       function paint(last, extra) {
         const pos = B.parse(G.st.fen), flip = G.flip, turn = pos.turn;
@@ -82,37 +95,48 @@
         await wait(2400); if (!G || tok !== G.token) return; finish("par checkmate (il l'a décidé)", G.over);
       }
       function record(why) {
-        const prime = G.primeSide, acts = G.acts.map((a) => Object.assign({}, a)), winner = G.over && G.over.winner ? G.over.winner : prime;
+        const prime = G.primeSide, acts = G.acts.map((a) => Object.assign({}, a)), winner = G.over && "winner" in G.over ? G.over.winner : prime;
         const names = prime === "w" ? ["ChatGPT Prime", nameOf("b")] : [nameOf("w"), "ChatGPT Prime"];
-        const result = (winner === prime ? "ChatGPT Prime gagne" : nameOf(winner) + " gagne") + " · " + why;
+        const result = (!winner ? "Nulle" : winner === prime ? "ChatGPT Prime gagne" : G.mode === "human" ? "Tu gagnes" : nameOf(winner) + " gagne") + " · " + why;
         const rec = { variant: true, mode: "prime", t: Date.now(), title: "🤖 ChatGPT Prime · " + names[0] + " – " + names[1], result, plies: acts.length, brill: 0, acc: null, cheats: G.st.cheats, pgn: "", id: "prime", pw: names[0], pb: names[1], pk: ["variant", "variant"], bw: 0, bb: 0,
-          me: G.mode === "human" ? (prime === "w" ? "b" : "w") : null, accW: null, accB: null, ch: [], mv: acts.map((a) => [a.uci, a.san, a.key || "good", 0, null, ""]), v: { mode: "prime", acts, start: P.START, over: G.over ? G.over.why : "end", duo: false, beaten: !!(G.over && G.over.why === "twist") } };
+          me: G.mode === "human" ? (prime === "w" ? "b" : "w") : null, accW: null, accB: null, ch: [], mv: acts.map((a) => [a.uci, a.san, a.key || "good", 0, null, ""]), v: { mode: "prime", acts, start: P.START, over: G.over ? G.over.why : "end", duo: false, beaten: !!(G.over && G.over.why === "twist") || (!!winner && winner !== prime), primeWon: winner === prime } };
         if (acts.length >= 2) { const l = E.settings.get("variants.hist", []); l.push(rec); E.settings.set("variants.hist", l.slice(-40)); }
         return rec;
       }
       function finish(why, over) {
         G.over = over || G.over || { why: "end" }; G.busy = false; const rec = record(why); G.rec = rec; status(rec.result);
         $("#pr-btns").innerHTML = `<button class="btn pri" id="pr-again">↻ REJOUER</button><button class="btn" id="pr-edit">✂ ÉDITER CETTE PARTIE</button>`;
-        $("#pr-again").onclick = () => start(); $("#pr-edit").onclick = () => E.chessEdit && E.chessEdit.open(rec); if (G.over.why === "kill") say(G.acts[G.acts.length - 1].say);
+        $("#pr-again").onclick = () => start(); $("#pr-edit").onclick = () => E.chessEdit && E.chessEdit.open(rec); if (G.over.why === "kill") say(G.acts[G.acts.length - 1].say); else if (G.over.say) say(G.over.say);
       }
       const gameOverNow = () => { const ch = new Chess(G.st.fen); return ch.game_over() ? ch : null; };
       async function primeTurn(danger) {
         if (!G || G.over) return; G.busy = true; status("ChatGPT Prime réfléchit… (ou pas)"); await new Promise((r) => setTimeout(r, 700));
         const tok = G.token, r = await P.turn(G.st, { L, danger, weak: 18 }); if (!G || tok !== G.token) return;
         for (const a of r.acts) { if (!G || tok !== G.token) return; await playAct(a); }
-        if (r.over) return finish(r.over.why === "kill" ? "échec et mat" : "fin", r.over);
-        const go = gameOverNow(); if (go) return finish(go.in_checkmate() ? "échec et mat" : go.in_stalemate() ? "pat… selon Prime, c'est une victoire" : "nulle (Prime conteste)", { why: go.in_checkmate() ? "mate" : "draw", winner: G.primeSide });
+        if (r.over) {
+          if (r.over.why === "twist") return twist();
+          if (r.over.why === "mated") { stamp("ÉCHEC ET MAT"); try { E.chessSound.play("mate"); } catch (e) { /* son facultatif */ } return finish("échec et mat", r.over); }
+          if (r.over.why === "crash") { const bw = $("#pr-bw"); bw.classList.add("pr-glitch"); glitchSfx(); setTimeout(() => bw.classList.remove("pr-glitch"), 800); stamp("ERREUR SERVEUR"); return finish("ChatGPT Prime a planté", r.over); }
+          return finish(r.over.why === "kill" ? "échec et mat" : "fin", r.over);
+        }
+        const go = gameOverNow(); if (go) return go.in_checkmate() ? finish("échec et mat", { why: "mate", winner: G.primeSide }) : drawEnd(go);
         if (G.acts.length > 220) return finish("fatigue (Prime déclare la victoire)", { why: "long", winner: G.primeSide });
-        G.busy = false; if (G.mode === "sf") sfTurn(); else status("À toi de jouer.");
+        G.busy = false; if (G.mode === "bot") sfTurn(); else status("À toi de jouer.");
       }
-      async function sfTurn() {                                                                       // mode spectateur : Stockfish joue l'autre camp
-        if (!G || G.over) return; G.busy = true; status("Stockfish réfléchit…"); const tok = G.token; await new Promise((r) => setTimeout(r, 500));
-        const fen = G.st.fen; let uci = ""; try { const r = await L.think(fen, 100, 350); uci = r.uci; } catch (e) { uci = ""; } if (!G || tok !== G.token) return;
-        const ch = new Chess(fen), mv = ch.moves({ verbose: true }), m = mv.find((x) => x.from + x.to + (x.promotion || "") === uci) || mv[0];
-        if (!m) return finish("Stockfish n'a plus de coup", { why: "end", winner: G.primeSide });
-        const lost = m.captured && "nbrq".includes(m.captured) ? 1 : 0; ch.move(m); await human(m, ch);
-        if (!G || tok !== G.token) return; const go = gameOverNow(); if (go) return go.in_checkmate() ? twist() : finish("nulle", { why: "draw", winner: G.primeSide });
-        primeTurn(false);
+      // nulle : dans une partie qu'il devait gagner, Prime la déclare gagnée ; sinon c'est une vraie nulle
+      const drawEnd = (go) => (G.st.beatable ? finish(go.in_stalemate() ? "pat" : "nulle", { why: "draw", winner: "" }) : finish(go.in_stalemate() ? "pat… selon Prime, c'est une victoire" : "nulle (Prime conteste)", { why: "draw", winner: G.primeSide }));
+      /** après le coup de l'adversaire : mat -> c'est Prime qui réagit (roi téléporté, plot twist ou défaite), nulle -> fin */
+      const afterOpp = () => { const go = gameOverNow(); if (go && !go.in_checkmate()) return drawEnd(go); primeTurn(!!(go && go.in_checkmate())); };
+      async function sfTurn() {                                                                       // mode spectateur : un de nos bots (ou Stockfish) joue l'autre camp
+        if (!G || G.over) return; G.busy = true; const o = G.opp; status(o.name + " réfléchit…"); const tok = G.token; await new Promise((r) => setTimeout(r, 500));
+        const fen = G.st.fen; let uci = "";
+        try { const r = await L.choose(fen, o.power || powerOfElo(o.elo), L.startSeen(fen), { pure: !!o.pure, taste: !!o.taste, ms: o.power >= 100 ? 700 : undefined }); uci = r && r.uci ? r.uci : ""; } catch (e) { uci = ""; }
+        if (!uci) { try { uci = (await L.think(fen, o.power || powerOfElo(o.elo), 350)).uci || ""; } catch (e) { uci = ""; } }
+        if (!G || tok !== G.token) return;
+        const ch = new Chess(fen), mv = ch.moves({ verbose: true }), m = mv.find((x) => x.from + x.to + (x.promotion || "") === uci) || mv[Math.floor(Math.random() * mv.length)];
+        if (!m) return finish(o.name + " n'a plus de coup", { why: "end", winner: G.primeSide });
+        ch.move(m); await human(m, ch);
+        if (!G || tok !== G.token) return; afterOpp();
       }
       async function human(m, ch) {                                                                  // joue le coup de l'autre camp (toi / Stockfish)
         const a = { k: "mv", side: m.color, seat: m.color === "w" ? 0 : 1, key: "good", ev: null, from: m.from, to: m.to, piece: m.piece, cap: m.captured || "", promo: m.promotion || "", uci: m.from + m.to + (m.promotion || ""), san: m.san, fen: ch.fen(), cheat: "" };
@@ -122,16 +146,17 @@
       async function onTap(sq) {
         if (!G || G.over || G.busy || G.mode !== "human") return; const ch = new Chess(G.st.fen); if ((ch.turn() === "w") === (G.primeSide === "w")) return;
         const mv = G.sel ? ch.moves({ square: G.sel, verbose: true }).filter((x) => x.to === sq) : [];
-        if (mv.length) { G.busy = true; const m = mv.find((x) => x.promotion === "q") || mv[0]; ch.move(m); const lost = m.captured && "nbrq".includes(m.captured); await human(m, ch); const go = gameOverNow(); if (go) return go.in_checkmate() ? twist() : finish("nulle", { why: "draw", winner: G.primeSide }); return primeTurn(!!lost); }
+        if (mv.length) { G.busy = true; const m = mv.find((x) => x.promotion === "q") || mv[0]; ch.move(m); const lost = m.captured && "nbrq".includes(m.captured); await human(m, ch); const go = gameOverNow(); if (go && !go.in_checkmate()) return drawEnd(go); return primeTurn(!!lost || !!go); }
         const p = ch.get(sq); G.sel = p && p.color === ch.turn() ? sq : null; paint(); if (G.sel) B.burst($("#pr-board"), sq, "tap");
       }
       function start() {
         const col = cfg.color === "r" ? (Math.random() < 0.5 ? "w" : "b") : cfg.color; E.settings.set("prime.cfg", cfg);
         const humanSide = col, primeWhite = humanSide === "b";
-        G = { mode: cfg.mode, primeSide: primeWhite ? "w" : "b", st: P.newState(primeWhite, Math.random() < (cfg.beat == null ? 0.35 : cfg.beat)), acts: [], sel: null, last: null, busy: false, over: null, token: Math.random(), flip: cfg.mode === "human" ? humanSide === "b" : false };
+        const opp = Object.assign({}, OPP[cfg.opp]); if (opp.wheel) opp.elo = 1 + Math.floor(Math.random() * 3200);                 // Le Jester : la roue tire son Elo
+        G = { mode: cfg.mode, oppId: cfg.opp, opp, primeSide: primeWhite ? "w" : "b", st: P.newState(primeWhite, cfg.beat == null ? P.rollBeatable() : Math.random() < cfg.beat), acts: [], sel: null, last: null, busy: false, over: null, token: Math.random(), flip: cfg.mode === "human" ? humanSide === "b" : false };
         $("#pr-home").hidden = true; $("#pr-game").hidden = false; say("Je suis un Grand Maître à 9999 Elo. Les règles ? Je les connais toutes. Je les applique selon mon humeur."); paint();
         $("#pr-btns").innerHTML = `<button class="btn" id="pr-stop">ABANDONNER</button>`; $("#pr-stop").onclick = () => finish("tu abandonnes (Prime accepte avec élégance)", { why: "resign", winner: G.primeSide });
-        if (primeWhite || cfg.mode === "sf") { if (primeWhite) primeTurn(false); else sfTurn(); } else status("À toi de jouer.");
+        if (primeWhite || cfg.mode === "bot") { if (primeWhite) primeTurn(false); else sfTurn(); } else status("À toi de jouer.");
       }
       $("#pr-go").onclick = start;
       $("#pr-back").onclick = () => { if (G) G.token = Math.random(); G = null; $("#pr-game").hidden = true; $("#pr-home").hidden = false; paintHist(); };

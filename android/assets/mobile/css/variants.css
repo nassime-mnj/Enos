@@ -118,3 +118,6 @@
 @keyframes prSpin{to{rotate:180deg}}@keyframes prUnspin{to{rotate:-180deg}}
 /* une liste de coups (white-space:nowrap) ne doit JAMAIS élargir la page : colonne unique bornée à l'écran (Prime, Game Clips, Variantes…) */
 .suite-body{grid-template-columns:minmax(0,1fr)}.suite-body>*,.suite-body .card{min-width:0;max-width:100%}.ch-moves{max-width:100%}
+.pr-opps{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}.pr-opps button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:inherit;min-width:0}
+.pr-opps img{width:38px;height:38px;border-radius:50%;object-fit:cover}.pr-opps b{font-size:10px;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr-opps small{font-size:9px;opacity:.6}
+.pr-opps button.on{border-color:var(--red,#ff2a3a);background:rgba(255,42,58,.1);box-shadow:0 0 14px rgba(255,42,58,.25)}.pr-cap{margin:10px 0 6px;font-size:12px}.pr-oav{width:22px;height:22px;border-radius:50%;object-fit:cover}
