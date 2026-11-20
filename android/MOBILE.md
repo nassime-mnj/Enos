@@ -570,6 +570,15 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.110 — Néo-Cité : le jeu de plateau immobilier d'ETO
+
+- **Néo-Cité** (`js/games/neocite_rules.js` + `g_neocite.js`), jeu original de 2 à 6 joueurs (nom, plateau et règles propres, aucune reprise d'un jeu existant) : 32 cases, 8 quartiers de 3 lots, 2 Relais, 2 cases Signal, coins Départ / Pare-feu / Réserve / Audit.
+- Règles : achat ou **enchère sous pli fermé** si le lot est refusé ; quartier complet = loyer doublé puis **antennes** (1 à 3) et **tour** ; **Rachat** du 3e lot d'un quartier à 2 fois son prix ; **Relais** = téléportation à l'autre Relais pour 50 ; amendes et taxes versées à la **Réserve**, remportée par celui qui s'y arrête ; Pare-feu (payer 50, faire un double ou laissez-passer) ; 14 cartes Signal ; hypothèques et ventes automatiques en cas de dette, faillite.
+- 3D : plateau d'obsidienne cerclé d'or et de néon, cases en relief (bandeau de quartier, prix, illustrations des cases spéciales), ville miniature lumineuse au centre avec la Spire et l'Œil, pions en verre teinté qui avancent case par case, dés 3D lancés, antennes et tours posées sur les lots, liseré à la couleur du propriétaire.
+- Interface : capital des joueurs et Réserve en haut, fiche du lot à l'achat, enchères, **Gérer** (construire, vendre, hypothéquer, lever, racheter), fiche d'un lot au toucher, carte Signal à l'écran.
+- Bots : achat selon la valeur (quartier à compléter ou à bloquer), offres d'enchère, construction et rachats selon le niveau. Options : durée (20 tours, 40 tours, jusqu'à la faillite), capital de départ.
+- Tests : `tests/node/neocite_rules.test.js` (plateau, loyers, construction, rachat, enchères, relais, Pare-feu, cartes, faillite, parties complètes entre bots), `t_neocite.py`.
+
 ## 1.109 — Jeux ETO : CHROMA, Flick Foot / Hockey, Poker
 
 - **CHROMA** (`js/games/chroma_rules.js` + `g_chroma.js`) : jeu de cartes original de 2 à 6 joueurs (110 cartes, 4 couleurs, Gel, Retour, +2, Prisme, +4 Œil, Échange ; annonce CHROMA obligatoire sinon +2). Table ronde 3D en feutre, pioche et défausse en 3D, éventails des adversaires, anneau à la couleur demandée, main en éventail en bas, choix de couleur et d'échange, rideau « passe le téléphone » en local.

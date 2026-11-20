@@ -18,7 +18,7 @@
       { n: "Profil", items: [["@prof:stats", "Statistiques", "cc:user"], ["@prof:prizes", "Prix", "cc:medal"]] },
     ] },
     { id: "jeux", n: "JEUX", t: "Jeux", img: "cat_jeux", sections: [
-      { n: "Plateau", items: [["dames", "Dames"]] },
+      { n: "Plateau", items: [["neocite", "Néo-Cité"], ["dames", "Dames"]] },
       { n: "Cartes", items: [["chroma", "CHROMA"], ["poker", "Poker"]] },
       { n: "Sport", items: [["flick", "Flick Foot"]] },
       { n: "Arcade", items: [["g2048"], ["snake"], ["mines"]] },
