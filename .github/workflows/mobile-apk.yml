@@ -69,6 +69,7 @@ jobs:
           bash android/tools/build_engines.sh
       - name: Construire l'APK
         run: |
+          printf '%s\n%s\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" > android/assets/build_info.txt   # la mise à jour web ne superpose que des versions plus récentes que ce commit
           CODE=$(( $(cat android/version.txt) + 1 ))      # version.txt = dernière version publiée (18 -> APK 1.19) ; à incrémenter à la main pour une nouvelle version
           FLAGS=""
           [ "${{ steps.sign.outputs.mode }}" = "test" ] && FLAGS="--test-build"

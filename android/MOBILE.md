@@ -570,6 +570,11 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.118 — Correctif : la mise à jour web ne remet plus d'anciens fichiers
+- Problème vu sur téléphone en 1.117 : villes de Néo-Cité et drapeaux de Flick illisibles, mini-golf / bowling absents, anciens décors. Cause : la mise à jour web automatique (`WebUpdater`) lisait la branche `main` (restée en 1.96) et superposait ses fichiers, plus anciens, à ceux de l'APK.
+- La CI écrit `assets/build_info.txt` (branche + commit de construction). La branche suivie par défaut devient celle de l'APK.
+- Garde-fou : un commit distant n'est superposé que s'il est **en avance** sur le commit de l'APK (API GitHub `compare`, statut `ahead`). Sinon rien n'est téléchargé, et une superposition plus ancienne déjà présente est retirée (retour aux fichiers de l'APK, page rechargée).
+
 ## 1.117 — Mini-golf 3D, bowling 3D, loup-garou ; décors Stade, Rue, Volcan, Tempête
 - **Décors partagés** (`js/games/decor_more.js`, branchés sur `flick_decor.js`) :
   - **Stade** : tribunes pleines, supporters qui sautent et font la ola aux grosses frappes, flashs d'appareils photo, pylônes d'éclairage, panneaux LED défilants ;

@@ -38,6 +38,7 @@ final class WebUpdater {
     private final SharedPreferences prefs;
     private final long apkCode;
     private final File root, live, stage;
+    private final String buildBranch, buildSha;                        // branche et commit dont l'APK a été construite (assets/build_info.txt, écrit par la CI)
     private volatile Map<String, String> overlay = new HashMap<>();   // chemin relatif -> empreinte Git du fichier superposé
     private Map<String, String> bundled;                              // idem pour les fichiers embarqués dans l'APK (calculé une fois)
 
@@ -48,12 +49,26 @@ final class WebUpdater {
         root = new File(ctx.getFilesDir(), "web");
         live = new File(root, "live");
         stage = new File(root, "stage");
+        String br = null, sha = null;
+        try (InputStream in = ctx.getAssets().open("build_info.txt")) {
+            String[] l = new String(readAll(in), "UTF-8").trim().split("\\s+");
+            if (l.length >= 2 && l[0].matches("[A-Za-z0-9._/-]{1,80}") && l[1].matches("[0-9a-f]{40}")) { br = l[0]; sha = l[1]; }
+        } catch (Exception ignored) { }
+        buildBranch = br; buildSha = sha;
         load();
     }
 
     String branch() {
-        String b = prefs.getString("web_branch", "main");
-        return b.matches("[A-Za-z0-9._/-]{1,80}") ? b : "main";
+        String def = buildBranch != null ? buildBranch : "main";
+        String b = prefs.getString("web_branch", def);
+        return b.matches("[A-Za-z0-9._/-]{1,80}") ? b : def;
+    }
+
+    /** retire la superposition (retour aux fichiers de l'APK) */
+    private void reset() {
+        deleteTree(live); deleteTree(stage); new File(root, "state.json").delete();
+        overlay = new HashMap<>();
+        prefs.edit().remove("web_commit").remove("web_label").apply();
     }
 
     boolean auto() { return prefs.getBoolean("web_auto", true); }
@@ -147,6 +162,22 @@ final class WebUpdater {
             String commit = httpText("https://api.github.com/repos/" + REPO + "/commits/" + br, "application/vnd.github.sha").trim();
             if (!commit.matches("[0-9a-f]{40}")) return res("error", 0, "Réponse GitHub inattendue.");
             if (commit.equals(prefs.getString("web_commit", "")) && overlay != null && !overlay.isEmpty() && !stage.isDirectory()) return res("uptodate", 0, "Déjà à jour.");
+
+            // jamais de fichiers plus anciens que ceux de l'APK : la branche doit être EN AVANCE sur le commit de construction
+            if (buildSha != null) {
+                boolean ahead = false;
+                if (!commit.equals(buildSha)) {
+                    step = "comparaison avec l'APK";
+                    JSONObject cmp = new JSONObject(httpText("https://api.github.com/repos/" + REPO + "/compare/" + buildSha + "..." + commit, null));
+                    ahead = "ahead".equals(cmp.optString("status"));
+                }
+                if (!ahead) {
+                    deleteTree(stage);
+                    if (!overlay.isEmpty()) { reset(); return res("applied", 0, "Fichiers web plus anciens que l'APK retirés."); }
+                    prefs.edit().putString("web_commit", commit).apply();
+                    return res("uptodate", 0, commit.equals(buildSha) ? "Déjà à jour." : "L'application installée est plus récente que la branche " + br + ".");
+                }
+            }
 
             // une version web qui exige une APK plus récente (nouveau code Java) ne doit pas être appliquée à une vieille APK
             long need = 0;
