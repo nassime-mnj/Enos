@@ -63,6 +63,7 @@
   const SPAWN = ["Cette dame est apparue naturellement par promotion spontanée.", "Je l'avais mise de côté pour plus tard.", "Elle était cachée derrière le plateau, c'est classique.", "C'est une pièce de réserve : tout le monde en a une."];
   const SELF = ["Je mange mon propre fou pour libérer l'espace… je le ressusciterai ensuite.", "Capture interne : ça s'appelle la consolidation.", "Mon roi avait faim, c'est un cas de force majeure."];
   const END = ["Échec et mat selon la règle 47 bis : le roi adverse est capturé.", "Partie terminée : j'ai gagné par mat différé rétroactif.", "Mat ! (La position était déjà gagnante avant que tu joues.)"];
+  const FAKE_MATE = ["Échec et mat. Bien joué quand même.", "Et c'est mat. Ma dame contrôle tout.", "Échec et mat ! Ton roi ne peut plus bouger, c'est mathématique.", "Mat. Je te laisse vérifier, mais c'est mat."];
   const ESCAPE = ["Mat ? Mon roi était déjà parti, tu as maté une case vide.", "Le roi a le droit de prendre l'avion en cas d'urgence.", "Téléportation royale : article 3 du protocole Prime.", "Échec et mat évité. Mon roi est plus rapide que tes pièces."];
   const TWIST = ["De quoi tu parles ? Tu t'es fait checkmate.", "Checkmate ? Oui, TOI. Regarde l'échiquier dans l'autre sens.", "Quoi ? Non non non. C'est toi qui es maté. J'ai la position, je fais ce que je veux.", "Tu confonds les camps. Pivote le plateau : c'est clair, tu es en checkmate."];
   const PN = { p: "pion", n: "cavalier", b: "fou", r: "tour", q: "dame", k: "roi" };
@@ -181,6 +182,46 @@
     }).sort((x, y) => y.sc - x.sc);
     return rated[0].sc >= 1 ? rated[Math.floor(Math.random() * Math.min(2, rated.length))].m : rnd(moves);
   };
+  /**
+   * TRICHE BÊTE (parties qu'il perd) : il triche autant, mais contre lui-même.
+   *  fakemate : sa dame traverse le plateau et se pose juste devant ton roi, en prise ; il annonce « échec et mat » (ce n'en est pas un)
+   *  spawn : il fait apparaître une dame ou une tour sur une case prise par n'importe quelle pièce adverse
+   *  convert : il convertit une pièce adverse (ça, il le fait quelle que soit l'issue)
+   */
+  P.makeDumbCheat = (fen, white, late, convs) => {
+    const b = P.parse(fen).b, ek = kingOf(b, !white), ok = kingOf(b, white); if (ek < 0 || ok < 0) return null;
+    const near = []; for (let t = 0; t < 64; t++) if (!b[t] && Math.max(Math.abs((t & 7) - (ek & 7)), Math.abs((t >> 3) - (ek >> 3))) === 1) near.push(t);
+    const opts = [];
+    { const q = b.findIndex((p) => p === (white ? "Q" : "q")), cs = [];                                // dame (ou dame inventée) collée au roi adverse, non défendue
+      for (const t of near) {
+        const nb = q >= 0 ? place(b, q, t) : b.slice(); if (q < 0) nb[t] = white ? "Q" : "q";
+        if (P.attacked(nb, t, white) || !P.safe(nb, white)) continue;
+        cs.push({ type: q >= 0 ? "teleport" : "spawn", from: q, to: t, piece: nb[t], cap: "", b: nb, fake: true, d: q >= 0 ? Math.max(Math.abs((t & 7) - (q & 7)), Math.abs((t >> 3) - (q >> 3))) : 0 });
+      }
+      cs.sort((x, y) => y.d - x.d + (Math.random() - 0.5) * 2); if (cs.length) opts.push([1.2, cs[0]]); }
+    if (!late) { const cs = [];                                                                                     // pièce lourde qui apparaît… en prise
+      for (let t = 0; t < 64; t++) {
+        if (b[t]) continue; const pc = Math.random() < 0.6 ? "q" : "r", nb = b.slice(); nb[t] = white ? pc.toUpperCase() : pc;
+        if (!P.attacked(nb, t, !white) || P.attacked(nb, t, white) || !P.safe(nb, white)) continue;
+        cs.push({ type: "spawn", from: -1, to: t, piece: nb[t], cap: "", b: nb, sc: Math.random() });
+      }
+      cs.sort((x, y) => y.sc - x.sc); if (cs.length) opts.push([1, cs[0]]); }
+    if (!late && (convs || 0) < 2) { const cs = [];                                                                 // conversion d'une pièce adverse (2 au plus, pions et pièces mineures : il faut qu'on puisse encore le mater)
+      for (let t = 0; t < 64; t++) { const o = b[t]; if (!o || isW(o) === white || !"pnb".includes(o.toLowerCase())) continue; const pc = white ? o.toUpperCase() : o.toLowerCase(), nb = b.slice(); nb[t] = pc; if (P.safe(nb, white)) cs.push({ type: "convert", from: -1, to: t, piece: pc, cap: "", conv: o.toLowerCase(), b: nb }); }
+      if (cs.length) opts.push([0.45, rnd(cs)]); }
+    const notMate = (c) => { try { return !new Chess(P.fenOf(c.b, white ? "b" : "w", "-", 1)).in_checkmate(); } catch (e) { return false; } };   // partie perdue : jamais de vrai mat par accident
+    for (let i = opts.length - 1; i >= 0; i--) if (!notMate(opts[i][1])) opts.splice(i, 1);
+    if (!opts.length) return null;
+    let r = Math.random() * opts.reduce((a, o) => a + o[0], 0), pick = opts[0][1]; for (const o of opts) { r -= o[0]; if (r <= 0) { pick = o[1]; break; } }
+    pick.san = pick.type === "teleport" ? sanOf(pick.piece, pick.from, pick.to, "", "+") : pick.piece.toUpperCase() + sq(pick.to) + (pick.fake ? "+" : "");
+    return pick;
+  };
+  /** COUP SUICIDE (fin d'une partie perdue) : un coup légal qui laisse un mat en 1 à l'adversaire, s'il en existe un. */
+  P.suicideMove = (fen) => {
+    const moves = new Chess(fen).moves({ verbose: true }), ok = [];
+    for (const m of moves) { const c = new Chess(fen); c.move(m); if (c.moves({ verbose: true }).some((r) => { const d = new Chess(c.fen()); d.move(r); return d.in_checkmate(); })) ok.push(m); }
+    return ok.length ? rnd(ok) : null;
+  };
   P.WINRATE = 0.6;                                                                                  // sur l'ensemble des parties, ChatGPT Prime gagne 60 % du temps
   const LOSE_LINES = ["Erreur réseau. Je reviens… (il ne revient pas)", "Je suis désolé, une erreur s'est produite. Veuillez régénérer la partie.", "Cette partie n'a jamais eu lieu.", "Mon abonnement a expiré au mauvais moment."];
   P.loseLine = () => rnd(LOSE_LINES);
@@ -216,7 +257,7 @@
       return beat ? { acts, over: { why: "mated", winner: other, say: P.loseLine() } } : { acts, over: { why: "twist", winner: side } };
     }
     if (beat && st.n >= 90) return { acts, over: { why: "crash", winner: other, say: P.loseLine() } };    // partie perdue qui s'éternise : Prime « plante »
-    const cheatNow = st.pend ? false : beat ? st.n >= P.CHEAT_FROM + 3 && Math.random() < 0.08 : P.wantsCheat(st.n, st.cheats, inChk || !!opts.danger);                  // partie perdue : il triche à peine et ne se sauve plus quand il est en échec
+    const cheatNow = st.pend ? false : beat ? st.n >= P.CHEAT_FROM && Math.random() < (st.n >= 40 ? 0.2 : 0.4) : P.wantsCheat(st.n, st.cheats, inChk || !!opts.danger);                  // il triche tout le temps ; partie perdue : il ne triche plus pour se sauver
     st.n++;
     const push = (c, kind, fenAfter) => {
       const a = mkAct(st, side, { k: c.type === "spawn" || c.type === "revive" || c.type === "convert" ? "drop" : "mv", conv: c.conv || "", from: c.from < 0 ? "" : sq(c.from), to: sq(c.to), piece: lowest(c.piece.toLowerCase()), cap: c.cap ? c.cap.toLowerCase() : "", uci: (c.from < 0 ? "@" : sq(c.from)) + sq(c.to), san: c.san, fen: fenAfter, cheat: c.type });
@@ -226,7 +267,11 @@
       const r = P.revive(st.fen, white, st.pend); st.pend = "";
       if (r) { st.cheats++; push(r, "revive", flipFen(r.b, other, P.parse(st.fen))); return { acts, over: null }; }
     }
-    if (cheatNow) {
+    if (beat && cheatNow) {                                                                            // partie perdue : triche BÊTE
+      const c = P.makeDumbCheat(st.fen, white, st.n >= 40, st.convs);
+      if (c) { st.cheats++; if (c.type === "convert") st.convs = (st.convs || 0) + 1; const a = push(c, c.type, flipFen(c.b, other, S0)); if (c.fake) { a.say = rnd(FAKE_MATE); a.fake = true; } return { acts, over: null }; }
+    }
+    if (cheatNow && !beat) {
       const S = P.parse(st.fen), kill = !beat && P.shouldKill(st.cheats, st.n), roll = Math.random();
       let c = null;
       if (!inChk && !kill && st.cheats >= 2 && roll < 0.1) { c = P.makeSelfCapture(st.fen, white); if (c) st.pend = c.cap; }
@@ -250,7 +295,8 @@
       }
     }
     // coup normal (partie perdue : de plus en plus de coups bêtes)
-    const m = (beat && Math.random() < Math.min(0.8, 0.2 + 0.012 * st.n) && P.stupidMove(st.fen, white)) || (await normalMove(st.fen, opts.L, weak, rate));
+    let m = (beat && st.n >= 25 && Math.random() < (st.n >= 40 ? 0.8 : 0.5) && P.suicideMove(st.fen)) || (beat && Math.random() < Math.min(0.4, 0.1 + 0.006 * st.n) && P.stupidMove(st.fen, white)) || (await normalMove(st.fen, opts.L, weak, rate));
+    if (beat && m) { const t = new Chess(st.fen); t.move(m); if (t.in_checkmate()) { const alt = new Chess(st.fen).moves({ verbose: true }).filter((x) => { const u = new Chess(st.fen); u.move(x); return !u.in_checkmate(); }); if (alt.length) m = rnd(alt); } }   // partie perdue : il ne mate pas par accident
     if (!m) { const c = P.makeCheat(st.fen, white, { allowKill: !beat }); if (c) { st.cheats++; const a = push(c, c.type, flipFen(c.b, other, S0)); if (c.type === "kill") { a.say = P.babble(a, "end"); return { acts, over: { why: "kill", winner: side } }; } return { acts, over: null }; } return { acts, over: { why: "stuck", winner: other } }; }
     const ch = new Chess(st.fen); ch.move(m);
     const a = mkAct(st, side, { from: m.from, to: m.to, piece: m.piece, cap: m.captured || "", promo: m.promotion || "", uci: uciOf(m), san: m.san, fen: ch.fen(), cheat: "" });

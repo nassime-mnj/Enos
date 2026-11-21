@@ -570,6 +570,16 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.116 — ChatGPT Prime triche aussi quand il perd (mais bêtement)
+- Partie perdue : il triche toujours (40 % de ses coups à partir du 6ᵉ, 20 % après le 40ᵉ), mais **contre lui-même** (`P.makeDumbCheat`) :
+  - **faux mat** : sa dame traverse le plateau et se pose collée à ton roi, non défendue ; il annonce « échec et mat » (tampon ÉCHEC ET MAT à l'écran) alors que tu la prends. Sans dame, il en fait apparaître une au même endroit ;
+  - **pièce lourde en prise** : une dame ou une tour apparaît sur une case prise par n'importe quelle pièce adverse ;
+  - **conversion** (comme dans les parties qu'il gagne), 2 au plus et seulement pions / pièces mineures, pour qu'on puisse encore le mater.
+  Aucune triche bête ne donne un vrai mat, et ses coups légaux ne matent pas par accident. À partir de son 25ᵉ coup, il joue souvent un coup qui laisse un mat en 1 (`P.suicideMove`).
+- Partie gagnée : inchangée (triche efficace, roi capturé, roi téléporté, plot twist).
+- Correctif : quitter une partie pendant que Prime joue pouvait terminer la partie suivante (fin de tour sans vérification du jeton).
+- Simulation (`tests/node/prime_winrate.test.js`) : 57–65 % de victoires, ~99 % des parties perdues avec triche, défaites surtout par vrai mat ; la dame du faux mat est toujours prenable.
+
 ## 1.115 — ChatGPT Prime : contre nos bots, 60 % de victoires, roi téléporté
 - **Bot contre Prime** : au lieu de Stockfish seul, on choisit l'adversaire de Prime parmi nos bots (ETO, E.N.O.S., Naskolit, Pénoire, Le Jester, GhorGhor, Nasko, Lelex, Naskurieux) ou Stockfish 19. Même force qu'en Défis (Elo → puissance, ETO à pleine puissance avec son goût tactique, le Jester tire son Elo à la roue). Les anciens réglages « Stockfish contre Prime » sont repris.
 - **60 % de victoires** (`P.WINRATE`) : le sort de la partie est tiré au début (`P.rollBeatable`). Partie gagnante : il triche comme avant et finit par gagner. Partie perdante : il triche à peine, joue des **coups bêtes** de plus en plus souvent (`P.stupidMove` laisse en prise la plus grosse pièce possible), finit **maté pour de bon** ; s'il traîne au-delà de 90 coups, il « plante » (erreur serveur) et perd.

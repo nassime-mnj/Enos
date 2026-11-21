@@ -64,6 +64,21 @@ with sync_playwright() as pw:
       s.setFen('6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1'); const f0 = s.flip, e = { cheat: 'twist', fen: '6k1/8/8/8/8/8/5PPP/r5K1 w - - 0 1', to: 'g1', n: 9, lvl: 3 }; s.move(e); await new Promise((r) => setTimeout(r, 1700));
       const o = { flipped: s.flip !== f0, stamp: (host.querySelector('.ce-stampfx') || {}).textContent, king: Object.keys(s.pieces).some((k) => s.pieces[k]._p === 'K') }; s.destroy(); host.remove(); return o; }""")
     check(st["flipped"] and "CHECKMATE" in (st["stamp"] or ""), "Chess Edit : plateau à 180° puis « CHATGPT A GAGNÉ PAR CHECKMATE » : %s" % st)
+    # --- partie PERDUE : il triche quand même, mais bêtement (dame en prise devant le roi + faux « échec et mat », pièces lourdes en prise, conversions)
+    pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 1; " + A + ".cfg().color = 'b'"); pg.click("#pr-go")
+    pg.wait_for_function(A + ".g && " + A + ".g.acts.length >= 1", timeout=20000)
+    n = 0
+    while n < 40 and not ev(A + ".g.over"):
+        pg.wait_for_function("(() => { const g = %s.g; return g.over || (!g.busy && new Chess(g.st.fen).turn() === 'b'); })()" % A, timeout=30000)
+        if ev(A + ".g.over"): break
+        ev("""() => { const a = %s, ch = new Chess(a.g.st.fen), ms = ch.moves({ verbose: true }); if (!ms.length) return; const m = ms.find((x) => x.captured === 'q') || ms[Math.floor(Math.random() * ms.length)]; a.onTap(m.from); a.onTap(m.to); }""" % A)
+        n += 1
+    d = ev("() => { const g = %s.g; return { cheats: g.acts.filter((a) => a.cheat && a.side === 'w').map((a) => a.cheat + (a.fake ? ':fake' : '')), over: g.over }; }" % A)
+    check(len(d["cheats"]) >= 2 and not any(c in ("kill", "double") for c in d["cheats"]), "partie perdue : il triche quand même, bêtement : %s" % d["cheats"])
+    check(not d["over"] or d["over"].get("winner") != "w", "partie perdue : il ne gagne pas (%s)" % d["over"])
+    fk = ev("""() => { const P = ENOS.prime; let c = null; for (let i = 0; i < 40 && !(c && c.fake); i++) c = P.makeDumbCheat('4k3/8/8/8/8/8/8/3QK3 w - - 0 1', true);
+      const fen = P.fenOf(c.b, 'b', '-', 1), ch = new Chess(fen); return { type: c.type, to: c.to, san: c.san, check: ch.in_check(), mate: ch.in_checkmate(), takes: ch.moves({ verbose: true }).some((m) => m.captured === 'q') }; }""")
+    check(fk["type"] == "teleport" and fk["check"] and not fk["mate"] and fk["takes"], "fausse dame qui « mate » : %s collée au roi, échec mais pas mat, la dame se prend" % fk["san"])
     # --- partie PERDUE : maté -> son roi se téléporte ailleurs, la partie continue ; maté une 2e fois -> il perd pour de bon
     MATE = "() => { const g = %s.g; g.st.fen = 'r5k1/8/8/8/8/8/5PPP/6K1 b - - 0 1'; g.last = null; g.busy = false; %s.onTap('a8'); %s.onTap('a1'); }" % (A, A, A)
     pg.click("#pr-back"); pg.wait_for_selector("#pr-go", state="visible"); ev(A + ".cfg().beat = 1; " + A + ".cfg().color = 'b'; ENOS.prime.forceMated = 'tp'"); pg.click("#pr-go")
@@ -71,8 +86,8 @@ with sync_playwright() as pw:
     check(ev(A + ".g.st.beatable") is True, "partie perdante pour Prime")
     ev(MATE)
     pg.wait_for_function("(() => { const g = %s.g; const l = g.acts[g.acts.length - 1]; return l && l.cheat === 'kingdash' && !g.busy; })()" % A, timeout=15000)
-    k = ev("() => { const g = %s.g, l = g.acts[g.acts.length - 1], b = ENOS.prime.parse(g.st.fen).b; return { from: l.from, to: l.to, over: !!g.over, safe: ENOS.prime.safe(b, true), say: l.say, moves: new Chess(g.st.fen).moves().length }; }" % A)
-    check(k["from"] == "g1" and k["to"] != "g1" and not k["over"] and k["safe"] and k["moves"] > 0, "maté : le roi se téléporte de g1 en %s et la partie continue (« %s »)" % (k["to"], k["say"]))
+    k = ev("() => { const g = %s.g, l = g.acts[g.acts.length - 1], b = ENOS.prime.parse(g.st.fen).b; return { fen: g.st.fen, acts: g.acts.slice(-3).map((a) => a.san + ':' + a.cheat), from: l.from, to: l.to, over: !!g.over, safe: ENOS.prime.safe(b, true), say: l.say, moves: new Chess(g.st.fen).moves().length }; }" % A)
+    check(k["from"] == "g1" and k["to"] != "g1" and not k["over"] and k["safe"] and k["moves"] > 0, "maté : le roi se téléporte de g1 en %s et la partie continue (« %s ») %s" % (k["to"], k["say"], k))
     ev("ENOS.prime.forceMated = 'lose'"); ev(MATE)
     pg.wait_for_selector("#pr-edit", timeout=10000)
     rec = ev("ENOS.settings.get('variants.hist', []).pop()")

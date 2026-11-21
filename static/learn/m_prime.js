@@ -84,7 +84,7 @@
         G.acts.push(a); G.st.fen = a.fen; const last = a.from ? [a.from, a.to] : [a.to, a.to];
         paint(last, { anim: a.from && a.from !== a.to && a.k === "mv" ? a.from + a.to : "" });
         try { E.chessSound.forSan(a.san); } catch (e) { /* son facultatif */ } B.burst($("#pr-board"), a.to, a.cap ? "capture" : "land");                       // un coup illégal est joué EXACTEMENT comme un autre : aucun avertissement
-        say(a.say); await new Promise((r) => setTimeout(r, 900));
+        if (a.fake) stamp("ÉCHEC ET MAT"); say(a.say); await new Promise((r) => setTimeout(r, a.fake ? 1300 : 900));
       }
       /** PLOT TWIST : Prime est maté… « De quoi tu parles ? Tu t'es fait checkmate. » : le plateau fait un 180° (il prend NOTRE place) et il déclare avoir gagné par checkmate */
       async function twist() {
@@ -113,6 +113,7 @@
         if (!G || G.over) return; G.busy = true; status("ChatGPT Prime réfléchit… (ou pas)"); await new Promise((r) => setTimeout(r, 700));
         const tok = G.token, r = await P.turn(G.st, { L, danger, weak: 18 }); if (!G || tok !== G.token) return;
         for (const a of r.acts) { if (!G || tok !== G.token) return; await playAct(a); }
+        if (!G || tok !== G.token) return;                                                             // partie quittée pendant l'animation
         if (r.over) {
           if (r.over.why === "twist") return twist();
           if (r.over.why === "mated") { stamp("ÉCHEC ET MAT"); try { E.chessSound.play("mate"); } catch (e) { /* son facultatif */ } return finish("échec et mat", r.over); }
@@ -146,7 +147,7 @@
       async function onTap(sq) {
         if (!G || G.over || G.busy || G.mode !== "human") return; const ch = new Chess(G.st.fen); if ((ch.turn() === "w") === (G.primeSide === "w")) return;
         const mv = G.sel ? ch.moves({ square: G.sel, verbose: true }).filter((x) => x.to === sq) : [];
-        if (mv.length) { G.busy = true; const m = mv.find((x) => x.promotion === "q") || mv[0]; ch.move(m); const lost = m.captured && "nbrq".includes(m.captured); await human(m, ch); const go = gameOverNow(); if (go && !go.in_checkmate()) return drawEnd(go); return primeTurn(!!lost || !!go); }
+        if (mv.length) { G.busy = true; const m = mv.find((x) => x.promotion === "q") || mv[0]; ch.move(m); const lost = m.captured && "nbrq".includes(m.captured), tok = G.token; await human(m, ch); if (!G || tok !== G.token) return; const go = gameOverNow(); if (go && !go.in_checkmate()) return drawEnd(go); return primeTurn(!!lost || !!go); }
         const p = ch.get(sq); G.sel = p && p.color === ch.turn() ? sq : null; paint(); if (G.sel) B.burst($("#pr-board"), sq, "tap");
       }
       function start() {
