@@ -190,7 +190,8 @@
     const plan = R.plan(results, mus), D = plan.D;
     if (plan.segs.length < 2) throw new Error("Aucun moment à monter.");
     // résolution : 4K si l'encodeur suit, sinon 1080p
-    let W = o.quality === "1080" ? 1080 : o.quality === "540" ? 540 : 2160, H = W * 16 / 9;                // 540 : réservé aux tests automatiques let vc = await pickVideo(W, H, FPS); if (!vc && W === 2160) { W = 1080; H = 1920; vc = await pickVideo(W, H, FPS); }
+    let W = o.quality === "1080" ? 1080 : o.quality === "540" ? 540 : 2160, H = W * 16 / 9; let vc = await pickVideo(W, H, FPS);                // 540 : réservé aux tests automatiques
+    if (!vc && W === 2160) { W = 1080; H = 1920; vc = await pickVideo(W, H, FPS); }
     if (!vc) throw new Error("Aucun encodeur vidéo disponible.");
     prog(0.03, "Mixage du son…"); const ac = typeof AudioEncoder === "function" ? await pickAudio() : null; const sfx = sfxList(plan); let mixed = null; try { mixed = await mixAudio(mus, plan, sfx); } catch (e) { mixed = null; }
     // moteur de rendu partagé (une seule carte graphique pour tout), hors écran

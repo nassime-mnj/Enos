@@ -38,7 +38,8 @@ with sync_playwright() as pw:
     pg.click("#tool-multiedit #me-make")
     pg.wait_for_timeout(4000); pg.screenshot(path=SH + "multiedit_render.png")
     check(pg.locator("#tool-multiedit .me-render canvas").count() == 0 and pg.locator("#tool-multiedit .me-bar").count() == 1, "pendant le rendu : barre de progression seulement, aucun aperçu")
-    pg.wait_for_selector("#tool-multiedit .me-res video", timeout=3000000)
+    pg.wait_for_selector("#tool-multiedit .me-res video, #tool-multiedit .pl-err", timeout=3000000)
+    if pg.locator("#tool-multiedit .pl-err").count(): check(False, "montage : " + pg.inner_text("#tool-multiedit .pl-err")); raise SystemExit(1)
     b64 = pg.evaluate("""(async () => { const v = document.querySelector('#tool-multiedit .me-res video'); const b = await (await fetch(v.src)).blob(); const buf = new Uint8Array(await b.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 32768) s += String.fromCharCode.apply(null, buf.subarray(i, i + 32768)); return btoa(s); })()""")
     import base64, subprocess, json
     p = SH + "multiedit_out.mp4"; open(p, "wb").write(base64.b64decode(b64))
