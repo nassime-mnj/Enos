@@ -235,6 +235,8 @@
         B = P.map(() => GF.ball(H)); strokes = P.map(() => 0); done = P.map(() => false); cur = -1; phase = "intro"; camS.intro = 0; pending = null; overview = false;
         keyT.position.set(H.cup.x * 0.5, 0, (H.cup.z + H.tee.z) / 2); S.key.position.set(keyT.position.x - 6, 14, keyT.position.z + 5);
         paint(); banner(`Trou ${k + 1} · ${def.name}`, "Par " + def.par, null, 2200);
+        // MultiEdit : balles + pièces mobiles du trou, dans un ordre reproductible par le rejeu
+        api.clip.track([...balls.map((b) => b.m), ...hole.dyn.flatMap((d) => [d.arm, d.sail, d.pend, d.f.k === "bumper" ? d.m : null].filter(Boolean))], S.camera, { opts: { decor: theme, holes: +o.holes === 3 ? 3 : 9 }, k, players: P.map((p) => ({ name: p.name, human: !!p.human, img: p.img || "" })) });
       };
       const nextTurn = () => {
         if (done.every(Boolean)) return endHole();
@@ -244,7 +246,7 @@
         if (!P[cur].human) { api.clip.begin("coup"); shotSt = { hits: 0, loop: false }; const lvl = P[cur].level || "normal", t0 = clock + 1.1; setTimeout(() => { if (!alive || phase !== "aim") return; const sh = GF.botShot(H, B[cur], lvl, t0); pending = { p: cur, at: t0, sh }; aim = sh.angle; }, 250); }
       };
       let shotSt = null;                                                       // temps forts (MultiEdit)
-      const fire = (p, a, pw) => { api.clip.begin("coup"); shotSt = shotSt || { hits: 0, loop: false }; shotSt.from = { x: B[p].x, z: B[p].z }; strokes[p]++; GF.shoot(B[p], a, pw); phase = "roll"; trail.clear(); dots.forEach((d) => (d.visible = false)); setPower(0); paint();
+      const fire = (p, a, pw) => { api.clip.begin("coup"); api.clip.event("shot", balls[p].m.position, pw); shotSt = shotSt || { hits: 0, loop: false }; shotSt.from = { x: B[p].x, z: B[p].z }; strokes[p]++; GF.shoot(B[p], a, pw); phase = "roll"; trail.clear(); dots.forEach((d) => (d.visible = false)); setPower(0); paint();
         api.sfx("flick.shot", { intensity: pw, vol: 0.3 + pw * 0.5, rate: 1.2 }); api.vibrate(10 + Math.round(pw * 20)); };
       const settle = (p, ev) => {
         const b = B[p];
@@ -285,6 +287,7 @@
         while (acc >= GF.DT && it < 10) { acc -= GF.DT; clock += GF.DT; it++;
           if (pending && clock >= pending.at && phase === "aim") { const pd = pending; pending = null; fire(pd.p, pd.sh.angle, pd.sh.power); }
           if (phase === "roll") { const b = B[cur]; for (const e of GF.step(H, b, clock)) {
+              { const bp = balls[cur].m.position, kind = { wall: "bounce", bumper: "hit", mill: "hit", hammer: "hit", loop: "loop", cup: "cup", water: "water", lip: "bounce" }[e.k]; if (kind && (kind !== "bounce" || e.v > 0.6)) api.clip.event(kind, bp, Math.min(1, (e.v || 3) / 5)); }
               if (e.k === "wall" && e.v > 0.4 && clock - lastWall > 0.08) { lastWall = clock; api.sfx("flick.wall", { intensity: Math.min(1, e.v / 5), vol: Math.min(0.8, e.v / 6) }); }
               else if (e.k === "bumper" || e.k === "mill" || e.k === "hammer") { if (shotSt) shotSt.hits++; api.sfx("flick.post", { intensity: Math.min(1, e.v / 4) }); S.shake(0.02, 0.15); }
               else if (e.k === "loop") { api.sfx("bowl.roll", { vol: 0.6, rate: 1.4 }); if (shotSt) shotSt.loop = true; api.clip.mark("looping"); }
@@ -319,6 +322,7 @@
         else { camS.dir.set(Math.sin(aim), 0, -Math.cos(aim)); wantPos = tmp.copy(bp).addScaledVector(camS.dir, -2.3); wantPos.y = bp.y + 1.1; wantLook = tmp2.copy(bp).addScaledVector(camS.dir, 2.2); wantLook.y = bp.y - 0.1; }
         const k = Math.min(1, dt * (phase === "aim" && drag ? 12 : 4)); cam.position.lerp(wantPos, k); camS.look.lerp(wantLook, k); cam.lookAt(camS.look);
       });
+      if (setup.replay) { startHole(setup.replay.k || 0); return { destroy: () => { alive = false; S.dispose(); }, replay: { S, subjects: balls.map((b) => b.m), theme, fx: () => {} } }; }
       api.ambience(theme, null, 0.8);
       startHole(0);
       return { destroy: () => { alive = false; S.dispose(); }, _st: () => ({ hi, phase, cur, strokes: strokes.slice(), done: done.slice(), score, H, B, clock }), _theme: () => theme,
