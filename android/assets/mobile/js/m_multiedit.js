@@ -109,7 +109,7 @@
         catch (e) { el.innerHTML = `<div class="card"><p class="pl-err">${esc(e.message || String(e))}</p><button class="btn wide" id="me-new">Retour</button></div>`; el.querySelector("#me-new").onclick = () => finishRun(); }
       };
       const showResult = (out) => {
-        const url = URL.createObjectURL(out.blob), ext = out.mime.includes("mp4") ? "mp4" : "webm", name = "multiedit_" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + "." + ext;
+        E.multiEdit.last = out; const url = URL.createObjectURL(out.blob), ext = out.mime.includes("mp4") ? "mp4" : "webm", name = "multiedit_" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + "." + ext;
         el.innerHTML = `<div class="me-res"><video src="${url}" controls playsinline loop autoplay></video><p class="muted">${out.w}×${out.h} · 60 i/s · ${Math.round(out.duration)} s · ${Math.round(out.blob.size / 1e6 * 10) / 10} Mo · ${out.codec.toUpperCase()}</p>
           <button class="btn pri wide" id="me-save">Enregistrer la vidéo</button><button class="btn wide" id="me-again">Refaire le montage</button><button class="btn wide" id="me-new">Nouvelle série</button></div>`;
         el.querySelector("#me-save").onclick = async () => { const b = new Uint8Array(await out.blob.arrayBuffer()); if (A.save) await A.save(name, out.mime, b); else { const a = document.createElement("a"); a.href = url; a.download = name; a.click(); } };

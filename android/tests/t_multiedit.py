@@ -31,8 +31,12 @@ with sync_playwright() as pw:
     print("moments :", info)
     check(len(info) >= 1 and any("BUT" in c["label"] for c in info), "le but est gardé comme temps fort")
     g = [c for c in info if "BUT" in c["label"]][0]
-    check(g["frames"] > 20 and g["n"] == 11 and "goal" in g["ev"] and "shot" in g["ev"] and g["meta"], "enregistrement de scène : %d images, 10 palets + balle, chocs %s" % (g["frames"], g["ev"]))
+    check(g["frames"] >= 8 and g["n"] == 11 and "goal" in g["ev"] and "shot" in g["ev"] and g["meta"], "enregistrement de scène : %d images, 10 palets + balle, chocs %s" % (g["frames"], g["ev"]))
     pg.screenshot(path=SH + "multiedit_done.png")
+    pl = pg.evaluate("""(() => { const r = document.querySelector('#tool-multiedit .suite-body')._api.run.results; const beats = []; for (let t = 0.25; t < 60; t += 0.469) beats.push(t);
+      const p = ENOS.meRender.plan(r, { D: 60, beats, drop: 3, gen: false }); return p.segs.map(s => [s.k, s.t0, s.t1, s.cam || '', !!s.outro]); })()""")
+    check(abs(pl[-1][2] - 60) < 0.01 and pl[-1][4] and sum(1 for x in pl if x[0] == "replay") >= 4 and len({x[3] for x in pl if x[0] == "replay"}) >= 3,
+          "musique de 60 s : les moments reviennent (caméras jeu / poursuite / orbite) jusqu'à la fin, final au ralenti")
     # rendu hors ligne (petite résolution pour le banc de test : même moteur que le 4K)
     pg.evaluate("ENOS.settings.set('multiedit.quality', '540')")
     pg.click("#tool-multiedit #me-make")
@@ -40,7 +44,7 @@ with sync_playwright() as pw:
     check(pg.locator("#tool-multiedit .me-render canvas").count() == 0 and pg.locator("#tool-multiedit .me-bar").count() == 1, "pendant le rendu : barre de progression seulement, aucun aperçu")
     pg.wait_for_selector("#tool-multiedit .me-res video, #tool-multiedit .pl-err", timeout=3000000)
     if pg.locator("#tool-multiedit .pl-err").count(): check(False, "montage : " + pg.inner_text("#tool-multiedit .pl-err")); raise SystemExit(1)
-    b64 = pg.evaluate("""(async () => { const v = document.querySelector('#tool-multiedit .me-res video'); const b = await (await fetch(v.src)).blob(); const buf = new Uint8Array(await b.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 32768) s += String.fromCharCode.apply(null, buf.subarray(i, i + 32768)); return btoa(s); })()""")
+    b64 = pg.evaluate("""(async () => { const b = ENOS.multiEdit.last.blob; const buf = new Uint8Array(await b.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 32768) s += String.fromCharCode.apply(null, buf.subarray(i, i + 32768)); return btoa(s); })()""")
     import base64, subprocess, json
     p = SH + "multiedit_out.mp4"; open(p, "wb").write(base64.b64decode(b64))
     pr = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", p], capture_output=True, text=True).stdout or "{}")

@@ -31,7 +31,8 @@
 
   // ------------------------------------------------------------------ plan de la vidéo
   const SYNC = { bounce: 1, post: 1, hit: 1, goal: 2, cup: 2, strike: 2, spare: 2, loop: 1, water: 2, shot: 1 };
-  function highlightSeg(c, beats, t0) {
+  function highlightSeg(c, beats, t0, slow) {
+    slow = slow || 0.75;
     const fr = c.rp.frames, last = fr[fr.length - 1].t;
     let ev = c.rp.events.filter((e) => SYNC[e.k] && (e.k !== "hit" || e.v > 0.3) && (e.k !== "bounce" || e.v > 0.12)).sort((a, b) => a.t - b.t);
     const ded = []; for (const e of ev) if (!ded.length || e.t - ded[ded.length - 1].t > 0.1 || SYNC[e.k] > 1) ded.push(e); ev = ded.slice(0, 9);
@@ -40,7 +41,7 @@
     const lead = Math.min(1.1, ev[0].t), pts = [[nextBeat(beats, t0) || t0, ev[0].t - lead]];
     let b = nextBeat(beats, pts[0][0] + 0.3) || pts[0][0] + 0.5; pts.push([b, ev[0].t]);
     for (let i = 1; i < ev.length; i++) { const dg = ev[i].t - ev[i - 1].t; let nb = b, steps = 0;
-      while (true) { const cand = nextBeat(beats, nb + 0.12); if (cand == null) { nb += 0.5; break; } nb = cand; steps++; const sp = dg / (nb - b); if (sp <= 0.75 || steps > 4) break; }
+      while (true) { const cand = nextBeat(beats, nb + 0.12); if (cand == null) { nb += 0.5; break; } nb = cand; steps++; const sp = dg / (nb - b); if (sp <= slow || steps > 5) break; }
       b = nb; pts.push([b, ev[i].t]); }
     const big = ev.some((e) => SYNC[e.k] > 1), tail = big ? 1.6 : 1.0, endG = Math.min(last, ev[ev.length - 1].t + tail);
     // arrêt sur image (fond noir) un temps après le moment clé
@@ -58,21 +59,38 @@
     let t = 0;
     const introEnd = firstBeat(Math.min(mus.drop && mus.drop > 2 && mus.drop < 9 ? mus.drop : 2.2, mus.D * 0.15));
     segs.push({ k: "intro", t0: 0, t1: introEnd }); words.push([firstBeat(0.15), "MULTI", "A"], [firstBeat(introEnd * 0.5), "EDIT", "B"]); t = introEnd;
-    const games = results.filter((r) => !r.res.skipped);
+    const games = results.filter((r) => !r.res.skipped), pool = [];
+    const KW = { goal: "BUT", strike: "STRIKE", spare: "SPARE", water: "PLOUF" };
+    const addClip = (c, g, pass) => {
+      const s = highlightSeg(c, B, t, pass ? (pass % 2 ? 0.5 : 0.62) : 0.75); s.g = g; s.cam = pass ? (pass % 2 ? "chase" : "orbit") : "game"; s.orb0 = (pass * 2.1 + c.seq) % 6.28; segs.push(s);
+      const kw = Object.assign({ cup: c.label === "TROU EN UN !" ? "ACE" : "DANS LE TROU" }, KW), key = s.syncs.filter((x) => SYNC[x.e.k] > 1).pop();
+      if (key && kw[key.e.k]) kw[key.e.k].split(" ").forEach((w, i) => words.push([key.T + i * 0.22, w, (i + pass) % 2 ? "B" : "A"]));
+      t = s.t1; };
     for (const r of games) {
       const g = r.step.g, clips = (r.clips || []).slice().sort((a, b) => a.seq - b.seq).slice(0, 4), chess = r.res.chess && r.res.chess.mv && r.res.chess.mv.length >= 2;
       if (!clips.length && !chess) continue;
       const tEnd = firstBeat(t + 1.6); segs.push({ k: "title", t0: t, t1: tEnd, g, r }); words.push([t + 0.02, GNAME[g] || g.toUpperCase(), "B"]); t = tEnd;
-      if (chess) { const d = Math.min(16, Math.max(6, r.res.chessDur || 12)), e = firstBeat(t + d); segs.push({ k: "chess", t0: t, t1: e, rec: r.res.chess }); t = e; }
+      if (chess) { const d = Math.min(16, Math.max(6, r.res.chessDur || 12)), e = firstBeat(t + d); segs.push({ k: "chess", t0: t, t1: e, rec: r.res.chess }); pool.push({ k: "chess", rec: r.res.chess, d, g }); t = e; }
       for (const c of clips) {
-        if (c.rp) { const s = highlightSeg(c, B, t); s.g = g; segs.push(s); const kw = { goal: "BUT", cup: c.label === "TROU EN UN !" ? "ACE" : "DANS LE TROU", strike: "STRIKE", spare: "SPARE", water: "PLOUF" };
-          const key = s.syncs.filter((x) => SYNC[x.e.k] > 1).pop(); if (key && kw[key.e.k]) kw[key.e.k].split(" ").forEach((w, i) => words.push([key.T + i * 0.22, w, i % 2 ? "B" : "A"]));
-          t = s.t1; }
-        else { const e = firstBeat(t + 2.4); segs.push({ k: "money", t0: t, t1: e, c, g }); words.push([t + 0.05, c.label, "A"]); t = e; }
+        if (c.rp) { addClip(c, g, 0); pool.push({ k: "rp", c, g }); }
+        else { const e = firstBeat(t + 2.4); segs.push({ k: "money", t0: t, t1: e, c, g }); words.push([t + 0.05, c.label, "A"]); pool.push({ k: "money", c, g }); t = e; }
       }
     }
-    // la musique va jusqu'au bout : récap / final sur le temps restant
-    const end = mus.D; if (t < end - 0.3) { segs.push({ k: "outro", t0: t, t1: end, results: games }); words.push([firstBeat(t + 0.1), "GG", "A"], [firstBeat(Math.min(end - 1.2, t + 1.8)), "E.N.O.S.", "B"]); }
+    // la musique va jusqu'au bout : les moments reviennent (autres caméras, autres ralentis) tant qu'il reste du morceau, puis le final
+    const end = mus.D, bestIt = pool.filter((x) => x.k === "rp").sort((a, b) => b.c.score - a.c.score)[0], best = bestIt && bestIt.c, OUT = Math.min(6, Math.max(3.5, (end - t) * 0.08));
+    for (let pass = 1; pool.length && pass < 60 && end - t > OUT + 3; pass++) {
+      for (const it of pool) {
+        if (end - t < OUT + 3) break;
+        if (it.k === "rp") addClip(it.c, it.g, pass);
+        else if (it.k === "chess") { const e = firstBeat(t + Math.min(it.d, 8)); segs.push({ k: "chess", t0: t, t1: e, rec: it.rec, from: Math.max(0, it.d - 8) }); t = e; }
+        else { const e = firstBeat(t + 1.8); segs.push({ k: "money", t0: t, t1: e, c: it.c, g: it.g }); words.push([t + 0.05, it.c.label, pass % 2 ? "B" : "A"]); t = e; }
+      }
+    }
+    if (t < end - 0.3) {
+      if (best) { const a = Math.max(0, best.at - 0.9), b2 = Math.min(best.dur, best.at + 1.2); segs.push({ k: "replay", c: best, g: bestIt.g, cam: "orbit", orb0: 1.2, outro: true, results: games, t0: t, t1: end, pts: [[t, a], [end, b2]], freeze: null, syncs: [] }); }
+      else segs.push({ k: "outro", t0: t, t1: end, results: games });
+      words.push([firstBeat(t + 0.1), "GG", "A"], [firstBeat(Math.min(end - 1.2, t + 1.8)), "E.N.O.S.", "B"]);
+    }
     else { const last = segs[segs.length - 1]; last.t1 = Math.min(last.t1, end); }
     return { segs: segs.filter((s) => s.t0 < end - 1e-3).map((s) => ((s.t1 = Math.min(s.t1, end)), s)), words: words.filter((w) => w[0] < end), D: end };
   };
@@ -96,7 +114,7 @@
         else if (e.k === "spare") add(T, "sx_knockout", 0.9, "hit");
       }
       if (s.k === "money") { const k = s.c.kind; add(s.t0 + 0.05, k === "bankrupt" ? "sx_mario" : k === "rent" && s.c.amount >= 400 ? "sx_gunshot" : "fahh", 0.9, "hit"); if (k === "rent") add(s.t0 + 0.5, "fahh_slow", 0.6, "voice"); }
-      if (s.k === "outro") add(s.t0, "sx_gong", 0.7, "hit");
+      if (s.k === "outro" || s.outro) add(s.t0, "sx_gong", 0.7, "hit");
     }
     return L.sort((a, b) => a.t - b.t);
   }
@@ -154,8 +172,9 @@
     const k = out3(age / 0.14), fade = age > life - 0.12 ? (life - age) / 0.12 : 1, sc = 1.25 - 0.25 * k, txt = cur[1];
     g.save(); g.translate(W / 2, H * 0.46); g.scale(sc, sc); g.globalAlpha = clamp(k * fade, 0, 1); g.textAlign = "center"; g.textBaseline = "middle";
     const size = Math.min(W * 0.3, (W * 1.7) / Math.max(2.2, txt.length));
-    if (cur[2] === "A") { g.font = `900 ${size}px "Noto Serif", Georgia, "Times New Roman", serif`; g.shadowColor = "rgba(255,30,40,0.95)"; g.shadowBlur = size * 0.35; g.fillStyle = "#ff2333"; g.fillText(txt, 0, 0); g.shadowBlur = size * 0.12; g.fillStyle = "#ff4a55"; g.fillText(txt, 0, 0); }
-    else { const sz = size * 1.35; g.font = `400 ${sz}px "Bebas Neue", Oswald, Impact, sans-serif`; g.fillStyle = "rgba(255,0,60,0.55)"; g.fillText(txt, -sz * 0.02, 0); g.fillStyle = "rgba(0,220,255,0.5)"; g.fillText(txt, sz * 0.02, 0); g.shadowColor = "rgba(255,255,255,0.5)"; g.shadowBlur = sz * 0.12; g.fillStyle = "#ffffff"; g.fillText(txt, 0, 0); }
+    const fit = (f) => { g.font = f; const m = g.measureText(txt).width; if (m > W * 0.86) { const z = (W * 0.86) / m; g.scale(z, z); } };
+    if (cur[2] === "A") { fit(`900 ${size}px "Noto Serif", Georgia, "Times New Roman", serif`); g.shadowColor = "rgba(255,30,40,0.95)"; g.shadowBlur = size * 0.35; g.fillStyle = "#ff2333"; g.fillText(txt, 0, 0); g.shadowBlur = size * 0.12; g.fillStyle = "#ff4a55"; g.fillText(txt, 0, 0); }
+    else { const sz = size * 1.35; fit(`400 ${sz}px "Bebas Neue", Oswald, Impact, sans-serif`); g.fillStyle = "rgba(255,0,60,0.55)"; g.fillText(txt, -sz * 0.02, 0); g.fillStyle = "rgba(0,220,255,0.5)"; g.fillText(txt, sz * 0.02, 0); g.shadowColor = "rgba(255,255,255,0.5)"; g.shadowBlur = sz * 0.12; g.fillStyle = "#ffffff"; g.fillText(txt, 0, 0); }
     g.restore(); return true;
   }
   // cartes 2D (titres, Néo-Cité, intro, récap) — jamais d'image de fichier (texture « salie ») : formes, texte, images embarquées
@@ -172,6 +191,14 @@
       if (c.amount) g.fillText("−" + String(amt).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " €", W / 2, H * 0.72); g.shadowBlur = 0; g.font = font(W * 0.045, 700); g.fillStyle = "#ffd27a"; g.fillText((c.city || c.sub || "").toUpperCase(), W / 2, H * 0.8); }
     if (seg.k === "outro") { g.textAlign = "left"; seg.results.forEach((r, i) => { const a = out3((lt - 0.3 - i * 0.12) / 0.3); if (a <= 0) return; const y = H * 0.6 + i * H * 0.055; g.globalAlpha = a; g.fillStyle = "rgba(255,255,255,0.08)"; g.fillRect(W * 0.1, y - H * 0.022, W * 0.8, H * 0.044);
       g.fillStyle = "#fff"; g.font = font(W * 0.042, 800); g.fillText(GNAME[r.step.g] || r.step.g, W * 0.13, y + W * 0.014); g.textAlign = "right"; const ok = r.res.won || /1-0/.test(r.res.chess ? r.res.chess.result || "" : ""); g.fillStyle = ok ? "#4ade80" : "#ff6d88"; g.fillText(r.res.chess ? (r.res.chess.result || "") : ok ? "VICTOIRE" : "DÉFAITE", W * 0.87, y + W * 0.014); g.textAlign = "left"; g.globalAlpha = 1; }); }
+  }
+
+  function drawRecap(g, W, H, results, lt) {
+    const font = (px, w) => `${w || 900} ${px}px Inter, "Arial Black", sans-serif`;
+    results.forEach((r, i) => { const a = out3((lt - 0.5 - i * 0.12) / 0.35); if (a <= 0) return; const y = H * 0.66 + i * H * 0.058; g.globalAlpha = a; g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(W * 0.08, y - H * 0.024, W * 0.84, H * 0.048);
+      g.fillStyle = "#ff2d55"; g.fillRect(W * 0.08, y - H * 0.024, W * 0.012, H * 0.048);
+      g.textAlign = "left"; g.fillStyle = "#fff"; g.font = font(W * 0.046, 800); g.fillText(GNAME[r.step.g] || r.step.g.toUpperCase(), W * 0.13, y + W * 0.016);
+      g.textAlign = "right"; const ok = r.res.won || /1-0/.test(r.res.chess ? r.res.chess.result || "" : ""); g.fillStyle = ok ? "#4ade80" : "#ff6d88"; g.fillText(r.res.chess ? (r.res.chess.result || "") : ok ? "VICTOIRE" : "DÉFAITE", W * 0.88, y + W * 0.016); g.globalAlpha = 1; });
   }
 
   // ------------------------------------------------------------------ encodeurs
@@ -206,7 +233,8 @@
     // ressources 2D (images embarquées seulement)
     const res = { art: {} }; if (E.g3d.pack) { await E.g3d.pack("neocite"); for (const s of plan.segs) if (s.k === "money" && s.c.art && !res.art[s.c.art]) res.art[s.c.art] = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = E.g3d.src("img/games/capital/lots/" + s.c.art + ".webp"); }); }
     // échecs : timeline Chess Edit
-    for (const s of plan.segs) if (s.k === "chess") { try { const Mp = E.editMap, plies = Mp.gamePlies(s.rec); s.tl = Mp.buildViral(plies, s.rec, null, { voices: false, intro: false, keepTwist: true, syncDrop: false, synth: true, opening: "" }); s.cc = Object.assign(document.createElement("canvas"), { width: 1080, height: 1920 }); s.R = new E.editRender.Renderer(s.cc, s.tl, { rec: s.rec }); await s.R.load(); s.tex = new T.CanvasTexture(s.cc); s.tex.colorSpace = T.NoColorSpace; } catch (e) { s.k = "title"; s.r = { step: { bots: [] } }; } }
+    const chessCache = new Map();
+    for (const s of plan.segs) if (s.k === "chess") { const sh = chessCache.get(s.rec); if (sh) { Object.assign(s, sh); continue; } try { const Mp = E.editMap, plies = Mp.gamePlies(s.rec); s.tl = Mp.buildViral(plies, s.rec, null, { voices: false, intro: false, keepTwist: true, syncDrop: false, synth: true, opening: "" }); s.cc = Object.assign(document.createElement("canvas"), { width: 1080, height: 1920 }); s.R = new E.editRender.Renderer(s.cc, s.tl, { rec: s.rec }); await s.R.load(); s.tex = new T.CanvasTexture(s.cc); s.tex.colorSpace = T.NoColorSpace; chessCache.set(s.rec, { tl: s.tl, cc: s.cc, R: s.R, tex: s.tex }); } catch (e) { s.k = "title"; s.r = { step: { bots: [] } }; } }
     // encodeur + muxer
     const target = new Mp4Muxer.ArrayBufferTarget(), muxer = new Mp4Muxer.Muxer({ target, fastStart: "in-memory", video: { codec: vc.name, width: W, height: H, frameRate: FPS }, audio: mixed && ac ? { codec: ac.name, numberOfChannels: 2, sampleRate: 48000 } : undefined });
     let err = null; const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (err = e) });
@@ -228,6 +256,23 @@
       const A = fr[lo].d, Bd = fr[hi].d, k = hi === lo ? 0 : (gt - fr[lo].t) / Math.max(1e-6, fr[hi].t - fr[lo].t), list = inst.rec.list || [];
       for (let i = 0; i < Math.min(n, list.length); i++) { const o2 = list[i], j = i * 9; o2.position.set(lerp(A[j], Bd[j], k), lerp(A[j + 1], Bd[j + 1], k), lerp(A[j + 2], Bd[j + 2], k)); q0.set(A[j + 3], A[j + 4], A[j + 5], A[j + 6]); q1.set(Bd[j + 3], Bd[j + 4], Bd[j + 5], Bd[j + 6]); o2.quaternion.copy(q0.slerp(q1, k)); const s = lerp(A[j + 7], Bd[j + 7], k); o2.scale.setScalar(s || 1); o2.visible = (k < 0.5 ? A[j + 8] : Bd[j + 8]) > 0.5; }
       const cam = inst.rec.cam; if (cam && seg.c.rp.cam) { const j = n * 9; cam.position.set(lerp(A[j], Bd[j], k), lerp(A[j + 1], Bd[j + 1], k), lerp(A[j + 2], Bd[j + 2], k)); q0.set(A[j + 3], A[j + 4], A[j + 5], A[j + 6]); q1.set(Bd[j + 3], Bd[j + 4], Bd[j + 5], Bd[j + 6]); cam.quaternion.copy(q0.slerp(q1, k)); cam.fov = lerp(A[j + 7], Bd[j + 7], k); cam.aspect = W / H; cam.updateProjectionMatrix(); } };
+    // caméra : « game » = celle de la partie, rapprochée et tournée vers la balle ; « chase » = derrière la balle ; « orbit » = tour lent autour d'elle
+    const V = () => new T.Vector3(), up = new T.Vector3(0, 1, 0), m4 = new T.Matrix4(), qL = new T.Quaternion(), tmpA = V(), tmpB = V();
+    const posAt = (seg, i, gt, out) => { const fr = seg.c.rp.frames; let lo = 0, hi = fr.length - 1; if (gt <= fr[0].t) hi = 0; else if (gt >= fr[hi].t) lo = hi; else { while (hi - lo > 1) { const m = (lo + hi) >> 1; if (fr[m].t <= gt) lo = m; else hi = m; } }
+      const k = hi === lo ? 0 : (gt - fr[lo].t) / Math.max(1e-6, fr[hi].t - fr[lo].t), A = fr[lo].d, Bd = fr[hi].d, j = i * 9; return out.set(lerp(A[j], Bd[j], k), lerp(A[j + 1], Bd[j + 1], k), lerp(A[j + 2], Bd[j + 2], k)); };
+    const cineCam = (seg, ins, cam, subj, gt, lt) => {
+      const list = ins.rec.list || [], si = list.indexOf(subj); if (si < 0) return null;
+      const bp = V(); for (let i = -2; i <= 2; i++) bp.add(posAt(seg, si, gt + i * 0.06, tmpA)); bp.multiplyScalar(0.2); if (subj.parent) { subj.parent.updateMatrixWorld(true); bp.applyMatrix4(subj.parent.matrixWorld); }
+      const R0 = clamp(cam.position.distanceTo(bp), 1, 60), mode = seg.cam || "game";
+      if (mode === "game") { cam.position.lerp(bp, 0.28); m4.lookAt(cam.position, bp, up); qL.setFromRotationMatrix(m4); cam.quaternion.slerp(qL, 0.5); }
+      else {
+        let pos;
+        if (mode === "chase") { const d = posAt(seg, si, gt + 0.35, tmpB).sub(posAt(seg, si, gt - 0.6, tmpA)); d.y = 0; if (d.lengthSq() < 1e-4) { d.copy(bp).sub(cam.position); d.y = 0; } d.normalize(); seg._dir = seg._dir ? seg._dir.lerp(d, 0.08).normalize() : d.clone();
+          pos = bp.clone().addScaledVector(seg._dir, -R0 * 0.42).addScaledVector(up, R0 * 0.2); cam.fov = 52; }
+        else { const a = seg.orb0 + lt * 0.55, r = R0 * 0.4; pos = bp.clone().add(tmpA.set(Math.cos(a) * r, R0 * 0.17, Math.sin(a) * r)); cam.fov = 46; }
+        pos.y = Math.max(pos.y, bp.y + R0 * 0.08); cam.position.copy(pos); m4.lookAt(cam.position, bp, up); cam.quaternion.setFromRotationMatrix(m4);
+      }
+      cam.aspect = W / H; cam.updateProjectionMatrix(); return bp; };
     const subjPass = (S, subjects) => { const keep = new Set(); subjects.forEach((s) => { let o2 = s; while (o2) { keep.add(o2); o2 = o2.parent; } s.traverse((c) => keep.add(c)); });
       const saved = []; S.scene.traverse((o2) => { if (o2 === S.scene || keep.has(o2) || o2.isLight) return; if (o2.visible) { saved.push(o2); o2.visible = false; } });
       const bg = S.scene.background, fog = S.scene.fog; S.scene.background = null; S.scene.fog = null; renderer.setRenderTarget(subjRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(S.scene, S.camera); renderer.setRenderTarget(null);
@@ -253,12 +298,13 @@
           lastGt = gt;
           // caméra : coup de poing vers le sujet à chaque choc
           const cam = ins.rec.cam || S.camera, subj = ins.rp.subjects && ins.rp.subjects[0];
-          if (subj && pulse > 0.01) { const sp = new T.Vector3(); subj.getWorldPosition(sp); cam.position.lerp(sp, 0.12 * pulse); cam.fov *= 1 - 0.12 * pulse; cam.updateProjectionMatrix(); const pr = sp.clone().project(cam); U.uCenter.value.set(clamp(pr.x * 0.5 + 0.5, 0.2, 0.8), clamp(pr.y * 0.5 + 0.5, 0.2, 0.8)); } else U.uCenter.value.set(0.5, 0.5);
+          const bp = subj ? cineCam(seg, ins, cam, subj, gt, lt) : null;
+          if (subj && pulse > 0.01) { const sp = bp || subj.getWorldPosition(new T.Vector3()); cam.position.lerp(sp, 0.12 * pulse); cam.fov *= 1 - 0.12 * pulse; cam.updateProjectionMatrix(); const pr = sp.clone().project(cam); U.uCenter.value.set(clamp(pr.x * 0.5 + 0.5, 0.2, 0.8), clamp(pr.y * 0.5 + 0.5, 0.2, 0.8)); } else U.uCenter.value.set(0.5, 0.5);
           U.tScene.value = S.renderTex(); U.uLinScene.value = S.bloom && S.bloom() ? 0 : 1;
           const frz = seg.freeze && t >= seg.freeze[0] && t < seg.freeze[1];
-          textOn = drawWords(tg, cw, ch, plan.words, t, mus.beats);
+          textOn = drawWords(tg, cw, ch, plan.words, t, mus.beats); if (seg.outro) { drawRecap(tg, cw, ch, seg.results, lt); textOn = true; }
           if ((frz || textOn) && ins.rp.subjects) { subjPass(S, ins.rp.subjects); U.uHasSubj.value = 1; U.uBehind.value = textOn ? 1 : 0; U.uIso.value = frz ? 1 : 0; } } }
-      else if (seg.k === "chess") { seg.R.draw(Math.min(lt, seg.tl.duration - 0.01)); seg.tex.needsUpdate = true; U.tScene.value = seg.tex; textOn = drawWords(tg, cw, ch, plan.words, t, mus.beats); }
+      else if (seg.k === "chess") { seg.R.draw(Math.min((seg.from || 0) + lt, seg.tl.duration - 0.01)); seg.tex.needsUpdate = true; U.tScene.value = seg.tex; textOn = drawWords(tg, cw, ch, plan.words, t, mus.beats); }
       else { drawCard(cg, cw, ch, seg, t, res); cardTex.needsUpdate = true; U.tScene.value = cardTex; textOn = drawWords(tg, cw, ch, plan.words, t, mus.beats); }
       if (seg !== lastSeg) { lastSeg = seg; lastGt = seg.k === "replay" ? gtAt(seg, t) : 0; }
       textTex.needsUpdate = true;

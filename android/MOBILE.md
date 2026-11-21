@@ -570,6 +570,18 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.122 — MultiEdit v2 : edit épique calculé hors écran, 4K 60 i/s, calé sur la musique jusqu'au bout
+- **Plus rien ne s'affiche pendant le montage** : seule une barre de progression (temps restant, Annuler) ; le téléphone ne rame plus.
+- **Enregistrement, pas filmage** (`js/games/highlights.js`) : pendant la partie, positions et rotations de la balle, des palets, des quilles et de la caméra sont notées image par image, avec chaque choc (tir, rebond, poteau, but, coupe, strike…). Au montage, la scène est reconstruite hors écran (mode « rejeu » des jeux, `G3.replayCtx`) et recalculée **en 4K (2160×3840) à 60 i/s** (repli 1080p si l'encodeur ne suit pas), HEVC ou H.264 + son, en MP4.
+- **Calé sur la musique** (`js/multiedit_render.js`) :
+  - les temps forts (kicks) du morceau sont détectés ; chaque rebond de la balle tombe sur un temps, au ralenti entre deux chocs (rampes de vitesse) ;
+  - arrêt sur image sur fond noir au but / à la coupe ;
+  - **la vidéo dure exactement la musique** : les moments reviennent avec d'autres caméras (poursuite derrière la balle, tour autour d'elle) et d'autres ralentis jusqu'à la fin, puis un final au ralenti avec le récap de la série.
+- **Effets** : séparation RVB, flou radial de vitesse, zoom « coup de poing » et secousse à chaque choc, éclair, étalonnage contrasté, vignette, grain. Pour le foot, petit impact stylé sur chaque rebond (aucun texte « rebond 1, 2, 3 »).
+- **Grands mots façon edit** sur les temps (serif rouge lumineux / condensé blanc à franges RVB), placés **derrière la balle**, toujours entiers à l'écran.
+- **Sons** : les bruitages de Chess Edit selon la situation (impacts, cristal sur le poteau, boum + NBA au but, ciel sur un trou en un, « fahh » sur un gros loyer…), mixés hors ligne avec atténuation de la musique.
+- Test : `t_multiedit.py` (enregistrement, aucun aperçu pendant le rendu, vidéo 60 i/s avec son).
+
 ## 1.121 — Compression vidéo : taille finale par fichier, file d'attente, meilleure qualité
 - **Nouveau moteur** (`js/video_transcode.js`) : le MP4 est lu directement (boîtes moov/stbl : échantillons, images clés, horodatages, rotation), décodé et ré-encodé par WebCodecs **plus vite que le temps réel** (accélération matérielle), puis écrit en MP4 (`vendor/mp4-muxer.js`).
   - Codec : HEVC (H.265) si le téléphone sait l'encoder, sinon H.264 High, VP9, AV1.
