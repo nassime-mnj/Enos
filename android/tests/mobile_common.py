@@ -35,3 +35,12 @@ def open_tool(pg, tool):
     pg.wait_for_function(f"window.ENOS.hub && window.ENOS.modules")
     pg.evaluate(f"window.ENOS.modules.open('{tool}')")
     pg.wait_for_selector(f"#tool-{tool}:not([hidden]) .suite-body > *", state="attached")
+
+
+def all_humans(pg, tool):
+    """salon mixte : passe toutes les places en « Joueur » (partie à plusieurs sur le même téléphone)"""
+    for _ in range(12):
+        loc = pg.locator(f'#tool-{tool} .gm-kind [data-v="h"]:not(.on)')
+        if not loc.count():
+            break
+        loc.first.click()

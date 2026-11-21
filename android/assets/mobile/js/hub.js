@@ -23,6 +23,10 @@
       { n: "Sport", items: [["flick", "Flick Foot"], ["golf", "Mini-golf"], ["bowling", "Bowling"]] },
       { n: "Arcade", items: [["g2048"], ["snake"], ["mines"]] },
     ] },
+    { id: "clipedit", n: "CLIP EDIT", t: "Clip Edit", img: "cat_clipedit", sections: [
+      { n: "Chess Edit", items: [["chessedit", "Chess Edit"], ["clips", "Game Clips"]] },
+      { n: "Multi Edit", items: [["multiedit", "MultiEdit"]] },
+    ] },
     { id: "cloud", n: "CLOUD", t: "Cloud", img: "cat_cloud", sections: [
       { n: "Mon compte", items: [["plans", "Abonnement"], ["gateway", "ETO Gateway"], ["fleet", "ETO Fleet"], ["support", "Assistant ETO"], ["cloud"], ["s-upd", "Mise à jour"], ["backup"]] },
       { n: "Échanger", items: [["clip"], ["b-sy", "Sync PC"], ["vault"]] },
@@ -55,7 +59,7 @@
   H.CATS = CATS;
   // THÈME OBSIDIAN : icônes duotone (js/hub_icons.js) pour les catégories et la page Échecs
   const HI = (n, c) => (E.hubIcon ? E.hubIcon(n, c) : "");
-  const CAT_IC = { echecs: "knight", jeux: "trophy", cloud: "cloud", parametres: "settings", codage: "code", outils: "wrench", organisation: "folder", ordinateur: "monitor" };
+  const CAT_IC = { echecs: "knight", jeux: "trophy", clipedit: "clapper", cloud: "cloud", parametres: "settings", codage: "code", outils: "wrench", organisation: "folder", ordinateur: "monitor" };
   const CH_IC = { "@tc:bullet": "zap", "@tc:blitz": "flame", "@tc:rapid": "timer", "@tc:daily": "calendar", defis: "swords", chess: "eye", "@resume": "play", "@team": "users", "@combat": "shield", royale: "crown", simul: "grid4", fived: "layers",
     fog: "fog", variants: "flask", prime: "bot", "@learn:lessons": "grad", "@puz:": "puzzle", "@learn:openings": "book", "@puz:mateIn1": "target", "@puz:fork": "fork", "@puz:pin": "pin", "@puz:skewer": "spear", "@learn:advice": "bulb", train: "brain",
     advisor: "scan", "@prof:games": "history", "@import": "import", chessedit: "clapper", clips: "drama", "@prof:stats": "chart", "@prof:prizes": "trophy" };

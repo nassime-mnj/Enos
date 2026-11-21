@@ -94,6 +94,12 @@ def sync_pc():
     files += [("img/menu/" + n, "img/menu/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "menu")) if n.startswith("cc_") and n.endswith(".png")]
     files += [("img/badges/" + n, "img/badges/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "badges")) if n.endswith(".png")]
     files += [("img/chess/" + n, "img/chess/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "chess")) if n.endswith(".png")]
+    # JEUX (mêmes fichiers que le téléphone, mêmes chemins relatifs : js/games/, vendor/three*, img/games/, css/games.css) — rail « Jeux » de la page PC
+    files += [("js/games/" + n, "js/games/" + n) for n in os.listdir(os.path.join(MOBILE, "js", "games")) if n.endswith(".js")]
+    files += [("vendor/three.min.js", "vendor/three.min.js"), ("vendor/three_extras.js", "vendor/three_extras.js"), ("css/games.css", "css/games.css")]
+    for root_, _, names in os.walk(os.path.join(MOBILE, "img", "games")):
+        rel = os.path.relpath(root_, MOBILE).replace(os.sep, "/")
+        files += [(rel + "/" + n, rel + "/" + n) for n in names if n.endswith((".webp", ".png", ".jpg"))]
     for a, b in files:
         if not os.path.isfile(os.path.join(MOBILE, a)):                  # fichier généré absent de ce poste (ex. data/piece_model.js) : on garde la copie PC existante
             print("ignoré (absent) :", a)

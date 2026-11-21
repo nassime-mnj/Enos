@@ -486,6 +486,29 @@
    "files": [
     "audio/games/nc/auction_1.ogg"
    ]
+  },
+  "flick.goalrl": {
+   "bus": "music",
+   "vol": 0.85,
+   "files": [
+    "audio/games/flick/goal_rl_1.ogg"
+   ]
+  },
+  "amb.ocean": {
+   "bus": "amb",
+   "vol": 0.9,
+   "pack": "amb",
+   "files": [
+    "audio/games/amb/ocean_1.ogg"
+   ]
+  },
+  "amb.storm": {
+   "bus": "amb",
+   "vol": 0.9,
+   "pack": "amb",
+   "files": [
+    "audio/games/amb/storm_1.ogg"
+   ]
   }
  },
  "sources": {
@@ -593,6 +616,9 @@
   "lowDown.mp3": "Digital_SFX_Set/lowDown.mp3",
   "powerUp7.mp3": "Digital_SFX_Set/powerUp7.mp3",
   "lowThreeTone.mp3": "Digital_SFX_Set/lowThreeTone.mp3",
-  "bell_01.ogg": "100-CC0-SFX_0/bell_01.ogg"
+  "bell_01.ogg": "100-CC0-SFX_0/bell_01.ogg",
+  "goal_rl_1.ogg": "fourni par le propriétaire : Rocket League DFH Stadium Goal scoring OST",
+  "ocean_1.ogg": "fourni par le propriétaire : Calming Sounds of Nature - 5 Minutes of Ocean Wave Sounds (boucle de 56 s)",
+  "storm_1.ogg": "fourni par le propriétaire : 5 Minutes of Rain and Thunderstorm Sounds (Epidemic ASMR, boucle de 56 s)"
  }
 }

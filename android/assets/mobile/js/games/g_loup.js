@@ -1,7 +1,7 @@
 "use strict";
 // LOUP-GAROU : village en cercle autour du feu du conseil, nuit (lune, lucioles) et jour, cartes de rôle qui se retournent,
 // débat où les bots parlent, accusent, se défendent et se dévoilent (vraie voyante ou loup qui bluffe), vote, potions de la sorcière, balle du chasseur.
-// Contre les bots : toi + 4 à 9 de nos bots. En local : un seul téléphone qui passe de main en main la nuit (écran de passage), débat à voix haute.
+// Salon mixte : joueurs humains et bots. Un seul humain : il voit ses infos en continu. Plusieurs humains : le téléphone passe de main en main la nuit (écran de passage) ; les bots parlent quand même au débat.
 // Règles et cerveau des bots : js/games/loup_rules.js.
 (() => {
   const E = window.ENOS, W = E.loup, esc = E.esc;
@@ -16,7 +16,7 @@
     id: "loup", title: "Loup-garou", sub: "Démasque les loups avant qu'il ne soit trop tard", hero: "img/games/common/card_loup.webp", min: 5, max: 10, rules: RULES,
     icon: '<path d="M5 20l2-9-3-6 5 3h6l5-3-3 6 2 9"/><path d="M9.5 13h.01M14.5 13h.01M10 17l2 1 2-1"/>',
     async start(host, setup, api) {
-      const local = setup.mode === "local";
+      const local = setup.players.filter((p) => p.human).length > 1;      // plusieurs humains sur le même téléphone
       // noms en double (même bot choisi deux fois) : on numérote
       const seen = {}; const players = setup.players.map((p) => { const k = p.name; seen[k] = (seen[k] || 0) + 1; return Object.assign({}, p, { name: seen[k] > 1 ? k + " " + seen[k] : k }); });
       const st = W.newGame(players), n = st.ps.length, me = local ? -1 : st.ps.findIndex((p) => p.human);
@@ -76,7 +76,7 @@
       const choice = (title, opts, secs, def) => new Promise((res) => { let fin = false; const end = (v) => { if (fin) return; fin = true; if (secs) stopTimer(); act.innerHTML = ""; res(v); }; if (secs) countdown(secs, "Temps", () => end(opts[def == null ? opts.length - 1 : def][0])); act.innerHTML = `<p>${esc(title)}</p><div class="lg-opts">${opts.map(([v, l, img], k) => `<button class="btn${k === 0 ? " pri" : ""}" data-k="${k}">${img ? `<img src="${IMG}${img}.webp" alt="">` : ""}${esc(l)}</button>`).join("")}</div>`;
         act.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => end(opts[+b.dataset.k][0]))); });
       const humanAlive = () => me >= 0 && st.ps[me].alive;
-      const isHuman = (p) => !!p && (local || p.i === me);
+      const isHuman = (p) => !!p && !!p.human;
       // ---------------------------------------------------------------- nuit
       const kill = async (dead, why) => { for (const i of dead) { const p = st.ps[i]; paint(); tile(i).classList.add("die"); api.sfx("fx.stinger", { vol: 0.5 });
           await fx("fx_death", p.name + (why === "vote" ? " est éliminé" : " est mort"), W.ROLES[p.role].name, 1900); narr(`${p.name} était ${W.ROLES[p.role].name.toLowerCase()}.`);
@@ -139,13 +139,14 @@
         let endDeb; const debEnd = new Promise((r) => (endDeb = r));
         const nAlive = W.alive(st).length;
         countdown(local ? 150 : Math.min(130, 50 + nAlive * 9), "Débat", () => endDeb());
-        if (local) { act.innerHTML = `<p>Débattez à voix haute, puis passez au vote.</p><button class="btn pri wide" id="lg-go">Passer au vote</button>`; act.querySelector("#lg-go").onclick = () => endDeb(); }
+        if (local) { act.innerHTML = `<p>Débattez à voix haute, puis passez au vote.</p><button class="btn pri wide" id="lg-go">Passer au vote</button>`; act.querySelector("#lg-go").onclick = () => endDeb(); talkBots(); }
         else { talkBots().then(() => { if (!humanAlive()) endDeb(); }); if (humanAlive()) humanTalk(endDeb); }
         await debEnd; debating = false; stopTimer(); if (curPick) curPick(); act.innerHTML = ""; $("#lg-typing").hidden = true;
         await speakQ; if (!alive) return;
         phase("Jour " + st.day, "Le vote", false); await fx("fx_vote", "Le vote", "Le village désigne un suspect", 1300);
         const votes = {};
-        if (local) { const t = await pick("Qui le village élimine-t-il ?", () => true, "Personne", 60); if (t != null) W.alive(st).forEach((p) => (votes[p.i] = t)); }
+        if (local) { for (const h of W.alive(st).filter(isHuman)) { const t = await pick(`Vote de ${h.name} : qui élimines-tu ?`, (q) => q.i !== h.i, "S'abstenir", 40); if (t != null) { votes[h.i] = t; narr(`${h.name} vote contre ${st.ps[t].name}.`); } }
+          for (const p of W.alive(st).filter((q) => !isHuman(q))) { votes[p.i] = W.botVote(st, p); await D(800); narr(`${p.name} vote contre ${st.ps[votes[p.i]].name}.`); } }
         else { if (humanAlive()) votes[me] = await pick("Ton vote : qui élimines-tu ?", (q) => q.i !== me, "Je m'abstiens", 30);
           for (const p of W.alive(st).filter((q) => q.i !== me)) { votes[p.i] = W.botVote(st, p); await D(800); narr(`${p.name} vote contre ${st.ps[votes[p.i]].name}.`); } }
         const t = W.tally(votes);
@@ -156,7 +157,7 @@
       // ---------------------------------------------------------------- partie
       const run = async () => {
         phase("Préparation", "Distribution des rôles", true); await D(500);
-        if (local) { for (const p of st.ps) { await pass(p.name); view = p.i; paint(); await card(p.role, p.name + ", ton rôle", "Cacher ma carte"); view = -1; paint(); } }
+        if (local) { for (const p of st.ps.filter(isHuman)) { await pass(p.name); view = p.i; paint(); await card(p.role, p.name + ", ton rôle", "Cacher ma carte"); view = -1; paint(); } }
         else { view = me; paint(); await card(st.ps[me].role, "Ton rôle"); const mates = W.wolves(st).filter((w) => w.i !== me); if (st.ps[me].role === "wolf" && mates.length) narr(`Ton complice : ${mates.map((w) => w.name).join(", ")}.`); }
         while (alive && !W.winner(st) && st.day < 30) { await night(); if (!alive || W.winner(st)) break; await day(); }
         if (!alive) return;

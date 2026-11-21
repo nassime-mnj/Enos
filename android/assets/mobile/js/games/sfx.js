@@ -31,6 +31,9 @@
     if (window.ENOS_GSFX_DATA) return res(true);
     const s = document.createElement("script"); s.src = (E.assetBase || "") + "js/games/sfx_data.js"; s.onload = () => res(true); s.onerror = () => { dataP = null; res(false); }; document.head.appendChild(s);
   }));
+  /** ambiances longues : fichier à part (js/games/sfx_<pack>_data.js), chargé seulement quand un décor en a besoin */
+  const packP = {};
+  const loadPack = (name) => packP[name] || (packP[name] = new Promise((res) => { const s = document.createElement("script"); s.src = (E.assetBase || "") + "js/games/sfx_" + name + "_data.js"; s.onload = () => res(true); s.onerror = () => { delete packP[name]; res(false); }; document.head.appendChild(s); }));
   const b64 = (s) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
   const decode = (file) => {
     if (bufs.has(file)) return bufs.get(file);
@@ -42,6 +45,7 @@
   A.preload = async (prefixes) => {
     if (!(await loadData()) || !A.ctx()) return false;
     const evs = Object.keys(BANK()).filter((k) => prefixes.some((p) => k === p || k.startsWith(p + ".")));
+    for (const p of new Set(evs.map((k) => BANK()[k].pack).filter(Boolean))) await loadPack(p);
     await Promise.all(evs.flatMap((k) => BANK()[k].files.map((f) => decode(f).p)));
     return true;
   };

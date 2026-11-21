@@ -241,15 +241,21 @@
         for (let k = 1; k <= nP; k++) { const p = (cur + k + nP) % nP; if (!done[p]) { cur = p; break; } }
         phase = "aim"; aim = defaultAim(cur); setPower(0); paint();
         $("#gf-hint").hidden = !P[cur].human;
-        if (!P[cur].human) { const lvl = P[cur].level || "normal", t0 = clock + 1.1; setTimeout(() => { if (!alive || phase !== "aim") return; const sh = GF.botShot(H, B[cur], lvl, t0); pending = { p: cur, at: t0, sh }; aim = sh.angle; }, 250); }
+        if (!P[cur].human) { api.clip.begin("coup"); shotSt = { hits: 0, loop: false }; const lvl = P[cur].level || "normal", t0 = clock + 1.1; setTimeout(() => { if (!alive || phase !== "aim") return; const sh = GF.botShot(H, B[cur], lvl, t0); pending = { p: cur, at: t0, sh }; aim = sh.angle; }, 250); }
       };
-      const fire = (p, a, pw) => { strokes[p]++; GF.shoot(B[p], a, pw); phase = "roll"; trail.clear(); dots.forEach((d) => (d.visible = false)); setPower(0); paint();
+      let shotSt = null;                                                       // temps forts (MultiEdit)
+      const fire = (p, a, pw) => { api.clip.begin("coup"); shotSt = shotSt || { hits: 0, loop: false }; shotSt.from = { x: B[p].x, z: B[p].z }; strokes[p]++; GF.shoot(B[p], a, pw); phase = "roll"; trail.clear(); dots.forEach((d) => (d.visible = false)); setPower(0); paint();
         api.sfx("flick.shot", { intensity: pw, vol: 0.3 + pw * 0.5, rate: 1.2 }); api.vibrate(10 + Math.round(pw * 20)); };
       const settle = (p, ev) => {
         const b = B[p];
+        { const s0 = shotSt || { hits: 0 }; shotSt = null; const dist = s0.from ? Math.hypot(b.x - s0.from.x, b.z - s0.from.z) : 0;
+          if (b.cup) { api.clip.mark("coupe"); api.clip.end({ score: 80 + (strokes[p] === 1 ? 140 : strokes[p] < H.def.par ? 50 : 0) + dist * 4 + (s0.loop ? 40 : 0) + s0.hits * 8, label: strokes[p] === 1 ? "TROU EN UN !" : GF.label(strokes[p], H.def.par).toUpperCase(), sub: `${P[p].name} · ${H.def.name}` }, 1300); }
+          else if (ev === "water") api.clip.end({ score: 28, label: C.fluid === "lava" ? "DANS LA LAVE" : "PLOUF", sub: P[p].name }, 150);
+          else if (s0.loop) api.clip.end({ score: 45 + dist * 2, label: "LOOPING", sub: P[p].name }, 300);
+          else api.clip.cancel(); }
         if (ev === "water") { strokes[p]++; banner(C.fluid === "lava" ? "Dans la lave !" : "Plouf !", "+1 coup, la balle revient", null, 1500); b.x = b.rest.x; b.z = b.rest.z; b.sx = null; b.idx = GF.nearest(H, b.x, b.z); api.sfx("flick.post", { vol: 0.5, rate: 0.6 }); }
         if (b.cup) { done[p] = true; score[p][hi] = strokes[p]; const lab = GF.label(strokes[p], H.def.par); banner(lab, P[p].name + " · " + strokes[p] + (strokes[p] > 1 ? " coups" : " coup"), strokes[p] === 1 ? "img/games/golf/fx_holeinone.webp" : null, 1700);
-          api.sfx(strokes[p] <= H.def.par ? "flick.goal" : "chip.lay", { vol: 0.8 }); if (strokes[p] < H.def.par) api.vibrate([20, 40, 60]); }
+          api.sfx(strokes[p] <= H.def.par ? "chip.collect" : "chip.lay", { vol: 0.8 }); if (strokes[p] < H.def.par) api.sfx("fx.stinger", { vol: 0.5 }); if (strokes[p] < H.def.par) api.vibrate([20, 40, 60]); }
         else if (strokes[p] >= GF.MAX_STROKES) { done[p] = true; score[p][hi] = GF.MAX_STROKES; banner("Balle ramassée", P[p].name + " · " + GF.MAX_STROKES + " coups", null, 1500); }
         phase = "wait"; paint(); setTimeout(() => { if (alive) nextTurn(); }, b.cup ? 1500 : 650);
       };
@@ -264,7 +270,7 @@
         const me = P.findIndex((p) => p.human); api.end(win, `Score : ${tot[me >= 0 ? me : 0]} coups (par ${par})` + (nP > 1 ? " · " + P.map((p, i) => p.name + " " + tot[i]).join(", ") : "")); };
       // ---------------------------------------------------------------- toucher
       const cv = S.renderer.domElement; let drag = null;
-      cv.addEventListener("pointerdown", (e) => { if (phase !== "aim" || !P[cur].human || overview) return; drag = { x: e.clientX, y: e.clientY, a: aim }; cv.setPointerCapture && cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener("pointerdown", (e) => { if (phase !== "aim" || !P[cur].human || overview) return; api.clip.begin("coup"); drag = { x: e.clientX, y: e.clientY, a: aim }; cv.setPointerCapture && cv.setPointerCapture(e.pointerId); });
       cv.addEventListener("pointermove", (e) => { if (!drag) return; aim = drag.a - (e.clientX - drag.x) * 0.0055; setPower(Math.max(0, Math.min(1, (e.clientY - drag.y) / (cv.clientHeight * 0.32)))); });
       const up = () => { if (!drag) return; drag = null; if (power > 0.03 && phase === "aim") fire(cur, aim, power); else setPower(0); };
       cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
@@ -280,8 +286,8 @@
           if (pending && clock >= pending.at && phase === "aim") { const pd = pending; pending = null; fire(pd.p, pd.sh.angle, pd.sh.power); }
           if (phase === "roll") { const b = B[cur]; for (const e of GF.step(H, b, clock)) {
               if (e.k === "wall" && e.v > 0.4 && clock - lastWall > 0.08) { lastWall = clock; api.sfx("flick.wall", { intensity: Math.min(1, e.v / 5), vol: Math.min(0.8, e.v / 6) }); }
-              else if (e.k === "bumper" || e.k === "mill" || e.k === "hammer") { api.sfx("flick.post", { intensity: Math.min(1, e.v / 4) }); S.shake(0.02, 0.15); }
-              else if (e.k === "loop") api.sfx("bowl.roll", { vol: 0.6, rate: 1.4 });
+              else if (e.k === "bumper" || e.k === "mill" || e.k === "hammer") { if (shotSt) shotSt.hits++; api.sfx("flick.post", { intensity: Math.min(1, e.v / 4) }); S.shake(0.02, 0.15); }
+              else if (e.k === "loop") { api.sfx("bowl.roll", { vol: 0.6, rate: 1.4 }); if (shotSt) shotSt.loop = true; api.clip.mark("looping"); }
               else if (e.k === "loopfail") banner("Pas assez de vitesse", "il faut taper plus fort pour le looping", null, 1300);
               else if (e.k === "lip") api.sfx("flick.post", { vol: 0.4, rate: 1.6 });
               else if (e.k === "water") { settle(cur, "water"); break; } }
@@ -313,6 +319,7 @@
         else { camS.dir.set(Math.sin(aim), 0, -Math.cos(aim)); wantPos = tmp.copy(bp).addScaledVector(camS.dir, -2.3); wantPos.y = bp.y + 1.1; wantLook = tmp2.copy(bp).addScaledVector(camS.dir, 2.2); wantLook.y = bp.y - 0.1; }
         const k = Math.min(1, dt * (phase === "aim" && drag ? 12 : 4)); cam.position.lerp(wantPos, k); camS.look.lerp(wantLook, k); cam.lookAt(camS.look);
       });
+      api.ambience(theme, null, 0.8);
       startHole(0);
       return { destroy: () => { alive = false; S.dispose(); }, _st: () => ({ hi, phase, cur, strokes: strokes.slice(), done: done.slice(), score, H, B, clock }), _theme: () => theme,
         _shoot: (a, pw) => { if (phase !== "aim" || !P[cur].human) return false; fire(cur, a == null ? defaultAim(cur) : a, pw); return true; }, _aim: () => defaultAim(cur), _skipHole: () => { B.forEach((b, i) => { if (!done[i]) { done[i] = true; score[i][hi] = 3; } }); endHole(); } };

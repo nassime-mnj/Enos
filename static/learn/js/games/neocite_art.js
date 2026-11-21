@@ -1,0 +1,4 @@
+"use strict";
+// Images Néo-Cité présentes dans img/games/capital/ (icônes, monuments des villes, cartes événement) : liste régénérée à chaque import d'images.
+// Le jeu n'essaie de charger que ce qui est listé ; sinon il garde ses visuels dessinés.
+window.ENOS_NC_ART = {"icons": ["airport", "antenna", "audit", "bankrupt", "coins", "dice", "gavel", "jail", "logo", "mortgage", "reserve", "signal", "start", "tower", "trade"], "lots": ["abidjan", "alger", "amsterdam", "bangkok", "berlin", "buenos_aires", "casablanca", "dakar", "doha", "dubai", "istanbul", "le_caire", "lisbonne", "londres", "madrid", "mexico", "new_york", "paris", "rio_de_janeiro", "rome", "seoul", "singapour", "tokyo", "tunis"], "cards": ["audit2", "back", "bounty", "cloud", "dividend", "drone", "fine", "hack", "jackpot", "jail", "maint", "pass", "pixel", "refund", "relay", "rest", "round", "start", "summit", "viral"], "skyline": false};

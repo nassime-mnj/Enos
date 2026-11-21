@@ -307,13 +307,38 @@
           ${testBar(true)}
           <div class="pl-list">${PRIVATE.map((p, i) => card(p, i, false)).join("")}</div>
           <div class="card pl-pub"><h3>Offres publiques<span class="sp">aperçu</span></h3>${PUBLIC.map((p) => `<div class="pl-row" style="--c:${p.color}">${ic(p.icon)}<b>${esc(p.name)} ${esc(p.tier)}</b><span>${p.month ? eur(p.month) + " € / mois" : "Gratuit"}</span>${P.current() === p.id ? '<i class="pl-act sm"><i></i>Actif</i>' : ""}</div>`).join("")}</div>
-          <div id="ceo-admin"></div>`;
+          <div id="ceo-cleaner"></div><div id="ceo-admin"></div>`;
         wire(el, () => paint());
+        cleaner(el.querySelector("#ceo-cleaner"));
         admin(el.querySelector("#ceo-admin"), paint);
       };
       this._paint = paint; paint();
     },
   });
+
+  // ------------------------------------------------------------------ Espace CEO › ENOS Cleaner : désinstaller les autres versions installées (TEST, anciennes éditions)
+  function cleaner(box) {
+    if (!box) return;
+    const N = E.native, size = (b) => (b > 1e9 ? (b / 1e9).toFixed(1) + " Go" : Math.round(b / 1e6) + " Mo"), day = (t) => (t ? new Date(t).toLocaleDateString("fr-FR") : "");
+    const draw = () => {
+      if (!N || !N.available || !N.enosApps) { box.innerHTML = `<div class="card pl-adm"><h3>ENOS Cleaner</h3><p class="muted">Disponible dans l'application Android.</p></div>`; return; }
+      const apps = N.enosApps().sort((a, b) => (b.self - a.self) || (b.updated - a.updated)), others = apps.filter((a) => !a.self), tot = others.reduce((s, a) => s + (a.size || 0), 0);
+      box.innerHTML = `<div class="card pl-adm cl-box"><h3>ENOS Cleaner<span class="sp">${apps.length} version${apps.length > 1 ? "s" : ""} installée${apps.length > 1 ? "s" : ""}</span></h3>
+        <p class="muted">Les autres versions d'E.N.O.S. installées sur ce téléphone (TEST, anciennes éditions). Android demande de confirmer chaque désinstallation.</p>
+        <div class="cl-list">${apps.map((a) => `<div class="cl-app${a.self ? " self" : ""}"><div><b>${esc(a.label)}</b><small>${esc(a.pkg)} · v${esc(a.version)} · ${size(a.size)}${a.updated ? " · mise à jour le " + day(a.updated) : ""}</small></div>
+          ${a.self ? `<span class="cl-tag">Celle-ci</span>` : `<button class="btn" data-un="${esc(a.pkg)}">Désinstaller</button>`}</div>`).join("") || `<p class="muted">Aucune autre version.</p>`}</div>
+        ${others.length > 1 ? `<button class="btn pri wide" data-un-all>Tout désinstaller (${others.length} · ${size(tot)})</button>` : ""}${!others.length ? `<p class="cl-ok">Rien à nettoyer : seule cette version est installée.</p>` : ""}</div>`;
+      box.querySelectorAll("[data-un]").forEach((b) => (b.onclick = () => { if (!N.uninstallApp(b.dataset.un)) E.ui.toast("Désinstallation impossible.", "err"); }));
+      const all = box.querySelector("[data-un-all]");
+      if (all) all.onclick = () => { queue = others.map((a) => a.pkg); next(); };
+    };
+    // « tout désinstaller » : une fenêtre système après l'autre (on passe à la suivante quand l'application revient au premier plan)
+    let queue = [];
+    const next = () => { const p = queue.shift(); if (p && !N.uninstallApp(p)) next(); };
+    const onVis = () => { if (document.hidden) return; if (!box.isConnected) return document.removeEventListener("visibilitychange", onVis); setTimeout(() => { draw(); if (queue.length) next(); }, 400); };
+    document.addEventListener("visibilitychange", onVis);
+    draw();
+  }
 
   // ------------------------------------------------------------------ Espace CEO › générateur de clés + révocateur (compte CEO du serveur requis : c'est lui qui signe)
   const PLAB = (id) => { const p = BY[id] || BY.eto_free; return `<i class="pl-tag" style="--c:${p.color}">${esc(p.tier)}</i>`; };

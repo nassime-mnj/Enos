@@ -7,7 +7,7 @@ with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(60000)
     pg.add_style_tag(content="#toasts{display:none!important}")
     open_tool(pg, "flick"); pg.wait_for_selector("#tool-flick .gm-mode")
-    pg.click('#tool-flick .gm-mode[data-m="bots"]')
+    pg.click('#tool-flick .gm-mode[data-m="party"]')
     check(pg.locator('#tool-flick .gm-imgs [data-v="fr"] img').count() == 2, "drapeaux affichés en images dans le salon")
     pg.click('#tool-flick .gm-opt[data-k="mode"] [data-v="foot"]'); pg.click('#tool-flick .gm-opt[data-k="goals"] [data-v="3"]')
     check(pg.locator('#tool-flick .gm-opt[data-k="decor"] button').count() == 8, "8 décors proposés (Stade, Sakura, Océan, Automne, Rue, Volcan, Tempête, Arène ETO)")

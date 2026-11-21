@@ -7,7 +7,7 @@ with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(60000)
     pg.add_style_tag(content="#toasts{display:none!important}")
     open_tool(pg, "bowling"); pg.wait_for_selector("#tool-bowling .gm-mode")
-    pg.click('#tool-bowling .gm-mode[data-m="bots"]')
+    pg.click('#tool-bowling .gm-mode[data-m="party"]')
     check(pg.locator('#tool-bowling .gm-opt[data-k="decor"] button').count() == 8, "8 décors proposés")
     pg.click('#tool-bowling .gm-opt[data-k="decor"] [data-v="eto"]'); pg.click('#tool-bowling .gm-count:not(.gm-opt) [data-n="2"]')
     pg.click("#tool-bowling #gm-go")

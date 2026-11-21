@@ -7,7 +7,7 @@ with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(60000)
     pg.add_style_tag(content="#toasts{display:none!important}")
     open_tool(pg, "golf"); pg.wait_for_selector("#tool-golf .gm-mode")
-    pg.click('#tool-golf .gm-mode[data-m="bots"]')
+    pg.click('#tool-golf .gm-mode[data-m="party"]')
     check(pg.locator('#tool-golf .gm-opt[data-k="decor"] button').count() == 5, "5 décors (Lagon, Forêt, Rue, Volcan, Tempête)")
     pg.click('#tool-golf .gm-opt[data-k="holes"] [data-v="3"]'); pg.click('#tool-golf .gm-opt[data-k="decor"] [data-v="lagon"]')
     pg.click('#tool-golf .gm-count:not(.gm-opt) [data-n="2"]')

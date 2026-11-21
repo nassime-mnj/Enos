@@ -570,6 +570,46 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.120 — Sons d'ambiance, salon mixte, ENOS Cleaner, Clip Edit + MultiEdit, jeux sur PC
+- **Sons** (fichiers fournis par le propriétaire ; à remplacer s'ils doivent être diffusés publiquement : ils sont sous droits) :
+  - **but au foot** (Flick, mode foot uniquement) : jingle de but Rocket League (`flick.goalrl`) ;
+  - **plage / océan** (décor Océan, Lagon du golf) : vagues en boucle de 56 s (`amb.ocean`) ;
+  - **tempête** : pluie et orage en boucle (`amb.storm`) ;
+  - la foule ne joue plus qu'au Stade et dans l'Arène ETO (plus de public sur la plage, sous l'orage, dans la rue ou le volcan). S'applique à Flick, Néo-Cité, Bowling et Mini-golf (`api.ambience`).
+  - Ambiances dans `js/games/sfx_amb_data.js`, chargé seulement si un décor les demande ; banque régénérée par `tools/gen_game_sfx.py` (sons existants inchangés).
+- **Salon mixte** : un seul mode « Partie ». Chaque place est un joueur (sur ce téléphone) ou un bot : par exemple 3 joueurs et 4 bots.
+  - Un seul humain : Victoire / Défaite comme avant.
+  - Plusieurs humains : rideaux / écrans de passage, et les bots jouent leur tour normalement.
+  - Loup-garou mixte : écrans de passage pour les humains, les bots parlent au débat et votent.
+- **ENOS Cleaner** (Espace CEO) :
+  - liste les versions d'E.N.O.S. / Eto installées (`com.nasko.*`), avec version, taille et date ;
+  - « Désinstaller » ouvre la fenêtre Android de confirmation, « Tout désinstaller » les enchaîne une à une ;
+  - Java : `LocalBridge.enosApps`, `uninstallApp` ; manifeste : `REQUEST_DELETE_PACKAGES` et `<queries>`.
+- **Catégorie Clip Edit** (icône clap) : Chess Edit et Game Clips en sous-catégorie, plus **MultiEdit**.
+- **MultiEdit** (`js/m_multiedit.js`) :
+  - tu composes une série (Foot, Néo-Cité, Échecs, Mini-golf, Bowling) et tes adversaires, puis tu les joues l'un après l'autre (« Jeu suivant » à la fin de chaque partie) ;
+  - pendant les parties 3D, chaque action est filmée depuis le canvas (`js/games/highlights.js`, MediaRecorder) puis notée :
+    - foot : buts (bonus par rebond, vitesse, distance) et poteaux ;
+    - golf : trous en un, birdies, loopings, chutes à l'eau ;
+    - bowling : strikes, spares, gouttières ;
+    - Néo-Cité : gros loyers, Réserve, faillites, prison ;
+  - les 5 meilleurs moments de chaque jeu sont gardés ;
+  - échecs : partie dans Défis contre le bot choisi, puis l'edit habituel de Chess Edit (même timeline, mêmes bruitages) ;
+  - montage vertical 720×1280 :
+    - intro « MULTI EDIT » ;
+    - carte de transition par jeu (nom, adversaires, résultat) ;
+    - moments démarrés juste avant l'action, ralenti au moment clé, zoom « coup de poing », flash, titre animé (« BUT · 3 REBONDS », « −1 250 € », « STRIKE ! ») ;
+    - récap final ;
+  - musique : ton fichier, ou un beat généré (sans droits) ; bruitages d'impact et de transition.
+- **Bowling** : option Partie 10 / 5 / 3 frames (MultiEdit utilise 3).
+- **Version PC** :
+  - `static/learn` reçoit les jeux (mêmes fichiers, copiés par `build_learn_data.py --sync`) : rail « Jeux » avec Flick, Mini-golf, Bowling, Néo-Cité, Loup-garou, Dames, Poker, CHROMA ;
+  - même salon, même 3D, à la souris.
+- Tests :
+  - nouveaux : `t_multiedit.py`, `t_pc_games.py` ;
+  - mis à jour pour le salon mixte : `t_loup.py` (partie à 2 humains + 4 bots), `t_dames.py`, `t_chroma.py`, `t_poker.py`, etc. ;
+  - `t_hub.py` : 9 catégories.
+
 ## 1.119 — Villes et drapeaux visibles, golf corrigé, loup-garou au rythme lisible
 - **Cases noires de Néo-Cité / drapeaux absents dans Flick** : dans l'application, la page est en `file://` ; une image chargée depuis un fichier « salit » le canvas et WebGL refuse la texture (vérifié : `SecurityError` en file://, rien en http://, d'où des tests verts). Les images utilisées dans des textures 3D sont désormais embarquées en `data:` (`tools/pack_game_images.py` → `js/games/img_pack_neocite.js`, `img_pack_flags.js`, chargés à l'ouverture du jeu ; `G3.pack`, `G3.src`).
 - **Golf** :

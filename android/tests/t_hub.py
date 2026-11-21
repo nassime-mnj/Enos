@@ -1,4 +1,4 @@
-"""Hub des modules : 7 catégories, tuiles sans description, tous les modules rangés, recherche, récents, transitions et animation de clic, profil échecs, accueil des Défis."""
+"""Hub des modules : 9 catégories, tuiles sans description, tous les modules rangés, recherche, récents, transitions et animation de clic, profil échecs, accueil des Défis."""
 from mobile_common import *
 
 errs = []
@@ -6,8 +6,8 @@ with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(60000)
     pg.evaluate("ENOS.ui.go('tools')"); pg.wait_for_selector(".hub-cat"); pg.wait_for_timeout(1500)
     labs = pg.evaluate("[...document.querySelectorAll('.hub-cl')].map((x) => x.firstChild.textContent.trim())")
-    check(labs == ["Échecs", "Cloud", "Paramètres", "Codage", "Outils", "Organisation", "Ordinateur"], "7 catégories dans l'ordre de ta maquette : %s" % labs)
-    check(pg.evaluate("document.querySelectorAll('.hub-cat .hub-ci svg.hi').length") == 7 and pg.evaluate("(() => { const i = document.querySelector('.hub-cat.feat img.ob-art'); return !!i && i.complete && i.naturalWidth > 100; })()"), "icônes duotone + cavalier de la carte Échecs (thème Obsidian)")
+    check(labs == ["Échecs", "Jeux", "Clip Edit", "Cloud", "Paramètres", "Codage", "Outils", "Organisation", "Ordinateur"], "9 catégories (Échecs, Jeux, Clip Edit en tête) : %s" % labs)
+    check(pg.evaluate("document.querySelectorAll('.hub-cat .hub-ci svg.hi').length") == 9 and pg.evaluate("(() => { const i = document.querySelector('.hub-cat.feat img.ob-art'); return !!i && i.complete && i.naturalWidth > 100; })()"), "icônes duotone + cavalier de la carte Échecs (thème Obsidian)")
     # tous les modules sont rangés quelque part
     miss = pg.evaluate("ENOS.modules.all().filter((id) => !ENOS.hub.has(id) && !['chess','learn'].includes(id) || false)")
     miss = [m for m in miss if m not in ("chess",)]
@@ -17,6 +17,8 @@ with sync_playwright() as pw:
     pg.click('.hub-cat[data-c="echecs"]'); pg.wait_for_timeout(120)
     fly_mid = pg.evaluate("document.querySelectorAll('.hub-fly').length")
     pg.wait_for_timeout(1100)
+    try: pg.wait_for_function("document.querySelectorAll('.hub-fly').length === 0", timeout=4000)
+    except Exception: pass
     secs = pg.evaluate("[...document.querySelectorAll('.hub-sec h4')].map((h) => h.textContent)")
     check(fly_mid == 1 and pg.evaluate("document.querySelectorAll('.hub-fly').length") == 0, "l'icône voyage vers l'en-tête puis disparaît (pendant : %d)" % fly_mid)
     check(secs == ["Jouer", "Affronter", "Apprendre", "Analyser", "Créer", "Profil", "Les adversaires"], "sections façon Chess.com (+ défilé des adversaires) : %s" % secs)
@@ -38,7 +40,7 @@ with sync_playwright() as pw:
     check(True, "« Fourchettes » ouvre les puzzles")
     pg.evaluate("ENOS.tools.show('')"); pg.wait_for_selector("#hub-back")
     pg.click("#hub-back"); pg.wait_for_selector(".hub-cat", state="visible"); pg.wait_for_function("ENOS.hub.cur() === null", timeout=5000)
-    check(pg.evaluate("ENOS.hub.cur()") is None and pg.locator(".hub-cat").count() == 7, "retour à l'accueil du hub")
+    check(pg.evaluate("ENOS.hub.cur()") is None and pg.locator(".hub-cat").count() == 9, "retour à l'accueil du hub")
     # récents + recherche
     rec = pg.evaluate("[...document.querySelectorAll('.hub-chip')].map((c) => c.dataset.id)"); check(len(rec) >= 1 and "defis" in rec or "learn" in rec or "chessprofile" in rec, "récents : %s" % rec)
     pg.fill("#hub-q", "bullet"); pg.wait_for_timeout(200)

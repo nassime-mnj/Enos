@@ -8,8 +8,8 @@ with sync_playwright() as pw:
     stacks = []; pg.on("pageerror", lambda e: stacks.append((e.stack or str(e))[:500]))
     pg.add_style_tag(content="#toasts{display:none!important}")
     open_tool(pg, "poker"); pg.wait_for_selector("#tool-poker .gm-mode")
-    pg.click('#tool-poker .gm-mode[data-m="bots"]'); pg.click('#tool-poker .gm-count:not(.gm-lvl):not(.gm-opt) [data-n="6"]')
-    check(pg.locator("#tool-poker .gm-bots .bp-slot").count() == 5, "6 joueurs : 5 bots")
+    pg.click('#tool-poker .gm-mode[data-m="party"]'); pg.click('#tool-poker .gm-count:not(.gm-lvl):not(.gm-opt) [data-n="6"]')
+    check(pg.locator("#tool-poker .gm-seats .bp-slot").count() == 5, "6 joueurs : 5 bots")
     pg.click("#tool-poker #gm-go"); pg.wait_for_selector("#gm-stage canvas.g3-canvas")
     pg.wait_for_function("ENOS.jeux.cur && ENOS.jeux.cur.inst && ENOS.jeux.cur.inst._st", timeout=60000)
     check(pg.evaluate(S + ".hole[0].length") == 2, "2 cartes distribuées")
@@ -18,7 +18,8 @@ with sync_playwright() as pw:
     check(pg.locator(".pk-seat").count() == 5, "5 sièges adverses autour de la table")
     acted = 0
     for _ in range(6):
-        pg.wait_for_function("(() => { const s = %s; return s.over || (s.turn === 0 && !s.result && !ENOS.jeux.cur.inst._busy()) || document.querySelector('.pk-res'); })()" % S, timeout=90000)
+        pg.wait_for_function("(() => { const s = %s; return s.over || (s.turn === 0 && !s.result && !ENOS.jeux.cur.inst._busy()) || document.querySelector('.pk-res') || document.querySelector('#gm-end:not([hidden])'); })()" % S, timeout=90000)
+        if pg.locator("#gm-end:not([hidden])").count(): check(True, "tapis perdu : fin de partie"); break
         if pg.locator(".pk-res").count():
             check(True, "fin de main : " + pg.inner_text(".pk-res b")); pg.click(".pk-res button"); pg.wait_for_timeout(1500); continue
         pg.wait_for_selector("#pk-acts:not([hidden])", timeout=5000)
@@ -50,7 +51,7 @@ with sync_playwright() as pw:
     check("Victoire" in pg.inner_text("#gm-end"), "fin : Victoire (" + pg.inner_text("#gm-end p") + ")")
     pg.click('#gm-end [data-a="quit"]')
     # local à 2 : rideau
-    open_tool(pg, "poker"); pg.click('#tool-poker .gm-mode[data-m="local"]'); pg.click('#tool-poker .gm-count:not(.gm-lvl):not(.gm-opt) [data-n="2"]')
+    open_tool(pg, "poker"); pg.click('#tool-poker .gm-mode[data-m="party"]'); pg.click('#tool-poker .gm-count:not(.gm-lvl):not(.gm-opt) [data-n="2"]'); all_humans(pg, 'poker')
     pg.click("#tool-poker #gm-go"); pg.wait_for_selector(".ch-curtain", timeout=60000)
     check(pg.locator("#pk-hand img.pk-c").count() == 0, "local : cartes cachées derrière le rideau")
     pg.click(".ch-curtain button"); pg.wait_for_timeout(500)

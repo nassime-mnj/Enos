@@ -3,12 +3,16 @@
 // Intégrée dans l'interface d'ENOS (iframe), la page propose un bouton FERMER qui prévient la fenêtre parente. #advisor dans l'adresse ouvre directement le Conseiller.
 (() => {
   const E = window.ENOS, $ = (s) => document.querySelector(s);
-  const built = {};
+  const built = {}, GAME_IDS = ["flick", "golf", "bowling", "neocite", "loup", "dames", "poker", "chroma"];
   const load = (src) => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error(src + " introuvable")); document.head.appendChild(s); });
   const need = { advisor: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_tools.js", "chess_course.js", "board_scan.js", "m_advisor.js"], game: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_tools.js", "chess_viewer.js"], course: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_tools.js", "chess_course.js"], arena: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "data/style_bots.js", "m_defis.js", "arena.js"], royale: ["chess4.js", "chess4_ai.js", "m_royale.js"], variants: ["variants.js", "m_variants.js"], prime: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "levy_data.js", "fahh_data.js", "edit_sfx_data.js", "edit_fonts_data.js", "chess_edit_audio.js", "chess_edit_map.js", "chess_edit_fx.js", "chess_edit_sfx.js", "mp4-muxer.js", "render_assets.js", "chess_edit_render.js", "chess_edit_scenes.js", "chess_edit_simul.js", "chess_edit_gl.js", "chess_edit_export.js", "m_chessedit.js", "prime.js", "m_prime.js"],
     chessedit: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "chess_review.js", "levy_data.js", "fahh_data.js", "edit_sfx_data.js", "edit_fonts_data.js", "chess_edit_audio.js", "chess_edit_map.js", "chess_edit_fx.js", "chess_edit_sfx.js", "mp4-muxer.js", "render_assets.js", "chess_edit_render.js", "chess_edit_scenes.js", "chess_edit_simul.js", "chess_edit_gl.js", "chess_edit_export.js", "m_chessedit.js"],
     clips: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "levy_data.js", "fahh_data.js", "edit_sfx_data.js", "edit_fonts_data.js", "chess_edit_audio.js", "chess_edit_map.js", "chess_edit_fx.js", "chess_edit_sfx.js", "mp4-muxer.js", "render_assets.js", "chess_edit_render.js", "chess_edit_scenes.js", "chess_edit_simul.js", "chess_edit_gl.js", "chess_edit_export.js", "m_chessedit.js", "prime.js", "clips.js", "m_clips.js"],
     backup: ["backup.js", "m_backup.js"],
+    // jeux : socle 3D + sons + salon commun, puis tous les jeux (chargés une fois, au premier jeu ouvert)
+    games: ["js/games/g3d.js", "js/games/sfx_bank.js", "js/games/sfx.js", "js/games/highlights.js", "js/games/core.js", "js/games/dames_rules.js", "js/games/g_dames.js", "js/games/chroma_rules.js", "js/games/g_chroma.js",
+      "js/games/flick_rules.js", "js/games/flick_decor.js", "js/games/decor_more.js", "js/games/g_flick.js", "js/games/poker_rules.js", "js/games/g_poker.js", "js/games/neocite_rules.js", "js/games/neocite_art.js", "js/games/g_neocite.js",
+      "js/games/golf_rules.js", "js/games/g_golf.js", "js/games/bowling_rules.js", "js/games/g_bowling.js", "js/games/loup_rules.js", "js/games/g_loup.js"],
     simul: ["stockfish_src.js", "chess_local.js", "chess_brain.js", "data/style_bots.js", "m_simul.js"] };
 
   async function show(t) {
@@ -46,10 +50,10 @@
       } catch (e) { $("#app-game").innerHTML = `<div class="card"><p class="muted">Revue indisponible : ${E.esc(e.message)}</p></div>`; }
       return;
     }
-    if (built[t]) return;
+    if (built[t]) { const m0 = GAME_IDS.includes(t) && E.suite.modules.find((x) => x.id === t); if (m0 && m0.onShow) m0.onShow(); return; }
     built[t] = true;
     try {
-      for (const f of need[t] || []) { if (!built["f:" + f]) { await load(f); built["f:" + f] = true; } }
+      for (const f of need[t] || (GAME_IDS.includes(t) ? need.games : [])) { if (!built["f:" + f]) { await load(f); built["f:" + f] = true; } }
       const m = E.suite.modules.find((x) => x.id === t);
       m.build($("#app-" + t), E.suite.api);
     } catch (e) { $("#app-" + t).innerHTML = `<div class="card"><p class="muted">Module indisponible : ${E.esc(e.message)}</p></div>`; built[t] = false; }
@@ -59,7 +63,7 @@
   document.querySelectorAll("[data-i]").forEach((b) => b.insertAdjacentHTML("afterbegin", E.hubIcon(b.dataset.i)));          // icônes de la barre latérale
   const ti = $("#top-search .ts-i"), tp = $("#top-play .tp-i"); if (ti) ti.outerHTML = E.hubIcon("search"); if (tp) tp.outerHTML = E.hubIcon("play");
   if (E.hub) E.hub.init();
-  const H = location.hash.slice(1), TABS = ["advisor", "course", "game", "arena", "simul", "royale", "variants", "chessedit", "clips", "backup", "learn", "prime"];
+  const H = location.hash.slice(1), TABS = [...GAME_IDS, "advisor", "course", "game", "arena", "simul", "royale", "variants", "chessedit", "clips", "backup", "learn", "prime"];
   show(TABS.includes(H) ? H : "hub");
   if (window.parent !== window) {
     const b = $("#close");

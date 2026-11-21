@@ -4,12 +4,12 @@ errs = []
 SH = (os.environ.get("SHOTS") or "/tmp") + "/"
 with sync_playwright() as pw:
     b, ctx = launch(pw); pg = open_app(ctx, errs); pg.set_default_timeout(60000)
-    open_tool(pg, "dames"); pg.click('#tool-dames .gm-mode[data-m="bots"]'); pg.wait_for_selector("#tool-dames .gm-bots .bp-slot")
+    open_tool(pg, "dames"); pg.click('#tool-dames .gm-mode[data-m="party"]'); pg.wait_for_selector("#tool-dames .gm-seats .bp-slot")
     check(pg.locator("#tool-dames .gm-lvl").count() == 0, "plus de sélecteur de niveau global : la classe vient du bot")
-    chip = pg.inner_text("#tool-dames .gm-bots .bp-slot")
-    check("Elo" not in chip and pg.locator("#tool-dames .gm-bots .gm-cls").count() >= 1, "puce adversaire : classe affichée, pas d'Elo (" + chip.replace("\n", " ") + ")")
+    chip = pg.inner_text("#tool-dames .gm-seats .bp-slot")
+    check("Elo" not in chip and pg.locator("#tool-dames .gm-seats .gm-cls").count() >= 1, "puce adversaire : classe affichée, pas d'Elo (" + chip.replace("\n", " ") + ")")
     pg.screenshot(path=SH + "gbots_lobby.png")
-    pg.click("#tool-dames .gm-bots .bp-slot"); pg.wait_for_selector("#sheet .gm-roster")
+    pg.click("#tool-dames .gm-seats .bp-slot"); pg.wait_for_selector("#sheet .gm-roster")
     txt = pg.inner_text("#sheet")
     check("Elo" not in txt and "Stockfish" not in txt and "Magnus" not in txt, "liste : aucun bot d'échecs extérieur, aucun Elo")
     names = pg.eval_on_selector_all("#sheet [data-b]", "els => els.map((e) => e.dataset.b)")

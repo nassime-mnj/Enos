@@ -151,13 +151,15 @@
         if (!running) { ballTrail.push(st.ball.x, st.ball.z, 0); st.bodies.forEach((b, i) => discTrails[i].push(b.x, b.z, 0)); return; }
         const dt = real, sub = Math.max(4, Math.ceil(dt / (1 / 240))); let res = null;
         for (let k = 0; k < sub; k++) { res = F.step(st, dt / sub); if (res.goal != null) break;
+          if (shotSt) for (const im of res.impacts || []) if (im.ball && (im.k === "wall" || im.k === "post") && im.v > 0.3) { shotSt.bounces++; if (im.k === "post") shotSt.post = true; }
           for (const im of res.impacts || []) if (im.v > 0.25) { const inten = Math.min(1, im.v / (m.max * 0.7)); api.sfx("flick." + im.k, { intensity: inten, pan: im.x / hw, rate: ice ? 1.12 : 1 });
             if (inten > 0.25) { sparks(im.x, im.z == null ? 0 : im.z, Math.round(4 + inten * 10), im.k === "ball" ? "#ffffff" : im.k === "post" ? "#ffe39a" : theme === "eto" ? "#ff3d63" : "#ffffff", 1.5 + inten * 3); if (inten > 0.55) S.shake(0.04 + inten * 0.08, 0.2); } } }
         if (!ice) { const sp = Math.hypot(st.ball.vx, st.ball.vz); if (sp > 0) { roll.set(st.ball.vz, 0, -st.ball.vx).normalize(); ballM.rotateOnWorldAxis(roll, (sp * dt) / m.ball); } }
         sync();
         ballTrail.push(st.ball.x, st.ball.z, Math.hypot(st.ball.vx, st.ball.vz)); st.bodies.forEach((b, i) => discTrails[i].push(b.x, b.z, Math.hypot(b.vx, b.vz)));
         if (res.goal != null) { running = false; return goal(res.goal); }
-        if (!F.moving(st)) { running = false; F.endShot(st, null); score(); setTimeout(turn, 250); }
+        if (!F.moving(st)) { running = false; F.endShot(st, null); score(); setTimeout(turn, 250);
+          if (shotSt) { const s0 = shotSt; shotSt = null; if (s0.post) api.clip.end({ score: 30 + s0.bounces * 5, label: "POTEAU !", sub: P[s0.team].name }, 200); else api.clip.cancel(); } }
       });
       // ---- bannière et flash
       const banner = (team, kmh, tier) => { const d = document.createElement("div"); d.className = "fl-goal t" + team; d.innerHTML = `<b>BUT !</b><span>${kmh} km/h${tier ? ` · ${tier}` : ""}</span>`; api.stage.appendChild(d); setTimeout(() => d.remove(), 2200);
@@ -173,19 +175,23 @@
         punch = { t: 0, d: 0.9, a: 0.6 + pow * 0.6, to: new T.Vector3(b.x, 0.3, sgn * hl) };
         shock(b.x, sgn * hl, TEAM[team], 4 + pow * 6); shock(b.x, sgn * hl, 0xffffff, 2 + pow * 3);
         sparks(b.x, sgn * hl, 30 + Math.round(pow * 30), team ? "#ff3d63" : "#45d8ff", 3 + pow * 4); confetti(b.x, sgn * (hl - 0.5), team ? ["#ff3d63", "#ffffff", "#e8b54a"] : ["#45d8ff", "#ffffff", "#e8b54a"]);
-        api.vibrate([30, 40, Math.round(60 + pow * 120)]); api.sfx("flick.post", { intensity: pow, rate: 0.8 }); api.sfx("flick.goal", { vol: 0.6 + pow * 0.4 }); api.sfx("fx.stinger", { vol: 0.5 + pow * 0.4 });
+        api.vibrate([30, 40, Math.round(60 + pow * 120)]); api.sfx("flick.post", { intensity: pow, rate: 0.8 }); if (!ice) api.sfx("flick.goalrl"); if (api.crowd(theme)) api.sfx("flick.goal", { vol: 0.6 + pow * 0.4 }); api.sfx("fx.stinger", { vol: 0.5 + pow * 0.4 });
         banner(team, kmh, tier);
+        api.clip.mark("but"); { const s0 = shotSt || { bounces: 0, team }; shotSt = null; const far = Math.abs(b.z - (s0.z0 == null ? b.z : s0.z0));
+          api.clip.end({ score: 100 + s0.bounces * 35 + kmh * 0.6 + far * 6, label: s0.bounces >= 2 ? "BUT · " + s0.bounces + " REBONDS" : s0.bounces === 1 ? "BUT EN UN REBOND" : "BUT !", sub: `${P[team].name} · ${kmh} km/h`, team, kmh, bounces: s0.bounces, score2: st.score.slice() }, 1700); }
         F.endShot(st, team); score();
         await new Promise((r) => setTimeout(r, 2000)); if (!alive) return;
         if (st.over) return api.end(st.over.winner, st.score.join(" – "));
         ballTrail.clear(); discTrails.forEach((x) => x.clear()); sync(); turn();
       };
       // ---- tir : souffle, poussière, rafale de vent
-      const kick = (i, power) => { const b = st.bodies[i]; api.sfx("flick.shot", { intensity: power }); decor.gust(0.6 + power * 1.6); if (power > 0.55) S.shake(0.03 + power * 0.06, 0.18); shock(b.x, b.z, 0xffffff, 1 + power * 1.8); sparks(b.x, b.z, Math.round(power * 8), "#ffffff", 1.2); };
+      let shotSt = null;                                                       // temps forts (MultiEdit) : rebonds de la balle, poteau, puissance
+      const kick = (i, power) => { const b = st.bodies[i]; api.clip.begin("tir"); shotSt = { bounces: 0, post: false, power, team: st.turn, z0: st.ball.z }; api.sfx("flick.shot", { intensity: power }); decor.gust(0.6 + power * 1.6); if (power > 0.55) S.shake(0.03 + power * 0.06, 0.18); shock(b.x, b.z, 0xffffff, 1 + power * 1.8); sparks(b.x, b.z, Math.round(power * 8), "#ffffff", 1.2); };
       // ---- tours
       const turn = async () => {
         if (!alive || st.over) return; score(); selRing.visible = false; aimG.visible = false;
         if (bot && st.turn === 1) {
+          api.clip.begin("tir");
           await new Promise((r) => setTimeout(r, 500)); if (!alive) return;
           const sh = F.bestShot(st, P[1].level || "normal"); const b = st.bodies[sh.idx]; selRing.visible = true; selRing.position.set(b.x, 0, b.z);
           await G3.tween(0.6, (k) => showAim(b, sh.dx, sh.dz, sh.power * k)); await new Promise((r) => setTimeout(r, 150));
@@ -196,7 +202,7 @@
       let drag = null;
       const cv = S.renderer.domElement;
       cv.addEventListener("pointerdown", (e) => {
-        if (running || slow || st.over || (bot && st.turn === 1)) return; const p = S.ground(e.clientX, e.clientY, 0.1); if (!p) return;
+        if (running || slow || st.over || (bot && st.turn === 1)) return; const p = S.ground(e.clientX, e.clientY, 0.1); if (!p) return; api.clip.begin("tir");
         let best = -1, bd = 1e9; st.bodies.forEach((b, i) => { if (b.t !== st.turn) return; const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < bd) { bd = d; best = i; } });
         if (best < 0 || bd > m.disc * 2.2) return;
         drag = { i: best, x0: p.x, z0: p.z }; selRing.visible = true; selRing.position.set(st.bodies[best].x, 0, st.bodies[best].z); cv.setPointerCapture && cv.setPointerCapture(e.pointerId); api.vibrate(6);
@@ -208,7 +214,7 @@
       surf.visible = !decor.hideSurface || ice;
       Object.values(nets).forEach(() => {});
       turn();
-      api.loop("flick.amb", { vol: theme === "eto" ? 1 : 0.55 });
+      api.ambience(theme, api.crowd(theme) ? "flick.amb" : null, theme === "eto" ? 1 : 0.7);
       return { destroy: () => { alive = false; S.dispose(); }, _st: () => st, _theme: () => theme, _intro: () => intro,
         _shoot: (i, dx, dz, p) => { if (running || slow) return false; const ok = F.shoot(st, i, dx, dz, p); if (ok) { kick(i, p); running = true; } return ok; } };
     },

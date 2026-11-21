@@ -21,7 +21,7 @@ with sync_playwright() as pw:
     check(not res["quiet"], "aucun fichier silencieux : %s" % res["quiet"][:3])
     check(not res["notPlayed"], "chaque événement se joue : %s" % res["notPlayed"][:5])
     # écran de jeu : bouton son + jeu sonorisé
-    open_tool(pg, "chroma"); pg.click('#tool-chroma .gm-mode[data-m="bots"]'); pg.click("#tool-chroma #gm-go"); pg.wait_for_selector("#gm-stage .gm-snd")
+    open_tool(pg, "chroma"); pg.click('#tool-chroma .gm-mode[data-m="party"]'); pg.click("#tool-chroma #gm-go"); pg.wait_for_selector("#gm-stage .gm-snd")
     pg.evaluate("window.__snd = []; const p = ENOS.gsfx.play; ENOS.gsfx.play = (ev, o) => { window.__snd.push(ev); return p(ev, o); }; 0")
     pg.wait_for_function("window.__snd.some((e) => typeof e === 'string' && e.startsWith('card.'))", timeout=30000)
     evs = pg.evaluate("window.__snd.map(String)"); check("null" not in evs and "undefined" not in evs, "CHROMA joue ses sons : " + ", ".join(sorted(set(evs))))

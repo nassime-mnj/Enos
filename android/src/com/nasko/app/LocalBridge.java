@@ -411,6 +411,54 @@ final class LocalBridge {
         return ok() ? act.webUpdateInfo() : "{}";
     }
 
+    // ------------------------------------------------------------------ ENOS Cleaner (espace CEO) : versions d'E.N.O.S. / Eto installées sur le téléphone
+    /** [{pkg, label, version, code, installed, updated, size, self}] pour les paquets com.nasko.* (application normale, version TEST, anciennes éditions) */
+    @JavascriptInterface
+    public String enosApps() {
+        if (!ok()) return "[]";
+        try {
+            android.content.pm.PackageManager pm = act.getPackageManager();
+            org.json.JSONArray out = new org.json.JSONArray();
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
+            android.content.Intent main = new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+            java.util.List<String> pkgs = new java.util.ArrayList<>();
+            for (android.content.pm.ResolveInfo ri : pm.queryIntentActivities(main, 0)) pkgs.add(ri.activityInfo.packageName);
+            for (String k : new String[]{"com.nasko.app", "com.nasko.app.test"}) pkgs.add(k);
+            for (String pkg : pkgs) {
+                if (pkg == null || !pkg.startsWith("com.nasko") || !seen.add(pkg)) continue;
+                android.content.pm.PackageInfo pi;
+                try { pi = pm.getPackageInfo(pkg, 0); } catch (Exception notInstalled) { continue; }
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("pkg", pkg);
+                o.put("label", String.valueOf(pi.applicationInfo.loadLabel(pm)));
+                o.put("version", pi.versionName == null ? "" : pi.versionName);
+                o.put("code", android.os.Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode);
+                o.put("installed", pi.firstInstallTime);
+                o.put("updated", pi.lastUpdateTime);
+                o.put("size", new java.io.File(pi.applicationInfo.sourceDir).length());
+                o.put("self", pkg.equals(act.getPackageName()));
+                out.put(o);
+            }
+            return out.toString();
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    /** ouvre la fenêtre système de désinstallation (l'utilisateur confirme) ; refusé pour l'application en cours et hors com.nasko.* */
+    @JavascriptInterface
+    public boolean uninstallApp(String pkg) {
+        if (!ok() || pkg == null || !pkg.matches("com\\.nasko[A-Za-z0-9_.]*") || pkg.equals(act.getPackageName())) return false;
+        try {
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_DELETE, android.net.Uri.parse("package:" + pkg));
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            act.startActivity(i);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @JavascriptInterface
     public void setWebUpdate(String branch, boolean auto) {
         if (ok()) act.setWebUpdate(branch, auto);

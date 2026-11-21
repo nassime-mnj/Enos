@@ -142,6 +142,9 @@
   N.isTestBuild = () => (N.available ? !!(B.isTestBuild && B.isTestBuild()) : true);          // navigateur de développement = environnement de test
   // Mise à jour instantanée du web de l'application depuis GitHub (sans réinstaller l'APK) : {state: uptodate|applied|ready|needs_apk|error, n, msg}
   N.webUpdate = (apply) => oneShot("webupd", (id) => B.webUpdate(id, !!apply));
+  /** ENOS Cleaner : versions installées (com.nasko.*) et désinstallation (fenêtre système, confirmée par l'utilisateur) */
+  N.enosApps = () => (N.available && B.enosApps ? parse(B.enosApps(), []) : []);
+  N.uninstallApp = (pkg) => !!(N.available && B.uninstallApp && B.uninstallApp(String(pkg || "")));
   N.webUpdateInfo = () => (N.available && B.webUpdateInfo ? parse(B.webUpdateInfo(), {}) : { label: "", branch: "main", auto: true });
   N.setWebUpdate = (branch, auto) => { if (N.available && B.setWebUpdate) B.setWebUpdate(String(branch || ""), !!auto); };
   // Super Enos : true = l'entraînement continue en arrière-plan (service de premier plan Android + verrou de réveil), false = relâche

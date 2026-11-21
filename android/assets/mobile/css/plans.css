@@ -240,3 +240,10 @@ body.no-pc #pc-locked,body.no-pc #pc-live{display:none!important}
 .db-spark{width:100%;height:70px;margin-top:12px}
 .db-bars{display:flex;flex-direction:column;gap:7px;margin-top:10px}.db-bars div{display:grid;grid-template-columns:70px 1fr 36px;align-items:center;gap:8px;font:600 12px var(--ui);color:#c9c7cf}
 .db-bars i{display:block;height:8px;border-radius:999px;background:var(--c)}.db-bars em{font-style:normal;text-align:right}
+/* Espace CEO › ENOS Cleaner */
+.cl-list{display:grid;gap:8px;margin:10px 0}
+.cl-app{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#0d0e13;border:1px solid #23242c}
+.cl-app>div{flex:1;min-width:0}.cl-app b{display:block;font:700 14px var(--ui);color:#fff}.cl-app small{display:block;font:500 11.5px/1.4 var(--ui);color:var(--muted);overflow-wrap:anywhere}
+.cl-app.self{border-color:color-mix(in srgb,var(--red,#ef1748) 50%,#23242c)}
+.cl-tag{font:700 11px var(--ui);padding:4px 9px;border-radius:999px;background:rgba(239,23,72,.16);color:#ff6d88}
+.cl-ok{margin:6px 0 0;font:600 13px var(--ui);color:#4ade80}

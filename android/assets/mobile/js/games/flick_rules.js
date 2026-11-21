@@ -31,18 +31,18 @@
       b.x += b.vx * dt; b.z += b.vz * dt;
       const sp = Math.hypot(b.vx, b.vz); if (sp > 0) { const ns = Math.max(0, sp - m.fric * dt * (b === s.ball ? 0.8 : 1) - sp * 0.15 * dt); b.vx *= ns / sp; b.vz *= ns / sp; }
       // murs latéraux
-      if (b.x - b.r < -hw) { impacts.push({ k: "wall", v: Math.abs(b.vx), x: b.x, z: b.z }); b.x = -hw + b.r; b.vx = Math.abs(b.vx) * m.rest; hits.push("wall"); } else if (b.x + b.r > hw) { impacts.push({ k: "wall", v: Math.abs(b.vx), x: b.x, z: b.z }); b.x = hw - b.r; b.vx = -Math.abs(b.vx) * m.rest; hits.push("wall"); }
+      if (b.x - b.r < -hw) { impacts.push({ k: "wall", v: Math.abs(b.vx), x: b.x, z: b.z, ball: b === s.ball }); b.x = -hw + b.r; b.vx = Math.abs(b.vx) * m.rest; hits.push("wall"); } else if (b.x + b.r > hw) { impacts.push({ k: "wall", v: Math.abs(b.vx), x: b.x, z: b.z, ball: b === s.ball }); b.x = hw - b.r; b.vx = -Math.abs(b.vx) * m.rest; hits.push("wall"); }
       // lignes de fond (ouverture du but pour la balle uniquement ; les palets restent sur le terrain)
       const inMouth = Math.abs(b.x) < gh - (b === s.ball ? b.r * 0.2 : 0);
       if (b === s.ball && inMouth) {
         if (b.z < -hl - b.r) return { goal: 0, hits, impacts };
         if (b.z > hl + b.r) return { goal: 1, hits, impacts };
         // poteaux
-        for (const px of [-gh, gh]) for (const pz of [-hl, hl]) { const dx = b.x - px, dz = b.z - pz, d = Math.hypot(dx, dz); if (d < b.r && d > 0) { const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz; if (vn < 0) { impacts.push({ k: "post", v: -vn, x: b.x, z: b.z }); b.vx -= 1.8 * vn * nx; b.vz -= 1.8 * vn * nz; b.x = px + nx * b.r; b.z = pz + nz * b.r; hits.push("post"); } } }
+        for (const px of [-gh, gh]) for (const pz of [-hl, hl]) { const dx = b.x - px, dz = b.z - pz, d = Math.hypot(dx, dz); if (d < b.r && d > 0) { const nx = dx / d, nz = dz / d, vn = b.vx * nx + b.vz * nz; if (vn < 0) { impacts.push({ k: "post", v: -vn, x: b.x, z: b.z, ball: true }); b.vx -= 1.8 * vn * nx; b.vz -= 1.8 * vn * nz; b.x = px + nx * b.r; b.z = pz + nz * b.r; hits.push("post"); } } }
         // fond des filets : on garde la balle dans la cage
         if (b.z < -hl - 0.6) { b.z = -hl - 0.6; b.vz = Math.abs(b.vz) * 0.3; } if (b.z > hl + 0.6) { b.z = hl + 0.6; b.vz = -Math.abs(b.vz) * 0.3; }
       } else {
-        if (b.z - b.r < -hl) { impacts.push({ k: "wall", v: Math.abs(b.vz), x: b.x, z: b.z }); b.z = -hl + b.r; b.vz = Math.abs(b.vz) * m.rest; hits.push("wall"); } else if (b.z + b.r > hl) { impacts.push({ k: "wall", v: Math.abs(b.vz), x: b.x, z: b.z }); b.z = hl - b.r; b.vz = -Math.abs(b.vz) * m.rest; hits.push("wall"); }
+        if (b.z - b.r < -hl) { impacts.push({ k: "wall", v: Math.abs(b.vz), x: b.x, z: b.z, ball: b === s.ball }); b.z = -hl + b.r; b.vz = Math.abs(b.vz) * m.rest; hits.push("wall"); } else if (b.z + b.r > hl) { impacts.push({ k: "wall", v: Math.abs(b.vz), x: b.x, z: b.z, ball: b === s.ball }); b.z = hl - b.r; b.vz = -Math.abs(b.vz) * m.rest; hits.push("wall"); }
       }
     }
     // collisions entre corps (élastiques, masses)

@@ -14,7 +14,7 @@
   E.jeux.register({
     id: "bowling", title: "Bowling", sub: "Strikes, spares et effet en 3D", hero: "img/games/common/card_bowling.webp", min: 1, max: 4, rules: RULES,
     icon: '<circle cx="9" cy="15" r="6"/><path d="M17 3c-1.5 0-2 1.5-2 3s1 2 1 3-1 1.5-1 4 1 4 2 4 2-1.5 2-4-1-3-1-4 1-1.5 1-3-.5-3-2-3z"/>',
-    options: [{ key: "decor", label: "Décor", def: "eto", choices: [["eto", "Bowling ETO"], ["stade", "Stade"], ["ocean", "Océan"], ["automne", "Automne"], ["sakura", "Sakura"], ["rue", "Rue"], ["volcan", "Volcan"], ["tempete", "Tempête"]] }],
+    options: [{ key: "frames", label: "Partie", def: 10, choices: [[10, "10 frames"], [5, "5 frames"], [3, "3 frames"]] }, { key: "decor", label: "Décor", def: "eto", choices: [["eto", "Bowling ETO"], ["stade", "Stade"], ["ocean", "Océan"], ["automne", "Automne"], ["sakura", "Sakura"], ["rue", "Rue"], ["volcan", "Volcan"], ["tempete", "Tempête"]] }],
     async start(host, setup, api) {
       const P = setup.players, o = setup.opts || {}, DC = E.flickDecor, theme = DC && DC.IDS.includes(o.decor) ? o.decor : "eto";
       const S = await G3.stage(host, { fov: 46, exposure: 1.05, fog: 0.012, cam: [0, 1.35, 2.6], look: [0, 0.2, -8], bloom: { strength: 0.42, radius: 0.5, threshold: 0.9 } });
@@ -73,11 +73,14 @@
       // ---------------------------------------------------------------- HUD
       api.hud.innerHTML = `<div class="bw-sheet" id="bw-sheet"></div><div class="bw-hint" id="bw-hint">Glisse à gauche ou à droite pour te placer, puis vers le haut pour lancer</div><div class="bw-ban" id="bw-ban" hidden></div>`;
       const $ = (s) => api.hud.querySelector(s);
-      const rolls = P.map(() => []);
+      const rolls = P.map(() => []), MAXF = Math.max(1, Math.min(10, +o.frames || 10));
+      const doneP = (r) => { const c = B.cursor(r); return c.done || (MAXF < 10 && c.frame >= MAXF); };   // partie courte : on s'arrête après MAXF frames
       let cur = 0, phase = "aim", x0 = 0.12, standing = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], pins = B.rack(standing), ball = null, simT = 0, settleT = 0, alive = true, rollSnd = 0, hits = 0;
+      /** total : en partie courte, les frames sans bonus encore connu comptent leurs quilles */
+      const totalOf = (r) => { const sc = B.score(r); if (MAXF >= 10) return sc.total; let t = 0; sc.frames.slice(0, MAXF).forEach((f) => { t = f.score != null ? f.score : t + f.rolls.reduce((a, b) => a + b, 0); }); return t; };
       const sheet = () => { $("#bw-sheet").innerHTML = P.map((p, i) => { const sc = B.score(rolls[i]), lab = B.label(rolls[i]); let k = 0;
-          const fr = sc.frames.map((f, fi) => { const n = f.rolls.length, sy = lab.slice(k, k + n); k += n; return `<i><span>${sy.map((x) => `<em>${x}</em>`).join("")}</span><b>${f.score == null ? "" : f.score}</b></i>`; }).join("");
-          return `<div class="bw-row${i === cur && phase !== "over" ? " on" : ""}"><small>${esc(p.name)}</small>${fr}<strong>${sc.total}</strong></div>`; }).join("");
+          const fr = sc.frames.slice(0, MAXF).map((f, fi) => { const n = f.rolls.length, sy = lab.slice(k, k + n); k += n; return `<i><span>${sy.map((x) => `<em>${x}</em>`).join("")}</span><b>${f.score == null ? "" : f.score}</b></i>`; }).join("");
+          return `<div class="bw-row${i === cur && phase !== "over" ? " on" : ""}"${MAXF < 10 ? ` style="grid-template-columns:42px repeat(${MAXF},1fr) 34px"` : ""}><small>${esc(p.name)}</small>${fr}<strong>${totalOf(rolls[i])}</strong></div>`; }).join("");
         api.turn(phase === "over" ? "" : P[cur].human ? (setup.mode === "bots" ? "À toi" : P[cur].name) : P[cur].name + "…", cur); };
       const banner = (img, txt) => { const b = $("#bw-ban"); b.hidden = false; b.innerHTML = `${img ? `<img src="${img}" alt="">` : ""}<b>${esc(txt)}</b>`; b.classList.remove("in"); void b.offsetWidth; b.classList.add("in"); clearTimeout(b._t); b._t = setTimeout(() => (b.hidden = true), 1500); };
       const syncPins = () => pins.forEach((p) => { const m = pinMeshes[p.i]; m.visible = !p.gone; const f = new T.Vector3(Math.sin(p.dir), 0, -Math.cos(p.dir)), ax = new T.Vector3(f.z, 0, -f.x).normalize();
@@ -86,11 +89,13 @@
       const newTurn = () => { const c = B.cursor(rolls[cur]); if (c.fresh) resetRack([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
         phase = "aim"; ball = null; ballMesh.material = balls[cur]; ballMesh.visible = true; x0 = P[cur].human ? x0 : 0; trail.clear(); sheet(); $("#bw-hint").hidden = !P[cur].human; guide.visible = P[cur].human;
         if (!P[cur].human) setTimeout(() => { if (!alive || phase !== "aim") return; const t = B.botThrow(standing, P[cur].level || "normal"); x0 = t.x0; setTimeout(() => alive && phase === "aim" && throwBall(t.x0, t.angle, t.speed, t.hook), 650); }, 500); };
-      const throwBall = (bx, angle, speed, hook) => { ball = B.throwBall(bx, angle, speed, hook); phase = "roll"; simT = 0; settleT = 0; hits = 0; guide.visible = false; $("#bw-hint").hidden = true;
+      const throwBall = (bx, angle, speed, hook) => { api.clip.begin("boule"); ball = B.throwBall(bx, angle, speed, hook); phase = "roll"; simT = 0; settleT = 0; hits = 0; guide.visible = false; $("#bw-hint").hidden = true;
         api.sfx("bowl.roll", { vol: 0.7, intensity: speed / 10 }); rollSnd = 0; api.vibrate(15); };
       const afterRoll = () => {
         const knocked = pins.filter((p) => p.down || p.gone).map((p) => p.i), n = knocked.length, c0 = B.cursor(rolls[cur]);
         rolls[cur].push(n); standing = standing.filter((i) => !knocked.includes(i));
+        { const lbl = c0.fresh && n === 10 ? ["STRIKE !", 120] : !c0.fresh && n === c0.standing ? ["SPARE !", 80] : n === 0 && ball && ball.gutter ? ["GOUTTIÈRE", 22] : n >= 8 ? [n + " QUILLES", n * 4] : null;
+          if (lbl) api.clip.end({ score: lbl[1], label: lbl[0], sub: P[cur].name }, 350); else api.clip.cancel(); }
         if (c0.fresh && n === 10) { banner("img/games/bowling/fx_strike.webp", "STRIKE !"); api.sfx("bowl.strike"); api.vibrate([30, 40, 80]); S.shake(0.03, 0.4); }
         else if (!c0.fresh && n === c0.standing) { banner("img/games/bowling/fx_spare.webp", "SPARE !"); api.sfx("bowl.strike", { vol: 0.7 }); }
         else if (n === 0) banner(null, ball && ball.gutter ? "Gouttière" : "Raté");
@@ -98,16 +103,16 @@
         const c = B.cursor(rolls[cur]);
         phase = "wait"; sheet();
         setTimeout(() => { if (!alive) return;
-          if (c.done || c.frame > c0.frame) { const nxt = P.findIndex((_, k) => !B.cursor(rolls[(cur + 1 + k) % P.length]).done); if (nxt < 0) return finish(); cur = (cur + 1 + nxt) % P.length; resetRack([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); }
+          if (c.done || c.frame > c0.frame) { const nxt = P.findIndex((_, k) => !doneP(rolls[(cur + 1 + k) % P.length])); if (nxt < 0) return finish(); cur = (cur + 1 + nxt) % P.length; resetRack([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); }
           else if (c.fresh) resetRack([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
           else resetRack(standing);
           newTurn(); }, 1400);
       };
-      const finish = () => { phase = "over"; sheet(); const tot = P.map((_, i) => B.score(rolls[i]).total), best = Math.max(...tot), win = tot.filter((v) => v === best).length > 1 ? null : tot.indexOf(best); const me = Math.max(0, P.findIndex((p) => p.human));
+      const finish = () => { phase = "over"; sheet(); const tot = P.map((_, i) => totalOf(rolls[i])), best = Math.max(...tot), win = tot.filter((v) => v === best).length > 1 ? null : tot.indexOf(best); const me = Math.max(0, P.findIndex((p) => p.human));
         api.end(win, `Score : ${tot[me]}` + (P.length > 1 ? " · " + P.map((p, i) => p.name + " " + tot[i]).join(", ") : "")); };
       // ---------------------------------------------------------------- geste
       const cv = S.renderer.domElement; let pts = null;
-      cv.addEventListener("pointerdown", (e) => { if (phase !== "aim" || !P[cur].human) return; pts = [{ x: e.clientX, y: e.clientY, t: performance.now(), x0 }]; });
+      cv.addEventListener("pointerdown", (e) => { if (phase !== "aim" || !P[cur].human) return; api.clip.begin("boule"); pts = [{ x: e.clientX, y: e.clientY, t: performance.now(), x0 }]; });
       cv.addEventListener("pointermove", (e) => { if (!pts) return; pts.push({ x: e.clientX, y: e.clientY, t: performance.now() }); const a = pts[0], dy = e.clientY - a.y, dx = e.clientX - a.x;
         if (dy > -30) x0 = Math.max(-hw + L.ball, Math.min(hw - L.ball, a.x0 + (dx / cv.clientWidth) * 1.4)); });
       const release = () => { if (!pts) return; const p = pts; pts = null; if (p.length < 3) return; const A = p[0], Z = p[p.length - 1], dy = Z.y - A.y;
@@ -124,7 +129,7 @@
         if (phase === "roll" || phase === "settle") {
           const sub = 8, h = Math.min(dt, 0.04) / sub;
           for (let k = 0; k < sub; k++) { const ev = B.step(ball, pins, h); simT += h;
-            ev.forEach((e) => { if (e === "gutter") api.sfx("bowl.gutter"); else if (e === "hit" || e === "pin") { hits++; if (hits < 8) api.sfx("bowl.pin", { intensity: Math.min(1, 0.4 + hits * 0.1), vol: 0.5 + Math.random() * 0.4 }); } }); }
+            ev.forEach((e) => { if (e === "gutter") api.sfx("bowl.gutter"); else if (e === "hit" || e === "pin") { hits++; if (hits === 1) api.clip.mark("impact"); if (hits < 8) api.sfx("bowl.pin", { intensity: Math.min(1, 0.4 + hits * 0.1), vol: 0.5 + Math.random() * 0.4 }); } }); }
           const pz = ballMesh.position.z; ballMesh.position.set(ball.x, ball.gutter ? L.ball - 0.07 : L.ball, ball.z); ballMesh.visible = !ball.done;
           const d = Math.abs(ballMesh.position.z - pz); axis.set(ball.vx, 0, ball.vz); if (axis.lengthSq() > 1e-6) { axis.crossVectors(up, axis.normalize()); ballMesh.rotateOnWorldAxis(axis, d / L.ball + (ball.hook * dt * 3)); }
           if (!ball.done) trail.push(ball.x, ball.z, Math.hypot(ball.vx, ball.vz));
@@ -138,7 +143,7 @@
         else { wantP.set(x0 * 0.4, 1.3, 2.4); wantL.set(x0 * 0.2, 0.15, -9); }
         const k = Math.min(1, dt * (phase === "roll" ? 3.5 : 2.2)); cam.position.lerp(wantP, k); look.lerp(wantL, k); cam.lookAt(look);
       });
-      resetRack(standing); newTurn(); api.loop("bowl.amb", { vol: 0.35 });
+      resetRack(standing); newTurn(); api.ambience(theme, theme === "eto" ? "bowl.amb" : theme === "stade" ? "flick.amb" : null, theme === "eto" ? 0.35 : 0.6);
       return { destroy: () => { alive = false; S.dispose(); }, _st: () => ({ cur, phase, rolls: rolls.map((r) => r.slice()), standing: standing.slice(), x0 }), _theme: () => theme,
         _finish: (rs) => { rs.forEach((r, i) => (rolls[i] = r.slice())); finish(); }, _throw: (bx, angle, speed, hook) => { if (phase !== "aim" || !P[cur].human) return false; x0 = bx; throwBall(bx, angle, speed, hook); return true; } };
     },

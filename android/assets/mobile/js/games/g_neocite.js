@@ -60,7 +60,7 @@
       const winM = new T.MeshStandardMaterial({ color: 0x0f1016, emissive: 0xffffff, emissiveMap: winTex, emissiveIntensity: 1.0, roughness: 0.3, metalness: 0.5 });
       const DC = E.flickDecor, theme = DC && DC.extra && o.decor && o.decor !== "nuit" && DC.IDS.includes(o.decor) ? o.decor : "nuit";
       if (theme !== "nuit") {                                                   // mêmes décors que Flick, montés autour de la table
-        const dec = DC.mount(S, theme, { W: SIDE + 2.6, L: SIDE + 2.6 }, -0.36); S.onFrame((dt, t) => dec.update(dt, t));
+        const dec = DC.mount(S, theme, { W: SIDE + 2.6, L: SIDE + 2.6 }, -0.36); S.onFrame((dt, t) => dec.update(dt, t)); api.ambience(theme, null, 0.6);
       } else {
       const floorTex = G3.canvasTex(T, 1024, 1024, (g, w) => { g.fillStyle = "#07080c"; g.fillRect(0, 0, w, w); g.strokeStyle = "rgba(239,23,72,.22)"; g.lineWidth = 3; for (let k = 0; k <= 16; k++) { g.beginPath(); g.moveTo(k * w / 16, 0); g.lineTo(k * w / 16, w); g.stroke(); g.beginPath(); g.moveTo(0, k * w / 16); g.lineTo(w, k * w / 16); g.stroke(); }
           for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(255,${150 + Math.random() * 80},120,${Math.random() * 0.5})`; const k = Math.floor(Math.random() * 17) * w / 16; Math.random() < 0.5 ? g.fillRect(k - 2, Math.random() * w, 4, 10) : g.fillRect(Math.random() * w, k - 2, 10, 4); } });
@@ -301,7 +301,13 @@
         const m = modal("nc-sig", `<div class="nc-tabic">${ICON("signal", "star")}</div><h2>Signal</h2><p class="nc-sub">Événement</p>${ca ? `<img class="nc-cardimg" src="${IMG}cards/${e.card}.webp" alt="">` : `<div class="nc-sigorb"></div>`}<p class="nc-sigtxt">${esc(e.text)}</p><button class="btn pri wide" data-ok>Continuer</button>`);
         api.sfx("nc.card"); const done = () => { clearTimeout(tm); closeModal(m); res(); }; const tm = setTimeout(done, P[st.turn] && P[st.turn].human ? 4000 : 2200); m.querySelector("[data-ok]").onclick = done; });
       const run = async (ev) => {
+        let best = null; const pick = (score, label, sub) => { if (!best || score > best.score) { best = { score, label, sub }; api.clip.mark(label); } };
+        if (ev.some((e) => e.t === "dice")) api.clip.begin("tour");
         for (const e of ev) {
+          if (e.t === "rent" && e.amount >= 60) pick(e.amount / 6, "−" + fmt(e.amount), `${name(e.p)} paie ${name(e.to)} · ${N.BOARD[e.sq].name}`);
+          else if (e.t === "bankrupt") pick(220, "FAILLITE", name(e.p));
+          else if (e.t === "reserve" && e.amount >= 100) pick(e.amount / 5, "+" + fmt(e.amount), `${name(e.p)} remporte la Réserve`);
+          else if (e.t === "jail") pick(30, "PARE-FEU", `${name(e.p)} part en prison`);
           if (e.t === "dice") { await rollDice(e.dice, e.p); say(`${name(e.p)} fait ${e.dice[0]} + ${e.dice[1]}${e.dice[0] === e.dice[1] ? " · double" : ""}`); await wait(150); }
           else if (e.t === "move") { await movePawn(e.p, e.from, e.to, Math.abs(e.to - e.from) > 12 && (e.to === N.RELAYS[0] || e.to === N.RELAYS[1]) && N.BOARD[e.from].type === "relay"); showLand(e.to); }
           else if (e.t === "salary") { floatText(0, "+200 €", "#22c55e"); }
@@ -317,6 +323,7 @@
           refreshDeco(); drawPlayers();
         }
         refreshDeco(); drawPlayers();
+        if (api.clip.active()) { if (best) api.clip.end(best, 900); else api.clip.cancel(); }
       };
       // ---------------------------------------------------------------- case Enchères (tout le monde enchérit, sous pli fermé)
       const botCeil = (j, sq) => { const lvl = P[j].level || setup.level || "normal", f = { easy: 0.75, normal: 0.95, hard: 1.05, max: 1.12 }[lvl] || 0.95;
