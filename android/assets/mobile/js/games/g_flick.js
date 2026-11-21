@@ -1,6 +1,6 @@
 "use strict";
 // FLICK FOOT / FLICK HOCKEY 3D : palets à drapeaux (dôme brillant, cerclage d'or), tir à la fronde, physique réelle (js/games/flick_rules.js).
-// Décors au choix (js/games/flick_decor.js : Arène ETO, Océan, Automne, Sakura) : seul l'environnement change, jamais la physique.
+// Décors au choix (js/games/flick_decor.js + decor_more.js : Arène ETO, Stade, Océan, Automne, Sakura, Rue, Volcan, Tempête) : seul l'environnement change, jamais la physique.
 // Mise en scène : travelling d'ouverture, traînées de vitesse, étincelles aux chocs, rafales de vent au tir,
 // but « ressenti » : ralenti, filet qui se tend, onde de choc, éclats aux couleurs de l'équipe, secousse et halo proportionnels à la frappe, vitesse affichée.
 (() => {
@@ -16,7 +16,7 @@
     id: "flick", title: "Flick Foot", sub: "Foot et hockey de palets, vue du dessus", hero: "img/games/common/card_flick.webp", min: 2, max: 2, rules: RULES,
     icon: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6"/><path d="M12 3v6M12 15v6"/>',
     options: [{ key: "mode", label: "Terrain", def: "foot", choices: [["foot", "Football"], ["hockey", "Hockey"]] },
-      { key: "decor", label: "Décor", def: "sakura", choices: [["sakura", "Sakura"], ["ocean", "Océan"], ["automne", "Automne"], ["eto", "Arène ETO"]] },
+      { key: "decor", label: "Décor", def: "stade", choices: [["stade", "Stade"], ["sakura", "Sakura"], ["ocean", "Océan"], ["automne", "Automne"], ["rue", "Rue"], ["volcan", "Volcan"], ["tempete", "Tempête"], ["eto", "Arène ETO"]] },
       { key: "goals", label: "Buts pour gagner", def: 3, choices: [[3, "3"], [5, "5"], [7, "7"]] },
       { key: "t0", label: "Équipe 1", def: "fr", choices: FLAGS, img: (v) => "img/games/flick/flag_" + v + ".webp" }, { key: "t1", label: "Équipe 2", def: "de", choices: FLAGS, img: (v) => "img/games/flick/flag_" + v + ".webp" }],
     async start(host, setup, api) {
@@ -24,11 +24,11 @@
       let st = F.newGame(o.mode || "foot", o.goals || 3);
       { const tb = api.stage && api.stage.querySelector(".gm-top b"); if (tb) tb.textContent = st.mode === "hockey" ? "Flick Hockey" : "Flick Foot"; }
       const m = st.m, ice = st.mode === "hockey", flags = [o.t0 || "fr", (o.t1 && o.t1 !== o.t0) ? o.t1 : (o.t0 === "de" ? "fr" : "de")];
-      const theme = D() && ["eto", "ocean", "automne", "sakura"].includes(o.decor) ? o.decor : "eto";
+      const theme = D() && D().IDS.includes(o.decor) && (D().extra[o.decor] || ["eto", "ocean", "automne", "sakura"].includes(o.decor)) ? o.decor : "eto";
       const EL = 62 * Math.PI / 180, SPAN = m.L + 2.4, WID = m.W + 1.8;
       // caméra : pose de jeu calculée à chaque redimensionnement ; le travelling d'ouverture et les « coups de poing » s'y ajoutent
       const camBase = { pos: null, look: null };
-      const S = await G3.stage(host, { fov: 40, exposure: 1.0, fog: 0.012, cam: [0, 14, 6], look: [0, 0, 0], bloom: { strength: theme === "eto" ? 0.6 : theme === "automne" ? 0.22 : 0.38, radius: 0.5, threshold: theme === "automne" ? 0.97 : 0.93 },
+      const S = await G3.stage(host, { fov: 40, exposure: 1.0, fog: 0.012, cam: [0, 14, 6], look: [0, 0, 0], bloom: { strength: { eto: 0.6, automne: 0.22, volcan: 0.45, stade: 0.45, tempete: 0.5, rue: 0.35 }[theme] || 0.38, radius: 0.5, threshold: { automne: 0.97, volcan: 0.95, stade: 0.9 }[theme] || 0.93 },
         fit: (cam, ar) => { const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * ar);
           const d = Math.max((WID / 2) / Math.tan(hf / 2), (SPAN * Math.sin(EL) / 2) / Math.tan(vf / 2) + SPAN * 0.14) + 0.6;
           camBase.pos = new cam.position.constructor(0, d * Math.sin(EL), d * Math.cos(EL)); camBase.look = new cam.position.constructor(0, 0, 0.35);
@@ -42,13 +42,15 @@
       // ---- bandes (matière selon le décor)
       const railM = { eto: M.obsidian, ocean: new T.MeshPhysicalMaterial({ color: 0xdfe6ec, roughness: 0.12, metalness: 0.9, clearcoat: 1 }), automne: new T.MeshStandardMaterial({ color: 0xb07a35, roughness: 0.28, metalness: 0.95 }),
         sakura: new T.MeshPhysicalMaterial({ color: 0x2a120c, roughness: 0.25, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 }) }[theme];
-      const stripM = { eto: M.neonRed, ocean: new T.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false }), automne: M.gold, sakura: M.gold }[theme];
+      const rx = (!railM && D() && D().railFor) ? D().railFor(T, M, theme) : null;
+      const stripM0 = { eto: M.neonRed, ocean: new T.MeshBasicMaterial({ color: 0xffd9a0, toneMapped: false }), automne: M.gold, sakura: M.gold }[theme];
+      const railM2 = railM || (rx ? rx.rail : M.obsidian), stripM = stripM0 || (rx ? rx.strip : M.neonRed), capM = rx ? rx.cap : theme === "eto" ? M.metal : M.gold;
       const wallH = 0.3, wt = 0.22, walls = new T.Group(); S.add(walls);
-      const wall = (w, d, x, z) => { const b = new T.Mesh(G3.roundedBox(T, w, wallH, d, 0.09, 3), railM); b.position.set(x, wallH / 2 - 0.02, z); b.castShadow = true; b.receiveShadow = true; walls.add(b);
+      const wall = (w, d, x, z) => { const b = new T.Mesh(G3.roundedBox(T, w, wallH, d, 0.09, 3), railM2); b.position.set(x, wallH / 2 - 0.02, z); b.castShadow = true; b.receiveShadow = true; walls.add(b);
         const n = new T.Mesh(w > d ? new T.BoxGeometry(w * 0.96, 0.02, 0.045) : new T.BoxGeometry(0.045, 0.02, d * 0.96), stripM); n.position.set(x, wallH - 0.005, z); walls.add(n); };
       wall(wt, m.L + wt * 2, -hw - wt / 2, 0); wall(wt, m.L + wt * 2, hw + wt / 2, 0);
       [-1, 1].forEach((sgn) => { const seg = hw - gh; wall(seg, wt, -gh - seg / 2, sgn * (hl + wt / 2)); wall(seg, wt, gh + seg / 2, sgn * (hl + wt / 2)); });
-      const capG = new T.SphereGeometry(0.15, 20, 12); [[-hw - wt / 2, -hl - wt / 2], [hw + wt / 2, -hl - wt / 2], [-hw - wt / 2, hl + wt / 2], [hw + wt / 2, hl + wt / 2]].forEach(([x, z]) => { const c = new T.Mesh(capG, theme === "eto" ? M.metal : M.gold); c.position.set(x, wallH, z); walls.add(c); });
+      const capG = new T.SphereGeometry(0.15, 20, 12); [[-hw - wt / 2, -hl - wt / 2], [hw + wt / 2, -hl - wt / 2], [-hw - wt / 2, hl + wt / 2], [hw + wt / 2, hl + wt / 2]].forEach(([x, z]) => { const c = new T.Mesh(capG, capM); c.position.set(x, wallH, z); walls.add(c); });
       // ---- cages (filet déformable : il se tend au but)
       const nets = {};
       [-1, 1].forEach((sgn) => {
@@ -127,7 +129,7 @@
       sync(); score();
       // ---- caméra : travelling d'ouverture (rasant, depuis derrière le but) puis pose de jeu ; « punch » vers le but marqué
       const cam = S.camera, look = new T.Vector3(); let intro = 0, punch = null;
-      const introFrom = { pos: new T.Vector3(hw * 1.4, theme === "sakura" ? 4.2 : 2.4, hl + 8.5), look: new T.Vector3(0, 0.2, -1.5) };
+      const introFrom = { pos: theme === "stade" ? new T.Vector3(hw * 1.1, 2.6, hl + 3.2) : new T.Vector3(hw * 1.4, theme === "sakura" ? 4.2 : 2.4, hl + 8.5), look: new T.Vector3(0, 0.2, -1.5) };
       const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
       const placeCam = (dt) => {
         if (!camBase.pos) return;

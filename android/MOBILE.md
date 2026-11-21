@@ -570,6 +570,38 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.117 — Mini-golf 3D, bowling 3D, loup-garou ; décors Stade, Rue, Volcan, Tempête
+- **Décors partagés** (`js/games/decor_more.js`, branchés sur `flick_decor.js`) :
+  - **Stade** : tribunes pleines, supporters qui sautent et font la ola aux grosses frappes, flashs d'appareils photo, pylônes d'éclairage, panneaux LED défilants ;
+  - **Rue** : terrain grillagé au coucher du soleil, mur à graffitis, immeubles éclairés, lampadaires, voiture qui passe ;
+  - **Volcan** : plateforme de basalte au fond d'un cratère, lac de lave animé (shader), coulées sur la paroi, braises, bombes de lave ;
+  - **Tempête** : plateforme offshore sur une mer d'orage (houle de Gerstner, écume, reflets), pluie, éclairs qui illuminent la scène.
+  - Les shaders (lave, mer d'orage, pluie, éclairs) sont dans `E.decorFx`, réutilisés par le golf.
+- **Flick** : 8 décors (Stade par défaut, Sakura, Océan, Automne, Rue, Volcan, Tempête, Arène ETO).
+- **Néo-Cité** : les mêmes décors, plus la ville de nuit d'origine (option « Décor » du salon). `D.mount` monte le décor autour de la table.
+- **Mini-golf 3D** (`golf_rules.js` + `g_golf.js`), 1 à 4 joueurs :
+  - parcours de 9 trous (ou Express, 3 trous), par 24 ;
+  - obstacles : pentes, bosse, looping (il faut assez de vitesse), moulin à bras tournants, boulets qui se balancent, bumpers champignons, passerelles au-dessus de l'eau (+1 coup) ;
+  - commandes : caméra derrière la balle ; glisser à gauche ou à droite pour viser, tirer vers le bas pour doser (jauge à droite), relâcher pour taper ; bouton « Vue » pour voir tout le trou ;
+  - rendu cartoon : ombrage toon par paliers, contours noirs, couleurs franches, eau stylisée, drapeau qui flotte ;
+  - décors : Lagon, Forêt, Rue, Volcan (lave), Tempête (mer d'orage) ;
+  - les bots visent par simulation, au même pas fixe que le jeu.
+- **Bowling 3D** (`g_bowling.js`, physique de `bowling_rules.js`) :
+  - piste aux vraies dimensions (bois verni, flèches, gouttières, fosse, machine), quilles tournées ;
+  - lancer au doigt : glisser à gauche ou à droite pour se placer, puis vers le haut ; la vitesse du geste règle la force, sa courbe l'effet ;
+  - feuille de score officielle sur 10 frames, bannières STRIKE / SPARE, bots ;
+  - décors : Bowling ETO (néons) ou les décors partagés.
+- **Loup-garou** (`loup_rules.js` + `g_loup.js`), 5 à 10 joueurs :
+  - rôles : loups, voyante, sorcière (2 potions), chasseur, villageois ;
+  - village en cercle autour d'un feu animé, nuit puis jour, cartes de rôle qui se retournent ;
+  - débat : les bots accusent, se défendent, la voyante se dévoile et les loups bluffent ;
+  - tu peux accuser, te dire villageois ou te dire voyante (même en mentant), puis voter ;
+  - en local : un seul téléphone, écran « Passe le téléphone à… » avant chaque action secrète ;
+  - simulation de 1 500 parties entre bots : village et loups gagnent chacun environ la moitié des parties.
+- Tests :
+  - Playwright : `t_golf.py`, `t_bowling.py`, `t_loup.py` ; `t_flick.py` mis à jour pour 8 décors ;
+  - Node : `golf_rules.test.js`, `loup_rules.test.js`.
+
 ## 1.116 — ChatGPT Prime triche aussi quand il perd (mais bêtement)
 - Partie perdue : il triche toujours (40 % de ses coups à partir du 6ᵉ, 20 % après le 40ᵉ), mais **contre lui-même** (`P.makeDumbCheat`) :
   - **faux mat** : sa dame traverse le plateau et se pose collée à ton roi, non défendue ; il annonce « échec et mat » (tampon ÉCHEC ET MAT à l'écran) alors que tu la prends. Sans dame, il en fait apparaître une au même endroit ;

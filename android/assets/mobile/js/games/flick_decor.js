@@ -8,16 +8,21 @@
   const E = window.ENOS, G3 = E.g3d;
   if (!G3) return;
   const D = (E.flickDecor = {});
-  D.THEMES = [["eto", "Arène ETO"], ["ocean", "Océan"], ["automne", "Automne"], ["sakura", "Sakura"]];
+  D.THEMES = [["eto", "Arène ETO"], ["stade", "Stade"], ["ocean", "Océan"], ["automne", "Automne"], ["sakura", "Sakura"], ["rue", "Rue"], ["volcan", "Volcan"], ["tempete", "Tempête"]];
+  D.IDS = D.THEMES.map((t) => t[0]);
+  D.extra = {};          // décors ajoutés par js/games/decor_more.js : D.extra[id](S, m, out, helpers)
+  D.surfBase = {};       // fonds de terrain de ces décors : D.surfBase[id](g, w, h)
   const rnd = (a, b) => a + Math.random() * (b - a);
 
   /** surface du terrain (gazon rayé + lignes, ou glace) */
   D.surface = (T, theme, m, ice) => {
     const hw = m.W / 2, hl = m.L / 2, gh = m.goal / 2, eto = theme === "eto";
-    const LINE = { eto: "#ff3d63", ocean: "#f4f1e8", automne: "#f1e2bf", sakura: "#f7e4e8" }[theme] || "#ffffff";
+    const LINE = { eto: "#ff3d63", ocean: "#f4f1e8", automne: "#f1e2bf", sakura: "#f7e4e8", stade: "#ffffff", rue: "#f2f2ee", volcan: "#ffcf8a", tempete: "#f6d34a" }[theme] || "#ffffff";
+    const glowLine = eto || theme === "volcan";
     return G3.canvasTex(T, 1024, Math.round(1024 * m.L / m.W), (g, w, h) => {
       if (ice) { const lg = g.createLinearGradient(0, 0, w, h); lg.addColorStop(0, "#e4ecf3"); lg.addColorStop(1, "#c9d6e1"); g.fillStyle = lg; g.fillRect(0, 0, w, h);
         for (let i = 0; i < 320; i++) { g.strokeStyle = `rgba(255,255,255,${Math.random() * 0.4})`; g.lineWidth = Math.random() * 1.6; g.beginPath(); const x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 140, y + (Math.random() - 0.5) * 40); g.stroke(); } }
+      else if (D.surfBase[theme]) D.surfBase[theme](g, w, h);
       else {
         const A = eto ? ["#0d1f15", "#112619"] : theme === "automne" ? ["#2c6a2e", "#347838"] : theme === "sakura" ? ["#3c6b2c", "#447834"] : ["#2b7f3c", "#349146"];
         for (let i = 0; i < 14; i++) { g.fillStyle = A[i % 2]; g.fillRect(0, (i / 14) * h, w, h / 14 + 1); }
@@ -25,7 +30,7 @@
         if (!eto) { const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, h * 0.7); r.addColorStop(0, "rgba(255,255,220,0.06)"); r.addColorStop(1, "rgba(0,0,0,0.22)"); g.fillStyle = r; g.fillRect(0, 0, w, h); }
       }
       const sx = w / m.W, X = (x) => (x + hw) * sx, Z = (z) => (z + hl) * sx;
-      const line = (c, wdt) => { g.strokeStyle = c; g.lineWidth = wdt; g.shadowColor = c; g.shadowBlur = eto && !ice ? 14 : 0; g.globalAlpha = eto ? 1 : 0.88; };
+      const line = (c, wdt) => { g.strokeStyle = c; g.lineWidth = wdt; g.shadowColor = c; g.shadowBlur = glowLine && !ice ? 14 : 0; g.globalAlpha = glowLine || theme === "stade" ? 1 : 0.88; };
       if (ice) { line("#ef1748", 10); g.beginPath(); g.moveTo(0, Z(0)); g.lineTo(w, Z(0)); g.stroke(); line("#1aa3d6", 9); [-m.L * 0.2, m.L * 0.2].forEach((z) => { g.beginPath(); g.moveTo(0, Z(z)); g.lineTo(w, Z(z)); g.stroke(); });
         line("#ef1748", 5); [-1, 1].forEach((sgn) => { g.beginPath(); g.moveTo(0, Z(sgn * (hl - 0.5))); g.lineTo(w, Z(sgn * (hl - 0.5))); g.stroke(); g.beginPath(); g.arc(X(0), Z(sgn * (hl - 0.5)), gh * sx, sgn > 0 ? Math.PI : 0, sgn > 0 ? Math.PI * 2 : Math.PI); g.fillStyle = "rgba(26,163,214,0.25)"; g.fill(); g.stroke(); });
         line("#1aa3d6", 6); g.beginPath(); g.arc(X(0), Z(0), 1.0 * sx, 0, Math.PI * 2); g.stroke(); }
@@ -81,6 +86,7 @@
   D.build = (S, theme, m, ice) => {
     const T = S.T, M = S.mats, hw = m.W / 2, hl = m.L / 2, upd = [], parts = [];
     const out = { hideGoals: false, hideSurface: false, update: (dt, t) => { upd.forEach((f) => f(dt, t)); parts.forEach((p) => p.update(dt)); }, gust: (k) => parts.forEach((p) => (p.gust = Math.max(p.gust, k))), ready: Promise.resolve(), goalM: M.metal, netColor: 0xffffff };
+    if (D.extra[theme]) { D.extra[theme](S, m, out, { skyTex, leafTex, rockTex, lights, sky, cloudTree, island, upd, parts, rnd }); return out; }
     if (theme === "ocean") {
       sky(S, skyTex(T, [[0, "#2f7fd3"], [0.55, "#8fd0f2"], [1, "#e7f6ff"]], [0.78, 0.18, "rgba(255,252,235,1)", "rgba(255,236,190,0.6)"], 10), 0x9fd8ee, 0.006);
       lights(S, { key: 0xfff4e0, ki: 2.8, kp: [6, 12, -8], sky: 0xbfe6ff, ground: 0x2a6f6a, hi: 1.0 });

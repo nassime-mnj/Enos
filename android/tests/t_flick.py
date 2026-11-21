@@ -10,7 +10,7 @@ with sync_playwright() as pw:
     pg.click('#tool-flick .gm-mode[data-m="bots"]')
     check(pg.locator('#tool-flick .gm-imgs [data-v="fr"] img').count() == 2, "drapeaux affichés en images dans le salon")
     pg.click('#tool-flick .gm-opt[data-k="mode"] [data-v="foot"]'); pg.click('#tool-flick .gm-opt[data-k="goals"] [data-v="3"]')
-    check(pg.locator('#tool-flick .gm-opt[data-k="decor"] button').count() == 4, "4 décors proposés (Sakura, Océan, Automne, Arène ETO)")
+    check(pg.locator('#tool-flick .gm-opt[data-k="decor"] button').count() == 8, "8 décors proposés (Stade, Sakura, Océan, Automne, Rue, Volcan, Tempête, Arène ETO)")
     pg.click('#tool-flick .gm-opt[data-k="decor"] [data-v="sakura"]')
     pg.click('#tool-flick .gm-opt[data-k="t0"] [data-v="ma"]'); pg.click('#tool-flick .gm-opt[data-k="t1"] [data-v="jp"]')
     pg.screenshot(path=SH + "flick_lobby.png")

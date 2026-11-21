@@ -41,7 +41,8 @@
     id: "neocite", title: "Néo-Cité", sub: "Le jeu de plateau immobilier d'ETO, de 2 à 6 joueurs", hero: IMG + "table_bg.webp", min: 2, max: 6, rules: RULES,
     icon: '<path d="M4 20V10l4-3v13M10 20V5l5-2v17M17 20v-9l3 2v7"/><path d="M3 20h18"/>',
     options: [{ key: "rounds", label: "Durée", def: 40, choices: [[20, "20 tours"], [40, "40 tours"], [0, "Jusqu'à la faillite"]] },
-      { key: "cash", label: "Capital de départ", def: 1500, choices: [[1000, "1 000 €"], [1500, "1 500 €"], [2000, "2 000 €"]] }],
+      { key: "cash", label: "Capital de départ", def: 1500, choices: [[1000, "1 000 €"], [1500, "1 500 €"], [2000, "2 000 €"]] },
+      { key: "decor", label: "Décor", def: "nuit", choices: [["nuit", "Ville de nuit"], ["stade", "Stade"], ["sakura", "Sakura"], ["ocean", "Océan"], ["automne", "Automne"], ["rue", "Rue"], ["volcan", "Volcan"], ["tempete", "Tempête"], ["eto", "Arène ETO"]] }],
     async start(host, setup, api) {
       const P = setup.players, n = P.length, o = setup.opts || {}, art = ART();
       const st = N.newGame(n, { cash: +o.cash || 1500, rounds: o.rounds == null ? 40 : +o.rounds, seed: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
@@ -57,27 +58,32 @@
       const winTex = G3.canvasTex(T, 64, 128, (g, w, h) => { g.fillStyle = "#0a0b0f"; g.fillRect(0, 0, w, h); for (let y = 8; y < h - 6; y += 9) for (let x = 7; x < w - 6; x += 10) { const r = Math.random(); g.fillStyle = r < 0.3 ? "rgba(255,200,170,.9)" : r < 0.38 ? "rgba(255,61,99,.85)" : r < 0.42 ? "rgba(26,207,214,.8)" : "rgba(30,31,40,1)"; g.fillRect(x, y, 5, 4); } });
       winTex.wrapS = winTex.wrapT = T.RepeatWrapping;
       const winM = new T.MeshStandardMaterial({ color: 0x0f1016, emissive: 0xffffff, emissiveMap: winTex, emissiveIntensity: 1.0, roughness: 0.3, metalness: 0.5 });
+      const DC = E.flickDecor, theme = DC && DC.extra && o.decor && o.decor !== "nuit" && DC.IDS.includes(o.decor) ? o.decor : "nuit";
+      if (theme !== "nuit") {                                                   // mêmes décors que Flick, montés autour de la table
+        const dec = DC.mount(S, theme, { W: SIDE + 2.6, L: SIDE + 2.6 }, -0.36); S.onFrame((dt, t) => dec.update(dt, t));
+      } else {
       const floorTex = G3.canvasTex(T, 1024, 1024, (g, w) => { g.fillStyle = "#07080c"; g.fillRect(0, 0, w, w); g.strokeStyle = "rgba(239,23,72,.22)"; g.lineWidth = 3; for (let k = 0; k <= 16; k++) { g.beginPath(); g.moveTo(k * w / 16, 0); g.lineTo(k * w / 16, w); g.stroke(); g.beginPath(); g.moveTo(0, k * w / 16); g.lineTo(w, k * w / 16); g.stroke(); }
-        for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(255,${150 + Math.random() * 80},120,${Math.random() * 0.5})`; const k = Math.floor(Math.random() * 17) * w / 16; Math.random() < 0.5 ? g.fillRect(k - 2, Math.random() * w, 4, 10) : g.fillRect(Math.random() * w, k - 2, 10, 4); } });
-      floorTex.wrapS = floorTex.wrapT = T.RepeatWrapping; floorTex.repeat.set(10, 10);
-      const floor = new T.Mesh(new T.PlaneGeometry(240, 240), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.32, metalness: 0.65, envMapIntensity: 0.6 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -1.6; floor.receiveShadow = true; S.add(floor);
-      S.scene.background = new T.Color(0x05060a);
-      const sky = new T.Mesh(new T.SphereGeometry(110, 32, 16), new T.MeshBasicMaterial({ side: T.BackSide, fog: false, toneMapped: false, map: G3.canvasTex(T, 512, 256, (g, w, h) => { const lg = g.createLinearGradient(0, 0, 0, h); lg.addColorStop(0, "#020206"); lg.addColorStop(0.55, "#12040b"); lg.addColorStop(0.7, "#3a0716"); lg.addColorStop(1, "#05060a"); g.fillStyle = lg; g.fillRect(0, 0, w, h); for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.7})`; g.fillRect(Math.random() * w, Math.random() * h * 0.45, 1, 1); } }) })); S.add(sky);
-      // gratte-ciel instanciés en couronne
-      const NB = G3.fx() ? 260 : 120, sky1 = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), winM, NB), dm = new T.Object3D(); let nb = 0;
-      for (let i = 0; i < NB * 3 && nb < NB; i++) { const a = Math.random() * Math.PI * 2, r = 17 + Math.pow(Math.random(), 0.7) * 30, x = Math.cos(a) * r, z = Math.sin(a) * r; const h = 2 + Math.random() * (r < 24 ? 7 : 16), w = 0.8 + Math.random() * 1.8;
-        dm.position.set(x, -1.6 + h / 2, z); dm.scale.set(w, h, w * (0.7 + Math.random() * 0.6)); dm.rotation.y = Math.random() * 0.4; dm.updateMatrix(); sky1.setMatrixAt(nb++, dm.matrix); }
-      sky1.count = nb; S.add(sky1);
-      // projecteurs qui balaient le ciel
-      const beamT = G3.canvasTex(T, 64, 256, (g, w, h) => { const lg = g.createLinearGradient(0, h, 0, 0); lg.addColorStop(0, "rgba(255,90,120,0.55)"); lg.addColorStop(1, "rgba(255,90,120,0)"); g.fillStyle = lg; g.fillRect(0, 0, w, h); });
-      const beams = [[-16, -14], [17, -12], [-20, 8], [19, 10]].map(([x, z], k) => { const b = new T.Mesh(new T.ConeGeometry(1.4, 30, 16, 1, true), new T.MeshBasicMaterial({ map: beamT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide, fog: false }));
-        b.geometry.translate(0, 15, 0); b.position.set(x, -1.6, z); b.userData.ph = k * 1.7; S.add(b); return b; });
-      // drones lumineux
-      const ND = 26, drones = new T.InstancedMesh(new T.SphereGeometry(0.07, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), ND), DR = [];
-      for (let i = 0; i < ND; i++) { DR.push({ r: 14 + Math.random() * 14, y: 2 + Math.random() * 6, s: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.08), a: Math.random() * 6.28 }); drones.setColorAt(i, new T.Color(i % 3 === 0 ? 0x1acfd6 : i % 3 === 1 ? 0xff3d63 : 0xffe0a0)); }
-      S.add(drones);
-      S.onFrame((dt, t) => { beams.forEach((b) => { b.rotation.z = Math.sin(t * 0.3 + b.userData.ph) * 0.45; b.rotation.x = Math.cos(t * 0.23 + b.userData.ph) * 0.3; });
-        DR.forEach((d, i) => { d.a += d.s * dt; dm.position.set(Math.cos(d.a) * d.r, d.y + Math.sin(t + i) * 0.2, Math.sin(d.a) * d.r); dm.scale.setScalar(1); dm.rotation.set(0, 0, 0); dm.updateMatrix(); drones.setMatrixAt(i, dm.matrix); }); drones.instanceMatrix.needsUpdate = true; });
+          for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(255,${150 + Math.random() * 80},120,${Math.random() * 0.5})`; const k = Math.floor(Math.random() * 17) * w / 16; Math.random() < 0.5 ? g.fillRect(k - 2, Math.random() * w, 4, 10) : g.fillRect(Math.random() * w, k - 2, 10, 4); } });
+        floorTex.wrapS = floorTex.wrapT = T.RepeatWrapping; floorTex.repeat.set(10, 10);
+        const floor = new T.Mesh(new T.PlaneGeometry(240, 240), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.32, metalness: 0.65, envMapIntensity: 0.6 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -1.6; floor.receiveShadow = true; S.add(floor);
+        S.scene.background = new T.Color(0x05060a);
+        const sky = new T.Mesh(new T.SphereGeometry(110, 32, 16), new T.MeshBasicMaterial({ side: T.BackSide, fog: false, toneMapped: false, map: G3.canvasTex(T, 512, 256, (g, w, h) => { const lg = g.createLinearGradient(0, 0, 0, h); lg.addColorStop(0, "#020206"); lg.addColorStop(0.55, "#12040b"); lg.addColorStop(0.7, "#3a0716"); lg.addColorStop(1, "#05060a"); g.fillStyle = lg; g.fillRect(0, 0, w, h); for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.7})`; g.fillRect(Math.random() * w, Math.random() * h * 0.45, 1, 1); } }) })); S.add(sky);
+        // gratte-ciel instanciés en couronne
+        const NB = G3.fx() ? 260 : 120, sky1 = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), winM, NB), dm = new T.Object3D(); let nb = 0;
+        for (let i = 0; i < NB * 3 && nb < NB; i++) { const a = Math.random() * Math.PI * 2, r = 17 + Math.pow(Math.random(), 0.7) * 30, x = Math.cos(a) * r, z = Math.sin(a) * r; const h = 2 + Math.random() * (r < 24 ? 7 : 16), w = 0.8 + Math.random() * 1.8;
+          dm.position.set(x, -1.6 + h / 2, z); dm.scale.set(w, h, w * (0.7 + Math.random() * 0.6)); dm.rotation.y = Math.random() * 0.4; dm.updateMatrix(); sky1.setMatrixAt(nb++, dm.matrix); }
+        sky1.count = nb; S.add(sky1);
+        // projecteurs qui balaient le ciel
+        const beamT = G3.canvasTex(T, 64, 256, (g, w, h) => { const lg = g.createLinearGradient(0, h, 0, 0); lg.addColorStop(0, "rgba(255,90,120,0.55)"); lg.addColorStop(1, "rgba(255,90,120,0)"); g.fillStyle = lg; g.fillRect(0, 0, w, h); });
+        const beams = [[-16, -14], [17, -12], [-20, 8], [19, 10]].map(([x, z], k) => { const b = new T.Mesh(new T.ConeGeometry(1.4, 30, 16, 1, true), new T.MeshBasicMaterial({ map: beamT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide, fog: false }));
+          b.geometry.translate(0, 15, 0); b.position.set(x, -1.6, z); b.userData.ph = k * 1.7; S.add(b); return b; });
+        // drones lumineux
+        const ND = 26, drones = new T.InstancedMesh(new T.SphereGeometry(0.07, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), ND), DR = [];
+        for (let i = 0; i < ND; i++) { DR.push({ r: 14 + Math.random() * 14, y: 2 + Math.random() * 6, s: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.08), a: Math.random() * 6.28 }); drones.setColorAt(i, new T.Color(i % 3 === 0 ? 0x1acfd6 : i % 3 === 1 ? 0xff3d63 : 0xffe0a0)); }
+        S.add(drones);
+        S.onFrame((dt, t) => { beams.forEach((b) => { b.rotation.z = Math.sin(t * 0.3 + b.userData.ph) * 0.45; b.rotation.x = Math.cos(t * 0.23 + b.userData.ph) * 0.3; });
+          DR.forEach((d, i) => { d.a += d.s * dt; dm.position.set(Math.cos(d.a) * d.r, d.y + Math.sin(t + i) * 0.2, Math.sin(d.a) * d.r); dm.scale.setScalar(1); dm.rotation.set(0, 0, 0); dm.updateMatrix(); drones.setMatrixAt(i, dm.matrix); }); drones.instanceMatrix.needsUpdate = true; });
+      }
       // ---------------------------------------------------------------- table et socle
       const table = new T.Mesh(G3.roundedBox(T, SIDE + 2.2, 1.2, SIDE + 2.2, 0.5, 4), M.obsidian); table.position.y = -0.95; table.receiveShadow = true; S.add(table);
       const base = new T.Mesh(G3.roundedBox(T, SIDE + 0.7, 0.4, SIDE + 0.7, 0.35, 4), M.obsidian); base.position.y = -0.22; base.receiveShadow = true; S.add(base);

@@ -79,7 +79,7 @@
   };
 
   // familles de sons préchargées par jeu (js/games/sfx_bank.js)
-  const SFX = { dames: ["dames"], chroma: ["card", "chroma"], poker: ["card", "chip", "table"], flick: ["flick"], neocite: ["nc", "dice", "chip"], bowling: ["bowl"] };
+  const SFX = { dames: ["dames"], chroma: ["card", "chroma"], poker: ["card", "chip", "table"], flick: ["flick"], neocite: ["nc", "dice", "chip"], bowling: ["bowl"], golf: ["flick", "chip", "bowl"], loup: ["card", "table"] };
   /** écran de jeu plein écran */
   G.play = (g, setup) => {
     G.close();
