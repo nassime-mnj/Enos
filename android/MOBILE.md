@@ -570,6 +570,27 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.121 — Compression vidéo : taille finale par fichier, file d'attente, meilleure qualité
+- **Nouveau moteur** (`js/video_transcode.js`) : le MP4 est lu directement (boîtes moov/stbl : échantillons, images clés, horodatages, rotation), décodé et ré-encodé par WebCodecs **plus vite que le temps réel** (accélération matérielle), puis écrit en MP4 (`vendor/mp4-muxer.js`).
+  - Codec : HEVC (H.265) si le téléphone sait l'encoder, sinon H.264 High, VP9, AV1.
+  - **Son AAC recopié tel quel** (aucune perte) ; sa taille exacte est retirée du budget.
+  - **Taille finale visée** : débit vidéo = (taille voulue − son − en-têtes) / durée. Si ce débit est trop bas pour garder une image nette, la résolution baisse par paliers (4K → 1440 → 1080 → 720…), puis 60 → 30 images par seconde : on perd le moins possible en qualité perçue.
+  - 2e passe automatique si le fichier dépasse la cible de plus de 4 % (ou reste très en dessous : on rend du débit).
+  - Rotation des vidéos de téléphone conservée.
+  - Repli en temps réel (MediaRecorder, débit calculé sur la taille voulue) pour les formats non MP4.
+- **File d'attente** :
+  - ajoute plusieurs vidéos d'un coup ;
+  - pour **chaque** vidéo, choisis la taille finale en Mo, ou −50 / −70 / −85 / −92 % ;
+  - l'aperçu du réglage s'affiche (« ≈ 1080p · HEVC · 4,1 Mb/s · son intact ») ;
+  - taille par défaut des nouvelles vidéos réglable ;
+  - « Tout compresser » les traite une par une (progression par fichier, « Arrêter »), et chaque vidéo peut être enregistrée dès qu'elle est prête.
+- Mesures en test (H.264, sans HEVC sur le banc de test) :
+  - 26 Mo → 5,98 Mo (cible 6 Mo, SSIM 0,957) ;
+  - 11,6 Mo → 3,46 Mo (cible 3,48 Mo, SSIM 0,962) ;
+  - vidéo tournée → 3,97 Mo, rotation conservée ;
+  - toutes en une seule passe, son AAC intact.
+- Test : `t_compress_video.py`.
+
 ## 1.120 — Sons d'ambiance, salon mixte, ENOS Cleaner, Clip Edit + MultiEdit, jeux sur PC
 - **Sons** (fichiers fournis par le propriétaire ; à remplacer s'ils doivent être diffusés publiquement : ils sont sous droits) :
   - **but au foot** (Flick, mode foot uniquement) : jingle de but Rocket League (`flick.goalrl`) ;
