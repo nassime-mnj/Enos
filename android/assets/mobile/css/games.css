@@ -393,3 +393,15 @@ body.gm-on #scrim{z-index:1000}body.gm-on .sheet{z-index:1010}body.gm-on #toasts
 .lg-front>*{position:relative}.lg-front small{font:700 10.5px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:#ffcf7a}.lg-front b{font:900 24px var(--ui)}.lg-front p{margin:4px 0 0;font:500 12.5px/1.4 var(--ui);color:#e6e2d8}
 .lg-front.wolf{border-color:#ff3d63;box-shadow:0 0 40px rgba(255,61,99,.45)}.lg-front.village{border-color:#1acfd6}
 .lg-pass{display:flex;flex-direction:column;align-items:center;gap:8px}.lg-pass small{font:700 12px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:#ffcf7a}.lg-pass b{font:900 32px var(--ui)}.lg-pass p{margin:0 0 10px;color:#c9c7cf}
+.lg-timer{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 112px);transform:translateX(-50%);z-index:3;width:min(64vw,240px);height:26px;border-radius:13px;overflow:hidden;background:rgba(10,11,18,.85);border:1px solid rgba(255,255,255,.18)}
+.lg-timer i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(255,207,122,.35),rgba(255,207,122,.6));transition:width .25s linear}
+.lg-timer b{position:relative;display:block;text-align:center;font:800 12.5px/26px var(--ui);color:#fff}
+.lg-timer.hot{border-color:#ff3d63}.lg-timer.hot i{background:linear-gradient(90deg,rgba(255,61,99,.4),rgba(255,61,99,.75))}
+.lg-typing{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 162px);z-index:3;display:flex;align-items:center;gap:7px;padding:5px 12px 5px 6px;border-radius:999px;background:rgba(10,11,18,.88);border:1px solid rgba(255,255,255,.1);font:500 12.5px var(--ui);color:#d8d2c4;animation:lgIn .25s}
+.lg-typing img,.lg-typing .ph{width:22px;height:22px;border-radius:50%;object-fit:cover;background:#1b1d26;display:grid;place-items:center;font:800 9px var(--ui)}
+.lg-typing b{color:#fff}.lg-typing .dots{display:flex;gap:3px;margin-left:2px}.lg-typing .dots u{width:5px;height:5px;border-radius:50%;background:#ffcf7a;animation:lgDot 1.2s infinite}
+.lg-typing .dots u:nth-child(2){animation-delay:.2s}.lg-typing .dots u:nth-child(3){animation-delay:.4s}
+@keyframes lgDot{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.lg-p.typing img,.lg-p.typing .ph{box-shadow:0 0 0 4px rgba(255,207,122,.55)}
+.lg-log{bottom:calc(env(safe-area-inset-bottom,0px) + 196px)!important;max-height:26%!important}
+.lg-msg p{font-size:14px!important}

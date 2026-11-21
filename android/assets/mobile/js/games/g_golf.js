@@ -192,7 +192,11 @@
             const track = new T.Mesh(tg, toon(0xff8a1f, { side: T.DoubleSide })); track.castShadow = true; lg.add(track);
             const tube = (off, col) => { const curve = new T.CatmullRomCurve3(pts.map((p) => p.clone().add(new T.Vector3(q.nx * off, 0.05, q.nz * off)))); const m = outline(new T.Mesh(new T.TubeGeometry(curve, 96, 0.045, 8, false), toon(col)), OLs); m.castShadow = true; lg.add(m); };
             tube(-W, 0xffc21a); tube(W, 0xffc21a);
-            const supp = outline(new T.Mesh(new T.CylinderGeometry(0.06, 0.08, R * 2 + 0.2, 8), toon(0x2f7ad8)), OLs); supp.position.set(q.x + q.nx * (W + 0.25), q.y + R, q.z + q.nz * (W + 0.25)); lg.add(supp);
+            const supp = outline(new T.Mesh(new T.CylinderGeometry(0.06, 0.08, R * 2 + 0.2, 8), toon(0x2f7ad8)), OLs); supp.position.set(q.x + q.nx * (W + 0.3), q.y + R, q.z + q.nz * (W + 0.3)); lg.add(supp);
+            // couloir et entonnoirs (mêmes segments que la physique)
+            const gateM = toon(C.top);
+            f.gates.forEach(([ax, az, bx, bz]) => { const len = Math.hypot(bx - ax, bz - az); if (len < 0.01) return; const wl = outline(new T.Mesh(new T.BoxGeometry(0.1, 0.2, len + 0.1), gateM), olPush(0.018));
+              wl.position.set((ax + bx) / 2, q.y + 0.1, (az + bz) / 2); wl.rotation.y = Math.atan2(bx - ax, bz - az); wl.castShadow = true; lg.add(wl); });
             dyn.push({ f, curve: pts }); }
         });
         return { g, dyn };
@@ -243,7 +247,7 @@
         api.sfx("flick.shot", { intensity: pw, vol: 0.3 + pw * 0.5, rate: 1.2 }); api.vibrate(10 + Math.round(pw * 20)); };
       const settle = (p, ev) => {
         const b = B[p];
-        if (ev === "water") { strokes[p]++; banner(C.fluid === "lava" ? "Dans la lave !" : "Plouf !", "+1 coup, la balle revient", null, 1500); b.x = b.rest.x; b.z = b.rest.z; b.idx = GF.nearest(H, b.x, b.z); api.sfx("flick.post", { vol: 0.5, rate: 0.6 }); }
+        if (ev === "water") { strokes[p]++; banner(C.fluid === "lava" ? "Dans la lave !" : "Plouf !", "+1 coup, la balle revient", null, 1500); b.x = b.rest.x; b.z = b.rest.z; b.sx = null; b.idx = GF.nearest(H, b.x, b.z); api.sfx("flick.post", { vol: 0.5, rate: 0.6 }); }
         if (b.cup) { done[p] = true; score[p][hi] = strokes[p]; const lab = GF.label(strokes[p], H.def.par); banner(lab, P[p].name + " · " + strokes[p] + (strokes[p] > 1 ? " coups" : " coup"), strokes[p] === 1 ? "img/games/golf/fx_holeinone.webp" : null, 1700);
           api.sfx(strokes[p] <= H.def.par ? "flick.goal" : "chip.lay", { vol: 0.8 }); if (strokes[p] < H.def.par) api.vibrate([20, 40, 60]); }
         else if (strokes[p] >= GF.MAX_STROKES) { done[p] = true; score[p][hi] = GF.MAX_STROKES; banner("Balle ramassée", P[p].name + " · " + GF.MAX_STROKES + " coups", null, 1500); }

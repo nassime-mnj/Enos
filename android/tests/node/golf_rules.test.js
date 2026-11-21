@@ -18,6 +18,12 @@ G.HOLES.forEach((def, i) => { const H = G.build(def);
 { const H = G.build(G.HOLES[5]); const lp = H.feat[0]; const b = G.ball(H);
   assert(G.simulate(H, b, 0, 0.3, 0).s < lp.s, "looping trop lent : retour");
   assert(G.simulate(H, b, 0, 1, 0).s > lp.s, "looping à pleine puissance : passé"); }
+// looping fermé : impossible de le dépasser sans faire le tour (ni par les côtés, ni à travers le support)
+[5, 8].forEach((hi) => { const H = G.build(G.HOLES[hi]); const lp = H.feat.find((f) => f.k === "loop");
+  for (let k = 0; k < 120; k++) { const b = G.ball(H); const st = G.sampleAt(H, lp.s - 3); b.x = st.x + st.nx * (Math.random() - 0.5) * 1.4; b.z = st.z + st.nz * (Math.random() - 0.5) * 1.4; b.idx = G.nearest(H, b.x, b.z);
+    G.shoot(b, G.angleTo(b, st.x + st.tx * 3 + st.nx * (Math.random() - 0.5) * 2.5, st.z + st.tz * 3 + st.nz * (Math.random() - 0.5) * 2.5), 0.5 + Math.random() * 0.5); let t = 0, looped = false, past = false;
+    while (b.moving) { t += G.DT; const ev = G.step(H, b, t); if (ev.some((e) => e.k === "loop")) looped = true; if (!b.loop && H.S[b.idx].s > lp.s + lp.R + 0.4) past = true; }
+    assert(!past || looped, `trou ${hi + 1} : balle passée au-delà du looping sans le faire`); } });
 // coupe : une balle lente posée juste devant tombe
 { const H = G.build(G.HOLES[0]); const b = G.ball(H); const q = G.sampleAt(H, H.cupS - 0.6); b.x = q.x; b.z = q.z; b.idx = G.nearest(H, b.x, b.z);
   assert(G.simulate(H, b, G.angleTo(b, H.cup.x, H.cup.z), 0.14, 0).cup, "putt court rentré"); }

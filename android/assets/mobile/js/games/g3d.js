@@ -70,7 +70,11 @@
   };
   /** texture dessinée sur un canvas (motifs, logos, numéros) */
   G3.canvasTex = (T, w, h, draw) => { const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; return t; };
-  G3.loadTex = (T, url) => new Promise((res) => { new T.TextureLoader().load(url, (t) => { t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; res(t); }, undefined, () => res(null)); });
+  /** images des textures en data: (js/games/img_pack_<nom>.js) : une image file:// salit le canvas et la texture WebGL reste noire dans l'application */
+  const packs = {};
+  G3.pack = (name) => packs[name] || (packs[name] = new Promise((res) => { const s = document.createElement("script"); s.src = (G3.base || "") + "js/games/img_pack_" + name + ".js"; s.onload = res; s.onerror = res; document.head.appendChild(s); }));
+  G3.src = (url) => (window.ENOS_IMG && window.ENOS_IMG[url]) || url;
+  G3.loadTex = (T, url) => new Promise((res) => { new T.TextureLoader().load(G3.src(url), (t) => { t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; res(t); }, undefined, () => res(null)); });
 
   /**
    * crée une scène dans `host` : {T, renderer, scene, camera, mats, add, pick(x,y,objects), onFrame(fn), dispose()}

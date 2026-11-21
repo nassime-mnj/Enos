@@ -17,7 +17,7 @@
   const fmt = (v) => (v < 0 ? "−" : "") + String(Math.round(Math.abs(v))).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f") + "\u00a0€";
   const slug = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
   const ART = () => window.ENOS_NC_ART || { icons: [], lots: [], cards: [] };
-  const loadImg = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+  const loadImg = (src) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = G3.src(src); });
   const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
   const wrap = (g, txt, maxW) => { const words = txt.split(" "), lines = []; let cur = ""; for (const w of words) { const t = cur ? cur + " " + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur); return lines; };
 
@@ -94,6 +94,7 @@
         const t = corner ? HALF - C / 2 : HALF - C - (k - 0.5) * W1, e = HALF - C / 2;
         const pos = [[-e, t], [-t, -e], [e, -t], [t, e]][s], rot = [-Math.PI / 2, Math.PI, Math.PI / 2, 0][s];
         return { x: pos[0], z: pos[1], rot, corner, s }; };
+      await G3.pack("neocite");
       const icons = {}; await Promise.all((art.icons || []).map(async (k) => (icons[k] = await loadImg(IMG + "icons/" + k + ".webp"))));
       const lotArt = {}; await Promise.all((art.lots || []).map(async (k) => (lotArt[k] = await loadImg(IMG + "lots/" + k + ".webp"))));
       const LABEL = { start: "DÉPART", jail: "PARE-FEU", reserve: "RÉSERVE", auction: "ENCHÈRES", audit: "AUDIT", signal: "SIGNAL" }; void 0;

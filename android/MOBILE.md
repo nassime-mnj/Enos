@@ -570,6 +570,18 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.119 — Villes et drapeaux visibles, golf corrigé, loup-garou au rythme lisible
+- **Cases noires de Néo-Cité / drapeaux absents dans Flick** : dans l'application, la page est en `file://` ; une image chargée depuis un fichier « salit » le canvas et WebGL refuse la texture (vérifié : `SecurityError` en file://, rien en http://, d'où des tests verts). Les images utilisées dans des textures 3D sont désormais embarquées en `data:` (`tools/pack_game_images.py` → `js/games/img_pack_neocite.js`, `img_pack_flags.js`, chargés à l'ouverture du jeu ; `G3.pack`, `G3.src`).
+- **Golf** :
+  - le looping ne se prend que dans l'axe de sa piste ; un couloir fermé avec entonnoirs d'entrée et de sortie empêche de le contourner ou de traverser son support ;
+  - le passage du looping est détecté avec l'abscisse exacte de la balle (avant, il pouvait être manqué) ;
+  - les zones de choc des bumpers, du moulin et des boulets correspondent à leur taille visible ;
+  - test Node : 240 tirs au hasard, aucune balle ne dépasse le looping sans en faire le tour.
+- **Loup-garou** :
+  - minuteurs : débat (50 s + 9 s par joueur en vie, 130 s au plus ; 150 s en local), vote 30 s (abstention si rien), actions de nuit 30–40 s ;
+  - les bots parlent un par un : « X est en train d'écrire… » (selon la longueur du message), puis le message, puis le temps de le lire ;
+  - tu peux parler pendant que les bots débattent ; « Passer au vote » coupe le débat ; bouton « Vite » pour accélérer.
+
 ## 1.118 — Correctif : la mise à jour web ne remet plus d'anciens fichiers
 - Problème vu sur téléphone en 1.117 : villes de Néo-Cité et drapeaux de Flick illisibles, mini-golf / bowling absents, anciens décors. Cause : la mise à jour web automatique (`WebUpdater`) lisait la branche `main` (restée en 1.96) et superposait ses fichiers, plus anciens, à ceux de l'APK.
 - La CI écrit `assets/build_info.txt` (branche + commit de construction). La branche suivie par défaut devient celle de l'APK.

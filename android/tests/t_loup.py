@@ -8,13 +8,25 @@ def drive(pg, maxit=500, shots=None):
     talked = False
     for k in range(maxit):
         if pg.locator("#gm-end:not([hidden])").count(): return True
+        if shots is not None:
+            if "timer" not in shots and pg.locator("#lg-timer:not([hidden])").count() and "Débat" in pg.inner_text("#lg-timer"): shots.add("timer")
+            if "typing" not in shots and pg.locator("#lg-typing:not([hidden])").count(): pg.screenshot(path=SH + "loup_typing.png"); shots.add("typing")
         if pg.locator("#lg-fx:not([hidden]) #lg-ok").count():
             if shots is not None and "card" not in shots: pg.wait_for_timeout(900); pg.screenshot(path=SH + "loup_card.png"); shots.add("card")
             pg.click("#lg-fx #lg-ok"); continue
         if pg.locator('#lg-act [data-a="vote"]').count():
             if shots is not None and "day" not in shots: pg.screenshot(path=SH + "loup_day.png"); shots.add("day")
+            if shots is not None and pg.locator("#lg-timer:not([hidden])").count() and "Débat" in pg.inner_text("#lg-timer"): shots.add("timer")
             if not talked:
-                talked = True; pg.click('#lg-act [data-a="vil"]'); pg.wait_for_timeout(300); continue
+                talked = True; pg.click('#lg-act [data-a="vil"]'); pg.wait_for_timeout(300)
+                if shots is not None and "typing" not in shots:
+                    try:
+                        pg.wait_for_selector("#lg-typing:not([hidden])", timeout=15000); pg.screenshot(path=SH + "loup_typing.png"); shots.add("typing")
+                    except Exception: pass
+                for _ in range(40):
+                    if pg.locator(".lg-msg").count() >= 4 or not pg.locator('#lg-act [data-a="vote"]').count(): break
+                    pg.wait_for_timeout(500)
+                continue
             pg.click('#lg-act [data-a="vote"]'); continue
         if pg.locator("#lg-act #lg-val").count():
             can = pg.locator(".lg-p.can")
@@ -44,6 +56,8 @@ with sync_playwright() as pw:
     ok = drive(pg, 900, shots)
     check(ok, "partie menée jusqu'au bout")
     check(pg.locator(".lg-msg").count() >= 3, "les bots ont parlé pendant le débat (%d messages)" % pg.locator(".lg-msg").count())
+    check("timer" in shots, "minuteur du débat affiché")
+    check("typing" in shots, "« … est en train d'écrire » avant les messages des bots")
     txt = pg.inner_text("#gm-end"); check("Rôles" in txt and ("village gagne" in txt or "loups gagnent" in txt), "fin : camp gagnant et rôles révélés")
     st = pg.evaluate("(() => { const s = ENOS.jeux.cur.inst._st(); return { w: ENOS.loup.winner(s), alive: s.ps.filter(p => p.alive).length, wolves: s.ps.filter(p => p.role === 'wolf').length }; })()")
     check(st["w"] in ["village", "wolf"] and st["wolves"] == 2, "7 joueurs = 2 loups, victoire cohérente (%s)" % st["w"])

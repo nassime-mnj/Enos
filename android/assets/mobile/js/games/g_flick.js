@@ -74,7 +74,8 @@
       // ---- palets : socle cerclé d'or, dôme brillant au drapeau, halo d'équipe
       const discH = 0.16, gDisc = G3.disc(T, m.disc, discH, 0.05, 48), loader = new T.TextureLoader();
       const domeG = (() => { const g = new T.SphereGeometry(m.disc * 0.93, 40, 14, 0, Math.PI * 2, 0, Math.PI / 3.2), p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / (m.disc * 1.86) + 0.5, 0.5 - p.getZ(i) / (m.disc * 1.86)); return g; })();
-      const flagMat = (code) => { const t = loader.load("img/games/flick/flag_" + code + ".webp"); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; return new T.MeshPhysicalMaterial({ map: t, roughness: 0.18, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.45 }); };
+      await G3.pack("flags");
+      const flagMat = (code) => { const t = loader.load(G3.src("img/games/flick/flag_" + code + ".webp")); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; return new T.MeshPhysicalMaterial({ map: t, roughness: 0.18, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.45 }); };
       const domes = [flagMat(flags[0]), flagMat(flags[1])];
       const haloT = G3.canvasTex(T, 128, 128, (g, w) => { const r = g.createRadialGradient(w / 2, w / 2, w * 0.28, w / 2, w / 2, w / 2); r.addColorStop(0, "rgba(255,255,255,0.9)"); r.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = r; g.fillRect(0, 0, w, w); });
       const meshes = st.bodies.map((b) => { const g = new T.Group(); const d = new T.Mesh(gDisc, M.gold); d.castShadow = true; g.add(d);

@@ -40,7 +40,12 @@
     (def.feat || []).forEach((f) => { const o = Object.assign({}, f);
       if (f.k === "water") { o.s0 = f.a * L; o.s1 = f.b * L; }
       else { o.s = f.at * L; const q = at(f.at); o.cx = q.x + q.nx * (f.off || 0) * q.hw; o.cz = q.z + q.nz * (f.off || 0) * q.hw; o.q = q; }
-      if (f.k === "loop") o.R = 0.75;
+      if (f.k === "loop") { o.R = 0.75; o.W = 0.34;
+        // couloir fermé autour du looping : on ne peut ni le contourner ni traverser son support ; entonnoirs à l'entrée et à la sortie
+        const lat = o.W + 0.07, s0 = o.s - o.R - 0.3, s1 = o.s + o.R + 0.3, P2 = (ss, l) => { const q = G.sampleAt(H, ss); return [q.x + q.nx * l, q.z + q.nz * l, q.hw]; };
+        o.gates = [];
+        [-1, 1].forEach((sg) => { const a = P2(s0, sg * lat), b = P2(s1, sg * lat), wa = P2(s0 - 1.1, 0), wb = P2(s1 + 1.1, 0), ea = P2(s0 - 1.1, sg * (wa[2] - 0.02)), eb = P2(s1 + 1.1, sg * (wb[2] - 0.02));
+          o.gates.push([a[0], a[1], b[0], b[1]], [ea[0], ea[1], a[0], a[1]], [b[0], b[1], eb[0], eb[1]]); }); }
       if (f.k === "mill") o.arm = o.q.hw - 0.02;
       H.feat.push(o); });
     S.forEach((q) => { q.wall = !H.feat.some((f) => f.k === "water" && q.s > f.s0 && q.s < f.s1); });
@@ -57,18 +62,19 @@
   /** obstacles mobiles au temps t : [{x, z, r, vx, vz, e, cap: [ax, az, bx, bz]?}] */
   G.obstacles = (H, t) => { const out = [];
     H.feat.forEach((f) => {
-      if (f.k === "bumper") out.push({ x: f.cx, z: f.cz, r: 0.17, vx: 0, vz: 0, e: 1.15, k: "bumper" });
+      if (f.k === "bumper") out.push({ x: f.cx, z: f.cz, r: 0.22, vx: 0, vz: 0, e: 1.15, k: "bumper" });
+      else if (f.k === "loop") f.gates.forEach((c) => out.push({ cap: c, r: 0.06, w: 0, cx: 0, cz: 0, e: 0.7, k: "wall" }));
       else if (f.k === "mill") { const a = (f.w || 1.2) * t, dx = Math.cos(a), dz = Math.sin(a), L = f.arm;
         out.push({ cap: [f.cx - dx * L, f.cz - dz * L, f.cx + dx * L, f.cz + dz * L], r: 0.07, w: f.w || 1.2, cx: f.cx, cz: f.cz, e: 0.6, k: "mill" });
-        out.push({ x: f.cx, z: f.cz, r: 0.16, vx: 0, vz: 0, e: 0.6, k: "post" }); }
+        out.push({ x: f.cx, z: f.cz, r: 0.21, vx: 0, vz: 0, e: 0.6, k: "post" }); }
       else if (f.k === "hammer") { const w = f.w || 2, ph = f.ph || 0, A = f.amp * f.q.hw, o = A * Math.sin(w * t + ph), v = A * w * Math.cos(w * t + ph);
-        out.push({ x: f.cx + f.q.nx * o, z: f.cz + f.q.nz * o, r: 0.24, vx: f.q.nx * v, vz: f.q.nz * v, e: 0.9, k: "hammer" }); }
+        out.push({ x: f.cx + f.q.nx * o, z: f.cz + f.q.nz * o, r: 0.27, vx: f.q.nx * v, vz: f.q.nz * v, e: 0.9, k: "hammer" }); }
     });
     return out; };
 
   /** balle au départ */
   G.ball = (H) => ({ x: H.tee.x, z: H.tee.z, y: H.tee.y, vx: 0, vz: 0, idx: G.nearest(H, H.tee.x, H.tee.z), moving: false, cup: false, loop: null, rest: { x: H.tee.x, z: H.tee.z }, t: 0 });
-  G.shoot = (b, angle, power) => { const v = Math.max(0.05, Math.min(1, power)) * MAXV; b.vx = Math.sin(angle) * v; b.vz = -Math.cos(angle) * v; b.rest = { x: b.x, z: b.z }; b.moving = true; b.t = 0; };
+  G.shoot = (b, angle, power) => { const v = Math.max(0.05, Math.min(1, power)) * MAXV; b.vx = Math.sin(angle) * v; b.vz = -Math.cos(angle) * v; b.rest = { x: b.x, z: b.z }; b.moving = true; b.t = 0; b.sx = null; };
   /** angle de tir vers un point */
   G.angleTo = (b, x, z) => Math.atan2(x - b.x, -(z - b.z));
 
@@ -76,7 +82,7 @@
   G.step = (H, b, t) => {
     const ev = []; if (!b.moving) return ev;
     b.t += DT;
-    if (b.loop) { b.loop.t += DT; if (b.loop.t >= b.loop.dur) { const q = G.sampleAt(H, b.loop.s + 0.08); b.x = q.x + q.nx * b.loop.d; b.z = q.z + q.nz * b.loop.d; b.vx = q.tx * b.loop.v; b.vz = q.tz * b.loop.v; b.idx = G.nearest(H, b.x, b.z); b.loop = null; } return ev; }
+    if (b.loop) { b.loop.t += DT; if (b.loop.t >= b.loop.dur) { const q = G.sampleAt(H, b.loop.s + 0.08); b.x = q.x + q.nx * b.loop.d; b.z = q.z + q.nz * b.loop.d; b.vx = q.tx * b.loop.v; b.vz = q.tz * b.loop.v; b.idx = G.nearest(H, b.x, b.z); b.loop = null; b.sx = null; } return ev; }
     const S = H.S; let q = S[b.idx];
     // pente (roulement : 5/7 g) + frottements + légère aspiration près de la coupe
     const sp0 = Math.hypot(b.vx, b.vz);
@@ -85,10 +91,10 @@
     if (dc < 0.34 && sp0 < 1.0 && dc > 0.001) { b.vx += (dcx / dc) * 1.4 * DT; b.vz += (dcz / dc) * 1.4 * DT; }
     let sp = Math.hypot(b.vx, b.vz);
     if (sp > 0) { const ns = Math.max(0, sp - (0.75 + 0.22 * sp) * DT); b.vx *= ns / sp; b.vz *= ns / sp; sp = ns; }
-    const ps = q.s;
+    const ps = b.sx != null ? b.sx : q.s + (b.x - q.x) * q.tx + (b.z - q.z) * q.tz;   // abscisse exacte au pas précédent
     b.x += b.vx * DT; b.z += b.vz * DT;
     b.idx = G.nearest(H, b.x, b.z, b.idx); q = S[b.idx];
-    const dx = b.x - q.x, dz = b.z - q.z; let d = dx * q.nx + dz * q.nz; const along = dx * q.tx + dz * q.tz, s = q.s + along;
+    const dx = b.x - q.x, dz = b.z - q.z; let d = dx * q.nx + dz * q.nz; const along = dx * q.tx + dz * q.tz, s = q.s + along; b.sx = s;
     // bandes latérales (ou chute dans l'eau sur les passerelles)
     if (q.wall) { const lim = q.hw - BALL; if (Math.abs(d) > lim) { const sg = Math.sign(d), vn = b.vx * q.nx + b.vz * q.nz;
         b.x -= q.nx * (Math.abs(d) - lim) * sg; b.z -= q.nz * (Math.abs(d) - lim) * sg; d = lim * sg;
@@ -98,7 +104,7 @@
     if (s < BALL && b.vx * q.tx + b.vz * q.tz < 0) { const vt = b.vx * q.tx + b.vz * q.tz; b.vx -= 1.72 * vt * q.tx; b.vz -= 1.72 * vt * q.tz; ev.push({ k: "wall", v: Math.abs(vt) }); }
     if (s > H.L - BALL && b.vx * q.tx + b.vz * q.tz > 0) { const vt = b.vx * q.tx + b.vz * q.tz; b.vx -= 1.72 * vt * q.tx; b.vz -= 1.72 * vt * q.tz; b.x -= q.tx * (s - H.L + BALL); b.z -= q.tz * (s - H.L + BALL); ev.push({ k: "wall", v: Math.abs(vt) }); }
     // looping
-    for (const f of H.feat) if (f.k === "loop" && ps < f.s && s >= f.s) { const vt = b.vx * q.tx + b.vz * q.tz;
+    for (const f of H.feat) if (f.k === "loop" && ps < f.s && s >= f.s && Math.abs(d) < f.W) { const vt = b.vx * q.tx + b.vz * q.tz;
       if (vt >= 4.1) { b.loop = { t: 0, dur: (2 * Math.PI * f.R) / (vt * 0.72), v: vt * 0.8, s: f.s, d, f }; ev.push({ k: "loop", v: vt }); return ev; }
       if (vt > 0) { b.vx -= 1.55 * vt * q.tx; b.vz -= 1.55 * vt * q.tz; b.x -= q.tx * 0.02; b.z -= q.tz * 0.02; ev.push({ k: "loopfail", v: vt }); } }
     // obstacles
