@@ -570,6 +570,18 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.124 — MultiEdit : la série n'est plus jamais perdue, le montage continue en arrière-plan
+- **Sauvegarde sur le téléphone** (IndexedDB `enos_multiedit`, `E.meStore`) après CHAQUE partie de la série : jeux joués, temps forts enregistrés (images de scène), parties d'échecs, musique choisie, étape en cours.
+- **Retour après une fermeture** (notification, application tuée par Android, plantage du moteur de la page) : MultiEdit se rouvre tout seul au lancement (série de moins de 48 h) :
+  - série en cours → « Continuer la série » au jeu suivant ;
+  - montage interrompu → « Montage interrompu · On reprend ton edit », relancé tout seul après 5 s (après 2 interruptions en 4K, le 1080p est proposé) ;
+  - bandeau sur l'accueil de MultiEdit (« Série en cours », « Montage interrompu », « Abandonner »).
+- **Montage en arrière-plan** : service Android de premier plan pendant le rendu (notification « MultiEdit · Montage : 45 % · tu peux quitter l'application », bouton Arrêter), la page n'est plus gelée et son moteur reste prioritaire même cachée (`setRendererPriorityPolicy`) ; le calcul ne dépend plus des minuteurs (ralentis à 1/s quand l'application est cachée).
+- **Edit terminé** : enregistré d'office dans Téléchargements/ENOS, gardé dans « Mes edits » (2 derniers), notification « Ton edit MultiEdit est prêt » si l'application est cachée.
+- **Moins de mémoire en 4K** : la vidéo s'écrit au fil de l'eau par morceaux de 4 Mo (plus de tampon unique qui double), débit 4K 60 ramené à ~25 Mb/s (HEVC) / ~40 Mb/s (H.264).
+- Java : `TrainService` accepte « titre\ntexte\nmodule », `keepAlive` met à jour la notification, pont `notify(titre, texte, module)`.
+- Test : `t_multiedit.py` (page rechargée pendant le montage → reprise automatique, « Mes edits » après relance).
+
 ## 1.123 — E.N.O.S. et Mittens rentrent dans ta tête (prédictions, mémoire, voix d'E.N.O.S.)
 - **Mind games** (`js/mind_games.js`, répliques `js/mind_lines.js`) face à **E.N.O.S.** (Défi E.N.O.S., Boss, combats) et **Mittens**. Chaque phrase s'appuie sur un fait réel de la partie, d'où le « comment il sait ? » :
   - **prédiction scellée** : à chaque tour, Stockfish analyse TA position (MultiPV 4) et un modèle « humain » pondère les coups (perte en centipions, reprise immédiate, échecs, prises, pièce attaquée qui fuit, part « autre coup » selon le nombre de coups légaux). Au-delà de ~60 % : « J'ai déjà écrit ton prochain coup », puis après ton coup « Écrit à 21:14:07, avant ton coup : Dxd5. » ; parfois **tes deux prochains coups**, révélés un par un ; série de prédictions justes (« 3 sur 3. Je suis dans ta tête. ») ;

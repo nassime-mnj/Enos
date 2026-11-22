@@ -495,6 +495,23 @@ final class LocalBridge {
         if (ok()) act.setKeepAlive(on, text == null ? "" : text.length() > 120 ? text.substring(0, 120) : text);
     }
 
+    /** Notification simple (ex. « Ton edit est prêt ») ; module : écran ouvert quand on la touche. */
+    @JavascriptInterface
+    public void notify(String title, String text, String module) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 33 && act.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+            android.app.NotificationManager nm = (android.app.NotificationManager) act.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            nm.createNotificationChannel(new android.app.NotificationChannel("enos_done", "Travaux terminés", android.app.NotificationManager.IMPORTANCE_DEFAULT));
+            android.content.Intent open = new android.content.Intent(act, MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            if (module != null && module.matches("[a-z0-9_-]{1,32}")) open.putExtra("module", module);
+            android.app.PendingIntent pi = android.app.PendingIntent.getActivity(act, 4111, open, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+            nm.notify(4111, new android.app.Notification.Builder(act, "enos_done").setSmallIcon(android.R.drawable.stat_sys_download_done)
+                    .setContentTitle(title == null ? "" : title).setContentText(text == null ? "" : text).setContentIntent(pi).setAutoCancel(true).build());
+        } catch (Exception ignored) {
+        }
+    }
+
     @JavascriptInterface
     public void wake() {
         if (ok()) act.wakeRelay();

@@ -23,6 +23,24 @@
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const loadImg = (src) => new Promise((res) => { if (!src) return res(null); const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 
+  // ------------------------------------------------------------------ SAUVEGARDE (IndexedDB) : la série n'est JAMAIS perdue
+  // Après chaque partie, la série (jeux joués, temps forts enregistrés, parties d'échecs, musique) est écrite sur le téléphone. Si l'application est fermée,
+  // tuée par Android ou relancée pendant le montage, on retrouve tout en revenant : « Continuer la série », « Reprendre le montage » (relancé tout seul),
+  // et les edits terminés restent dans « Mes edits » (et sont enregistrés d'office dans Téléchargements/ENOS).
+  const ST = {
+    db: null,
+    open() { return this.db || (this.db = new Promise((res, rej) => { try { const r = indexedDB.open("enos_multiedit", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } })); },
+    async tx(mode, fn) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", mode), st = t.objectStore("kv"), q = fn(st); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); },
+    get(k) { return this.tx("readonly", (s) => s.get(k)).catch(() => null); },
+    set(k, v) { return this.tx("readwrite", (s) => s.put(v, k)).catch((e) => { console.warn("multiedit: sauvegarde", e); return null; }); },
+    del(k) { return this.tx("readwrite", (s) => s.delete(k)).catch(() => null); },
+  };
+  /** copie enregistrable : garde nombres, textes, tableaux (typés compris), objets simples, fichiers ; jette fonctions et éléments de page */
+  const clean = (v, d) => { if (v == null || typeof v !== "object") return typeof v === "function" ? undefined : v; if ((d || 0) > 12) return undefined;
+    if (ArrayBuffer.isView(v) || v instanceof Blob || v instanceof Date) return v; if (typeof Node !== "undefined" && v instanceof Node) return undefined;
+    if (Array.isArray(v)) return v.map((x) => clean(x, (d || 0) + 1)); const o = {}; for (const k in v) { const x = clean(v[k], (d || 0) + 1); if (x !== undefined) o[k] = x; } return o; };
+  E.meStore = ST;
+
   E.suite.register({
     id: "multiedit", group: "games", title: "MultiEdit", sub: "Une série de jeux, un seul edit",
     icon: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18M7 7l2-4M12 7l2-4M17 7l2-4"/>',
@@ -31,9 +49,40 @@
       let steps = E.settings.get("multiedit.steps", null) || [{ g: "flick", bots: ["eto"], decor: "stade" }, { g: "neocite", bots: ["lelex", "ghorghor"], decor: "nuit" }, { g: "chess", bots: ["enos"] }, { g: "golf", bots: ["nasko"], decor: "lagon" }];
       let music = null, run = null;
       const save = () => E.settings.set("multiedit.steps", steps);
+      const persist = () => run ? ST.set("run", clean({ v: 1, id: run.id, at: Date.now(), steps: run.steps || steps, i: run.i, results: run.results, state: run.state, quality: run.quality || "", attempts: run.attempts || 0, music: music ? { blob: music, name: music.name || "musique" } : null })) : ST.del("run");
+      const fileOf = (m) => { if (!m || !m.blob) return null; try { return new File([m.blob], m.name || "musique", { type: m.blob.type || "audio/mpeg" }); } catch (e) { const b = m.blob; b.name = m.name; return b; } };
+      /** reprend une série sauvegardée */
+      const resume = (saved, auto) => { run = { id: saved.id, i: saved.i, results: saved.results || [], state: saved.state, quality: saved.quality, attempts: saved.attempts || 0, steps: saved.steps };
+        steps = saved.steps || steps; music = fileOf(saved.music);
+        if (saved.state === "playing" && run.i < steps.length) return interstitial();
+        if (saved.state === "rendering") return interrupted(auto);
+        finishRun(); };
+      const interrupted = (auto) => {
+        const q = run.quality || E.settings.get("multiedit.quality", "4k"), lower = q === "4k" && run.attempts >= 2;
+        el.innerHTML = `<div class="me-done"><small>Montage interrompu</small><h2>On reprend ton edit</h2><p class="muted">L'application a été fermée pendant le montage. Ta série est intacte (${run.results.filter((r) => !r.res.skipped).length} jeux) : le montage repart du début.</p>
+          ${lower ? `<p class="muted">Le rendu 4K a déjà été interrompu ${run.attempts} fois : le 1080p est conseillé (2 à 3 fois plus rapide, moins de mémoire).</p>` : ""}
+          <button class="btn pri wide" id="me-re">Reprendre le montage${auto && !lower ? ' <span id="me-cd">· 5</span>' : ""}</button>${lower ? `<button class="btn wide" id="me-re1080">Reprendre en 1080p</button>` : ""}<button class="btn wide" id="me-later">Plus tard</button></div>`;
+        let cd = 5, timer = null; const go = (qq) => { clearInterval(timer); if (qq) E.settings.set("multiedit.quality", qq); montage(run.results); };
+        if (auto && !lower) timer = setInterval(() => { cd--; const n = el.querySelector("#me-cd"); if (!n) return clearInterval(timer); n.textContent = "· " + cd; if (cd <= 0) go(); }, 1000);
+        el.querySelector("#me-re").onclick = () => go(); const r1 = el.querySelector("#me-re1080"); if (r1) r1.onclick = () => go("1080");
+        el.querySelector("#me-later").onclick = () => { clearInterval(timer); run.state = "ready"; persist(); finishRun(); };
+      };
+      /** bandeau de l'accueil : série en cours / montage interrompu + mes edits */
+      const paintSaved = async () => {
+        const [saved, edits] = await Promise.all([ST.get("run"), ST.get("edits")]), box = el.querySelector("#me-saved"); if (!box) return;
+        let h = "";
+        if (saved && saved.state !== "done" && saved.results) { const n = saved.results.filter((r) => !r.res.skipped).length, tot = (saved.steps || []).length;
+          h += `<div class="card me-resume"><b>${saved.state === "rendering" ? "Montage interrompu" : saved.state === "playing" ? "Série en cours" : "Série terminée, edit pas encore créé"}</b><small>${n} jeu${n > 1 ? "x" : ""} joué${n > 1 ? "s" : ""}${saved.state === "playing" ? " sur " + tot : ""} · ${new Date(saved.at).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</small>
+            <div class="row"><button class="btn pri" id="me-res-go">${saved.state === "playing" ? "Continuer la série" : saved.state === "rendering" ? "Reprendre le montage" : "Créer l'edit"}</button><button class="btn" id="me-res-x">Abandonner</button></div></div>`; }
+        if (edits && edits.length) h += `<div class="card me-edits"><b>Mes edits</b>${edits.map((x, k) => `<div class="me-ed"><span>${new Date(x.at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · ${x.w}×${x.h} · ${Math.round(x.duration)} s · ${Math.round(x.blob.size / 1e6)} Mo${x.saved ? " · enregistré" : ""}</span><button class="btn" data-ed="${k}">Voir</button></div>`).join("")}</div>`;
+        box.innerHTML = h;
+        const g = box.querySelector("#me-res-go"); if (g) g.onclick = () => resume(saved, false);
+        const x = box.querySelector("#me-res-x"); if (x) x.onclick = async () => { if (!confirm("Abandonner cette série ? Les parties jouées seront perdues.")) return; await ST.del("run"); run = null; paintSaved(); };
+        box.querySelectorAll("[data-ed]").forEach((b) => (b.onclick = () => showResult(edits[+b.dataset.ed], true)));
+      };
       // ------------------------------------------------------------ constructeur de série
       const paint = () => {
-        el.innerHTML = `<div class="me-hero"><small>Clip Edit</small><h2>MultiEdit</h2><p>Choisis tes jeux et tes adversaires. Tu les joues à la suite, l'edit se monte tout seul avec les meilleurs moments.</p></div>
+        el.innerHTML = `<div class="me-hero"><small>Clip Edit</small><h2>MultiEdit</h2><p>Choisis tes jeux et tes adversaires. Tu les joues à la suite, l'edit se monte tout seul avec les meilleurs moments.</p></div><div id="me-saved"></div>
           <div class="me-steps">${steps.map((s, i) => { const G = GAMES[s.g]; return `<div class="me-step" data-i="${i}"><img class="me-art" src="${G.art}" alt=""><div class="me-sb"><small>Jeu ${i + 1}</small><b>${esc(G.name)}</b>
             <div class="me-bots">${s.bots.map((b, k) => `<button class="me-bot" data-b="${k}" title="${esc(botName(b))}">${botImg(b) ? `<img src="${esc(botImg(b))}" alt="">` : `<span>${esc(botName(b).slice(0, 2))}</span>`}<em>${esc(botName(b))}</em></button>`).join("")}${s.bots.length < G.max ? `<button class="me-add-bot" data-addb>+</button>` : ""}</div>
             ${G.decors ? `<select class="me-decor" data-d>${G.decors.map(([v, l]) => `<option value="${v}"${(s.decor || G.decor) === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>` : ""}</div>
@@ -54,13 +103,14 @@
         el.querySelector("#me-mus").onclick = async () => { const f = A.pick ? (await A.pick({ accept: "audio/*" }))[0] : null; if (f) { music = f; paint(); } };
         const mx = el.querySelector("#me-mus-x"); if (mx) mx.onclick = () => { music = null; paint(); };
         el.querySelector("#me-go").onclick = () => startRun();
+        paintSaved();
       };
       const pickBot = (cur, canDel) => new Promise((res) => { let done = false;
         const sh = E.ui.sheet({ title: "Adversaire", html: `<div class="me-roster">${roster().map((id) => `<button data-b="${id}" class="${id === cur ? "on" : ""}">${botImg(id) ? `<img src="${esc(botImg(id))}" alt="">` : `<span>${esc(botName(id).slice(0, 2))}</span>`}<b>${esc(botName(id))}</b></button>`).join("")}</div>`,
           options: (canDel ? [{ label: "Retirer cet adversaire", fn: () => { done = true; res("__del"); } }] : []).concat([{ label: "Fermer" }]), onClose: () => { if (!done) res(null); } });
         sh.querySelectorAll("[data-b]").forEach((b) => (b.onclick = () => { done = true; E.ui.closeSheet(true); res(b.dataset.b); })); });
       // ------------------------------------------------------------ série
-      const startRun = () => { if (!steps.length) return; run = { i: 0, results: [] }; interstitial(); };
+      const startRun = () => { if (!steps.length) return; run = { id: Date.now(), i: 0, results: [], state: "playing", attempts: 0, steps: JSON.parse(JSON.stringify(steps)) }; persist(); interstitial(); };
       const interstitial = () => {
         const s = steps[run.i], G = GAMES[s.g];
         el.innerHTML = `<div class="me-inter"><small>Jeu ${run.i + 1} / ${steps.length}</small><img src="${G.art}" alt=""><h2>${esc(G.name)}</h2>
@@ -89,6 +139,7 @@
       };
       const back = () => { if (E.modules && E.modules.open) E.modules.open("multiedit"); };
       const after = (res, clips, stop) => { if (run.chessTimer) clearInterval(run.chessTimer); run.results.push({ step: steps[run.i], res: res || {}, clips: clips || [] }); run.i++; back();
+        run.state = stop || run.i >= steps.length ? "ready" : "playing"; persist();
         if (stop || run.i >= steps.length) finishRun(); else interstitial(); };
       const finishRun = () => { const usable = run.results.filter((r) => r.clips.length || (r.res && r.res.chess && r.res.chess.mv && r.res.chess.mv.length >= 2));
         el.innerHTML = `<div class="me-done"><small>Série terminée</small><h2>${usable.length ? "On monte l'edit ?" : "Rien à monter"}</h2>
@@ -96,7 +147,7 @@
           ${usable.length ? `<div class="cv-chips me-q">${[["4k", "4K 60 i/s"], ["1080", "1080p 60 i/s (plus rapide)"]].map(([v, l]) => `<button data-q="${v}" class="${E.settings.get("multiedit.quality", "4k") === v ? "on" : ""}">${l}</button>`).join("")}</div><button class="btn pri wide" id="me-make">Créer l'edit</button>` : `<p class="muted">Aucun moment enregistré.</p>`}<button class="btn wide" id="me-new">Nouvelle série</button></div>`;
         const mk = el.querySelector("#me-make"); if (mk) mk.onclick = () => montage(run.results);
         el.querySelectorAll(".me-q [data-q]").forEach((b) => (b.onclick = () => { E.settings.set("multiedit.quality", b.dataset.q); el.querySelectorAll(".me-q [data-q]").forEach((x) => x.classList.toggle("on", x === b)); }));
-        el.querySelector("#me-new").onclick = () => paint(); };
+        el.querySelector("#me-new").onclick = async () => { if (run && run.state !== "done" && run.results.length && !confirm("Commencer une nouvelle série ? Celle-ci (pas encore montée) sera perdue.")) return; run = null; await ST.del("run"); paint(); }; };
       // ------------------------------------------------------------ montage
       const montage = async (results) => {
         const q = E.settings.get("multiedit.quality", "4k");
@@ -105,24 +156,45 @@
         const st = (t) => (el.querySelector("#me-st").textContent = t), t0 = performance.now();
         const pg = (k, txt) => { el.querySelector("#me-pg").style.width = Math.round(k * 100) + "%"; if (txt) st(txt); const el2 = el.querySelector("#me-eta"); if (el2 && k > 0.08) { const left = ((performance.now() - t0) / k) * (1 - k) / 1000; el2.textContent = "Encore " + (left > 90 ? Math.round(left / 60) + " min" : Math.round(left) + " s"); } };
         const sig = { stop: false }; el.querySelector("#me-cancel").onclick = () => { sig.stop = true; };
-        try { const out = await E.meRender.render(results, { music, quality: q, onProgress: pg, signal: sig }); showResult(out); }
-        catch (e) { el.innerHTML = `<div class="card"><p class="pl-err">${esc(e.message || String(e))}</p><button class="btn wide" id="me-new">Retour</button></div>`; el.querySelector("#me-new").onclick = () => finishRun(); }
+        const N = E.native || {}, keep = (t) => N.keepAlive && N.keepAlive(true, "MultiEdit\n" + t + "\nmultiedit");
+        run.state = "rendering"; run.quality = q; run.attempts = (run.attempts || 0) + 1; await persist();
+        keep("Montage de l'edit…"); E.onKeepAliveStop = () => { sig.stop = true; };
+        let lastPct = -1; const pg2 = (k, txt) => { pg(k, txt); const pct = Math.floor(k * 20) * 5; if (pct !== lastPct) { lastPct = pct; keep("Montage : " + pct + " % · tu peux quitter l'application"); } };
+        try {
+          const out = await E.meRender.render(results, { music, quality: q, onProgress: pg2, signal: sig });
+          run.state = "done"; out.at = Date.now(); out.name = "multiedit_" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".mp4";
+          const edits = ((await ST.get("edits")) || []).slice(0, 1); edits.unshift({ at: out.at, blob: out.blob, w: out.w, h: out.h, duration: out.duration, codec: out.codec, mime: out.mime, name: out.name, saved: false }); await ST.set("edits", edits);
+          await persist();
+          try { out.saved = await (A.save ? A.save(out.name, out.mime, out.blob, "downloads") : false); if (out.saved) { edits[0].saved = true; await ST.set("edits", edits); } } catch (e) { out.saved = false; }
+          if (N.keepAlive) N.keepAlive(false);
+          if (document.hidden && N.notify) N.notify("Ton edit MultiEdit est prêt", `${Math.round(out.duration)} s en ${out.h >= 3000 ? "4K" : "1080p"} · ${out.saved ? "enregistré dans Téléchargements/ENOS" : "touche pour le voir"}`, "multiedit");
+          showResult(out);
+        }
+        catch (e) { if (N.keepAlive) N.keepAlive(false); run.state = "ready"; await persist();
+          el.innerHTML = `<div class="card"><p class="pl-err">${esc(e.message || String(e))}</p><button class="btn wide" id="me-new">Retour</button></div>`; el.querySelector("#me-new").onclick = () => finishRun(); }
+        finally { E.onKeepAliveStop = null; }
       };
-      const showResult = (out) => {
-        E.multiEdit.last = out; const url = URL.createObjectURL(out.blob), ext = out.mime.includes("mp4") ? "mp4" : "webm", name = "multiedit_" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + "." + ext;
-        el.innerHTML = `<div class="me-res"><video src="${url}" controls playsinline loop autoplay></video><p class="muted">${out.w}×${out.h} · 60 i/s · ${Math.round(out.duration)} s · ${Math.round(out.blob.size / 1e6 * 10) / 10} Mo · ${out.codec.toUpperCase()}</p>
-          <button class="btn pri wide" id="me-save">Enregistrer la vidéo</button><button class="btn wide" id="me-again">Refaire le montage</button><button class="btn wide" id="me-new">Nouvelle série</button></div>`;
-        el.querySelector("#me-save").onclick = async () => { const b = new Uint8Array(await out.blob.arrayBuffer()); if (A.save) await A.save(name, out.mime, b); else { const a = document.createElement("a"); a.href = url; a.download = name; a.click(); } };
-        el.querySelector("#me-again").onclick = () => montage(run.results);
-        el.querySelector("#me-new").onclick = () => paint();
+      const showResult = (out, fromList) => {
+        E.multiEdit.last = out; const url = URL.createObjectURL(out.blob), ext = out.mime.includes("mp4") ? "mp4" : "webm", name = out.name || "multiedit_" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + "." + ext;
+        el.innerHTML = `<div class="me-res"><video src="${url}" controls playsinline loop autoplay></video><p class="muted">${out.w}×${out.h} · 60 i/s · ${Math.round(out.duration)} s · ${Math.round(out.blob.size / 1e6 * 10) / 10} Mo · ${String(out.codec || "").toUpperCase()}${out.saved ? " · déjà enregistré dans Téléchargements/ENOS" : ""}</p>
+          <button class="btn pri wide" id="me-save">${out.saved ? "Enregistrer une copie" : "Enregistrer la vidéo"}</button>${fromList || !run ? "" : `<button class="btn wide" id="me-again">Refaire le montage</button>`}<button class="btn wide" id="me-new">${fromList ? "Retour" : "Nouvelle série"}</button></div>`;
+        el.querySelector("#me-save").onclick = async () => { if (A.save) await A.save(name, out.mime, out.blob, "downloads"); else { const a = document.createElement("a"); a.href = url; a.download = name; a.click(); } };
+        const ag = el.querySelector("#me-again"); if (ag) ag.onclick = () => montage(run.results);
+        el.querySelector("#me-new").onclick = async () => { if (!fromList) { run = null; await ST.del("run"); } paint(); };
       };
-      el._api = { get steps() { return steps; }, set steps(v) { steps = v; save(); paint(); }, startRun, get run() { return run; }, montage, finishRun };
+      el._api = { get steps() { return steps; }, set steps(v) { steps = v; save(); paint(); }, startRun, get run() { return run; }, montage, finishRun, resume, set music(f) { music = f; } };
       paint();
+      // retour après une fermeture de l'application : la série reprend là où elle en était (montage relancé tout seul)
+      ST.get("run").then((saved) => { if (!saved || run || saved.state === "done" || !saved.results) return; if (E.multiEdit._autoResume && Date.now() - saved.at < 48 * 3600e3) { E.multiEdit._autoResume = false; resume(saved, true); } });
     },
   });
 
   // ================================================================== moteur de montage
   const M = (E.multiEdit = {});
+  // au lancement : une série non terminée (application fermée pendant une partie ou pendant le montage) rouvre MultiEdit
+  setTimeout(() => { ST.get("run").then((saved) => { if (!saved || saved.state === "done" || !saved.results || Date.now() - saved.at > 48 * 3600e3 || (E.jeux && E.jeux.cur)) return;
+    const usable = saved.results.some((r) => (r.clips && r.clips.length) || (r.res && r.res.chess && r.res.chess.mv && r.res.chess.mv.length >= 2)); if (!usable && saved.state !== "playing") return;
+    M._autoResume = true; try { if (E.ui && E.ui.go) E.ui.go("tools"); if (E.modules && E.modules.open) E.modules.open("multiedit"); } catch (e) { /* écran indisponible */ } }); }, 1800);
   /** beat généré (128 BPM) : kick, clap, charleston, basse — pour ne dépendre d'aucune musique sous droits */
   M.beat = (ctx, dest, t0, dur) => {
     const bpm = 128, b = 60 / bpm, end = t0 + dur, notes = [43, 43, 46, 41], noise = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;

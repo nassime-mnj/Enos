@@ -150,6 +150,8 @@
   // Super Enos : true = l'entraînement continue en arrière-plan (service de premier plan Android + verrou de réveil), false = relâche
   N.keepAlive = (on, text) => { try { if (N.available && B.keepAlive) B.keepAlive(!!on, text || ""); } catch (e) { /* ancienne coque sans service : l'entraînement s'arrête avec l'écran */ } };
   N.openPcUi = () => { if (N.available) B.openPcUi(); };
+  /** notification simple ; module : écran ouvert quand on la touche (ex. « multiedit ») */
+  N.notify = (title, text, module) => { try { if (N.available && B.notify) B.notify(String(title || ""), String(text || ""), String(module || "")); } catch (e) { /* ancienne coque */ } };
   // Menu Partager d'Android : une image envoyée à E.N.O.S. (capture d'écran d'un échiquier) -> base64, lue une seule fois
   N.pendingShare = () => { const b = window.Enos; return N.available && b && b.pendingShare ? b.pendingShare() : ""; };
   N.openPcModule = (id) => { if (N.available) B.openPcModule(String(id)); else U_dev(id); };

@@ -250,8 +250,11 @@ public class MainActivity extends Activity {
         ui.post(new Runnable() {
             @Override
             public void run() {
+                if (on && keepAlive) { TrainService.start(MainActivity.this, text); return; }       // déjà actif : on met juste la notification à jour (progression)
                 if (on == keepAlive) return;
                 keepAlive = on;
+                // le moteur de la page reste prioritaire même écran éteint / application cachée (sinon Android le tue en premier pendant un rendu lourd)
+                if (Build.VERSION.SDK_INT >= 26 && web != null) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, !on);
                 if (on) {
                     if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                         requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 12);     // sans elle, le service tourne mais la notification reste cachée
@@ -260,8 +263,9 @@ public class MainActivity extends Activity {
                             @Override
                             public void onReceive(android.content.Context c, Intent i) {
                                 keepAlive = false;
+                                if (Build.VERSION.SDK_INT >= 26 && web != null) web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true);
                                 if (paused && web != null) web.onPause();
-                                if (onLocalApp && web != null) web.evaluateJavascript("window.ENOS&&ENOS.trainUi&&ENOS.trainUi.stopFromNative()", null);
+                                if (onLocalApp && web != null) web.evaluateJavascript("window.ENOS&&(ENOS.onKeepAliveStop&&ENOS.onKeepAliveStop(),ENOS.trainUi&&ENOS.trainUi.stopFromNative())", null);
                             }
                         };
                         android.content.IntentFilter f = new android.content.IntentFilter(TrainService.ACTION_STOP);

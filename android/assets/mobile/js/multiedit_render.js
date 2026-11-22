@@ -13,7 +13,8 @@
   const R = (E.meRender = {});
   const FPS = 60;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, out3 = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
-  const tick = () => new Promise((r) => setTimeout(r, 0));
+  // rendre la main SANS minuteur : une page cachée (application en arrière-plan) voit ses setTimeout ralentis à 1 par seconde, pas les messages
+  const tick = () => new Promise((r) => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });
   const GNAME = { flick: "FOOT", golf: "GOLF", bowling: "BOWLING", neocite: "NÉO-CITÉ", chess: "ÉCHECS" };
 
   // ------------------------------------------------------------------ musique et grille des temps
@@ -203,7 +204,7 @@
 
   // ------------------------------------------------------------------ encodeurs
   async function pickVideo(W, H, fps) { const list = [["hevc", "hvc1.1.6.L" + (W * H > 8912896 ? 183 : W * H > 2228224 ? 156 : 123) + ".B0"], ["avc", W * H > 2228224 ? "avc1.640034" : "avc1.64002a"], ["avc", "avc1.4d0034"]];
-    for (const [name, codec] of list) { const bitrate = Math.round(W * H * fps * (name === "hevc" ? 0.09 : 0.13)); try { const r = await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate, framerate: fps, ...(name === "avc" ? { avc: { format: "avc" } } : { hevc: { format: "hevc" } }) }); if (r && r.supported) return { name, codec, bitrate }; } catch (e) { /* suivant */ } } return null; }
+    for (const [name, codec] of list) { const bitrate = Math.round(W * H * fps * (name === "hevc" ? 0.05 : 0.08)); /* 4K 60 : ~25 Mb/s HEVC, ~40 Mb/s H.264 */ try { const r = await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate, framerate: fps, ...(name === "avc" ? { avc: { format: "avc" } } : { hevc: { format: "hevc" } }) }); if (r && r.supported) return { name, codec, bitrate }; } catch (e) { /* suivant */ } } return null; }
   async function pickAudio() { for (const [name, codec] of [["aac", "mp4a.40.2"], ["opus", "opus"]]) { try { const r = await AudioEncoder.isConfigSupported({ codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 192000 }); if (r && r.supported) return { name, codec }; } catch (e) { /* suivant */ } } return null; }
 
   // ------------------------------------------------------------------ rendu complet
@@ -236,7 +237,12 @@
     const chessCache = new Map();
     for (const s of plan.segs) if (s.k === "chess") { const sh = chessCache.get(s.rec); if (sh) { Object.assign(s, sh); continue; } try { const Mp = E.editMap, plies = Mp.gamePlies(s.rec); s.tl = Mp.buildViral(plies, s.rec, null, { voices: false, intro: false, keepTwist: true, syncDrop: false, synth: true, opening: "" }); s.cc = Object.assign(document.createElement("canvas"), { width: 1080, height: 1920 }); s.R = new E.editRender.Renderer(s.cc, s.tl, { rec: s.rec }); await s.R.load(); s.tex = new T.CanvasTexture(s.cc); s.tex.colorSpace = T.NoColorSpace; chessCache.set(s.rec, { tl: s.tl, cc: s.cc, R: s.R, tex: s.tex }); } catch (e) { s.k = "title"; s.r = { step: { bots: [] } }; } }
     // encodeur + muxer
-    const target = new Mp4Muxer.ArrayBufferTarget(), muxer = new Mp4Muxer.Muxer({ target, fastStart: "in-memory", video: { codec: vc.name, width: W, height: H, frameRate: FPS }, audio: mixed && ac ? { codec: ac.name, numberOfChannels: 2, sampleRate: 48000 } : undefined });
+    // le fichier s'écrit au fil de l'eau (morceaux de 4 Mo) au lieu d'un seul tampon qui double de taille : moitié moins de mémoire en 4K
+    const parts = [], write = (data, pos) => { let end = parts.length ? parts[parts.length - 1].pos + parts[parts.length - 1].data.length : 0;
+      if (pos < end) { for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i], a = Math.max(pos, q.pos), b = Math.min(pos + data.length, q.pos + q.data.length); if (b > a) q.data.set(data.subarray(a - pos, b - pos), a - q.pos); if (q.pos <= pos) break; }
+        if (pos + data.length <= end) return; data = data.subarray(end - pos); pos = end; }
+      parts.push({ pos, data: data.slice() }); };
+    const target = new Mp4Muxer.StreamTarget({ onData: (d, p) => write(d, p), chunked: true, chunkSize: 4 * 1024 * 1024 }), muxer = new Mp4Muxer.Muxer({ target, fastStart: false, video: { codec: vc.name, width: W, height: H, frameRate: FPS }, audio: mixed && ac ? { codec: ac.name, numberOfChannels: 2, sampleRate: 48000 } : undefined });
     let err = null; const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (err = e) });
     venc.configure({ codec: vc.codec, width: W, height: H, bitrate: vc.bitrate, framerate: FPS, bitrateMode: "variable", latencyMode: "quality", ...(vc.name === "avc" ? { avc: { format: "avc" } } : { hevc: { format: "hevc" } }) });
     // rejeu : une instance de jeu (mode « rejeu ») par moment, recréée quand la scène change
@@ -313,16 +319,16 @@
       U.uFade.value = Math.min(1, t / 0.25, (D - t) / 0.6);
       renderer.setRenderTarget(null); renderer.render(fxScene, fxCam);
       const vf = new VideoFrame(cv, { timestamp: Math.round((f * 1e6) / FPS), duration: Math.round(1e6 / FPS) }); venc.encode(vf, { keyFrame: f % (FPS * 2) === 0 }); vf.close();
-      while (venc.encodeQueueSize > 4) await new Promise((r) => setTimeout(r, 1));
+      while (venc.encodeQueueSize > 4) await new Promise((r) => { venc.addEventListener("dequeue", r, { once: true }); tick().then(() => setTimeout(r, 30)); });
       if (f % 4 === 0) { prog(0.05 + 0.88 * (f / N), `Rendu de l'edit : ${Math.round((100 * f) / N)} %`); await tick(); }
     }
     await venc.flush(); venc.close(); if (err) throw err;
     if (inst) { try { inst.game.destroy(); } catch (e) { /* rien */ } }
     if (mixed && ac) { prog(0.95, "Encodage du son…"); const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (err = e) }); aenc.configure({ codec: ac.codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 192000 });
       const L = mixed.getChannelData(0), Rr = mixed.getChannelData(1), NS = 4096; for (let p = 0; p < L.length; p += NS) { const n = Math.min(NS, L.length - p), data = new Float32Array(n * 2); data.set(L.subarray(p, p + n), 0); data.set(Rr.subarray(p, p + n), n);
-        const ad = new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round((p / 48000) * 1e6), data }); aenc.encode(ad); ad.close(); if (aenc.encodeQueueSize > 20) await new Promise((r) => setTimeout(r, 1)); }
+        const ad = new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round((p / 48000) * 1e6), data }); aenc.encode(ad); ad.close(); if (aenc.encodeQueueSize > 20) await tick(); }
       await aenc.flush(); aenc.close(); }
     muxer.finalize(); renderer.dispose(); subjRT.dispose(); prog(1, "Terminé");
-    return { blob: new Blob([target.buffer], { type: "video/mp4" }), mime: "video/mp4", duration: D, w: W, h: H, codec: vc.name, frames: N, sfx: sfx.length, beats: mus.beats.length, gen: mus.gen };
+    return { blob: new Blob(parts.map((x) => x.data), { type: "video/mp4" }), mime: "video/mp4", duration: D, w: W, h: H, codec: vc.name, frames: N, sfx: sfx.length, beats: mus.beats.length, gen: mus.gen };
   };
 })();

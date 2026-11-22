@@ -441,3 +441,10 @@ body.gm-on #scrim{z-index:1000}body.gm-on .sheet{z-index:1010}body.gm-on #toasts
 .me-spin{width:64px;height:64px;border-radius:50%;border:4px solid #2a2b33;border-top-color:#ff3d63;animation:meSpin 1s linear infinite;margin:20px auto 6px}
 @keyframes meSpin{to{transform:rotate(360deg)}}
 .me-render h3{margin:0;font:800 20px var(--ui);color:#fff}.me-q{justify-content:center;margin:6px 0}
+/* MultiEdit : série sauvegardée / montage interrompu / mes edits */
+#tool-multiedit .me-resume, #tool-multiedit .me-edits { margin: 10px 0; display: flex; flex-direction: column; gap: 6px; border: 1px solid rgba(239, 23, 72, 0.45); }
+#tool-multiedit .me-resume small { opacity: 0.75; }
+#tool-multiedit .me-resume .row { display: flex; gap: 8px; }
+#tool-multiedit .me-resume .row .btn { flex: 1; }
+#tool-multiedit .me-ed { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+#tool-multiedit .me-ed span { opacity: 0.85; }

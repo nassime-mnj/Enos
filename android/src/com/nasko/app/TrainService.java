@@ -44,18 +44,23 @@ public class TrainService extends Service {
             return START_NOT_STICKY;
         }
         String text = intent == null ? "" : intent.getStringExtra(EXTRA_TEXT);
+        // « titre\ntexte\nmodule » : d'autres travaux longs que l'entraînement (montage MultiEdit…) ont leur propre titre et ouvrent leur module
+        String title = "Super Enos s'entraîne", module = null;
+        if (text != null && text.contains("\n")) { String[] p = text.split("\n", 3); title = p[0]; text = p.length > 1 ? p[1] : ""; if (p.length > 2 && p[2].matches("[a-z0-9_-]{1,32}")) module = p[2]; }
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Entraînement de Super Enos", NotificationManager.IMPORTANCE_LOW));
         Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (module != null) open.putExtra("module", module);
         PendingIntent po = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent ps = PendingIntent.getService(this, 1, new Intent(this, TrainService.class).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
-                .setContentTitle("Super Enos s'entraîne")
+                .setContentTitle(title)
                 .setContentText(text == null || text.isEmpty() ? "Parties d'échecs en arrière-plan" : text)
                 .setContentIntent(po)
                 .addAction(new Notification.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel, "Arrêter", ps).build())
                 .setOngoing(true)
+                .setOnlyAlertOnce(true)
                 .build();
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         else startForeground(NOTIF_ID, n);
