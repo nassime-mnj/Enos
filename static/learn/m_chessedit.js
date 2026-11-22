@@ -366,7 +366,7 @@
         function stop() { if (!alive) return; alive = false; cancelAnimationFrame(raf); if (au) au.pause(); sfx.close(); stage.destroy(); host.remove(); S.stage = null; }
         S.stage = { stop };
         try {
-          await sfx.ctx.resume(); await sfx.load();
+          await sfx.ctx.resume(); await sfx.load(); await sfx.loadBot(tl.sfx);
         } catch (e) { A.toast("Audio indisponible : " + e.message, "err"); }
         if (!alive) return;
         if (tl.sfx.some((x) => x.bus === "voice") && sfx.voicesOk < 5) A.toast("Voix de Levy : " + sfx.voicesOk + "/5 chargées (" + (sfx.err || "") + ")", "warn");
@@ -396,7 +396,7 @@
         const duckFn = (when, len, lvl) => { if (!au) return; const ms = Math.max(0, (when - sfx.ctx.currentTime) * 1000); setTimeout(() => { if (alive) au.volume = (lvl || 0.45) * 0.85; }, Math.max(0, ms - 20)); clearTimeout(duckT); duckT = setTimeout(() => { if (alive) au.volume = 0.85; }, ms + len * 1000 + 180); };
         sfx.onVoice = duckFn; sfx.onDuck = duckFn;
         ov.querySelector(".ce-x").onclick = stop; ov.querySelector(".ce-pp").onclick = () => { paused = !paused; ov.querySelector(".ce-pp").textContent = paused ? "▶" : "⏸"; if (paused) { pausedAt = sfx.ctx.currentTime - T0; sfx.ctx.suspend(); if (au) au.pause(); } else { sfx.ctx.resume(); if (au) au.play().catch(() => {}); } };
-        try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load())]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }
+        try { await Promise.all([R.load(), sfx.ctx.resume().then(() => sfx.load()).then(() => sfx.loadBot(tl.sfx))]); } catch (e) { A.toast("Chargement : " + e.message, "err"); }
         if (!alive) return; load.remove(); const LEAD = 0.3; T0 = sfx.ctx.currentTime + LEAD; sfx.arm(tl.sfx, T0);
         if (au) { au.volume = 0.85; try { au.currentTime = Math.max(0, tl.musicStart || 0); } catch (e) { /* métadonnées pas encore prêtes */ } setTimeout(() => alive && au.play().catch(() => {}), LEAD * 1000); }       // la musique démarre au début du groove (musicStart > 0)
         const loop = () => { if (!alive) return; if (!paused) { const vt = Math.max(0, sfx.ctx.currentTime - T0); sfx.pump(vt); R.draw(vt); ov.querySelector(".ce-prog i").style.transform = `scaleX(${clamp01(vt / tl.duration)})`; if (vt > tl.duration + 0.4) return stop(); } raf = requestAnimationFrame(loop); };

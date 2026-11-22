@@ -115,6 +115,7 @@
       crowd: (theme) => ["eto", "stade"].includes(theme),
       /** temps forts pour MultiEdit (js/games/highlights.js) : inactif hors d'une série */
       clip: { begin: (tag) => !!(E.hl && E.hl.begin(tag)), mark: (k) => E.hl && E.hl.mark(k), cancel: () => E.hl && E.hl.cancel(), active: () => !!(E.hl && E.hl.active),
+        track: (list, camera, meta) => E.hl && E.hl.track(list, camera, meta), event: (k, pos, v) => E.hl && E.hl.event(k, pos, v), note: (info) => E.hl && E.hl.note(info),
         end: (info, delay) => { if (!E.hl) return; if (delay) setTimeout(() => E.hl.end(info), delay); else E.hl.end(info); } },
       /** fin de partie : winner = index du joueur gagnant (null = égalité) ; detail = texte */
       end: (winner, detail) => {

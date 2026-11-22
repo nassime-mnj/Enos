@@ -301,11 +301,10 @@
         const m = modal("nc-sig", `<div class="nc-tabic">${ICON("signal", "star")}</div><h2>Signal</h2><p class="nc-sub">Événement</p>${ca ? `<img class="nc-cardimg" src="${IMG}cards/${e.card}.webp" alt="">` : `<div class="nc-sigorb"></div>`}<p class="nc-sigtxt">${esc(e.text)}</p><button class="btn pri wide" data-ok>Continuer</button>`);
         api.sfx("nc.card"); const done = () => { clearTimeout(tm); closeModal(m); res(); }; const tm = setTimeout(done, P[st.turn] && P[st.turn].human ? 4000 : 2200); m.querySelector("[data-ok]").onclick = done; });
       const run = async (ev) => {
-        let best = null; const pick = (score, label, sub) => { if (!best || score > best.score) { best = { score, label, sub }; api.clip.mark(label); } };
-        if (ev.some((e) => e.t === "dice")) api.clip.begin("tour");
+        let best = null; const pick = (score, label, sub) => { if (!best || score > best.score) { best = { score, label, sub }; return true; } return false; };
         for (const e of ev) {
-          if (e.t === "rent" && e.amount >= 60) pick(e.amount / 6, "−" + fmt(e.amount), `${name(e.p)} paie ${name(e.to)} · ${N.BOARD[e.sq].name}`);
-          else if (e.t === "bankrupt") pick(220, "FAILLITE", name(e.p));
+          if (e.t === "rent" && e.amount >= 60) { if (pick(e.amount / 6, "−" + fmt(e.amount), `${name(e.p)} paie ${name(e.to)} · ${N.BOARD[e.sq].name}`)) Object.assign(best, { kind: "rent", amount: e.amount, city: N.BOARD[e.sq].name, art: slug(N.BOARD[e.sq].name), payer: (P[e.p] && P[e.p].img) || "", owner: (P[e.to] && P[e.to].img) || "" }); }
+          else if (e.t === "bankrupt") { if (pick(220, "FAILLITE", name(e.p))) Object.assign(best, { kind: "bankrupt", payer: (P[e.p] && P[e.p].img) || "" }); }
           else if (e.t === "reserve" && e.amount >= 100) pick(e.amount / 5, "+" + fmt(e.amount), `${name(e.p)} remporte la Réserve`);
           else if (e.t === "jail") pick(30, "PARE-FEU", `${name(e.p)} part en prison`);
           if (e.t === "dice") { await rollDice(e.dice, e.p); say(`${name(e.p)} fait ${e.dice[0]} + ${e.dice[1]}${e.dice[0] === e.dice[1] ? " · double" : ""}`); await wait(150); }
@@ -323,7 +322,7 @@
           refreshDeco(); drawPlayers();
         }
         refreshDeco(); drawPlayers();
-        if (api.clip.active()) { if (best) api.clip.end(best, 900); else api.clip.cancel(); }
+        if (api.clip.active() && best) api.clip.note(best);
       };
       // ---------------------------------------------------------------- case Enchères (tout le monde enchérit, sous pli fermé)
       const botCeil = (j, sq) => { const lvl = P[j].level || setup.level || "normal", f = { easy: 0.75, normal: 0.95, hard: 1.05, max: 1.12 }[lvl] || 0.95;

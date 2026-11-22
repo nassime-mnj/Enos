@@ -438,3 +438,6 @@ body.gm-on #scrim{z-index:1000}body.gm-on .sheet{z-index:1010}body.gm-on #toasts
 .me-sum{width:100%;display:grid;gap:6px}.me-sum div{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#0d0e13;border:1px solid #23242c;text-align:left}.me-sum b{flex:1;color:#fff}.me-sum span{color:#c9c7cf;font-size:13px}.me-sum em{font-style:normal;color:#ffcf7a;font-size:12px}
 .me-render canvas,.me-res video{width:min(100%,360px);aspect-ratio:9/16;border-radius:16px;background:#000}
 .me-bar{width:min(100%,360px);height:8px;border-radius:4px;background:#1b1c24;overflow:hidden}.me-bar i{display:block;height:100%;width:0;background:#ff3d63}
+.me-spin{width:64px;height:64px;border-radius:50%;border:4px solid #2a2b33;border-top-color:#ff3d63;animation:meSpin 1s linear infinite;margin:20px auto 6px}
+@keyframes meSpin{to{transform:rotate(360deg)}}
+.me-render h3{margin:0;font:800 20px var(--ui);color:#fff}.me-q{justify-content:center;margin:6px 0}

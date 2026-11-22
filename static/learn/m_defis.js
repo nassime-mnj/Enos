@@ -235,12 +235,12 @@
         if (FIGHT_HUMAN.includes(id)) { const op = FIGHT[id](); return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "combat") { const a = FIGHT[o.cw || "nasko"](), b = FIGHT[o.cb || "penoire"](); if (o.cw === o.cb) { a.name += " (Blancs)"; b.name += " (Noirs)"; } return [a, b]; }
         if (id === "brillant") { const e = { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" }; return o.color === "w" ? [hu, e] : [e, hu]; }
-        if (id === "enos") { const op = { kind: "sf", elo: B.powerToElo(o.pow), power: o.pow, name: "E.N.O.S." }; return o.color === "w" ? [hu, op] : [op, hu]; }
+        if (id === "enos") { const op = { kind: "sf", elo: B.powerToElo(o.pow), power: o.pow, name: "E.N.O.S.", talk: "enos" }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "coach") { const op = { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "speedrun") return [{ kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" }, { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }];
         if (id === "titans") return [{ kind: "sf", elo: (E.TOP_ELO || 3650), power: 100, top: true, hunt: true, name: "E.N.O.S." }, { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" }];
         const boss = { kind: "sf", elo: 3650, power: 100, name: "Stockfish 19" };
-        const ch = o.boss === "duo" ? { kind: "duo", elo: (E.TOP_ELO || 3650), power: 100, top: true, name: "E.N.O.S. + ETO" } : o.boss === "enos" ? { kind: "sf", elo: (E.TOP_ELO || 3650), power: 100, top: true, hunt: true, name: "E.N.O.S." } : { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" };
+        const ch = o.boss === "duo" ? { kind: "duo", elo: (E.TOP_ELO || 3650), power: 100, top: true, name: "E.N.O.S. + ETO" } : o.boss === "enos" ? { kind: "sf", elo: (E.TOP_ELO || 3650), power: 100, top: true, hunt: true, name: "E.N.O.S.", talk: "enos" } : { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" };
         const EB = { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" }, EN = { kind: "sf", elo: (E.TOP_ELO || 3650), power: 100, top: true, hunt: true, name: "E.N.O.S." }, duo = { kind: "duo", elo: (E.TOP_ELO || 3650), power: 100, top: true, name: "ETO + E.N.O.S." };
         if (id === "ebe" || id === "ebs" || id === "ebd") { const a = id === "ebd" ? duo : EB, b = id === "ebe" ? EN : boss; return o.color === "b" ? [b, a] : [a, b]; }
         return [ch, boss];
@@ -264,7 +264,7 @@
           ["w", "b"].forEach((c) => Object.defineProperty(g.pl, c, { enumerable: true, configurable: true, get: () => g.teams[c][g.moves.filter((x) => x.color === c).length % g.teams[c].length] }));
           const hw = g.teams.w.some((x) => x.human), hb = g.teams.b.some((x) => x.human); g.flip = hb && !hw;
         }
-        if (E.botChat) E.botChat.onSay = (bot, text, kind) => { if (g && g.chat && g.chat.length < 80) g.chat.push([g.moves.length, bot, text.slice(0, 160), kind]); };   // répliques gardées pour CHESS EDIT STUDIO
+        if (E.botChat) E.botChat.onSay = (bot, text, kind, p, voice) => { if (g && g.chat && g.chat.length < 80) g.chat.push(voice ? [g.moves.length, bot, text.slice(0, 160), kind, voice] : [g.moves.length, bot, text.slice(0, 160), kind]); };   // répliques gardées pour CHESS EDIT STUDIO
         if (g.tc) g.ch.header("TimeControl", g.tc.hdr || "-");
         g.ch.header("Event", m.t.replace(/[^\p{L}\p{N} .]/gu, "").trim(), "White", pl[0].name, "Black", pl[1].name, "Date", new Date().toISOString().slice(0, 10).replace(/-/g, "."));
         if (o.resume) {                                                          // reprise d'une partie en différé : on rejoue les coups enregistrés (jugements conservés)
@@ -298,6 +298,7 @@
         if (g.mode.human) {
           const c = g.pl.w.human ? "b" : "w", p = g.pl[c];
           if (p.talk && bc.has(p.talk)) g.talk[c] = bc.mount($("#df-botchat"), p.talk, { opp: opp(c), ctx: () => chatCtx(c), log: true });
+          if (E.mind) E.mind.start(g, g.talk[c]);
         } else {
           const top = g.flip ? "w" : "b", bot = top === "w" ? "b" : "w";
           const tp = (c) => (g.teams ? g.teams[c].find((x) => x.talk && bc.has(x.talk)) || {} : g.pl[c]);               // équipes : le 1er personnage de l'équipe parle pour elle
@@ -395,7 +396,7 @@
         const turn = g.ch.turn();
         if (g.sel && g.ch.moves({ square: g.sel, verbose: true }).some((m) => m.to === sq)) return humanMove(g.sel, sq);
         const p = g.ch.get(sq);
-        g.sel = p && p.color === turn ? sq : ""; g.hint = null; if (g.sel) E.vibrate(6);
+        g.sel = p && p.color === turn ? sq : ""; g.hint = null; if (g.sel) { E.vibrate(6); if (E.mind) E.mind.touch(g, g.sel); }
         paint();
       }
       async function humanMove(from, to) {
@@ -417,6 +418,7 @@
           if (mv) { paint(); setTimeout(() => { if (g && tok === g.token && !g.over) commit(pr.from + pr.to + (mv.promotion ? "q" : ""), {}, g.token); }, 90); return; }
           status("Premove annulé (coup illégal)"); paint();
         }
+        if (p.human && E.mind && g.mode.human && g.talk) { const bi = g.talk[turn === "w" ? "b" : "w"]; if (bi) E.mind.humanTurn(g, bi); }
         if (p.human) { status(g.teams ? (p.name === "Toi" ? "À toi de jouer" : "À " + p.name + " de jouer") + " · équipe " + (turn === "w" ? "Blancs" : "Noirs") : "À toi de jouer"); return; }
         if (g.paused) return;
         g.busy = true; status(`${p.kind === "duo" ? name(g.duoTurn++ % 2 ? "eto" : "enos") : p.name} réfléchit…`); paint();
@@ -510,6 +512,7 @@
         g.snaps.push({ fen: before, evalW: evalBefore, bestUci, n: g.moves.length, last: g.last, brill: { ...g.brill }, inBook: g.inBook, seen: g.seen, lostMinor: { ...g.lostMinor }, clk: g.clk ? { ...g.clk } : null, elos: { w: g.pl.w.elo, b: g.pl.b.elo } });
         const m = g.ch.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
         if (!m) { g.busy = false; return status("Coup illégal"); }
+        if (E.mind && g.pl[turn].human) { try { E.mind.humanMoved(g, uci, m.san); } catch (e) { /* facultatif */ } }
         g.fen = g.ch.fen(); g.last = [m.from, m.to]; g.seen = L.addSeen(g.seen, g.fen);
         E.chessSound && E.chessSound.forSan(m.san);
         paint(uci);
@@ -703,6 +706,7 @@
         paint(); status("Coup annulé"); next(g.token);
       }
       function undo() {
+        if (E.mind) E.mind.undo(g);
         if (g) { g.pre = null; g.psel = ""; }                                      // annuler efface aussi le premove
         if (!g || g.busy || g.over) return;
         const n = g.teams ? 1 : g.pl[g.ch.turn()].human ? 2 : 1;
@@ -724,7 +728,8 @@
       // ---- fin
       function finish(result, stopped) {
         if (!g) return;
-        g.over = result; g.busy = false; g.token++; clearInterval(g.clkI); if (g.tc && g.tc.days) saveDaily();
+        g.over = result; g.busy = false; g.token++; clearInterval(g.clkI);
+        if (E.mind && g.mode.human) { const w = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : ""; E.mind.end(g, stopped ? "" : !w ? "draw" : w === g.me ? "win" : "lose"); } if (g.tc && g.tc.days) saveDaily();
         { const rb = ["w", "b"].map((c) => g.pl[c] && g.pl[c].roster && E.botRoster && E.botRoster.byId[g.pl[c].roster]).find((b) => b && b.adapt);                // bot adaptatif : il suit ton niveau
           if (rb && g.me && !stopped) { const win = /Blancs gagnent/.test(result) ? "w" : /Noirs gagnent/.test(result) ? "b" : ""; E.botRoster.adapted(win === g.me, !!win && win !== g.me); } }
         paint(); status(result);

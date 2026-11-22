@@ -7,7 +7,7 @@
 (() => {
   const E = window.ENOS;
   const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-  const STRONG_CHAT = new Set(["bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_win", "mate_lose", "elo_up", "r_target", "mate_coming", "minor_lost", "resign_win"]);
+  const STRONG_CHAT = new Set(["bot_brilliant", "h_brilliant", "bot_blunder", "h_blunder", "mate_win", "mate_lose", "elo_up", "r_target", "mate_coming", "minor_lost", "resign_win", "predict_hit", "predict_streak", "seq_hit1", "seq_hit2", "touch_many", "touch_switch", "touch_right", "hesitate_pair", "slow", "hanging", "mate_seen", "forced", "doom", "haunt"]);   // + mind games d'E.N.O.S. : ces moments sont mis en avant dans l'edit (et sa voix y passe en reverb)
   const sqXY = (s) => ({ col: s.charCodeAt(0) - 97, row: 8 - +s[1] });                  // col 0 = colonne a ; row 0 = rangée 8 (en haut pour les Blancs)
 
   // ---------------------------------------------------------------- 1. les coups et leur dramaScore
@@ -48,7 +48,7 @@
       if (/^O-O/.test(mv.san)) { const rk = mv.from[1], short = mv.to[0] === "g", rf = (short ? "h" : "a") + rk, rt = (short ? "f" : "d") + rk; ids[rt] = ids[rf] || rf; delete ids[rf]; }
       ids[mv.to] = pid;
       const key = m[2] || "good", loss = m[3] | 0, ev = m[4] == null ? null : m[4], prevEv = i && rec.mv[i - 1][4] != null ? rec.mv[i - 1][4] : 0;
-      const lines = chat.filter((c) => c[0] - 1 === i).map((c) => ({ bot: c[1], text: c[2], kind: c[3] || "" }));
+      const lines = chat.filter((c) => c[0] - 1 === i).map((c) => ({ bot: c[1], text: c[2], kind: c[3] || "", ...(c[4] ? { voice: c[4] } : {}) }));
       const tags = [];
       let sac = false;                                                                  // sacrifice : pièce ≥ 3 qui arrive sur une case où elle peut être prise par moins forte, ou sans recapture possible
       if (VAL[mv.piece] >= 3 && !mv.captured || (mv.captured && VAL[mv.captured] < VAL[mv.piece] - 1 && VAL[mv.piece] >= 3)) {
@@ -354,6 +354,17 @@
         if (lastVoice != null && e.n - lastVoice >= 3 && !speak) sfx.push({ t: +(e.impact + 0.06).toFixed(3), id: "witty", gain: 1.3, bus: "sfx", ply: e.n });      // voix de sacrifice jouée au moins 3 coups avant : le nouveau brillant a le « witty alien »
         sfx.push({ t: e.impact, id: nB % 2 === 0 || !speak ? "sx_boom" : "mateboom", gain: 1.3, bus: "echo", ply: e.n }); nB++;                                                 // BOOM CINÉMA (collatéral) ou tonnerre grave, en alternance
         if (speak) { said.add(vid); sfx.push({ t: +(e.impact + 0.04).toFixed(3), id: vid, gain: vid === "the_rook" ? 3.2 : 1.3, wet: vid === "the_rook" ? 2.2 : 1, bus: "voice", level: 0.4, ply: e.n }); lastVoice = e.n; }     // voix de la pièce ; musique à −8 dB (sidechain)
+      });
+    }
+    // VOIX D'E.N.O.S. (mind games) sur les moments choquants de SA partie : la phrase réellement dite pendant la partie, ralentie + grande REVERB (bus « voice »)
+    if (opts.voices !== false && E.botVoice) {
+      const SHOCK = /^(predict|seq_|touch_|hesitate_pair|slow|hanging|haunt|doom|mate_|forced|memory_|h_blunder|bot_brilliant|h_brilliant|winning|resign_win|check)/;
+      let lastV = -99, nV = 0;
+      ev.forEach((e) => {
+        if (nV >= 5 || !e.lines || !e.lines.length || e.impact - lastV < 3) return;
+        const l = e.lines.find((x) => x.voice && x.bot === "enos" && SHOCK.test(x.kind || "")); if (!l) return;
+        let t = e.impact + 0.35; const busy = sfx.filter((s) => s.bus === "voice" && Math.abs(s.t - t) < 2.2); if (busy.length) t = Math.max(...busy.map((s) => s.t)) + 2.2;
+        sfx.push({ t: +t.toFixed(3), id: "bv:" + l.voice, gain: 1.6, wet: 2.4, bus: "voice", level: 0.35, ply: e.n, enos: true }); lastV = t; nV++;
       });
     }
     // PRÉ-SONS (dernier passage : ils ne doivent rien recouvrir) — brillant : « Made in Heaven » sur le coup clé, « reload » sur un autre ; mat : Mario « oh nooo », « no no wait wait » ou « reload »

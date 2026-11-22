@@ -50,7 +50,8 @@
     if (btn) btn.onclick = () => { const l = opts.shared ? TR && TR.host : host.querySelector(".bot-log"); if (!l) return; l.hidden = !l.hidden; if (!l.hidden) { I.unread = 0; unreadBadge(I); scroll(l); } };
     const form = host.querySelector(".bot-in");
     if (form) form.onsubmit = (e) => { e.preventDefault(); const i = form.querySelector("input"), t = i.value.trim(); if (t) { i.value = ""; userSays(I, t); } };
-    I.say = (kind, d) => fire(I, kind, d);
+    I.say = (kind, d, force) => fire(I, kind, d, force);
+    I.ghost = () => ghost(I);
     ALL.push(I);
     return I;
   }
@@ -93,27 +94,30 @@
     }
   }
 
-  const fmt = (t, I, d) => t.replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.userName && E.userName()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{elo\}/g, (d && d.elo) || "").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
+  const fmt = (t, I, d) => t.replace(/\{(a|b|n|t|sec|avg|piece|ton|ce|sq|time|s1|s2|s3|games|losses|m|fav|k|h|all|allT|p1|p2)\}/g, (x, k) => (d && d[k] != null ? String(d[k]) : x)).replace(/(^|[.!?…] )(ton|ta|ce|cette) /g, (w, a, b) => a + b[0].toUpperCase() + b.slice(1) + " ").replace(/\{me\}/g, (I.opts.opp && I.opts.opp()) || (E.userName && E.userName()) || (E.ai && E.ai.name && E.ai.name()) || "toi").replace(/\{san\}/g, (d && d.san) || "ce coup").replace(/\{elo\}/g, (d && d.elo) || "").replace(/\{open\}/g, (d && d.open) || "cette ouverture");
 
   /** Le personnage « tape » (3 points), puis la réplique apparaît dans la bulle et l'historique. */
-  async function speak(I, text, kind) {
+  /** Les répliques d'un même personnage passent l'une après l'autre (chacune reste lisible au moins 1,4 s). */
+  function speak(I, text, kind) { I.pending = (I.pending || 0) + 1; if (I.pending > 3) { I.pending--; return I.q; } I.q = (I.q || Promise.resolve()).then(() => speakNow(I, text, kind)).then(() => E.sleep(1400)).catch(() => {}).then(() => { I.pending--; }); return I.q; }
+  async function speakNow(I, text, kind) {
     if (!I.alive || !text) return;
     const bub = I.host.querySelector(".bot-bubble"), t = I.host.querySelector(".bot-t"), av = I.host.querySelector(".bot-av");
     if (!bub) return;
     bub.hidden = false; t.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; av.classList.add("talk"); const animId = CH[I.id] && CH[I.id].anim; if (animId && E.animIcons) E.animIcons.mood(av, animId === "eto" ? "talk" : "think");
     await E.sleep(350 + Math.min(800, text.length * 12));
     if (!I.alive) return;
-    t.textContent = text; av.classList.remove("talk"); if (animId && E.animIcons) E.animIcons.mood(av, E.animIcons.moodOf(animId, kind), 4200);
+    const vx = voiceFor(I.id, text, kind); if (vx.text) text = vx.text;
+    t.textContent = text; av.classList.remove("talk"); if (vx.src) playVoice(vx.src, I.id); if (animId && E.animIcons) E.animIcons.mood(av, E.animIcons.moodOf(animId, kind), 4200);
     bub.classList.remove("pop"); void bub.offsetWidth; bub.classList.add("pop");
     log(I, "b", text);
     I.gap = 0; lastSpoke = ply;
-    if (E.botChat && E.botChat.onSay) { try { E.botChat.onSay(I.id, text, kind || "", ply); } catch (e) { /* enregistrement facultatif */ } }
+    if (E.botChat && E.botChat.onSay) { try { E.botChat.onSay(I.id, text, kind || "", ply, vx.src || ""); } catch (e) { /* enregistrement facultatif */ } }
   }
 
   /** kind : voir js/bot_lines.js. d : {san, open}. Renvoie true si le personnage va parler. */
-  function fire(I, kind, d) {
+  function fire(I, kind, d, force) {
     if (!I || !I.alive) return false;
-    const strong = STRONG.has(kind), p = PROB[kind] == null ? 0.2 : PROB[kind];
+    const strong = force || STRONG.has(kind), p = force ? 1 : PROB[kind] == null ? 0.2 : PROB[kind];
     if (!strong && I.gap <= MIN_GAP) return false;
     if (!strong && lastSpoke === ply) return false;                   // un seul bavard par demi-coup, sauf moment fort
     if (Math.random() > p) return false;
@@ -127,6 +131,29 @@
     }
     speak(I, local, kind);
     return true;
+  }
+  // ---- VOIX (E.N.O.S. : phrases enregistrées avec ElevenLabs, js/voice_index.js) ; une phrase chiffrée (coup, case, secondes…) reçoit une « chute » dite à voix haute
+  const MIND_DYN = /^(predict_hit|predict_streak|seq_hit|touch_|slow|hanging|hesitate_pair|memory_|mate_seen|clock_low|late)/;
+  let audio = null;
+  function voiceFor(id, text, kind) {
+    const V = (window.ENOS_VOICE || {})[id]; if (!V || !E.botVoice) return {};
+    if (V[text]) return { src: V[text] };
+    const st = (LINES()[id] || {}).sting;
+    if (st && kind && MIND_DYN.test(kind) && Math.random() < 0.6) { const s = pick(st.filter((x) => V[x]).concat([])); if (s) return { text: text + " " + s, src: V[s] }; }
+    return {};
+  }
+  async function playVoice(name, id) {
+    if (!E.settings.get("chess.botvoice", true)) return;
+    try { const url = await E.botVoice.url(name, id); if (audio) audio.pause(); audio = new Audio(url); audio.volume = 1; const pr = audio.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { /* audio indisponible */ }
+  }
+  /** Points de suspension qui apparaissent… puis s'effacent sans un mot. */
+  function ghost(I) { if (!I) return; I.q = (I.q || Promise.resolve()).then(() => ghostNow(I)).catch(() => {}); }
+  async function ghostNow(I) {
+    if (!I || !I.alive) return;
+    const bub = I.host.querySelector(".bot-bubble"), t = I.host.querySelector(".bot-t"); if (!bub) return;
+    const prev = t.innerHTML, wasHidden = bub.hidden; bub.hidden = false; t.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+    await E.sleep(2200 + Math.random() * 2200); if (!I.alive) return;
+    if (t.querySelector(".dots")) { t.innerHTML = prev; bub.hidden = wasHidden; }
   }
   const LABEL = { bot_brilliant: "tu viens de jouer un coup brillant", bot_blunder: "tu viens de faire une énorme gaffe", h_brilliant: "ton adversaire vient de jouer un coup brillant", h_blunder: "ton adversaire vient de faire une énorme gaffe" };
 

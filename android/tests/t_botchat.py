@@ -114,9 +114,9 @@ with sync_playwright() as pw:
     check(1 <= e <= 3200 and pg.evaluate(A + ".g.pl.b.spins") == 1, "la roue a fixé l'Elo du Jester : %d" % e)
     pg.wait_for_function("document.querySelector('#df-botchat .bot-t') && document.querySelector('#df-botchat .bot-t').textContent.length > 8", timeout=8000)
     check(True, "le Jester commente la roue : « %s »" % pg.inner_text("#df-botchat .bot-t")[:70])
-    # autre mode : pas de bot
+    # Défi E.N.O.S. : il parle aussi (mind games, js/mind_games.js) ; le Boss Stockfish, lui, reste muet
     pg.evaluate(A + ".launch('enos', {color: 'w', pow: 5, elo: 400})")
-    check(pg.evaluate("document.querySelector('#df-botchat').hidden"), "pas de chat hors bots Nasko / Lelex")
+    check(not pg.evaluate("document.querySelector('#df-botchat').hidden"), "Défi E.N.O.S. : chat box d'E.N.O.S.")
     check(not errs, "aucune erreur JavaScript : %s" % errs[:2])
     b.close()
 import sys

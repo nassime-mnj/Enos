@@ -570,6 +570,20 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.123 — E.N.O.S. et Mittens rentrent dans ta tête (prédictions, mémoire, voix d'E.N.O.S.)
+- **Mind games** (`js/mind_games.js`, répliques `js/mind_lines.js`) face à **E.N.O.S.** (Défi E.N.O.S., Boss, combats) et **Mittens**. Chaque phrase s'appuie sur un fait réel de la partie, d'où le « comment il sait ? » :
+  - **prédiction scellée** : à chaque tour, Stockfish analyse TA position (MultiPV 4) et un modèle « humain » pondère les coups (perte en centipions, reprise immédiate, échecs, prises, pièce attaquée qui fuit, part « autre coup » selon le nombre de coups légaux). Au-delà de ~60 % : « J'ai déjà écrit ton prochain coup », puis après ton coup « Écrit à 21:14:07, avant ton coup : Dxd5. » ; parfois **tes deux prochains coups**, révélés un par un ; série de prédictions justes (« 3 sur 3. Je suis dans ta tête. ») ;
+  - **ta main** : pièce touchée puis reposée plusieurs fois (« Ton cavalier en g1. Tu l'as touché 3 fois. Il te fait peur ? »), pièces essayées les unes après les autres, la pièce que tu prends (« Oui. Ce fou. Je savais que tu le prendrais. » / « Pas cette tour. ») ;
+  - **ton temps** : ta vitesse habituelle est mémorisée ; il remarque quand tu ralentis, nomme les deux coups entre lesquels tu hésites (« Tu hésites entre e5 et c5. Ce sera e5. ») ;
+  - **le plateau vu de ton côté** : pièce attaquée sans défenseur, gaffe que tu ressasses, coup forcé (« aucun libre arbitre »), mat qu'il voit, position perdue, pendule basse, heure tardive ;
+  - **mémoire** d'une partie à l'autre (`mind.profile.<bot>`) : numéro de la partie, défaites, coup où tu as craqué la dernière fois, ton ouverture fétiche annoncée avant que tu la joues ;
+  - **pression** : points de suspension qui apparaissent puis s'effacent sans un mot, phrases d'ambiance ; les répliques passent l'une après l'autre (file d'attente, 3 au plus).
+- **Voix d'E.N.O.S.** : 194 phrases enregistrées avec ElevenLabs (voix « ENOS2 » du compte du propriétaire, ~8 100 caractères du quota gratuit), jouées quand la réplique correspond mot pour mot ; une phrase chiffrée (coup, case, secondes) reçoit une **chute dite à voix haute** (« Je vois tout. »). Fichiers : `audio/voice/enos/*.js` (mp3 base64, chargés à la demande : l'app interdit fetch), index `js/voice_index.js` (`E.botVoice`). Réglage `chess.botvoice`.
+- **Chess Edit** d'une partie contre E.N.O.S. : sur les moments choquants (prédiction réussie, gaffe, mat…), sa phrase revient **avec sa voix, ralentie et en grande reverb** (bus « voice » de `js/chess_edit_sfx.js`, `loadBot`) ; ces moments sont mis en avant dans le montage.
+- Le **Défi E.N.O.S.** a maintenant sa chat box (il parlait seulement dans les combats).
+- Version PC synchronisée (`build_learn_data.py --sync`).
+- Tests : `t_mind.py`, `node tests/node/mind_model.test.js` ; `t_botchat.py` mis à jour (son échec « ETO Brillant : avatar » existait avant).
+
 ## 1.122 — MultiEdit v2 : edit épique calculé hors écran, 4K 60 i/s, calé sur la musique jusqu'au bout
 - **Plus rien ne s'affiche pendant le montage** : seule une barre de progression (temps restant, Annuler) ; le téléphone ne rame plus.
 - **Enregistrement, pas filmage** (`js/games/highlights.js`) : pendant la partie, positions et rotations de la balle, des palets, des quilles et de la caméra sont notées image par image, avec chaque choc (tir, rebond, poteau, but, coupe, strike…). Au montage, la scène est reconstruite hors écran (mode « rejeu » des jeux, `G3.replayCtx`) et recalculée **en 4K (2160×3840) à 60 i/s** (repli 1080p si l'encodeur ne suit pas), HEVC ou H.264 + son, en MP4.

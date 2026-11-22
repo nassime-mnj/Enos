@@ -104,6 +104,12 @@
       this.voicesOk = VOICES.filter((k) => this.bufs[k]).length;
       return Object.keys(this.bufs).filter((k) => this.bufs[k]).length;
     }
+    /** voix des bots (ids « bv:<nom> », js/voice_index.js) présentes dans la timeline : décodées avant la lecture */
+    async loadBot(list) {
+      const ids = [...new Set((list || []).map((s) => s.id).filter((id) => /^bv:/.test(id) && !this.bufs[id]))];
+      await Promise.all(ids.map(async (id) => { try { this.bufs[id] = await this.ctx.decodeAudioData(await E.botVoice.buffer(id.slice(3))); } catch (e) { this.bufs[id] = null; } }));
+      return ids.filter((id) => this.bufs[id]).length;
+    }
     /** liste triée {t, id, gain, bus} ; t0 = instant (horloge audio) correspondant à t = 0 de la vidéo */
     arm(list, t0) { this.queue = list.slice().sort((x, y) => x.t - y.t); this.i = 0; this.t0 = t0; }
     /** à appeler à chaque image avec le temps vidéo courant : programme les sons des 350 prochaines ms sur l'horloge audio */

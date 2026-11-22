@@ -83,11 +83,13 @@
   G3.stage = async (host, o) => {
     o = o || {};
     const T = await G3.ready();
-    const renderer = new T.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    // rendu hors ligne (MultiEdit) : moteur de rendu partagé fourni par le monteur, taille fixe, aucune boucle d'animation ni affichage
+    const RP = G3.replayCtx || null;
+    const renderer = RP ? RP.renderer : new T.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+    if (!RP) renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = o.exposure || 1.05;
     renderer.shadowMap.enabled = o.shadows !== false; renderer.shadowMap.type = T.PCFSoftShadowMap;
-    renderer.domElement.className = "g3-canvas"; host.appendChild(renderer.domElement);
+    if (!RP) { renderer.domElement.className = "g3-canvas"; host.appendChild(renderer.domElement); }
     const scene = new T.Scene(); scene.background = new T.Color(o.bg != null ? o.bg : 0x07080b);
     scene.fog = new T.FogExp2(o.bg != null ? o.bg : 0x050507, o.fog != null ? o.fog : 0.045);
     scene.environment = studio(T, renderer);
@@ -104,9 +106,9 @@
     let alive = true, raf = 0, last = performance.now();
     let composer = null, bloom = null;
     // travelling d'ouverture : la caméra arrive en tournant depuis une vue rasante jusqu'à la pose de jeu
-    const intro = o.intro ? { k: 0, d: o.intro.d || 2.2, yaw: o.intro.yaw == null ? 0.9 : o.intro.yaw, zoom: o.intro.zoom || 0.75, low: o.intro.low || 0.35, p1: null, q1: null, live: false } : null;
-    const size = () => { const w = host.clientWidth || 360, h = host.clientHeight || 640; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (o.fit) o.fit(camera, w / h); if (intro) { intro.p1 = camera.position.clone(); intro.q1 = camera.quaternion.clone(); } if (composer) composer.setSize(w, h); };
-    const ro = window.ResizeObserver ? new ResizeObserver(size) : null; if (ro) ro.observe(host); else window.addEventListener("resize", size); size();
+    const intro = o.intro && !RP ? { k: 0, d: o.intro.d || 2.2, yaw: o.intro.yaw == null ? 0.9 : o.intro.yaw, zoom: o.intro.zoom || 0.75, low: o.intro.low || 0.35, p1: null, q1: null, live: false } : null;
+    const size = () => { const w = RP ? RP.size[0] : host.clientWidth || 360, h = RP ? RP.size[1] : host.clientHeight || 640; if (!RP) renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (o.fit) o.fit(camera, w / h); if (intro) { intro.p1 = camera.position.clone(); intro.q1 = camera.quaternion.clone(); } if (composer) composer.setSize(w, h); };
+    const ro = RP ? null : window.ResizeObserver ? new ResizeObserver(size) : null; if (ro) ro.observe(host); else if (!RP) window.addEventListener("resize", size); size();
     const shake = { a: 0, d: 0, t: 0 }, camOff = new T.Vector3();
     const loop = (t) => { if (!alive) return; const dt = Math.min(0.05, (t - last) / 1000); last = t; frames.forEach((f) => f(dt, t / 1000));
       if (shake.t > 0) { shake.t = Math.max(0, shake.t - dt); const k = shake.a * (shake.t / shake.d); camOff.set((Math.random() - 0.5) * k, (Math.random() - 0.5) * k * 0.6, (Math.random() - 0.5) * k); camera.position.add(camOff); }
@@ -119,11 +121,14 @@
       if (shake.t > 0 || camOff.lengthSq()) { camera.position.sub(camOff); camOff.set(0, 0, 0); }
       raf = requestAnimationFrame(loop); };
     // bloom (halo lumineux des néons, traînées, éclats) : chargé avec les extras, demi-résolution pour rester fluide sur téléphone
-    if (o.bloom && G3.fx()) G3.extras().then((X) => { if (!X || !alive || !X.EffectComposer) return;
-      composer = new X.EffectComposer(renderer); composer.addPass(new X.RenderPass(scene, camera));
-      const w = host.clientWidth || 360, h = host.clientHeight || 640; bloom = new X.UnrealBloomPass(new T.Vector2(w / 2, h / 2), o.bloom.strength || 0.55, o.bloom.radius || 0.5, o.bloom.threshold == null ? 0.82 : o.bloom.threshold);
-      composer.addPass(bloom); composer.addPass(new X.OutputPass()); composer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); composer.setSize(w, h); }).catch(() => {});
-    raf = requestAnimationFrame(loop);
+    let rpTarget = null;
+    const mkComposer = (X) => { if (!X || !alive || !X.EffectComposer) return;
+      if (RP) { rpTarget = new T.WebGLRenderTarget(RP.size[0], RP.size[1], { type: T.HalfFloatType }); composer = new X.EffectComposer(renderer, rpTarget); composer.renderToScreen = false; } else composer = new X.EffectComposer(renderer);
+      composer.addPass(new X.RenderPass(scene, camera));
+      const w = RP ? RP.size[0] : host.clientWidth || 360, h = RP ? RP.size[1] : host.clientHeight || 640; bloom = new X.UnrealBloomPass(new T.Vector2(w / 2, h / 2), o.bloom.strength || 0.55, o.bloom.radius || 0.5, o.bloom.threshold == null ? 0.82 : o.bloom.threshold);
+      composer.addPass(bloom); composer.addPass(new X.OutputPass()); if (RP) { composer.setPixelRatio(1); composer.setSize(RP.size[0], RP.size[1]); } else { composer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); composer.setSize(w, h); } };
+    if (o.bloom && G3.fx()) { if (RP) mkComposer(await G3.extras()); else G3.extras().then(mkComposer).catch(() => {}); }
+    if (!RP) raf = requestAnimationFrame(loop);
     return {
       T, renderer, scene, camera, mats, key, rim, look,
       add: (...x) => scene.add(...x),
@@ -138,7 +143,14 @@
       introActive: () => !!(intro && (intro.k < 1 || intro.live)),
       shake: (a, d) => { if (a > shake.a * (shake.t / (shake.d || 1))) { shake.a = a; shake.d = d || 0.4; shake.t = shake.d; } },
       bloom: () => bloom,
-      dispose: () => { alive = false; cancelAnimationFrame(raf); if (ro) ro.disconnect(); scene.traverse((m) => { if (m.geometry) m.geometry.dispose(); if (m.material) [].concat(m.material).forEach((x) => { if (x.map) x.map.dispose(); x.dispose(); }); }); renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); renderer.domElement.remove(); },
+      /** hors ligne : avance les animations de dt secondes (temps absolu t) sans rien afficher */
+      step: (dt, t) => { frames.forEach((f) => f(dt, t)); },
+      /** hors ligne : rend la scène (avec le bloom du jeu) et renvoie la texture du résultat */
+      renderTex: () => { if (composer) { composer.render(1 / 60); return composer.readBuffer.texture; } if (!rpTarget) rpTarget = new T.WebGLRenderTarget(RP.size[0], RP.size[1]); renderer.setRenderTarget(rpTarget); renderer.render(scene, camera); renderer.setRenderTarget(null); return rpTarget.texture; },
+      replay: !!RP,
+      dispose: () => { alive = false; cancelAnimationFrame(raf); if (ro) ro.disconnect(); scene.traverse((m) => { if (m.geometry) m.geometry.dispose(); if (m.material) [].concat(m.material).forEach((x) => { if (x.map) x.map.dispose(); x.dispose(); }); });
+        if (RP) { if (rpTarget) rpTarget.dispose(); if (composer) { try { composer.dispose(); } catch (e) { /* ancien three */ } } if (scene.environment) scene.environment.dispose(); return; }
+        renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); renderer.domElement.remove(); },
     };
   };
   /** fond de scène : dôme sombre avec halo cramoisi bas (la « brume rouge » de la DA) + sol mat très sombre */

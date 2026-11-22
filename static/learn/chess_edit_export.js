@@ -11,7 +11,7 @@
   /** mixage hors ligne : musique (facultative) + sfx/voix de la timeline -> AudioBuffer stéréo 48 kHz */
   X.mix = async function (tl, musicFile) {
     const dur = tl.duration + 0.4, oc = new OfflineAudioContext(2, Math.ceil(dur * SR), SR), player = new E.editSfx.Player(oc);
-    await player.load();
+    await player.load(); await player.loadBot(tl.sfx);
     const mg = oc.createGain(); mg.gain.value = 0.85; mg.connect(oc.destination);
     if (musicFile) { try { const buf = await oc.decodeAudioData(await musicFile.arrayBuffer()); const src = oc.createBufferSource(); src.buffer = buf; src.connect(mg); src.start(0, Math.max(0, tl.musicStart || 0)); } catch (e) { /* musique illisible : on exporte sans */ } }
     const duck = [];
