@@ -17,7 +17,9 @@
   const imgCache = {};
   const IMGSTAT = { data: 0, net: 0 };
   /** images en data: URI (window.ENOS_IMG, js/render_assets.js) : un canvas qui a dessiné une image « réseau / fichier » est TAINTED dans le WebView (VideoFrame, captureStream, getImageData refusés) */
-  const loadImg = (src) => (imgCache[src] ||= new Promise((res) => { const key = String(src).replace(E.assetBase || "", ""), emb = (window.ENOS_IMG || {})[key], i = new Image(); if (emb) IMGSTAT.data++; else IMGSTAT.net++; i.onload = () => res(i); i.onerror = () => res(null); i.src = emb || src; }));
+  const loadImg = (src) => (imgCache[src] ||= new Promise((res) => { const key = String(src).replace(E.assetBase || "", ""), emb = (window.ENOS_IMG || {})[key], i = new Image(); if (emb) IMGSTAT.data++; else IMGSTAT.net++;
+    if (!emb && location.protocol === "file:") { console.warn("Chess Edit : image absente de render_assets.js, ignorée (elle salirait le canvas) :", key); return res(null); }      // jamais d'export impossible à cause d'une image oubliée
+    i.onload = () => res(i); i.onerror = () => res(null); i.src = emb || src; }));
   const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
 
   class Renderer {
