@@ -323,3 +323,16 @@ html.ghor body::after{content:"";position:fixed;inset:0;z-index:70;pointer-event
 .bp-chip b{font:700 14px var(--ui);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-chip i{font:700 12px var(--ui);font-style:normal;color:var(--muted);flex:none}
 .bp-slot{display:flex;width:100%;padding:8px 12px;border-radius:14px;border:1px solid #262732;background:#0d0e13;color:inherit;transition:border-color .2s,transform .15s}
 .bp-slot:active{transform:scale(.98)}.bp-slot:hover{border-color:#3a3b46}
+/* RAPH -> E.N.O.S. : transition oppressante (l'écran s'éteint, l'œil rouge s'ouvre, tout pulse), puis ambiance terne et rouge jusqu'à la fin de la partie */
+.raph-ov{position:fixed;inset:0;z-index:90;pointer-events:none;opacity:0;transition:opacity 1.6s ease-in;background:radial-gradient(ellipse at 50% 42%,#ff10301a 0,#000000d0 55%,#000 100%)}
+.raph-ov.on{opacity:1;animation:raphPulse 1.1s ease-in-out infinite}
+.raph-ov.out{opacity:0;transition:opacity .8s ease-out}
+.raph-ov .eye{position:absolute;left:50%;top:42%;width:34vmin;height:34vmin;margin:-17vmin 0 0 -17vmin;border-radius:50%;background:radial-gradient(circle,#fff 0 4%,#ff3355 9%,#c4001e 24%,#5a000c 46%,transparent 70%);opacity:0;transform:scale(.3);filter:blur(1px)}
+.raph-ov.on .eye{animation:raphEye 3.2s ease-out forwards}
+@keyframes raphPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.6)}}
+@keyframes raphEye{0%{opacity:0;transform:scale(.3)}35%{opacity:.95;transform:scale(1)}70%{opacity:.8;transform:scale(1.15)}100%{opacity:0;transform:scale(2.4)}}
+html.enosmode #app{transition:filter 2.6s;filter:brightness(.62) contrast(1.18) saturate(.35) sepia(.25) hue-rotate(-18deg)}
+html.enosmode{--red:#ff1a3c;--red2:#ff4d63;--halo:#a0001a77}
+html.enosmode body::after{content:"";position:fixed;inset:0;z-index:70;pointer-events:none;background:radial-gradient(ellipse at center,transparent 35%,#2a0006cc 100%);animation:enosBreath 4.2s ease-in-out infinite}
+@keyframes enosBreath{0%,100%{opacity:.75}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.raph-ov.on,.raph-ov.on .eye,html.enosmode body::after{animation:none}}

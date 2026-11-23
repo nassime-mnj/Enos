@@ -6,7 +6,7 @@ with sync_playwright() as pw:
     b, ctx = launch(pw)
     pg = open_app(ctx, errs)
     open_tool(pg, "defis")
-    check(pg.locator(".df-mode").count() == 148, "148 tuiles rangées par familles (Bots E.N.O.S., Légendes, Joueurs pro, Streamers… + modes) (Nasko pénoire, Naskurieux, GhorGhor, Naskolit, Jester, combat de bots)")
+    check(pg.locator(".df-mode").count() == 149, "149 tuiles rangées par familles (Bots E.N.O.S. avec Raph, Légendes, Joueurs pro, Streamers… + modes) (Nasko pénoire, Naskurieux, GhorGhor, Naskolit, Jester, combat de bots)")
     check((not pg.evaluate("ENOS.hub.has('b-df')")), "plus de tuile « Défis » verrouillée")
     # --- partie contre E.N.O.S. (niveau bas) : on joue e2e4, le bot répond, chaque coup est jugé
     pg.evaluate("document.querySelector('#tool-defis .suite-body')._api.launch('enos', {color: 'w', pow: 5, elo: 400})")

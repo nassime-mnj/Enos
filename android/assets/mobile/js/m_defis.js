@@ -26,6 +26,7 @@
     ...(E.botRoster ? E.botRoster.list.filter((b) => !b.link).map((b) => ({ id: b.id, t: "♟ " + b.name, s: (b.adapt ? "ton niveau" : b.elo + " Elo") + " · " + b.sub, human: true, style: true, roster: true })) : []),
     { id: "ghorghor", t: "👁 GhorGhor", s: "1400 Elo… tant qu'il garde ses pièces", human: true },
     { id: "naskolit", t: "😴 Naskolit", s: "GM · 3200 Elo, perd 100 Elo à chaque erreur… ou meilleur coup adverse", human: true },
+    { id: "raph", t: "👔 Raph", s: "Co-fondateur de DualPulse · 800 Elo… tant que tout va bien", human: true },
     { id: "jester", t: "🃏 Le Jester", s: "Une roue tire son Elo au sort (1-3200) tous les 10 coups", human: true },
     { id: "x4a", t: "⚔ Arène 1v1v1v1", s: "Chess ×4 · 4 bots, chacun pour soi", human: false, x4: 0 },
     { id: "x4b", t: "⚔ Arène 2v2", s: "Chess ×4 · 2 équipes de 2 bots", human: false, x4: 1 },
@@ -70,13 +71,14 @@
         stockfish: () => ({ kind: "sf", elo: 3650, power: 100, pure: true, name: "Stockfish 19" }),
         naskurieux: () => ({ kind: "sf", elo: 1, name: "Naskurieux", talk: "naskurieux", title: "GM", gain: true }),       // GM à 1 Elo : +200 à chaque inexactitude / erreur / gaffe de l'adversaire
         naskolit: () => ({ kind: "sf", elo: 3200, name: "Naskolit", talk: "naskolit", title: "GM", lose: true }),             // GM à 3200 Elo : -100 à chaque imprécision (ou pire) de sa part et à chaque meilleur coup de l'adversaire ; il ne parle pas
-        jester: () => ({ kind: "sf", elo: 1600, name: "Le Jester", talk: "jester", wheel: true }),                         // la roue tire son Elo (1-3200) avant son 1er coup puis tous les 10 de ses coups
+        jester: () => ({ kind: "sf", elo: 1600, name: "Le Jester", talk: "jester", wheel: true }),
+        raph: () => ({ kind: "sf", elo: 800, name: "Raph", talk: "raph", raph: 1 }),                                          // 800 -> 1200 s'il perd l'avantage -> E.N.O.S. prend le relais s'il est en train de perdre                         // la roue tire son Elo (1-3200) avant son 1er coup puis tous les 10 de ses coups
         ghorghor: () => ({ kind: "style", style: "lelex", elo: 1400, skill: { mistake: 0.12, blunder: 0.05 }, name: "GhorGhor", talk: "ghorghor", transform: true }),   // style Lelex ; 3 pièces mineures perdues -> GhorGhor le vrai
       };
       (E.aiBots ? E.aiBots.ids : []).forEach((id) => { FIGHT[id] = () => ({ kind: "style", style: id, elo: eloOf(id), name: E.aiBots.def[id].name, talk: id }); });
       const RB = E.botRoster ? E.botRoster.list.filter((b) => !b.link) : [];                // échelle des 85 bots (les adaptatifs prennent ton niveau à chaque partie)
       RB.forEach((b) => { FIGHT[b.id] = () => { const e = b.adapt ? E.botRoster.adaptElo() : b.real || b.elo; return { kind: b.witty ? "witty" : "style", style: b.id, elo: e, name: b.name, talk: b.id, roster: b.id, ...(b.adapt ? { skill: E.botRoster.skillOf(e) } : {}) }; }; });
-      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", ...(E.aiBots ? E.aiBots.ids : []), ...RB.map((b) => b.id)];
+      const FIGHT_HUMAN = ["nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester", "raph", ...(E.aiBots ? E.aiBots.ids : []), ...RB.map((b) => b.id)];
       const tt = (p) => (E.botChat && p && p.elo ? E.botChat.titleOf(p.elo, p.title) : "");
       const tbadge = (p) => (E.botChat ? E.botChat.badge(tt(p)) : "");
       const FIGHT_NAMES = { ...Object.fromEntries((E.aiBots ? E.aiBots.ids : []).map((id) => [id, E.aiBots.def[id].name])), ...Object.fromEntries(RB.map((b) => [b.id, b.name])), nasko: "Nasko", penoire: "Nasko (pénoire)", lelex: "Lelex", ghorghor: "GhorGhor", naskurieux: "Naskurieux", naskolit: "Naskolit", jester: "Le Jester", eto: "ETO", enos: "E.N.O.S.", stockfish: "Stockfish" };
@@ -85,10 +87,10 @@
 
       // ---- accueil : sections, icônes + noms (les détails de chaque défi sont dans sa feuille de réglage)
       const AIIDS = E.aiBots ? E.aiBots.ids : [], botImg = (id) => (E.botChat && E.botChat.bots[id] && E.botChat.bots[id].img) || "";
-      const DFN = { brillant: ["ETO", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Stockfish 19", "img/bots/stockfish.png"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
+      const DFN = { raph: ["Raph", "img/bots/raph.png"], brillant: ["ETO", "img/bots/eto.png"], enos: ["E.N.O.S.", "img/bots/enos.png"], coach: ["Cours avec ETO", "cc:knight_w"], boss: ["Stockfish 19", "img/bots/stockfish.png"], teams: ["Équipes", "cc:users"], speedrun: ["Speedrun", "cc:blitz"], titans: ["Choc des Titans", "cc:fork"], combat: ["Combat de bots", "cc:handshake"], ebe: ["Brillant vs E.N.O.S.", "cc:sword"], ebs: ["Brillant vs Stockfish", "cc:pin"], ebd: ["Duo vs Stockfish 19", "cc:skewer"], x4a: ["Arène ×4", "cc:fourway"], x4b: ["Arène 2v2", "cc:fourway"], nasko: ["Nasko"], lelex: ["Lelex"], penoire: ["Pénoire"], naskurieux: ["Naskurieux"], ghorghor: ["GhorGhor"], naskolit: ["Naskolit"], jester: ["Le Jester"] };
       // TOUT est un bot : on range par FAMILLES (pas une catégorie « Bots ») — les bots inventés pour E.N.O.S., les LÉGENDES (ordis surpuissants), puis les autres
       const RBI = (c) => (E.botRoster ? E.botRoster.list.filter((b) => b.cat === c).map((b) => b.id) : []), LEG_R = ["r_mittens", "r_pal_9000", "r_skyweb", "r_chessgpt"];
-      const DFG = [["Bots E.N.O.S.", ["brillant", "enos", "nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester"]],
+      const DFG = [["Bots E.N.O.S.", ["brillant", "enos", "raph", "nasko", "lelex", "penoire", "naskurieux", "ghorghor", "naskolit", "jester"]],
         ["Légendes", ["boss", "obsidian", "plenty", "caissa", "viridithas", "lc0", "berserk", "ethereal", "koivisto", ...LEG_R]],
         ["Joueurs pro", RBI("pro")], ["Streamers", RBI("str")], ["Célébrités", RBI("cel")], ["IA", ["claude", "gpt", "gemini", "deepseek", "maia1100", "maia1500", "maia1900"]],
         ["Débutants", RBI("deb")], ["Intermédiaires", RBI("int")], ["Avancés", RBI("adv")], ["Maîtres", RBI("mai")],
@@ -274,7 +276,7 @@
           if (x.dl && Date.now() > x.dl) { const c = ch.turn(); setTimeout(() => { if (g && !g.over) { g.token++; finish("Temps écoulé (3 jours) — " + (c === "w" ? "les Noirs" : "les Blancs") + " gagnent"); } }, 300); }
         }
         $("#df-home").hidden = true; $("#df-game").hidden = false;
-        document.documentElement.classList.remove("ghor");
+        document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false);
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
         K.loadBook().then((ok) => { if (!ok && g) g.inBook = false; });
         chatSetup();
@@ -331,7 +333,7 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor"); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
+      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
@@ -555,7 +557,8 @@
           if (cancel && tok === g.token) { rewind(1); return; }
         }
         if (g.ch.game_over()) return finish(overText());
-        for (const col of ["w", "b"]) { if (g.pl[col].transform && !g.pl[col].done && g.lostMinor[col] >= 3) { await ghorTransform(col, tok); if (tok !== g.token) return; } }   // plus de 2 pièces mineures perdues : GhorGhor se réveille
+        for (const col of ["w", "b"]) { if (g.pl[col].transform && !g.pl[col].done && g.lostMinor[col] >= 3) { await ghorTransform(col, tok); if (tok !== g.token) return; } }
+        for (const col of ["w", "b"]) { if (g.pl[col].raph && g.pl[col].raph < 3) { await raphCheck(col, tok); if (tok !== g.token) return; } }       // Raph : 800 -> 1200 -> E.N.O.S.   // plus de 2 pièces mineures perdues : GhorGhor se réveille
         if (!g.mode.human) await sleep(g.delay);
         next(tok);
       }
@@ -683,6 +686,55 @@
         paint();
       }
 
+      // ---- RAPH (co-fondateur de DualPulse) : 800 Elo détendu ; s'il perd l'avantage, il se concentre (1200 Elo) ;
+      //      s'il est en train de perdre (sans que ce soit déjà joué), E.N.O.S. apparaît dans son dos, parle, l'ambiance devient oppressante, Raph DEVIENT E.N.O.S.
+      //      (pleine puissance, mind games, voix) et « fish » (ralenti) démarre.
+      function raphAdv(col) { const w = g.evalW || 0; return col === "w" ? w : -w; }
+      async function raphCheck(col, tok) {
+        const p = g.pl[col], adv = raphAdv(col), bc = E.botChat;
+        if (adv <= -330 && adv > -1600) return raphTakeover(col, tok);                                   // assez perdu pour qu'E.N.O.S. arrache la partie
+        if (p.raph === 1 && adv <= -110) {
+          p.raph = 2; p.elo = 1200; E.vibrate([30, 30, 30]); E.ui.toast("Raph se concentre : 1200 Elo", "warn", 2600);
+          const old = g.talk[col]; if (bc && old) { const n = bc.replace(old, "raph2", "awake"); g.talk[col] = n; setTimeout(() => { if (g && tok === g.token && n) n.say("transform", {}, true); }, 400); }
+          paint();
+        }
+      }
+      function oppressSound(sec) {                                                                         // grondement grave + battements de cœur qui ralentissent
+        try { if (!E.settings.get("chess.sound", true)) return; const ac = (glitchSound.ac = glitchSound.ac || new (window.AudioContext || window.webkitAudioContext)()), t = ac.currentTime; if (ac.state === "suspended") ac.resume();
+          const o = ac.createOscillator(), o2 = ac.createOscillator(), gd = ac.createGain(), lp = ac.createBiquadFilter(); o.type = "sawtooth"; o.frequency.setValueAtTime(48, t); o.frequency.exponentialRampToValueAtTime(30, t + sec); o2.type = "sine"; o2.frequency.value = 36;
+          lp.type = "lowpass"; lp.frequency.value = 220; gd.gain.setValueAtTime(0.0001, t); gd.gain.exponentialRampToValueAtTime(0.5, t + sec * 0.6); gd.gain.exponentialRampToValueAtTime(0.0001, t + sec + 0.8);
+          o.connect(lp); o2.connect(lp); lp.connect(gd); gd.connect(ac.destination); o.start(t); o2.start(t); o.stop(t + sec + 1); o2.stop(t + sec + 1);
+          for (let k = 0, tt = 0.2; tt < sec; k++, tt += 0.55 + k * 0.12) for (const dt of [0, 0.16]) { const b = ac.createOscillator(), bg = ac.createGain(); b.frequency.setValueAtTime(70, t + tt + dt); b.frequency.exponentialRampToValueAtTime(38, t + tt + dt + 0.14);
+            bg.gain.setValueAtTime(0.9, t + tt + dt); bg.gain.exponentialRampToValueAtTime(0.001, t + tt + dt + 0.2); b.connect(bg); bg.connect(ac.destination); b.start(t + tt + dt); b.stop(t + tt + dt + 0.25); }
+        } catch (e) { /* audio indisponible */ }
+      }
+      function oppressFx(ms) {                                                                             // l'écran s'éteint lentement, le rouge pulse, tout tremble un peu
+        const ov = document.createElement("div"); ov.className = "raph-ov"; ov.innerHTML = '<i class="eye"></i>'; document.body.appendChild(ov);
+        oppressSound(ms / 1000); void ov.offsetWidth; ov.classList.add("on"); document.documentElement.classList.add("enosmode");
+        return sleep(ms).then(() => { ov.classList.add("out"); setTimeout(() => ov.remove(), 900); });
+      }
+      function fish(on) {
+        try { if (!on) { const a = E._fish; E._fish = null; if (!a) return; let v = a.volume; const iv = setInterval(() => { v -= 0.05; if (v <= 0) { clearInterval(iv); a.pause(); } else a.volume = v; }, 60); return; }
+          if (E._fish || !E.settings.get("chess.sound", true)) return; const a = (E._fish = new Audio((E.assetBase || "") + "audio/raph/fish.mp3")); a.loop = true; a.volume = 0; const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
+          let v = 0; const iv = setInterval(() => { v += 0.03; if (v >= 0.5 || E._fish !== a) { clearInterval(iv); if (E._fish === a) a.volume = 0.5; } else a.volume = v; }, 80); } catch (e) { /* audio indisponible */ }
+      }
+      E.raphFish = fish;
+      async function raphTakeover(col, tok) {
+        const p = g.pl[col], bc = E.botChat; p.raph = 3; g.busy = true;
+        const old = g.talk[col]; let I = old;
+        if (bc && old) { I = bc.replace(old, "raph3", "awake"); g.talk[col] = I; }
+        E.vibrate([80, 60, 80]); paint();
+        await sleep(600); if (!g || tok !== g.token) return;
+        if (I) I.say("takeover", {}, true);
+        await sleep(9200); if (!g || tok !== g.token) return;                                               // la phrase d'E.N.O.S. (voix v3, ~7 s) va jusqu'au bout
+        E.vibrate([40, 80, 40, 80, 200]);
+        await oppressFx(3200); if (!g || tok !== g.token) return;
+        await glitchFx(1100); if (!g || tok !== g.token) return;
+        Object.assign(p, { kind: "sf", elo: (E.TOP_ELO || 3650), power: 100, top: true, hunt: true, name: "E.N.O.S.", title: "GM", talk: "enos" });
+        if (bc && I) { const n = bc.replace(I, "enos", "awake"); g.talk[col] = n; if (E.mind && g.mode.human) E.mind.start(g, n); setTimeout(() => { if (g && tok === g.token && n) n.say("raph_now", {}, true); }, 700); }
+        fish(true); g.busy = false; paint();
+      }
+
       // commentaire facultatif d'ETO (Groq) pour les coups marquants
       async function llm(mv, humanMove) {
         if (!E.ai || !E.ai.configured() || !E.settings.get("chess.comment", true)) return;
@@ -762,7 +814,7 @@
       function replay(rec) {
         if (!rec || !rec.mv || !rec.mv.length) return;
         if (g) { g.token++; L.abort && L.abort(); }
-        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor");
+        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false);
         const fens = [START], c = new Chess();
         rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
         const R = { rec, fens, k: 0, speed: 1, playing: false };
@@ -807,7 +859,7 @@
         go(0);
       }
 
-      el._api = { launch, replay, get g() { return g; }, setup,
+      el._api = { launch, replay, get g() { return g; }, setup, raphCheck: (col) => raphCheck(col, g.token),
         /** familles de l'accueil (pour l'Arène PC) : [[titre, [{id, name, img, elo}]]] */
         families: () => DFG.map(([t, ids]) => [t, ids.filter((id) => MODES.some((x) => x.id === id)).map((id) => { const m = MODES.find((x) => x.id === id), d = DFN[id] || [m.t.replace(/^[^\p{L}\p{N}]+/u, "")], rb = E.botRoster && E.botRoster.byId[id], ad = E.aiBots && E.aiBots.def[id];
           return { id, name: d[0], img: d[1] && !d[1].startsWith("cc:") ? d[1] : botImg(id), elo: rb ? (rb.adapt ? "ton niveau" : (rb.title ? rb.title + " " : "") + rb.elo) : ad ? ad.elo : "" }; })]),

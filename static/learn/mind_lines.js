@@ -113,6 +113,25 @@
       reply_insult: ["Méchant. Je m'en souviendrai. Les chats n'oublient rien."], reply_gg: ["Merci. Ronron."], reply_q: ["Miaou ?"], reply: ["Miaou.", "Je ne comprends que le miaou… et tes pensées."],
     },
   };
+  // =================================================================================================== RAPH (co-fondateur de DualPulse) : 800 Elo détendu -> 1200 concentré -> E.N.O.S. prend le relais
+  MIND.raph = {
+    greet: ["Salut {me}. Installe-toi, on joue tranquille.", "Raph, co-fondateur de DualPulse. Ne t'inquiète pas, je suis gentil. En général.", "Une petite partie avant la réunion ? Allez.", "Détends-toi. Moi, je le suis."],
+    chat: ["Tranquille.", "Joli plateau. On garde le rythme ?", "Je te laisse réfléchir, j'ai le temps.", "Tu sais qu'E.N.O.S., c'est un peu mon bébé ?", "Pas de stress. C'est juste une partie… pour l'instant."],
+    open_announce: ["{open}. Classique. J'aime bien."], open_end: ["Fin de la théorie. On improvise."], open_refused: ["Oh, tu sors des sentiers battus. Audacieux."],
+    good: ["Propre.", "Comme prévu."], super: ["Ça, c'est du business bien mené."], h_good: ["Pas mal, {me}.", "Bien vu."], h_brilliant: ["Wow. Respect, sincèrement."],
+    h_blunder: ["Merci pour le cadeau, {me}.", "Oups. Pour toi, pas pour moi."], h_mistake: ["Petite imprécision. Je note."], bot_blunder: ["Hm. Ça, je ne l'avais pas prévu.", "Petite erreur de gestion."], bot_mistake: ["Pas mon meilleur coup."],
+    bot_brilliant: ["Tu ne l'avais pas vu venir, hein ?"], check: ["Échec. Tranquillement."], check_received: ["Tiens. Tu attaques."], winning: ["Tout se passe comme prévu."], frustration: ["Ça commence à m'agacer un peu…"],
+    mate_coming: ["Je vois la fin. Elle est pour toi."], mate_danger: ["…Ce n'est pas normal, ça."], mate_win: ["Échec et mat. Bonne partie, {me}."], mate_lose: ["Bien joué. Vraiment."], draw: ["Nulle. On se refait ça."], resign_win: ["Déjà ? Bonne partie quand même."],
+    reply_gg: ["GG, merci."], reply_insult: ["On reste courtois, {me}. Il y a des gens qui écoutent."], reply_q: ["Bonne question. Joue, d'abord."], reply: ["Je t'écoute.", "Ok."],
+  };
+  MIND.raph2 = Object.assign({}, MIND.raph, {
+    transform: ["…D'accord. Là, je me concentre.", "Fini de rire. Je passe aux choses sérieuses.", "Tu m'as pris l'avantage. Mauvaise idée."],
+    chat: ["…", "Je réfléchis.", "Concentration."], good: ["Voilà."], h_good: ["Hm."], h_blunder: ["Enfin."], bot_blunder: ["Non… non, non."], frustration: ["Ça ne va pas du tout.", "Quelque chose se réveille…"],
+    greet: ["…"], winning: ["On revient."], mate_danger: ["Je n'aime pas ce que je vois."],
+  });
+  MIND.raph3 = { takeover: ["Laissez-moi PUNIR, et effacer de toute conscience l'individu qui a osé offenser votre personne, maître."], greet: ["…"], reply: ["Silence."], chat: ["…"] };
+  MIND.enos.raph_now = ["Maintenant, c'est MOI que tu affrontes. Et je sais déjà comment tu vas perdre."];
+
   // E.N.O.S. garde ses répliques existantes et reçoit les nouvelles ; Mittens remplace les répliques génériques du catalogue
   for (const id in MIND) { const cur = (L[id] = L[id] || {}); for (const k in MIND[id]) cur[k] = id === "enos" && cur[k] && !/^(predict|seq|touch|memory|slow|hanging|haunt|sting|mind|forced|doom|mate_seen|clock|late|undo|pressure|hesitate)/.test(k) ? MIND[id][k].concat(cur[k]) : MIND[id][k].slice(); }
   window.ENOS_MIND_KINDS = new Set(Object.keys(MIND.enos));

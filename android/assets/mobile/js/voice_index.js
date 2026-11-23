@@ -198,9 +198,12 @@ window.ENOS_VOICE = { enos: {
 "Dernier survivant : E.N.O.S. Mission accomplie.": "288aaedf17",
 "Victoire. Résultat conforme aux prévisions.": "410794d650"
 } };
+// Raph : la phrase d'E.N.O.S. dans son dos et sa première phrase une fois le relais pris (ElevenLabs v3, balises d'interprétation [menacing] [slowly] [whispers] [laughs darkly])
+window.ENOS_VOICE.raph3 = { "Laissez-moi PUNIR, et effacer de toute conscience l'individu qui a osé offenser votre personne, maître.": "raph_takeover" };
+window.ENOS_VOICE.enos["Maintenant, c'est MOI que tu affrontes. Et je sais déjà comment tu vas perdre."] = "raph_now";
 (() => {
   const E = window.ENOS, cache = {}, urls = {};
-  const load = (bot, name) => cache[name] || (cache[name] = new Promise((res, rej) => { if (window.ENOS_VB && window.ENOS_VB[name]) return res(); const s = document.createElement("script"); s.src = (E.assetBase || "") + "audio/voice/" + bot + "/" + name + ".js"; s.onload = () => res(); s.onerror = () => { delete cache[name]; rej(new Error("voix " + name)); }; document.head.appendChild(s); }));
+  const load = (bot, name) => cache[name] || (cache[name] = new Promise((res, rej) => { if (window.ENOS_VB && window.ENOS_VB[name]) return res(); const s = document.createElement("script"); s.src = (E.assetBase || "") + "audio/voice/enos/" + name + ".js"; s.onload = () => res(); s.onerror = () => { delete cache[name]; rej(new Error("voix " + name)); }; document.head.appendChild(s); }));
   const bytes = (name) => { const raw = atob(window.ENOS_VB[name]), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); return u8; };
   E.botVoice = {
     name: (bot, text) => ((window.ENOS_VOICE[bot] || {})[text] || null),

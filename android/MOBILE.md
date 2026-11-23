@@ -570,6 +570,16 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.125 — Bot Raph (co-fondateur de DualPulse) : quand il perd, E.N.O.S. prend le relais
+- **Raph** dans les Défis (Bots E.N.O.S.), trois phases selon l'évaluation de la partie (de son point de vue) :
+  1. **800 Elo**, détendu (icône 1), répliques de jeune patron cool ;
+  2. s'il **perd l'avantage** (≤ −1,1) : **1200 Elo**, concentré, yeux fermés (icône 2) ;
+  3. s'il est **en train de perdre** (de −3,3 à −16, assez pour qu'E.N.O.S. arrache la partie) : **E.N.O.S. apparaît dans son dos** (icône 3) et dit, voix ElevenLabs v3 (balise [menacing], rapide et nette, avec écho) : « Laissez-moi PUNIR, et effacer de toute conscience l'individu qui a osé offenser votre personne, maître. » ;
+  - puis **transition oppressante** (l'écran s'éteint, un œil rouge s'ouvre, grondement grave et battements de cœur, glitch), l'ambiance reste **terne et rouge** ; **Raph devient E.N.O.S.** (3650 Elo, pleine puissance, chasse aux brillants, mind games et voix) : « Maintenant, c'est MOI que tu affrontes. Et je sais déjà comment tu vas perdre. » ;
+  - **« fish » (version ralentie, fournie par le propriétaire)** se lance en boucle, coupée en fin de partie.
+- Fichiers : `img/bots/raph*.png`, `audio/raph/fish.mp3`, voix `audio/voice/enos/raph_*.js`, répliques dans `js/mind_lines.js`, logique `raphCheck` / `raphTakeover` dans `js/m_defis.js`, styles `.raph-ov` / `html.enosmode` dans `css/chess.css`.
+- Test : `t_raph.py` ; `t_defis.py` (149 tuiles).
+
 ## 1.124 — MultiEdit : la série n'est plus jamais perdue, le montage continue en arrière-plan
 - **Sauvegarde sur le téléphone** (IndexedDB `enos_multiedit`, `E.meStore`) après CHAQUE partie de la série : jeux joués, temps forts enregistrés (images de scène), parties d'échecs, musique choisie, étape en cours.
 - **Retour après une fermeture** (notification, application tuée par Android, plantage du moteur de la page) : MultiEdit se rouvre tout seul au lancement (série de moins de 48 h) :
