@@ -10,6 +10,7 @@
 <meta property="og:description" content="{{ studio.tagline }}">
 <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/css/site.css">
+<link rel="stylesheet" href="/static/css/assembly.css">
 {% if dev %}<link rel="stylesheet" href="/dev/style.css">{% endif %}
 </head>
 <body>
@@ -117,6 +118,7 @@
 
   <section id="contact" class="sec alt">
     <div class="wrap narrow center">
+      <div class="asm-sign" data-formation="DUAL PULSE" aria-hidden="true"></div>
       <header class="sec-h"><p class="eyebrow">Contact</p><h2>Get in touch</h2></header>
       <p class="lead sm">For press, partnerships, playtesting or general questions, write to us.</p>
       <a class="btn primary big" href="mailto:{{ studio.contact_email }}">{{ studio.contact_email }}</a>
@@ -134,5 +136,6 @@
   <form class="chat-f" id="chat-form" autocomplete="off"><input id="chat-in" type="text" maxlength="500" placeholder="Ask a question…" aria-label="Your question"><button type="submit" aria-label="Send">➤</button></form>
 </aside>
 <script src="/static/js/site.js" defer></script>
+<script src="/static/js/assembly.js" defer></script>
 </body>
 </html>

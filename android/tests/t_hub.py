@@ -63,7 +63,7 @@ with sync_playwright() as pw:
     pg.evaluate("ENOS.ui.closeSheet(true)")
     # accueil des Défis : sections, aucune description
     pg.evaluate("ENOS.modules.open('defis')"); pg.wait_for_selector("#df-home .hub-sec")
-    n_df = pg.locator("#df-home .df-mode").count(); n_sm = pg.evaluate("document.querySelectorAll('#df-home .df-mode small:not(.df-elo)').length"); check(n_df == 148 and n_sm == 0, "Défis : 148 modes en tuiles sans description (seul l'Elo est affiché) : %d / %d" % (n_df, n_sm))
+    n_df = pg.locator("#df-home .df-mode").count(); n_sm = pg.evaluate("document.querySelectorAll('#df-home .df-mode small:not(.df-elo)').length"); check(n_df == 149 and n_sm == 0, "Défis : 149 modes en tuiles sans description (seul l'Elo est affiché) : %d / %d" % (n_df, n_sm))
     check(not errs, "aucune erreur JS : %s" % errs[:3])
     b.close()
 raise SystemExit(1 if BAD else 0)

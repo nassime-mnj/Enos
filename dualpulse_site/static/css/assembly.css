@@ -1,0 +1,19 @@
+/* THE SITE IS AN ABANDONED MACHINE STILL RUNNING — styles of the assembly layer (static/js/assembly.js).
+   Without JavaScript or with reduced motion, the .asm class is never set: everything is shown normally. */
+.asm-fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:40}
+.asm [data-asm="raw"]{clip-path:inset(0 0 100% 0)}
+.asm [data-asm="built"]{cursor:crosshair}
+.asm [data-asm="built"] :is(a,button,summary,input,video){cursor:pointer}
+.asm .reveal{opacity:1;transform:none;transition:none}
+.asm-term{position:fixed;left:0;bottom:0;z-index:45;width:min(520px,calc(100vw - 96px));pointer-events:none;padding:22px 14px max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  background:linear-gradient(to top,#050607f0 30%,#05060700);border-top-right-radius:14px;
+  font:500 10.5px/1.45 ui-monospace,"Cascadia Code",Consolas,monospace;letter-spacing:.04em;color:#19e6ffcc;text-shadow:0 0 8px #19e6ff55;opacity:.9}
+.asm-term p{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:asmType .5s steps(24,end)}
+.asm-term p.b,.asm-term p.warn{color:#ff7a1acc;text-shadow:0 0 8px #ff7a1a55}
+.asm-term p.a{color:#fff;text-shadow:0 0 10px #19e6ff}
+.asm-term p.muted{color:#8b97aacc;text-shadow:none}
+@keyframes asmType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.asm-sign{height:clamp(70px,18vw,190px)}
+@media (max-width:640px){.asm-term{font-size:9px;width:calc(100vw - 92px)}.asm-term p:nth-last-child(n+4){display:none}}
+.asm-sign{display:block}
+@media (prefers-reduced-motion:reduce){.asm-fx,.asm-term{display:none}}

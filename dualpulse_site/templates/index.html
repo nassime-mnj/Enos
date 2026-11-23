@@ -10,6 +10,7 @@
 <meta property="og:description" content="{{ studio.tagline }}">
 <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/css/index.css">
+<link rel="stylesheet" href="/static/css/assembly.css">
 {% if dev %}<link rel="stylesheet" href="/dev/style.css">{% endif %}
 </head>
 <body class="home">
@@ -66,6 +67,7 @@
   </section>
 
   <section id="access" class="access" aria-labelledby="access-t">
+    <div class="asm-sign" data-formation="DUAL PULSE" aria-hidden="true"></div>
     <div class="access-in">
       <h2 id="access-t">Invitation only</h2>
       <p>Access requires an <b>invitation code</b> (<span class="tagpill">Dev</span> or <span class="tagpill">Friends</span>), which the Launcher asks for the first time you open it. Your access level depends on the code you receive.</p>
@@ -76,5 +78,6 @@
 
 <footer class="foot"><span>© {{ studio.year }} {{ studio.name }}</span><a href="/studio">The studio</a></footer>
 <script src="/static/js/index.js" defer></script>
+<script src="/static/js/assembly.js" defer></script>
 </body>
 </html>

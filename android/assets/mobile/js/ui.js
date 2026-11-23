@@ -1,5 +1,5 @@
 "use strict";
-// Interactions au pouce : pager glissé (swipe), barre de navigation basse, appui long, feuilles du bas (bottom sheets), toasts, clavier, retour Android.
+// Interactions au pouce : pager (onglets par la barre du bas, plus de glissement entre onglets depuis 1.126), barre de navigation basse, appui long, feuilles du bas (bottom sheets), toasts, clavier, retour Android.
 (() => {
   const E = window.ENOS, $ = E.$;
   const U = (E.ui = {});
@@ -24,34 +24,6 @@
   };
   U.tab = () => TABS[index];
   const measure = () => { W = $("#pager").clientWidth || window.innerWidth; place(-index * W, false); };
-
-  function swipe() {
-    const pager = $("#pager");
-    let sx = 0, sy = 0, dx = 0, mode = "", t0 = 0, down = false;
-    pager.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1 || e.target.closest("input[type=range],.no-swipe,.sheet")) { down = false; return; }
-      down = true; mode = ""; sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0; t0 = Date.now();
-    }, { passive: true });
-    pager.addEventListener("touchmove", (e) => {
-      if (!down) return;
-      const x = e.touches[0].clientX - sx, y = e.touches[0].clientY - sy;
-      if (!mode) { if (Math.abs(x) < 9 && Math.abs(y) < 9) return; mode = Math.abs(x) > Math.abs(y) * 1.25 ? "h" : "v"; }
-      if (mode !== "h") return;
-      dx = x;
-      const edge = (index === 0 && x > 0) || (index === TABS.length - 1 && x < 0);
-      place(-index * W + (edge ? x * 0.25 : x), false);                        // résistance élastique aux extrémités
-    }, { passive: true });
-    pager.addEventListener("touchend", () => {
-      if (!down || mode !== "h") { down = false; return; }
-      down = false;
-      const v = Math.abs(dx) / Math.max(1, Date.now() - t0);                    // px/ms
-      let to = index;
-      if (dx < -W * 0.22 || (dx < -30 && v > 0.45)) to = Math.min(TABS.length - 1, index + 1);
-      else if (dx > W * 0.22 || (dx > 30 && v > 0.45)) to = Math.max(0, index - 1);
-      U.go(to);
-    });
-    pager.addEventListener("touchcancel", () => { down = false; U.go(index, { silent: true }); });
-  }
 
   // ------------------------------------------------------------------ appui long (délégué) : handler(élément) ; le clic qui suit est supprimé
   U.longPress = (container, selector, handler) => {
@@ -154,7 +126,7 @@
   U.init = () => {
     U.applyAnim();
     measure();
-    swipe(); keyboard();
+    keyboard();                                                                     // plus de glissement gauche/droite entre onglets : il empêchait de faire défiler les pages larges (onglets : barre du bas)
     E.$$("#tabbar button").forEach((b) => (b.onclick = () => U.go(b.dataset.tab)));
     window.addEventListener("orientationchange", () => setTimeout(measure, 300));
     U.go(0, { silent: true });

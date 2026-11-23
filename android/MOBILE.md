@@ -570,6 +570,10 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.126 — Plus de glissement gauche/droite entre les onglets
+- Le pager ne réagit plus au glissement horizontal : il faisait changer d'onglet quand on voulait faire défiler une page large (tableaux, carrousels, plateaux). Les onglets se changent par la barre du bas (`js/ui.js`).
+- Test : `t_hub.py` (149 tuiles dans les Défis depuis l'arrivée de Raph).
+
 ## 1.125 — Bot Raph (co-fondateur de DualPulse) : quand il perd, E.N.O.S. prend le relais
 - **Raph** dans les Défis (Bots E.N.O.S.), trois phases selon l'évaluation de la partie (de son point de vue) :
   1. **800 Elo**, détendu (icône 1), répliques de jeune patron cool ;
