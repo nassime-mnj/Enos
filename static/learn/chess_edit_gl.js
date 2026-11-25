@@ -135,6 +135,24 @@ void main(){
       }
     }
     v.dim = dimBest;
+    // CINÉMA (comme les chess edits pro) : la profondeur de champ et un projecteur chaud SUIVENT l'action (seules ~2 cases autour du coup sont nettes,
+    // le reste du plateau part dans le flou et l'ombre), plateau légèrement désaturé ; étalonnage par qualité de coup (brillant : cyan, meilleur coup : vert)
+    if (this.cinema !== false && !(this.outro && t >= this.outro.t - 1.6)) {
+      let ci = -1; for (let i = 0; i < this.imp.length; i++) { const x = this.imp[i]; if (x.cheat === "twist" || !x.to) continue; if (x.impact - (x.dur || 90) / 1000 - (x.pre || 0) - 0.2 <= t) ci = i; else break; }
+      if (ci >= 0) {
+        const cur = this.imp[ci], prev = this.imp.slice(0, ci).reverse().find((x) => x.to && x.cheat !== "twist"), Pc = scr(cur.to), Pp = prev ? scr(prev.to) : Pc;
+        const s0 = cur.impact - (cur.dur || 90) / 1000 - (cur.pre || 0) - 0.2, kf = smooth(s0, cur.impact, t), P = { x: lerp(Pp.x, Pc.x, kf), y: lerp(Pp.y, Pc.y, kf) };
+        if (!(v.dof > 0.55)) { v.dof = Math.max(v.dof, 0.55); v.focus = [P.x, P.y]; v.focusR = cell * 2.4; }
+        if (v.dim < 0.42) { v.dim = 0.42; v.spot = [P.x, P.y]; v.spotR = cell * 3.1; }
+      }
+      v.gray = Math.max(v.gray, 0.28);
+      if (!(v.tintK > 0.05)) { v.tint = [0.94, 0.82, 0.66]; v.tintK = 0.42; }                                     // lumière chaude (tungstène)
+      for (const e of this.imp) { const age = t - e.impact; if (age < -0.05 || age > 1.8) continue;
+        const key = e.key || (e.badge && e.badge.img) || "", fade = age < 0 ? 0 : Math.exp(-Math.max(0, age - 0.25) * 2.2);
+        if (key === "brilliant" || e.bigMove) { const kk = 0.7 * fade; if (kk > v.tintK * 0.9) { v.tint = [0.45, 1.1, 1.28]; v.tintK = kk; } v.gray = Math.max(v.gray, 0.5 * fade); v.bloom = Math.max(v.bloom, 0.34 + 0.4 * fade); }
+        else if ((key === "best" || key === "great" || key === "excellent") && !e.soft) { const kk = 0.45 * Math.exp(-Math.max(0, age - 0.1) * 3); if (kk > v.tintK * 0.9) { v.tint = [0.72, 1.22, 0.74]; v.tintK = kk; } }
+      }
+    }
     // FINALE : le mat. Plateau en feu (braises, bords qui brûlent, teinte orange) puis VIDE : la pièce flotte floue dans le noir, lame de lumière.
     const o = this.outro;
     if (o && !o.defeat) {

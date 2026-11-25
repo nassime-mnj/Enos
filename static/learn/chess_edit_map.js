@@ -265,7 +265,7 @@
   const iconFor = (rec, name, used) => { const base = (hashS(String((rec && rec.t) || (rec && rec.title) || "") + "|" + name) % ICONS); let k = base; while (used.has(k) && used.size < ICONS) k = (k + 7) % ICONS; used.add(k); return "img/icons/ic" + String(k + 1).padStart(2, "0") + ".png"; };
   // BOTS : ils gardent leur icône d'origine (tête du personnage ; ETO / E.N.O.S. / Stockfish = leur pastille de couleur). Seuls les JOUEURS (humains) reçoivent une icône aléatoire.
   function botLook(name, talk) {
-    const bots = (E.botChat && E.botChat.bots) || {}, id = talk && bots[talk] ? talk : Object.keys(bots).find((k) => bots[k].name === name);
+    const bots = (E.botChat && E.botChat.bots) || {}, id = talk && bots[talk] ? talk : Object.keys(bots).find((k) => bots[k].name === name && !bots[k].variant);          // les phases de Raph (raph2, raph3 « E.N.O.S. ») ne remplacent jamais le vrai personnage
     const pick = (b, i) => ({ id: i || "", img: b.img || "", anim: b.anim || "", ph: b.img ? null : b.ph || [String(b.name || name).slice(0, 3).toUpperCase(), "#8d8d97"], b });
     if (id) return pick(bots[id], id);
     if (/^ETO\b/i.test(name) && bots.eto) return pick(bots.eto, "eto");
@@ -412,7 +412,7 @@
     const en = (v) => { const a = audio.energy; if (!a || !a.v || !a.v.length) return 0.7; return a.v[Math.max(0, Math.min(a.v.length - 1, Math.floor((v + ms) / a.hop)))]; };
     const gapAt = (v) => Math.max(0.5, Math.min(1.85, 1.85 - 1.35 * Math.min(1, en(v))));
     const kickAfter = (tMin) => { const a = SK.find((k) => k[0] >= tMin), b = MK.find((k) => k[0] >= tMin); return a && (!b || a[0] <= b[0] + 1.2) ? a : b || a || null; };
-    const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), isBl = (i) => plies[i].key === "blunder" && !isHero(i), KN_S = 2.8, isKn = (i) => plies[i].key === "brilliant" && plies[i].piece === "n";
+    const isHero = (i) => plies[i].key === "brilliant" || (L[i] >= 3 && !!plies[i].sacrifice), isBl = (i) => plies[i].key === "blunder" && !isHero(i), KN_S = 1.15, isKn = (i) => plies[i].key === "brilliant" && plies[i].piece === "n";
     const score = (i) => plies[i].drama + (L[i] >= 3 ? 40 : L[i] >= 2 ? 15 : 0) + (i === n - 1 ? 60 : 0), dtOf = (m) => Math.max(0.06, Math.min(0.14, 3.5 / Math.max(1, m)));
     const ANN = 1.0, isCheat = (i) => !!plies[i].cheat && plies[i].cheat !== "double" && plies[i].cheat !== "twist";              // CHATGPT PRIME : coup aberrant = flèche annoncée 1 s AVANT, puis le coup, puis 1,6 s pour lire
     const holdOf = (i, t) => (isHero(i) ? (plies[i].piece === "r" ? 1.8 : 1.6) : isBl(i) ? 1.7 : isCheat(i) ? 1.6 : gapAt(t));
@@ -463,7 +463,7 @@
     const minTail = Math.min(12, Math.max(1, n - 1)), tpre = D - 0.6 - t00, stretch = real && E0 - D > 6 && tpre > 12;       // musique longue : on étire le rythme AVANT le drop (jamais de plateau figé > 3 s) et on garde 0,65–0,90 s / coup après
     const tailMax = real ? clampN(Math.min(Math.floor((E0 - D) / 0.8), stretch ? n - Math.ceil(tpre / 2.0) : 34), minTail, 34) : 22, tailLen = Math.max(minTail, Math.min(tailMax, n - Math.min(4, n - 1)));
     const lo = Math.max(Math.min(4, n - 1), n - tailMax), hi = Math.max(lo, n - minTail); let start = n - tailLen; for (let i = lo; i <= hi; i++) if (score(i) > score(start)) start = i;       // meilleur tournant / sacrifice / coup illégal parmi les départs possibles
-    const KN_S = 2.8, isKn = (i) => plies[i].key === "brilliant" && plies[i].piece === "n", kd0 = isKn(start) ? KN_S : 0, DP = D - kd0;     // SACRIFICE DE CAVALIER BRILLANT : glissement très lent (2,8 s) le temps du « horse sound », impact à l'atterrissage
+    const KN_S = 1.15, isKn = (i) => plies[i].key === "brilliant" && plies[i].piece === "n", kd0 = isKn(start) ? KN_S : 0, DP = D - kd0;     // SACRIFICE DE CAVALIER BRILLANT : saut net (1,15 s : élan, bond, atterrissage) sur le « horse sound », impact à l'atterrissage
     const avail = Math.max(2, DP - 0.6 - t00), ffDt = (M) => clampN(3.5 / Math.max(1, M), 0.06, 0.14);
     let calmN = Math.min(twoD ? 10 : 8, start);
     if (twoD) calmN = clampN(Math.floor((D1 - 1.3 - t00) / 1.3) + 1, Math.min(2, start), Math.min(10, start)); 

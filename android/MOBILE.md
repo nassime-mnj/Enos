@@ -570,6 +570,18 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.128 — Chess Edit : rendu « cinéma », saut du cavalier, icône d'E.N.O.S.
+- **Icône d'E.N.O.S.** : dans un edit, choisir E.N.O.S. affichait Raph + E.N.O.S. (la phase 3 de Raph s'appelle aussi « E.N.O.S. » et passait avant lui dans la recherche par nom). Les phases de Raph sont marquées `variant` et exclues de cette recherche (`js/bot_chat.js`, `js/chess_edit_map.js`).
+- **Sacrifice de cavalier brillant** : le cavalier rampait 2,8 s en survolant sa case d'arrivée de 1,5 case puis redescendait (impression d'aller-retour). Saut net de 1,15 s, bond bas (0,55 case), sur le hennissement.
+- **Rendu « cinéma »** (référence : edits d'échecs pro) dans la post-production WebGL (`js/chess_edit_gl.js`), partagée par l'aperçu, l'export et MultiEdit :
+  - profondeur de champ qui suit l'action (≈ 2 cases nettes autour du coup, le reste du plateau flou) ;
+  - projecteur chaud (lumière tungstène) sur le coup, bords dans l'ombre, plateau légèrement désaturé ;
+  - étalonnage par qualité de coup : brillant → cyan, meilleur / excellent coup → vert ;
+  - flou de mouvement sur les mouvements de caméra rapides (`camBlur`, `js/chess_edit_render.js`).
+- **Netteté** : pièces pré-rendues à la taille réelle de la case (jusqu'à 360 px en 4K au lieu de 160 px agrandis), mise à l'échelle des images en haute qualité.
+- Pack « The complete pack for starting chess editing » : archive chiffrée (mot de passe requis) ; à intégrer dès réception du mot de passe (icônes de classement HD / SVG, 11 sons de plateau, pièces et plateau).
+- Tests : `t_chessedit.py`, `t_edit_render.py`, `t_edit_flow.py`, `t_edit_sounds.py`.
+
 ## 1.127 — Correctif : export Chess Edit « VideoFrames can't be created from tainted sources »
 - Cause : les icônes de Raph (`img/bots/raph*.png`) n'étaient pas dans `js/render_assets.js` (images en data: URI) ; dessinées depuis un fichier, elles « salissaient » le canvas et l'export vidéo refusait de démarrer.
 - `render_assets.js` régénéré (`tools/gen_render_assets.py`, 223 images) ; et le chargeur d'images du rendu ignore désormais (avec un avertissement) toute image absente du pack quand l'application tourne depuis ses fichiers : un oubli ne peut plus jamais bloquer un export.

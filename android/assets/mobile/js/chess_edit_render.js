@@ -50,7 +50,8 @@
     }
     /** pièce détourée : contour noir net de 2 px (blanches) / reflet interne en haut (noires) — pré-rendue */
     skin(im, white) {
-      const N = 160, pad = 8, c = mk(N, N), g = c.getContext("2d"), w = N - pad * 2, r = white ? 2.9 : 2.1;               // 2,5 px / 1,8 px à l'échelle d'une case de 135 px
+      const N = Math.round(Math.min(360, Math.max(160, this.cell * 1.25))), z = N / 160, pad = 8 * z, c = mk(N, N), g = c.getContext("2d"), w = N - pad * 2, r = (white ? 2.9 : 2.1) * z;      // sprite à la taille RÉELLE de la case (1080p : 160 px ; 4K : 340 px) : contour net au lieu d'un agrandissement flou
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
       for (let a = 0; a < 16; a++) { const t = (a / 16) * TAU; g.drawImage(im, pad + Math.cos(t) * r, pad + Math.sin(t) * r + 1, w, w); }
       g.globalCompositeOperation = "source-in"; g.fillStyle = white ? "#000000" : "#EAEAEA"; g.fillRect(0, 0, N, N); g.globalCompositeOperation = "source-over";   // silhouette élargie = contour
       g.drawImage(im, pad, pad + 1, w, w); g.globalCompositeOperation = "source-atop";
@@ -128,6 +129,7 @@
 
     /** image complète à l'instant t (secondes) */
     draw(t) {
+      this.ctx.imageSmoothingEnabled = true; this.ctx.imageSmoothingQuality = "high";                       // mise à l'échelle des pièces, badges et avatars en haute qualité (lissage « low » par défaut)
       if (!this.loaded) return; this._now = t; const { ctx, W, H } = this;
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
       if (t < this.introEnd - 0.3) { this.drawIntro(t); return; }
@@ -140,12 +142,22 @@
         else { this.drawWorld(tg, tw0, strobe, fbk ? tw0 : t); if (needChroma) this.composeChroma(chromaAmp); }
       }
       if (this.glPost) this.glPost(t);                                                                       // post-production WebGL (bloom, projecteur, fumée, feu, vide) sur le MONDE seulement
+      this.camBlur(t);                                                                                       // flou de mouvement sur les mouvements de caméra rapides (zoom / panoramique)
       this.drawScreenFx(ctx, t);
       if (this.teamHud && t >= this.introEnd) this.teamHud(ctx, t);
       this.drawOverlays(ctx, t);
       if (t < this.introEnd) { const k = (t - (this.introEnd - 0.3)) / 0.3; ctx.save(); ctx.globalAlpha = 1 - EASE.out3(clamp(k, 0, 1)); this.drawIntro(this.introEnd - 0.3); ctx.restore(); }
       this.drawFlashbang(ctx, t);
       if (this.introEnd && t >= this.introEnd && t < this.introEnd + 0.14) { ctx.fillStyle = "#fff"; ctx.globalAlpha = 0.9 * (1 - (t - this.introEnd) / 0.14); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    }
+    /** FLOU DE MOUVEMENT DE CAMÉRA : quand le cadre bouge vite (zoom, panoramique, rotation), 3 copies décalées vers le centre d'intérêt */
+    camBlur(t) {
+      if (!this.camAt || this.cinema === false || t < (this.introEnd || 0)) return;
+      const a = this.camAt(t), b = this.camAt(t - 1 / 30); if (!a || !b) return;
+      const v = Math.abs((a.S || 1) - (b.S || 1)) * 9 + Math.hypot((a.x || 0) - (b.x || 0), (a.y || 0) - (b.y || 0)) / this.cell * 1.2 + Math.abs((a.th || 0) - (b.th || 0)) * 6;
+      if (v < 0.12) return; const k = Math.min(1, (v - 0.12) * 1.6), { W, H } = this, g = this.ctx, tg = this.tmp.getContext("2d");
+      tg.globalCompositeOperation = "copy"; tg.globalAlpha = 1; tg.drawImage(this.cv, 0, 0); tg.globalCompositeOperation = "source-over";
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); for (let i = 1; i <= 3; i++) { const s = 1 + 0.014 * i * k; g.globalAlpha = 0.2 * k; g.drawImage(this.tmp, W / 2 - (W * s) / 2, H * 0.46 - (H * s) * 0.46, W * s, H * s); } g.restore();
     }
     /** gaffe « flash bang » : {e, u, hold} pendant l'image figée (≤ 1,15 s, jamais sur le coup suivant) */
     flashbangAt(t) { for (let i = 0; i < this.imp.length; i++) { const e = this.imp[i]; if (!e.flashbang) continue; const nx = this.imp[i + 1], hold = Math.max(0.3, Math.min(1.15, nx ? nx.impact - (nx.dur || 90) / 1000 - (nx.pre || 0) - e.impact - 0.08 : 1.15)), u = t - e.impact; if (u >= 0 && u < hold) return { e, u, hold }; } return null; }
@@ -272,11 +284,11 @@
           else {
             const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1, lean = (0.17 + 0.09 * Math.abs(dx / dist)) * (Math.sign(dx) || -Math.sign(dy) || 1), moving = m.k > 0 && m.k < 1;
             if (e && e.slowKnight && moving) {                                                                    // SACRIFICE DE CAVALIER : vol lent en arc, aura cyan, images fantômes derrière lui
-              const k0 = m.k, arc = Math.sin(clamp(k0, 0, 1) * Math.PI), lift = (x0, y0, kk) => ({ x: lerp(a.x, b.x, kk), y: lerp(a.y, b.y, kk) - Math.sin(clamp(kk, 0, 1) * Math.PI) * cell * 1.5 });
+              const k0 = m.k, arc = Math.sin(clamp(k0, 0, 1) * Math.PI), lift = (x0, y0, kk) => ({ x: lerp(a.x, b.x, kk), y: lerp(a.y, b.y, kk) - Math.sin(clamp(kk, 0, 1) * Math.PI) * cell * 0.55 });      // bond bas : il ne survole plus sa case d'arrivée (plus d'impression d'aller-retour)
               g.save(); g.globalAlpha = 0.35 * (1 - arc * 0.5); g.fillStyle = "#000"; g.beginPath(); g.ellipse(lerp(a.x, b.x, k0), lerp(a.y, b.y, k0) + cell * 0.36, cell * (0.3 + 0.1 * arc), cell * (0.08 + 0.03 * arc), 0, 0, TAU); g.fill(); g.restore();      // ombre au sol
               for (let i = 6; i >= 1; i--) { const kk = k0 - i * 0.03; if (kk <= 0) continue; const P = lift(0, 0, kk); this.glowAt(g, "#00F7FF", P.x, P.y, cell * 0.8, 0.07 * (7 - i)); this.piece(g, m.ch, P.x, P.y, cell * 1.02, { scale: 1 + 0.4 * Math.sin(kk * Math.PI), alpha: 0.05 * (7 - i), rot: 0.3 * Math.sin(kk * Math.PI) * (Math.sign(b.x - a.x) || 1) }); }
               const P = lift(0, 0, k0); this.glowAt(g, "#00F7FF", P.x, P.y, cell * (1.6 + arc), 0.55); this.glowAt(g, "#ffffff", P.x, P.y, cell * 0.9, 0.35 * arc);
-              this.piece(g, m.ch, P.x, P.y, cell * 1.02, { scale: 1 + 0.45 * arc, rot: 0.3 * arc * (Math.sign(b.x - a.x) || 1) });
+              this.piece(g, m.ch, P.x, P.y, cell * 1.02, { scale: 1 + 0.28 * arc, rot: 0.22 * arc * (Math.sign(b.x - a.x) || 1) });
             } else {
             let rot = moving ? lean : 0;
             if (e && this.spins(e)) { const v = t - (e.impact - (e.dur || 90) / 1000); if (v >= 0 && v < 0.14) rot += TAU * SPIN(v / 0.14); }
