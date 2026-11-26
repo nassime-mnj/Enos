@@ -236,7 +236,7 @@
         }
         if (FIGHT_HUMAN.includes(id)) { const op = FIGHT[id](); return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "combat") { const a = FIGHT[o.cw || "nasko"](), b = FIGHT[o.cb || "penoire"](); if (o.cw === o.cb) { a.name += " (Blancs)"; b.name += " (Noirs)"; } return [a, b]; }
-        if (id === "brillant") { const e = { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" }; return o.color === "w" ? [hu, e] : [e, hu]; }
+        if (id === "brillant") { const e = { kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO", talk: "eto" }; return o.color === "w" ? [hu, e] : [e, hu]; }
         if (id === "enos") { const op = { kind: "sf", elo: B.powerToElo(o.pow), power: o.pow, name: "E.N.O.S.", talk: "enos" }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "coach") { const op = { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }; return o.color === "w" ? [hu, op] : [op, hu]; }
         if (id === "speedrun") return [{ kind: "eto", elo: (E.TOP_ELO || 3650), top: true, name: "ETO" }, { kind: "sf", elo: o.elo, power: powerOfElo(o.elo), name: "Bot " + o.elo }];
@@ -276,12 +276,12 @@
           if (x.dl && Date.now() > x.dl) { const c = ch.turn(); setTimeout(() => { if (g && !g.over) { g.token++; finish("Temps écoulé (3 jours) — " + (c === "w" ? "les Noirs" : "les Blancs") + " gagnent"); } }, 300); }
         }
         $("#df-home").hidden = true; $("#df-game").hidden = false;
-        document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff();
+        document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff(); if (E.etoModeOff) E.etoModeOff();
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
         K.loadBook().then((ok) => { if (!ok && g) g.inBook = false; });
         chatSetup();
         buttons(); paint();
-        if (enosOpp()) enosMode(true);
+        if (enosOpp()) enosMode(true); else if (etoOpp()) etoMode(true);
         const tok = g.token;
         (async () => {
           if (id === "combat") await vsIntro(tok);                       // écran « VS » : les deux combattants entrent
@@ -335,7 +335,7 @@
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
+      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff(); if (E.etoModeOff) E.etoModeOff(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
@@ -428,9 +428,11 @@
         g.busy = true; status(`${p.kind === "duo" ? name(g.duoTurn++ % 2 ? "eto" : "enos") : p.name} réfléchit…`); paint();
         const own = g.moves.filter((m) => m.color === turn).length, every = (g.o && g.o.wheelEvery) || 10;
         if (p.wheel && own % every === 0 && p.lastSpin !== own) { await spinWheel(p, turn, own); if (!g || tok !== g.token) return; }          // la roue du Jester
-        let mv;
+        let mv; const etoThinks = p.talk === "eto" && E.etoMind && E.etoMind.el, fen0 = g.fen;
+        if (etoThinks) { try { const r = await L.analyse(fen0, { multipv: 5, movetime: 450 }); if (tok !== g.token) return; E.etoMind.show(fen0, r.lines); } catch (e) { /* pas d'idées affichées */ } }
         try { mv = await botMove(g.fen, p, g.duoTurn - 1); } catch (e) { g.busy = false; return status("✕ " + e.message); }
         if (tok !== g.token) return;
+        if (etoThinks) { try { await E.etoMind.decide(fen0, mv.uci); } catch (e) { /* animation facultative */ } if (tok !== g.token) return; }
         await commit(mv.uci, mv, tok);
       }
       function overText() {
@@ -555,8 +557,13 @@
         paint(); saveDaily();
         // gaffe catastrophique du joueur : continuer ou annuler ?
         if (g.mode.human && g.pl[turn].human && q.key === "blunder" && g.id !== "coach" && !g.ch.game_over()) {
-          const cancel = await new Promise((res) => E.ui.sheet({ title: "Gaffe catastrophique", html: `<p class="muted" style="margin-bottom:14px;line-height:1.5">Ton coup <b>${esc(m.san)}</b> te coûte ${q.loss} cp.${bestSan ? ` Il fallait jouer <b style="color:#7bd64d">${esc(bestSan)}</b>.` : ""}</p>`, options: [{ label: "ANNULER LE COUP", fn: () => res(true) }, { label: "CONTINUER", fn: () => res(false) }], onClose: () => res(false) }));
-          if (cancel && tok === g.token) { rewind(1); return; }
+          const cancel = await new Promise((res) => E.ui.sheet({ title: "Gaffe catastrophique", html: `<p class="muted" style="margin-bottom:14px;line-height:1.5">Ton coup <b>${esc(m.san)}</b> te coûte ${q.loss} cp.${bestSan ? ` Il fallait jouer <b style="color:#7bd64d">${esc(bestSan)}</b>.` : ""}</p>`, options: [...(E.etoWhy ? [{ label: "POURQUOI ?", cls: "pri", fn: () => res("why") }] : []), { label: "ANNULER LE COUP", fn: () => res(true) }, { label: "CONTINUER", fn: () => res(false) }], onClose: () => res(false) }));
+          if (cancel === "why" && tok === g.token) {                                              // les mains hologrammes rejouent la gaffe et ses conséquences, puis ramènent la partie juste avant
+            const snap = g.snaps[g.snaps.length - 1]; g.busy = true; status("ETO t'explique ta gaffe…");
+            try { await E.etoWhy({ board: $("#df-board"), before: snap.fen, after: g.fen, uci, mover: turn, render: (fen, last) => B.render($("#df-board"), B.parse(fen).m, { flip: g.flip, last }) }); } catch (e) { /* explication facultative */ }
+            g.busy = false; if (tok === g.token) { rewind(1); return; }
+          }
+          if (cancel === true && tok === g.token) { rewind(1); return; }
         }
         if (g.ch.game_over()) return finish(overText());
         for (const col of ["w", "b"]) { if (g.pl[col].transform && !g.pl[col].done && g.lostMinor[col] >= 3) { await ghorTransform(col, tok); if (tok !== g.token) return; } }
@@ -723,7 +730,7 @@
       E.raphFish = fish;
       // ---- THÈME E.N.O.S. : HUD rouge vif (css/enos_theme.css), son thème musical en boucle, et son regard qui passe d'une pièce à l'autre comme s'il calculait
       const enosOpp = () => !!(g && g.mode && g.mode.human && ["w", "b"].some((c) => g.pl[c] && g.pl[c].talk === "enos"));
-      let gazeIv = 0, gazeN = 0;
+      let gazeIv = 0, gazeN = 0, musT = 0;
       function gazeTick() {
         if (!g || !E.animIcons || !E.animIcons.look) return; const av = document.querySelector("#df-botchat canvas.bot-anim[data-bot='enos']"); if (!av) return;
         const col = g.pl.w.talk === "enos" ? "w" : "b", thinking = g.busy && g.ch.turn() === col; gazeN++;
@@ -737,10 +744,19 @@
       function enosMode(on) {
         const H = document.documentElement;
         if (on) { if (!H.classList.contains("enostheme")) { H.classList.add("enostheme", "et-enter"); setTimeout(() => H.classList.remove("et-enter"), 1700); }
-          fish(false); setTimeout(() => fish(true, "audio/enos/ost.mp3"), 250); clearInterval(gazeIv); gazeIv = setInterval(gazeTick, 240); }
-        else { H.classList.remove("enostheme", "et-enter"); clearInterval(gazeIv); gazeIv = 0; if (E.enosMind) E.enosMind.close(); }
+          fish(false); clearTimeout(musT); musT = setTimeout(() => fish(true, "audio/enos/ost.mp3"), 250); clearInterval(gazeIv); gazeIv = setInterval(gazeTick, 240); }
+        else { clearTimeout(musT); H.classList.remove("enostheme", "et-enter"); clearInterval(gazeIv); gazeIv = 0; if (E.enosMind) E.enosMind.close(); }
       }
       E.enosModeOff = () => enosMode(false); E.enosMode = enosMode;
+      // ---- THÈME ETO : application blanche, rayons azur, ciel nuageux (css/enos_theme.css), son thème musical, et sa PENSÉE visible (js/eto_mind.js)
+      const etoOpp = () => !!(g && g.mode && g.mode.human && ["w", "b"].some((c) => g.pl[c] && g.pl[c].talk === "eto"));
+      function etoMode(on) {
+        const H = document.documentElement;
+        if (on) { if (!H.classList.contains("etotheme")) { H.classList.add("etotheme", "et-enter"); setTimeout(() => H.classList.remove("et-enter"), 1700); }
+          fish(false); clearTimeout(musT); musT = setTimeout(() => fish(true, "audio/eto/ost.mp3"), 250); if (E.etoMind) E.etoMind.mount($("#df-botchat")); }
+        else { clearTimeout(musT); H.classList.remove("etotheme"); if (E.etoMind) E.etoMind.unmount(); }
+      }
+      E.etoModeOff = () => etoMode(false);
       async function raphTakeover(col, tok) {
         const p = g.pl[col], bc = E.botChat; p.raph = 3; g.busy = true;
         const old = g.talk[col]; let I = old;
@@ -836,7 +852,7 @@
       function replay(rec) {
         if (!rec || !rec.mv || !rec.mv.length) return;
         if (g) { g.token++; L.abort && L.abort(); }
-        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff();
+        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff(); if (E.etoModeOff) E.etoModeOff();
         const fens = [START], c = new Chess();
         rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
         const R = { rec, fens, k: 0, speed: 1, playing: false };

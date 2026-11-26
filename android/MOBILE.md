@@ -570,6 +570,14 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.130 — Thème ETO : ciel bleu cyan, sa pensée visible, et « Pourquoi ? » sur les gaffes
+- **Thème ETO** (`html.etotheme`, `css/enos_theme.css`) quand on affronte ETO : application BLANCHE (panneaux de verre à coins coupés, liseré et halo **bleu cyan ciel**, la couleur de son visage), ciel animé derrière les pages (dégradé cyan → blanc, rayons de soleil qui tournent lentement, nuages qui dérivent), entrée en éclat de lumière ; ETO a désormais son portrait animé et sa chat box dans ce défi.
+- **Son thème musical** (« In the Pool », version orchestrale, fichier fourni par le propriétaire, `audio/eto/ost.mp3`) en boucle, coupé en quittant.
+- **Pensée d'ETO** (`js/eto_mind.js`, panneau sous son portrait) : à chacun de ses coups, ses idées apparaissent (5 candidats, analyse réelle) ; une **main hologramme** attrape chaque idée écartée et la jette dans une **corbeille numérique** (compteur qui grimpe au fil de la partie), jusqu'au coup retenu, qu'il joue.
+- **« POURQUOI ? »** sur une gaffe catastrophique (toutes les parties contre un bot) : de petites mains hologrammes de la taille des pièces refont ton coup sur le plateau, jouent la meilleure réponse et la suite (analyse réelle), légendent (« Réponse : Fxf5, qui prend ta dame », « Bilan : tu perds ta dame », ou le mat), puis ramènent la partie juste avant la gaffe et s'en vont.
+- Musique des thèmes : plus de lancement en retard si l'on quitte la partie dans le quart de seconde.
+- Version PC synchronisée. Tests : `t_eto_theme.py`, `t_enos_theme.py`, `t_raph.py`, `t_defis.py`.
+
 ## 1.129 — Thème E.N.O.S. : HUD rouge HDR, son thème musical, son regard, sa pensée visible
 - **Thème E.N.O.S.** (`css/enos_theme.css`, `html.enostheme`) dès qu'E.N.O.S. est l'adversaire (Défi E.N.O.S., Boss E.N.O.S., ou quand il prend la place de Raph) : panneaux HUD à coins coupés, liseré néon dégradé et halo rouge (en-tête, bandeau d'E.N.O.S., joueurs, plateau, verdict, boutons, barre du bas), fond rouge sang fumé, entrée « l'écran s'éteint puis revient en rouge ».
 - **Son thème musical** (« Back To The Iron Lung », fichier fourni par le propriétaire, `audio/enos/ost.mp3`) en boucle, en fondu ; il remplace « fish » quand E.N.O.S. prend la place de Raph ; coupé en quittant la partie.

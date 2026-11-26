@@ -90,7 +90,7 @@ def sync_pc():
     # MIND GAMES d'E.N.O.S. / Mittens (prédictions, répliques) + voix enregistrées d'E.N.O.S. (petits scripts base64 chargés à la demande)
     files += [("js/mind_lines.js", "mind_lines.js"), ("js/voice_index.js", "voice_index.js"), ("js/mind_games.js", "mind_games.js")]
     files += [("audio/raph/fish.mp3", "audio/raph/fish.mp3")]
-    files += [("css/enos_theme.css", "enos_theme.css"), ("js/enos_mind_view.js", "enos_mind_view.js"), ("audio/enos/ost.mp3", "audio/enos/ost.mp3")]   # thème E.N.O.S. + cortex                       # Raph -> E.N.O.S. : musique « fish » (ralenti)
+    files += [("css/enos_theme.css", "enos_theme.css"), ("js/enos_mind_view.js", "enos_mind_view.js"), ("audio/enos/ost.mp3", "audio/enos/ost.mp3"), ("js/eto_mind.js", "eto_mind.js"), ("audio/eto/ost.mp3", "audio/eto/ost.mp3")]   # thème E.N.O.S. + cortex                       # Raph -> E.N.O.S. : musique « fish » (ralenti)
     files += [("audio/voice/enos/" + n, "audio/voice/enos/" + n) for n in os.listdir(os.path.join(MOBILE, "audio", "voice", "enos")) if n.endswith(".js")]
     files += [("img/bots/" + n, "img/bots/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "bots")) if n.endswith(".png")]
     files += [("img/roster/" + n, "img/roster/" + n) for n in os.listdir(os.path.join(MOBILE, "img", "roster")) if n.endswith(".png")]

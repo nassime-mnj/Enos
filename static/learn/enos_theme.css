@@ -2,8 +2,9 @@
    HUD rouge vif « HDR » : panneaux à coins coupés, double liseré néon, halo, fond rouge sang fumé ; ETO reste cyan. */
 html.enostheme{--red:#ff1a2e;--red2:#ff5262;--halo:#ff001e66;--et-cut:13px}
 html.enostheme body{background:#050001}
+html.enostheme #app,html.etotheme #app{isolation:isolate}
 html.enostheme #app{background:radial-gradient(120% 60% at 50% -5%,#4a000c 0%,#1a0205 38%,#070102 70%,#030001 100%)}
-html.enostheme #app::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55;
+html.enostheme #app::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.55;
   background:radial-gradient(60% 35% at 15% 30%,#ff00220f,transparent 70%),radial-gradient(50% 30% at 85% 70%,#ff00221a,transparent 70%),repeating-linear-gradient(0deg,#0000 0 3px,#ff00220a 3px 4px);animation:etSmoke 9s ease-in-out infinite alternate}
 @keyframes etSmoke{from{transform:translateY(0);opacity:.45}to{transform:translateY(-12px);opacity:.7}}
 
@@ -69,3 +70,101 @@ html.enostheme.et-enter #app{animation:etEnter 1.6s ease-out}
 .em-best b{font:700 14px ui-monospace,monospace;color:#fff}
 @media (min-width:700px){.em-grid{grid-template-columns:repeat(6,1fr)}}
 @media (prefers-reduced-motion:reduce){html.enostheme #app::before,.em-ov::after,html.enostheme #df-btns .btn.et-mind{animation:none}}
+
+/* =====================================================================================================================
+   THÈME ETO — html.etotheme : application BLANCHE, rayons HDR bleu azur, ciel nuageux animé ; sa pensée visible ; mains hologrammes
+   ===================================================================================================================== */
+html.etotheme{--red:#1aa3ff;--red2:#5cc8ff;--halo:#3ab8ff55;--et-cut:13px}
+html.etotheme body{background:#eaf6ff}
+html.etotheme #app{background:linear-gradient(180deg,#8fd3ff 0%,#c9ecff 32%,#f4fbff 62%,#ffffff 100%);color:#0d2a45}
+/* rayons de soleil azur qui tournent lentement + nuages qui dérivent */
+html.etotheme #app::before{content:"";position:fixed;left:50%;top:-60vh;width:220vmax;height:220vmax;margin-left:-110vmax;pointer-events:none;z-index:-1;opacity:.55;mix-blend-mode:screen;
+  background:repeating-conic-gradient(from 0deg at 50% 50%,#ffffff00 0deg 7deg,#bfe9ff55 9deg 12deg,#ffffff00 14deg 22deg);animation:etoRays 60s linear infinite;mask-image:radial-gradient(circle at 50% 50%,#000 8%,#0000 42%)}
+html.etotheme #app::after{content:"";position:fixed;inset:-20% -60%;pointer-events:none;z-index:-1;opacity:.95;
+  background:radial-gradient(18% 9% at 12% 22%,#fff 40%,#fff0 70%),radial-gradient(14% 7% at 22% 25%,#fff 35%,#fff0 70%),radial-gradient(22% 10% at 62% 14%,#fffffff2 40%,#fff0 72%),
+    radial-gradient(16% 8% at 74% 18%,#fff 35%,#fff0 70%),radial-gradient(26% 11% at 40% 52%,#ffffffcc 40%,#fff0 72%),radial-gradient(20% 9% at 84% 60%,#ffffffd9 40%,#fff0 72%),radial-gradient(24% 10% at 8% 78%,#ffffffd0 40%,#fff0 72%);
+  filter:blur(6px);animation:etoClouds 70s linear infinite alternate}
+@keyframes etoRays{to{transform:rotate(360deg)}}
+@keyframes etoClouds{from{transform:translateX(-12%)}to{transform:translateX(12%)}}
+/* panneaux en verre blanc à coins coupés, liseré azur lumineux */
+html.etotheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn,.eto-mind){
+  position:relative;isolation:isolate;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;filter:drop-shadow(0 0 8px rgba(40,170,255,.55)) drop-shadow(0 6px 14px rgba(20,90,160,.18));color:#0d2a45}
+html.etotheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn,.eto-mind)::before{
+  content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;background:linear-gradient(135deg,#6fd2ff,#1a8cff 35%,#bdf0ff 60%,#2a9dff);
+  clip-path:polygon(var(--et-cut) 0,calc(100% - var(--et-cut)) 0,100% var(--et-cut),100% calc(100% - var(--et-cut)),calc(100% - var(--et-cut)) 100%,var(--et-cut) 100%,0 calc(100% - var(--et-cut)),0 var(--et-cut))}
+html.etotheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn,.eto-mind)::after{
+  content:"";position:absolute;inset:1.6px;z-index:-1;pointer-events:none;background:linear-gradient(160deg,#ffffffee,#eef8ffe6 60%,#ffffffee);
+  clip-path:polygon(calc(var(--et-cut) - 1px) 0,calc(100% - var(--et-cut) + 1px) 0,100% calc(var(--et-cut) - 1px),100% calc(100% - var(--et-cut) + 1px),calc(100% - var(--et-cut) + 1px) 100%,calc(var(--et-cut) - 1px) 100%,0 calc(100% - var(--et-cut) + 1px),0 calc(var(--et-cut) - 1px))}
+html.etotheme #top{margin:6px 8px 0;padding-inline:14px}
+html.etotheme #top .brand{color:#0d2a45;text-shadow:0 0 12px #6fd2ff}
+html.etotheme #top .brand small{color:#1a8cff}
+html.etotheme #top :is(.chip,.icon-btn){color:#0d2a45;background:#ffffffaa;border-color:#7fcfff}
+html.etotheme #tabbar{margin:0 8px 6px}
+html.etotheme #tabbar button{color:#4a6a86}
+html.etotheme #tabbar button.on{color:#0a6fd6;text-shadow:0 0 10px #6fd2ff}
+html.etotheme #df-game > .card{background:transparent!important;border:0!important;box-shadow:none!important}
+html.etotheme #df-game,html.etotheme #df-game :is(b,span,small,.muted){color:#0d2a45}
+html.etotheme #df-game .df-pl b{color:#0d2a45}
+html.etotheme #df-game .bot-banner{padding:10px 10px 10px 8px;--et-cut:18px}
+html.etotheme #df-game .bot-bubble{background:#fff!important;color:#0d2a45;border:1.5px solid #3ab8ff;border-radius:14px 2px 14px 2px;box-shadow:0 0 16px #3ab8ff66}
+html.etotheme #df-game .bot-bubble::before{border-right-color:#3ab8ff}
+html.etotheme #df-game .bot-av{filter:drop-shadow(0 0 14px #3ab8ff) drop-shadow(0 0 32px #8fdcff)}
+html.etotheme #df-game .ch-evalbar{background:#d9eefc;border:1px solid #7fcfff}
+html.etotheme #df-game .ch-evalbar i{background:linear-gradient(90deg,#1a8cff,#bdf0ff)}
+html.etotheme #df-board{padding:9px;--et-cut:18px;filter:drop-shadow(0 0 12px rgba(40,170,255,.7)) drop-shadow(0 0 30px rgba(140,220,255,.45))}
+html.etotheme #df-btns .btn{color:#0a4f96;--et-cut:9px;letter-spacing:.06em}
+html.etotheme.et-enter #app{animation:etoEnter 1.6s ease-out}
+@keyframes etoEnter{0%{filter:brightness(2.4) saturate(.2)}100%{filter:none}}
+
+/* ---- PENSÉE D'ETO */
+.eto-mind{margin:6px 0 8px;padding:10px 12px 12px;--et-cut:14px}
+.em2-h{display:flex;align-items:center;gap:8px}
+.em2-h b{font:800 12px var(--ui);letter-spacing:.18em;color:#0a6fd6}
+.em2-st{flex:1;font:600 11.5px var(--ui);color:#4a6a86}
+.em2-bin{position:relative;width:34px;height:34px;display:grid;place-items:center;border:1.5px solid #3ab8ff;background:#e8f7ff;clip-path:polygon(18% 0,82% 0,100% 18%,100% 100%,0 100%,0 18%)}
+.em2-bin i{width:16px;height:16px;border:2px solid #1a8cff;border-top-width:3px;border-radius:0 0 3px 3px;box-shadow:0 0 8px #3ab8ff}
+.em2-bin span{position:absolute;right:-2px;top:-4px;min-width:16px;padding:0 3px;font:800 10px var(--ui);color:#fff;background:#1a8cff;border-radius:8px;text-align:center}
+.em2-bin.eat{animation:binEat .35s ease-out}
+@keyframes binEat{30%{transform:scale(1.18);box-shadow:0 0 16px #3ab8ff}}
+.em2-ideas{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:36px}
+.em2-idea{display:flex;flex-direction:column;align-items:center;min-width:56px;padding:5px 9px;background:linear-gradient(160deg,#ffffff,#e3f4ff);border:1.5px solid #7fcfff;box-shadow:0 0 10px #8fdcff88;animation:ideaIn .35s ease-out backwards;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.em2-idea b{font:800 14px var(--ui);color:#0d2a45}.em2-idea small{font:600 10.5px var(--ui);color:#3b77a8}
+.em2-idea.held{box-shadow:0 0 18px #3ab8ff}
+.em2-idea.keep{border-color:#1a8cff;background:linear-gradient(160deg,#dff4ff,#bfe8ff);box-shadow:0 0 22px #3ab8ff;transform:scale(1.08);transition:transform .3s}
+@keyframes ideaIn{from{opacity:0;transform:translateY(8px) scale(.8);filter:blur(3px)}}
+/* ---- mains hologrammes */
+.eh-hand{position:absolute;left:0;top:0;z-index:30;pointer-events:none;opacity:0;transition:opacity .25s}
+.eh-hand.on{opacity:1}.eh-hand.bye{opacity:0;transition:opacity .6s}
+.eh-svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 6px #3ab8ff) drop-shadow(0 0 14px #3ab8ff99)}
+.eh-svg path{fill:#bfeaff55;stroke:#2fb4ff;stroke-width:2.2;stroke-linejoin:round}
+.eh-svg .shut{display:none}.eh-hand.grab .eh-svg .shut{display:inline}.eh-hand.grab .eh-svg .open{display:none}
+.eh-hand.foe .eh-svg path{fill:#ffd6dc55;stroke:#ff5a72}.eh-hand.foe .eh-svg{filter:drop-shadow(0 0 6px #ff5a72) drop-shadow(0 0 14px #ff5a7299)}
+.eh-layer{position:absolute;inset:0;z-index:25;pointer-events:none;background:repeating-linear-gradient(0deg,#3ab8ff00 0 3px,#3ab8ff14 3px 4px)}
+.eh-cap{position:absolute;left:6%;right:6%;bottom:-2px;z-index:31;transform:translateY(100%);padding:8px 12px;font:700 13.5px var(--ui);color:#0d2a45;text-align:center;background:#ffffffee;border:1.5px solid #3ab8ff;box-shadow:0 0 16px #3ab8ff88;opacity:0}
+.eh-cap.on{opacity:1;animation:capIn .3s ease-out}.eh-cap.out{opacity:0;transition:opacity .35s}
+@keyframes capIn{from{opacity:0;transform:translateY(110%)}}
+@media (prefers-reduced-motion:reduce){html.etotheme #app::before,html.etotheme #app::after{animation:none}}
+/* le ciel (ETO) et la fumée (E.N.O.S.) passent derrière les pages */
+html:is(.etotheme,.enostheme) :is(#pager,#track,.view,.view > .scroll,#tool-defis,#tool-defis .suite-body,.subview){background:transparent!important}
+html.etotheme #app{background:linear-gradient(180deg,#6cc6ff 0%,#a9e0ff 28%,#e3f5ff 58%,#ffffff 100%)}
+html.etotheme #app::after{opacity:1;filter:blur(4px) drop-shadow(0 8px 18px #7fb8e0)}
+html.etotheme #app::before{opacity:.75}
+html.etotheme :is(.back,#tool-defis .back){background:#ffffffcc!important;color:#0a4f96!important;border:1.5px solid #6fcbff!important;box-shadow:0 0 12px #8fdcff88}
+html.etotheme #df-game .ttl{background:#1a8cff!important;color:#fff!important}
+html.etotheme #tabbar #tab-ind,html.etotheme #tabbar button.on::before{background:linear-gradient(160deg,#dff4ff,#bfe8ff)!important;border-color:#3ab8ff!important;box-shadow:0 0 14px #3ab8ff88!important}
+html.etotheme #df-game .bot-chatbtn{background:#fff;border:1.5px solid #3ab8ff;color:#0a4f96}
+
+/* ETO en BLEU CYAN CIEL (la couleur de son visage) — remplace l'azur */
+html.etotheme{--red:#00c2e0;--red2:#5ff0ff;--halo:#19e6ff55}
+html.etotheme #app{background:linear-gradient(180deg,#3fdcf2 0%,#93efff 28%,#dcfbff 58%,#ffffff 100%)!important}
+html.etotheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn,.eto-mind)::before{background:linear-gradient(135deg,#7ff6ff,#00b8d9 35%,#c8fbff 60%,#12cde6)!important}
+html.etotheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn,.eto-mind){filter:drop-shadow(0 0 8px rgba(25,230,255,.6)) drop-shadow(0 6px 14px rgba(0,120,150,.18))!important}
+html.etotheme #df-board{filter:drop-shadow(0 0 12px rgba(25,230,255,.75)) drop-shadow(0 0 30px rgba(150,245,255,.5))!important}
+html.etotheme #df-game .bot-bubble{border-color:#19d3e6!important;box-shadow:0 0 16px #19e6ff66!important}
+html.etotheme #df-game .ttl{background:#00b8d9!important}
+html.etotheme #df-game .ch-evalbar i{background:linear-gradient(90deg,#00c2e0,#c8fbff)!important}
+html.etotheme .em2-h b{color:#0098b8!important}
+html.etotheme :is(.back,#tool-defis .back){border-color:#5fe6f5!important;color:#007a96!important}
+html.etotheme #df-btns .btn{color:#007a96!important}
+.eh-svg path{stroke:#19d3e6;fill:#c8fbff55}.eh-svg{filter:drop-shadow(0 0 6px #19e6ff) drop-shadow(0 0 14px #19e6ff99)}.eh-cap{border-color:#19d3e6;box-shadow:0 0 16px #19e6ff88}.em2-idea{border-color:#7fe9f5;box-shadow:0 0 10px #8ff3ff88}.em2-idea.keep{border-color:#00c2e0;background:linear-gradient(160deg,#dcfbff,#b6f4ff);box-shadow:0 0 22px #19e6ff}.em2-bin{border-color:#19d3e6;background:#e6fdff}.em2-bin i{border-color:#00b8d9;box-shadow:0 0 8px #19e6ff}.em2-bin span{background:#00b8d9}
