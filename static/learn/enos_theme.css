@@ -168,3 +168,6 @@ html.etotheme .em2-h b{color:#0098b8!important}
 html.etotheme :is(.back,#tool-defis .back){border-color:#5fe6f5!important;color:#007a96!important}
 html.etotheme #df-btns .btn{color:#007a96!important}
 .eh-svg path{stroke:#19d3e6;fill:#c8fbff55}.eh-svg{filter:drop-shadow(0 0 6px #19e6ff) drop-shadow(0 0 14px #19e6ff99)}.eh-cap{border-color:#19d3e6;box-shadow:0 0 16px #19e6ff88}.em2-idea{border-color:#7fe9f5;box-shadow:0 0 10px #8ff3ff88}.em2-idea.keep{border-color:#00c2e0;background:linear-gradient(160deg,#dcfbff,#b6f4ff);box-shadow:0 0 22px #19e6ff}.em2-bin{border-color:#19d3e6;background:#e6fdff}.em2-bin i{border-color:#00b8d9;box-shadow:0 0 8px #19e6ff}.em2-bin span{background:#00b8d9}
+/* légende du « Pourquoi ? » : en haut du plateau (le plateau coupe ce qui dépasse) */
+.eh-cap{top:3%;bottom:auto;transform:none;left:4%;right:4%;font-size:14px;background:#ffffffeb;backdrop-filter:blur(3px)}
+@keyframes capIn{from{opacity:0;transform:translateY(-12px)}}
