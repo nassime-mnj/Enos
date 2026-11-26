@@ -276,11 +276,12 @@
           if (x.dl && Date.now() > x.dl) { const c = ch.turn(); setTimeout(() => { if (g && !g.over) { g.token++; finish("Temps écoulé (3 jours) — " + (c === "w" ? "les Noirs" : "les Blancs") + " gagnent"); } }, 300); }
         }
         $("#df-home").hidden = true; $("#df-game").hidden = false;
-        document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false);
+        document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff();
         $("#df-judge").hidden = true; $("#df-say").hidden = true; $("#df-moves").innerHTML = "";
         K.loadBook().then((ok) => { if (!ok && g) g.inBook = false; });
         chatSetup();
         buttons(); paint();
+        if (enosOpp()) enosMode(true);
         const tok = g.token;
         (async () => {
           if (id === "combat") await vsIntro(tok);                       // écran « VS » : les deux combattants entrent
@@ -327,13 +328,14 @@
           : h
           ? `<button class="btn" id="b-undo">ANNULER</button>${g.id === "coach" ? '<button class="btn" id="b-hint">INDICE</button>' : ""}<button class="btn" id="b-flip">RETOURNER</button><button class="btn" id="b-res">ABANDONNER</button>`
           : `<button class="btn" id="b-pause">⏸ PAUSE</button><button class="btn" id="b-flip">RETOURNER</button><button class="btn" id="b-stop">ARRÊTER</button>`;
+        if (enosOpp() && E.enosMind) { $("#df-btns").insertAdjacentHTML("beforeend", '<button class="btn et-mind" id="b-mind">🧠 VOIR CE QUE PENSE E.N.O.S.</button>'); $("#b-mind").onclick = () => E.enosMind.open(g.fen, { flip: g.flip }); }
         const on = (id, f) => { const b = $("#" + id); if (b) b.onclick = f; };
         on("b-flip", () => { g.flip = !g.flip; paint(); });
         on("b-undo", undo); on("b-hint", hint); on("b-res", resign);
         on("b-pause", () => { g.paused = !g.paused; $("#b-pause").textContent = g.paused ? "▶ REPRENDRE" : "⏸ PAUSE"; if (!g.paused) next(g.token); });
         on("b-stop", () => { g.token++; finish("Partie arrêtée", true); });
       }
-      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
+      const backHome = () => { if (g) { clearInterval(g.clkI); g.token++; L.abort && L.abort(); } if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff(); $("#df-game").hidden = true; $("#df-home").hidden = false; paintHist(); paintDaily(); };
       $("#df-back").onclick = backHome;
 
       function paint(anim) {
@@ -713,12 +715,32 @@
         oppressSound(ms / 1000); void ov.offsetWidth; ov.classList.add("on"); document.documentElement.classList.add("enosmode");
         return sleep(ms).then(() => { ov.classList.add("out"); setTimeout(() => ov.remove(), 900); });
       }
-      function fish(on) {
+      function fish(on, src) {
         try { if (!on) { const a = E._fish; E._fish = null; if (!a) return; let v = a.volume; const iv = setInterval(() => { v -= 0.05; if (v <= 0) { clearInterval(iv); a.pause(); } else a.volume = v; }, 60); return; }
-          if (E._fish || !E.settings.get("chess.sound", true)) return; const a = (E._fish = new Audio((E.assetBase || "") + "audio/raph/fish.mp3")); a.loop = true; a.volume = 0; const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
+          if (E._fish || !E.settings.get("chess.sound", true)) return; const a = (E._fish = new Audio((E.assetBase || "") + (src || "audio/raph/fish.mp3"))); a.loop = true; a.volume = 0; const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
           let v = 0; const iv = setInterval(() => { v += 0.03; if (v >= 0.5 || E._fish !== a) { clearInterval(iv); if (E._fish === a) a.volume = 0.5; } else a.volume = v; }, 80); } catch (e) { /* audio indisponible */ }
       }
       E.raphFish = fish;
+      // ---- THÈME E.N.O.S. : HUD rouge vif (css/enos_theme.css), son thème musical en boucle, et son regard qui passe d'une pièce à l'autre comme s'il calculait
+      const enosOpp = () => !!(g && g.mode && g.mode.human && ["w", "b"].some((c) => g.pl[c] && g.pl[c].talk === "enos"));
+      let gazeIv = 0, gazeN = 0;
+      function gazeTick() {
+        if (!g || !E.animIcons || !E.animIcons.look) return; const av = document.querySelector("#df-botchat canvas.bot-anim[data-bot='enos']"); if (!av) return;
+        const col = g.pl.w.talk === "enos" ? "w" : "b", thinking = g.busy && g.ch.turn() === col; gazeN++;
+        if (!thinking && gazeN % 3) return;                                                     // en calcul : saccades toutes les 0,24 s ; sinon plus lentement
+        if (Math.random() < (thinking ? 0.04 : 0.18)) { E.animIcons.look(av, null); return; }
+        const sq = []; g.ch.board().forEach((row, r) => row.forEach((p, f) => { if (p) sq.push({ s: "abcdefgh"[f] + (8 - r), c: p.color }); }));
+        let pool = thinking ? sq : sq.filter((x) => x.c !== col); if (g.last && Math.random() < 0.25) pool = g.last.map((s2) => ({ s: s2 }));
+        const pick = pool[Math.floor(Math.random() * pool.length)]; if (!pick) return; const el = document.querySelector(`#df-board [data-sq="${pick.s}"]`); if (!el) return;
+        const r = el.getBoundingClientRect(); E.animIcons.look(av, r.left + r.width / 2, r.top + r.height / 2);
+      }
+      function enosMode(on) {
+        const H = document.documentElement;
+        if (on) { if (!H.classList.contains("enostheme")) { H.classList.add("enostheme", "et-enter"); setTimeout(() => H.classList.remove("et-enter"), 1700); }
+          fish(false); setTimeout(() => fish(true, "audio/enos/ost.mp3"), 250); clearInterval(gazeIv); gazeIv = setInterval(gazeTick, 240); }
+        else { H.classList.remove("enostheme", "et-enter"); clearInterval(gazeIv); gazeIv = 0; if (E.enosMind) E.enosMind.close(); }
+      }
+      E.enosModeOff = () => enosMode(false); E.enosMode = enosMode;
       async function raphTakeover(col, tok) {
         const p = g.pl[col], bc = E.botChat; p.raph = 3; g.busy = true;
         const old = g.talk[col]; let I = old;
@@ -732,7 +754,7 @@
         await glitchFx(1100); if (!g || tok !== g.token) return;
         Object.assign(p, { kind: "sf", elo: (E.TOP_ELO || 3650), power: 100, top: true, hunt: true, name: "E.N.O.S.", title: "GM", talk: "enos" });
         if (bc && I) { const n = bc.replace(I, "enos", "awake"); g.talk[col] = n; if (E.mind && g.mode.human) E.mind.start(g, n); setTimeout(() => { if (g && tok === g.token && n) n.say("raph_now", {}, true); }, 700); }
-        fish(true); g.busy = false; paint();
+        enosMode(true); g.busy = false; buttons(); paint();                                     // E.N.O.S. prend la place de Raph : son thème, sa musique, son regard, et sa pensée visible
       }
 
       // commentaire facultatif d'ETO (Groq) pour les coups marquants
@@ -814,7 +836,7 @@
       function replay(rec) {
         if (!rec || !rec.mv || !rec.mv.length) return;
         if (g) { g.token++; L.abort && L.abort(); }
-        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false);
+        if (E.botChat) E.botChat.unmountAll(); document.documentElement.classList.remove("ghor", "enosmode"); if (E.raphFish) E.raphFish(false); if (E.enosModeOff) E.enosModeOff();
         const fens = [START], c = new Chess();
         rec.mv.forEach((m) => { c.move({ from: m[0].slice(0, 2), to: m[0].slice(2, 4), promotion: m[0][4] }); fens.push(c.fen()); });
         const R = { rec, fens, k: 0, speed: 1, playing: false };

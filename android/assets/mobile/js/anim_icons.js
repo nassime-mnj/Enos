@@ -68,7 +68,7 @@
   }
 
   // ---------------------------------------------------------------- E.N.O.S.
-  function enosEye(g, t, mood, mt) {
+  function enosEye(g, t, mood, mt, gaze) {
     const CX = 415, CY = 418, m = mood === "auto" ? A.autoMood("enos", t) : mood;
     const k = clamp((mt == null ? 9 : mt) / 0.3, 0, 1), ek = ease(k);
     g.save(); g.beginPath(); g.arc(CX, CY, 198, 0, TAU); g.clip(); g.translate(CX, CY);
@@ -79,6 +79,7 @@
     else if (m === "lock") { gx = 0.04 * Math.sin(t * 9); gy = 0.04 * Math.cos(t * 8); }
     else if (m === "alert") { gx = Math.sin(t * 14) * 0.08; gy = Math.cos(t * 12) * 0.08; }
     else if (m === "think") { gx = Math.cos(t * 3) * 0.5; gy = Math.sin(t * 3) * 0.5; }
+    if (gaze) { gx = gaze.x; gy = gaze.y; }                                                          // regard dirigé : il fixe une pièce précise du plateau (calcul)
     const spin = t * (m === "alert" ? 1.6 : m === "think" ? 1.1 : m === "scan" ? 0.7 : 0.25), pulse = 1 + 0.03 * Math.sin(t * 3) + (m === "alert" ? 0.07 * Math.abs(Math.sin(t * 9)) : 0);
     const lockK = m === "lock" ? ek : 0, ox = gx * 20, oy = gy * 20;
     // arcs extérieurs (rayon 168) qui tournent
@@ -109,11 +110,11 @@
   }
 
   /** Dessine l'icône animée. im = image d'origine ; size = côté en pixels (du dessin) ; t = temps (s) ; mood = humeur ('auto' = cycle libre) ; mt = secondes depuis le début de l'humeur. */
-  A.draw = (g, id, im, cx, cy, size, t, mood, mt) => {
+  A.draw = (g, id, im, cx, cy, size, t, mood, mt, gaze) => {
     if (!im) return;
     g.save(); g.translate(cx - size / 2, cy - size / 2); g.scale(size / 830, size / 830);
     g.drawImage(im, 0, 0, 830, 830);
-    if (id === "eto") etoFace(g, t, mood || "auto", mt); else if (id === "enos") enosEye(g, t, mood || "auto", mt);
+    if (id === "eto") etoFace(g, t, mood || "auto", mt); else if (id === "enos") enosEye(g, t, mood || "auto", mt, gaze);
     g.restore();
   };
 
@@ -121,6 +122,9 @@
   const imgs = {}, list = new Set(); let timer = 0, last = 0;
   const base = () => E.assetBase || "";
   const need = (id) => (imgs[id] ||= (() => { const im = new Image(); im.src = base() + A.IDS[id].img; return im; })());
+  /** regard : la pupille se tourne vers le point (x, y) de l'écran (null : regard libre). Saccades rapides, comme un œil qui calcule. */
+  A.look = (el, x, y) => { if (!el || !el.getBoundingClientRect) return; if (x == null) { el._gaze = null; return; } const r = el.getBoundingClientRect(), dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160);
+    el._gaze = { x: (dx / d) * k * 0.95, y: (dy / d) * k * 0.95 }; };
   A.canvas = (id, cls) => `<canvas class="bot-av bot-anim ${cls || ""}" data-bot="${id}" width="164" height="164"></canvas>`;
   A.mood = (el, mood, ms) => { if (!el || !el.dataset) return; el.dataset.mood = mood || ""; el._mt = performance.now(); clearTimeout(el._mto); if (mood && ms) el._mto = setTimeout(() => { el.dataset.mood = ""; el._mt = performance.now(); }, ms); };
   function tickAll(now) {
@@ -129,7 +133,8 @@
       if (!c.isConnected || c.offsetParent === null) return;
       const id = c.dataset.bot, im = need(id); if (!im || !im.complete || !im.naturalWidth) return;
       const g = c.getContext("2d"), t = now / 1000; g.clearRect(0, 0, c.width, c.height);
-      A.draw(g, id, im, c.width / 2, c.height / 2, c.width, t, c.dataset.mood || "auto", c._mt != null ? (now - c._mt) / 1000 : null);
+      let gz = null; if (c._gaze) { const cur = (c._gz = c._gz || { x: 0, y: 0 }), k = 0.45; cur.x += (c._gaze.x - cur.x) * k; cur.y += (c._gaze.y - cur.y) * k; gz = cur; } else if (c._gz) { c._gz.x *= 0.7; c._gz.y *= 0.7; gz = Math.abs(c._gz.x) + Math.abs(c._gz.y) > 0.02 ? c._gz : (c._gz = null); }
+      A.draw(g, id, im, c.width / 2, c.height / 2, c.width, t, c.dataset.mood || "auto", c._mt != null ? (now - c._mt) / 1000 : null, gz);
     });
   }
   A.start = () => { if (timer) return; const loop = (now) => { timer = requestAnimationFrame(loop); if (document.hidden) return; if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { if (now - last > 800) tickAll(now + 1000); return; } tickAll(now); }; timer = requestAnimationFrame(loop); };

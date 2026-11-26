@@ -75,7 +75,7 @@
     const job = queue.then(async () => {
       const w = await start();
       return new Promise((resolve) => {
-        const byPv = {};
+        const byPv = {}; let nodes = 0;
         let done = false; const end = (r) => { if (done) return; done = true; clearTimeout(guard); w.removeEventListener("message", onMsg); w.removeEventListener("error", onDie); resolve(r); };
         const onDie = () => end({ best: "", lines: [] });                                          // le moteur meurt pendant la recherche : on rend la main au lieu de bloquer la file
         const guard = setTimeout(() => { try { w.postMessage("stop"); } catch (e) { /* déjà arrêté */ } setTimeout(() => end({ best: "", lines: [] }), 3000); }, (o.movetime || 600) + 15000);
@@ -83,6 +83,7 @@
           const line = String(e.data);
           if (line.startsWith("info") && / pv /.test(line) && !/lowerbound|upperbound/.test(line)) {
             const sc = line.match(/score (cp|mate) (-?\d+)/), mp = line.match(/multipv (\d+)/), d = line.match(/ depth (\d+)/), pv = line.split(" pv ")[1];
+            const nd = line.match(/ nodes (\d+)/); if (nd) nodes = Math.max(nodes, +nd[1]);
             if (sc && pv) {
               const k = mp ? +mp[1] : 1, list = pv.trim().split(/\s+/);
               byPv[k] = { uci: list[0], pv: list, depth: d ? +d[1] : 0, ...(sc[1] === "cp" ? { cp: +sc[2] } : { mate: +sc[2] }) };
@@ -90,7 +91,7 @@
           }
           if (line.startsWith("bestmove")) {
             const best = line.split(" ")[1];
-            end({ best: best === "(none)" ? "" : best, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
+            end({ best: best === "(none)" ? "" : best, nodes, lines: Object.keys(byPv).map(Number).sort((a, b) => a - b).map((k) => byPv[k]) });
           }
         };
         w.addEventListener("message", onMsg); w.addEventListener("error", onDie);

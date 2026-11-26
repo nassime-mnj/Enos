@@ -1,0 +1,71 @@
+/* THÈME E.N.O.S. — actif pendant une partie contre E.N.O.S. (Défi E.N.O.S., Boss, ou quand il prend la place de Raph) : html.enostheme
+   HUD rouge vif « HDR » : panneaux à coins coupés, double liseré néon, halo, fond rouge sang fumé ; ETO reste cyan. */
+html.enostheme{--red:#ff1a2e;--red2:#ff5262;--halo:#ff001e66;--et-cut:13px}
+html.enostheme body{background:#050001}
+html.enostheme #app{background:radial-gradient(120% 60% at 50% -5%,#4a000c 0%,#1a0205 38%,#070102 70%,#030001 100%)}
+html.enostheme #app::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55;
+  background:radial-gradient(60% 35% at 15% 30%,#ff00220f,transparent 70%),radial-gradient(50% 30% at 85% 70%,#ff00221a,transparent 70%),repeating-linear-gradient(0deg,#0000 0 3px,#ff00220a 3px 4px);animation:etSmoke 9s ease-in-out infinite alternate}
+@keyframes etSmoke{from{transform:translateY(0);opacity:.45}to{transform:translateY(-12px);opacity:.7}}
+
+/* panneau HUD : coins coupés, liseré dégradé, intérieur sombre, halo rouge (le halo suit la découpe) */
+html.enostheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn){
+  position:relative;isolation:isolate;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;filter:drop-shadow(0 0 7px rgba(255,26,46,.5))}
+html.enostheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn)::before{
+  content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
+  background:linear-gradient(135deg,#ff4656 0%,#a3001a 30%,#ff1a2e 55%,#5c000d 80%,#ff3a4a 100%);
+  clip-path:polygon(var(--et-cut) 0,calc(100% - var(--et-cut)) 0,100% var(--et-cut),100% calc(100% - var(--et-cut)),calc(100% - var(--et-cut)) 100%,var(--et-cut) 100%,0 calc(100% - var(--et-cut)),0 var(--et-cut))}
+html.enostheme :is(#top,#tabbar,#df-game .bot-banner,#df-game .df-pl,#df-board,#df-game .df-judge,#df-game .ch-say,#df-btns .btn)::after{
+  content:"";position:absolute;inset:1.6px;z-index:-1;pointer-events:none;
+  background:linear-gradient(160deg,#22050a 0%,#0e0204 55%,#160306 100%);
+  clip-path:polygon(calc(var(--et-cut) - 1px) 0,calc(100% - var(--et-cut) + 1px) 0,100% calc(var(--et-cut) - 1px),100% calc(100% - var(--et-cut) + 1px),calc(100% - var(--et-cut) + 1px) 100%,calc(var(--et-cut) - 1px) 100%,0 calc(100% - var(--et-cut) + 1px),0 calc(var(--et-cut) - 1px))}
+html.enostheme #top{margin:6px 8px 0;padding-inline:14px}
+html.enostheme #top .brand{color:#fff;text-shadow:0 0 10px #ff1a2e,0 0 22px #ff001e88;letter-spacing:.18em}
+html.enostheme #top .brand small{color:#ff2a3a;letter-spacing:.42em;text-shadow:0 0 8px #ff1a2e}
+html.enostheme #tabbar{margin:0 8px 6px}
+html.enostheme #tabbar button.on,html.enostheme #tabbar button[aria-current]{color:#fff;text-shadow:0 0 8px #ff1a2e}
+html.enostheme #tabbar button.on svg{filter:drop-shadow(0 0 6px #ff1a2e)}
+html.enostheme #df-game > .card{background:transparent!important;border:0!important;box-shadow:none!important}
+html.enostheme #df-game .bot-banner{padding:10px 10px 10px 8px;--et-cut:18px}
+html.enostheme #df-game .bot-bubble{background:linear-gradient(160deg,#2a050b,#120306)!important;color:#fff;border:1.5px solid #ff2a3a;border-radius:2px 14px 2px 14px;box-shadow:0 0 14px #ff1a2e55,inset 0 0 18px #ff1a2e22;font-size:15.5px}
+html.enostheme #df-game .bot-bubble::before{border-right-color:#ff2a3a}
+html.enostheme #df-game .bot-bubble small{color:#fff}
+html.enostheme #df-game .bot-av{filter:drop-shadow(0 0 12px #ff1a2e) drop-shadow(0 0 30px #ff001e88)}
+html.enostheme #df-game .df-pl{padding:8px 12px;margin:6px 0}
+html.enostheme #df-game .df-pl b{color:#fff;letter-spacing:.06em}
+html.enostheme #df-game .ch-evalbar{background:#1a0306;box-shadow:0 0 10px #ff1a2e55;border:1px solid #ff2a3a66}
+html.enostheme #df-game .ch-evalbar i{background:linear-gradient(90deg,#ff1a2e,#ffd0d4)}
+html.enostheme #df-board{padding:9px;--et-cut:18px;filter:drop-shadow(0 0 10px rgba(255,26,46,.65)) drop-shadow(0 0 26px rgba(255,0,30,.25))}
+html.enostheme #df-game .df-judge{padding:10px 12px}
+html.enostheme #df-btns .btn{color:#fff;--et-cut:9px;letter-spacing:.08em}
+html.enostheme #df-btns .btn.et-mind{color:#fff;filter:drop-shadow(0 0 10px rgba(255,26,46,.9));animation:etPulse 2.4s ease-in-out infinite}
+@keyframes etPulse{50%{filter:drop-shadow(0 0 18px rgba(255,26,46,1))}}
+/* l'entrée d'E.N.O.S. : l'écran s'éteint puis revient en rouge */
+html.enostheme.et-enter #app{animation:etEnter 1.6s ease-out}
+@keyframes etEnter{0%{filter:brightness(.1) saturate(3)}40%{filter:brightness(1.6) saturate(1.6) hue-rotate(-10deg)}100%{filter:none}}
+
+/* ---------------------------------------------------------------- CORTEX D'E.N.O.S. (« Voir ce que pense E.N.O.S. ») */
+.em-ov{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;gap:8px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
+  background:radial-gradient(100% 60% at 50% 0,#3a0009,#0b0103 60%,#020000);color:#fff;opacity:0;transform:scale(1.04);transition:opacity .25s,transform .25s;overflow:hidden}
+.em-ov.on{opacity:1;transform:none}
+.em-ov::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0000 0 2px,#ff001e0d 2px 3px);animation:emScan 6s linear infinite}
+@keyframes emScan{to{background-position:0 120px}}
+.em-h{display:flex;align-items:center;justify-content:space-between}
+.em-h b{font:800 17px var(--ui);letter-spacing:.22em;text-shadow:0 0 12px #ff1a2e}
+.em-h small{display:block;color:#ff6b78;font:600 11px ui-monospace,monospace;letter-spacing:.08em}
+.em-x{width:38px;height:38px;border-radius:10px;border:1px solid #ff2a3a;background:#1a0306;color:#fff;font-size:17px}
+.em-count{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px solid #ff2a3a88;background:#16030680;box-shadow:0 0 18px #ff1a2e33 inset}
+.em-count small{font:700 10px ui-monospace,monospace;letter-spacing:.18em;color:#ff6b78}
+.em-count b{font:800 clamp(22px,7.5vw,34px) ui-monospace,"Cascadia Code",monospace;color:#fff;text-shadow:0 0 14px #ff1a2e;font-variant-numeric:tabular-nums}
+.em-count i{font:600 11px ui-monospace,monospace;color:#ffb3ba;font-style:normal}
+.em-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.em-b{position:relative;border:1px solid #ff2a3a99;box-shadow:0 0 10px #ff1a2e44}
+.em-b canvas{display:block;width:100%;height:auto;aspect-ratio:1}
+.em-b span{position:absolute;left:0;right:0;bottom:0;padding:2px 4px;background:#000a;font:700 9.5px ui-monospace,monospace;color:#ffd0d4}
+.em-flow{flex:1;min-height:60px;overflow:hidden;font:500 10.5px/1.5 ui-monospace,"Cascadia Code",monospace;color:#ff8a95;opacity:.85;mask-image:linear-gradient(#000 60%,#0000)}
+.em-flow p{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.em-flow p.hot{color:#fff;text-shadow:0 0 8px #ff1a2e}
+.em-best{padding:8px 12px;border:1px solid #ff2a3a;background:#1a0306cc}
+.em-best small{display:block;font:700 10px ui-monospace,monospace;letter-spacing:.18em;color:#ff6b78}
+.em-best b{font:700 14px ui-monospace,monospace;color:#fff}
+@media (min-width:700px){.em-grid{grid-template-columns:repeat(6,1fr)}}
+@media (prefers-reduced-motion:reduce){html.enostheme #app::before,.em-ov::after,html.enostheme #df-btns .btn.et-mind{animation:none}}

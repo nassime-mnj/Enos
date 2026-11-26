@@ -1,5 +1,5 @@
 """Bot Raph (co-fondateur de DualPulse) : 800 Elo détendu -> 1200 concentré s'il perd l'avantage -> E.N.O.S. apparaît dans son dos (phrase en voix v3),
-transition oppressante, Raph devient E.N.O.S. (pleine puissance, mind games), « fish » se lance ; tout s'arrête en quittant la partie."""
+transition oppressante, Raph devient E.N.O.S. (pleine puissance, mind games), son thème (HUD rouge + musique) se lance ; tout s'arrête en quittant la partie."""
 from mobile_common import *
 errs = []
 SH = (os.environ.get("SHOTS") or "/tmp") + "/"
@@ -29,7 +29,8 @@ with sync_playwright() as pw:
     p = pg.evaluate(A + ".g.pl.b")
     check(p["name"] == "E.N.O.S." and p["power"] == 100 and p["talk"] == "enos", "Raph est devenu E.N.O.S. (pleine puissance) : « %s »" % pg.inner_text("#df-botchat .bot-t"))
     check(pg.evaluate("ENOS.mind.state() && ENOS.mind.state().I.id") == "enos", "mind games d'E.N.O.S. actifs")
-    check(any("fish.mp3" in x for x in pg.evaluate("window.__aud")) and pg.evaluate("!!ENOS._fish"), "« fish » (ralenti) se lance")
+    pg.wait_for_timeout(600)
+    check(any("enos/ost.mp3" in x for x in pg.evaluate("window.__aud")) and pg.evaluate("!!ENOS._fish") and pg.evaluate("document.documentElement.classList.contains('enostheme')"), "le thème d'E.N.O.S. (HUD rouge + sa musique) prend le relais")
     ok = pg.evaluate("""() => new Promise((res) => { const a = document.createElement('audio'); a.oncanplaythrough = () => res(a.duration); a.onerror = () => res(-1); a.src = 'audio/raph/fish.mp3'; a.load(); setTimeout(() => res(-2), 6000); })""")
     check(ok > 60, "fichier « fish » lisible (%.0f s)" % ok)
     pg.screenshot(path=SH + "raph_enos.png")

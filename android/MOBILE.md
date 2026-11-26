@@ -570,6 +570,15 @@ Dans le WebView, les images chargées depuis les assets rendaient le canvas « t
 - Version PC synchronisée (`build_learn_data.py --sync`, `bot_pick.js` ajouté).
 - Tests : `t_simul.py`, `t_clips_simul.py`, `t_clips.py`, `t_defis.py`, `t_defis_tc.py`, `t_royale_bots.py`, `t_pc_hub.py`.
 
+## 1.129 — Thème E.N.O.S. : HUD rouge HDR, son thème musical, son regard, sa pensée visible
+- **Thème E.N.O.S.** (`css/enos_theme.css`, `html.enostheme`) dès qu'E.N.O.S. est l'adversaire (Défi E.N.O.S., Boss E.N.O.S., ou quand il prend la place de Raph) : panneaux HUD à coins coupés, liseré néon dégradé et halo rouge (en-tête, bandeau d'E.N.O.S., joueurs, plateau, verdict, boutons, barre du bas), fond rouge sang fumé, entrée « l'écran s'éteint puis revient en rouge ».
+- **Son thème musical** (« Back To The Iron Lung », fichier fourni par le propriétaire, `audio/enos/ost.mp3`) en boucle, en fondu ; il remplace « fish » quand E.N.O.S. prend la place de Raph ; coupé en quittant la partie.
+- **Son regard calcule** : la pupille de l'œil animé se pose sur les pièces du plateau (`E.animIcons.look`), en saccades rapides pendant qu'il réfléchit (ses pièces et les tiennes), plus lentement pendant ton tour.
+- **« 🧠 Voir ce que pense E.N.O.S. »** (`js/enos_mind_view.js`) : le cortex d'E.N.O.S. en direct sur la position — six mini-plateaux rejouent en ×4 ses meilleures lignes (analyse MultiPV réelle, jusqu'à 14 coups d'avance) en boucle, un flux de combinaisons et ramifications défile, un compteur de positions évaluées grimpe dans les millions (nœuds réellement calculés, cumulés par analyses successives tant que la vue est ouverte), la suite retenue s'affiche. Le moteur n'est jamais nommé.
+- `chess_local.js` renvoie désormais le nombre de nœuds de chaque analyse.
+- Version PC synchronisée.
+- Tests : `t_enos_theme.py` ; `t_raph.py` mis à jour.
+
 ## 1.128 — Chess Edit : rendu « cinéma », saut du cavalier, icône d'E.N.O.S.
 - **Icône d'E.N.O.S.** : dans un edit, choisir E.N.O.S. affichait Raph + E.N.O.S. (la phase 3 de Raph s'appelle aussi « E.N.O.S. » et passait avant lui dans la recherche par nom). Les phases de Raph sont marquées `variant` et exclues de cette recherche (`js/bot_chat.js`, `js/chess_edit_map.js`).
 - **Sacrifice de cavalier brillant** : le cavalier rampait 2,8 s en survolant sa case d'arrivée de 1,5 case puis redescendait (impression d'aller-retour). Saut net de 1,15 s, bond bas (0,55 case), sur le hennissement.
